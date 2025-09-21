@@ -6,8 +6,8 @@
 #define INCLUDE_LLHTTP_H_
 
 #define LLHTTP_VERSION_MAJOR 9
-#define LLHTTP_VERSION_MINOR 2
-#define LLHTTP_VERSION_PATCH 1
+#define LLHTTP_VERSION_MINOR 3
+#define LLHTTP_VERSION_PATCH 0
 
 #ifndef INCLUDE_LLHTTP_ITSELF_H_
 #define INCLUDE_LLHTTP_ITSELF_H_
@@ -553,10 +553,10 @@ typedef enum llhttp_status llhttp_status_t;
 
 #ifndef INCLUDE_LLHTTP_API_H_
 #define INCLUDE_LLHTTP_API_H_
+#include <stddef.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include <stddef.h>
 
 #if defined(__wasm__)
 #define LLHTTP_EXPORT __attribute__((visibility("default")))

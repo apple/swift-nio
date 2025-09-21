@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -26,7 +26,7 @@ extension String {
     @discardableResult
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public func write(
-        toFileAt path: FilePath,
+        toFileAt path: NIOFilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         fileSystem: some FileSystemProtocol
@@ -49,7 +49,7 @@ extension String {
     @discardableResult
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public func write(
-        toFileAt path: FilePath,
+        toFileAt path: NIOFilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false)
     ) async throws -> Int64 {
@@ -74,7 +74,7 @@ extension Sequence<UInt8> where Self: Sendable {
     @discardableResult
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public func write(
-        toFileAt path: FilePath,
+        toFileAt path: NIOFilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         fileSystem: some FileSystemProtocol
@@ -94,7 +94,7 @@ extension Sequence<UInt8> where Self: Sendable {
     @discardableResult
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public func write(
-        toFileAt path: FilePath,
+        toFileAt path: NIOFilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false)
     ) async throws -> Int64 {
@@ -119,7 +119,7 @@ extension AsyncSequence where Self.Element: Sequence<UInt8>, Self: Sendable {
     /// - Returns: The number of bytes written to the file.
     @discardableResult
     public func write(
-        toFileAt path: FilePath,
+        toFileAt path: NIOFilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         fileSystem: some FileSystemProtocol
@@ -141,7 +141,7 @@ extension AsyncSequence where Self.Element: Sequence<UInt8>, Self: Sendable {
     /// - Returns: The number of bytes written to the file.
     @discardableResult
     public func write(
-        toFileAt path: FilePath,
+        toFileAt path: NIOFilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false)
     ) async throws -> Int64 {
@@ -166,7 +166,7 @@ extension AsyncSequence where Self.Element == UInt8, Self: Sendable {
     /// - Returns: The number of bytes written to the file.
     @discardableResult
     public func write(
-        toFileAt path: FilePath,
+        toFileAt path: NIOFilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         fileSystem: some FileSystemProtocol
@@ -188,7 +188,7 @@ extension AsyncSequence where Self.Element == UInt8, Self: Sendable {
     /// - Returns: The number of bytes written to the file.
     @discardableResult
     public func write(
-        toFileAt path: FilePath,
+        toFileAt path: NIOFilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false)
     ) async throws -> Int64 {

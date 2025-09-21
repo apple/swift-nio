@@ -15,10 +15,6 @@
 
 import PackageDescription
 
-// Used only for environment variables, does not make its way
-// into the product code.
-import class Foundation.ProcessInfo
-
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
 let swiftSystem: PackageDescription.Target.Dependency = .product(name: "SystemPackage", package: "swift-system")
@@ -68,7 +64,7 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
-        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem", "NIOFileSystem"]),
+        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem"]),
         .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
     ],
     targets: [
@@ -117,6 +113,7 @@ let package = Package(
                 "NIOConcurrencyHelpers",
                 "NIOCore",
                 "_NIODataStructures",
+                "CNIOPosix",
                 swiftAtomics,
             ],
             exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
@@ -150,6 +147,13 @@ let package = Package(
         ),
         .target(
             name: "CNIOAtomics",
+            dependencies: [],
+            cSettings: [
+                .define("_GNU_SOURCE")
+            ]
+        ),
+        .target(
+            name: "CNIOPosix",
             dependencies: [],
             cSettings: [
                 .define("_GNU_SOURCE")
@@ -238,7 +242,7 @@ let package = Package(
             swiftSettings: strictConcurrencySettings
         ),
         .target(
-            name: "_NIOFileSystem",
+            name: "NIOFileSystem",
             dependencies: [
                 "NIOCore",
                 "NIOPosix",
@@ -256,12 +260,32 @@ let package = Package(
             ]
         ),
         .target(
-            name: "NIOFileSystem",
+            name: "NIOFileSystemFoundationCompat",
             dependencies: [
-                "_NIOFileSystem"
+                "NIOFileSystem",
+                "NIOFoundationCompat",
             ],
-            path: "Sources/_NIOFileSystemExported",
+            path: "Sources/NIOFileSystemFoundationCompat",
             swiftSettings: strictConcurrencySettings
+        ),
+
+        .target(
+            name: "_NIOFileSystem",
+            dependencies: [
+                "NIOCore",
+                "NIOPosix",
+                "CNIOLinux",
+                "CNIODarwin",
+                swiftAtomics,
+                swiftCollections,
+                swiftSystem,
+            ],
+            path: "Sources/_NIOFileSystem",
+            exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
+            resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
+            swiftSettings: strictConcurrencySettings + [
+                .define("ENABLE_MOCKING", .when(configuration: .debug))
+            ]
         ),
         .target(
             name: "_NIOFileSystemFoundationCompat",
@@ -269,7 +293,7 @@ let package = Package(
                 "_NIOFileSystem",
                 "NIOFoundationCompat",
             ],
-            path: "Sources/NIOFileSystemFoundationCompat",
+            path: "Sources/_NIOFileSystemFoundationCompat",
             swiftSettings: strictConcurrencySettings
         ),
 
@@ -557,7 +581,7 @@ let package = Package(
             name: "NIOFileSystemTests",
             dependencies: [
                 "NIOCore",
-                "_NIOFileSystem",
+                "NIOFileSystem",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
@@ -571,7 +595,7 @@ let package = Package(
             dependencies: [
                 "NIOCore",
                 "NIOPosix",
-                "_NIOFileSystem",
+                "NIOFileSystem",
                 "NIOFoundationCompat",
             ],
             exclude: [
@@ -585,8 +609,8 @@ let package = Package(
         .testTarget(
             name: "NIOFileSystemFoundationCompatTests",
             dependencies: [
-                "_NIOFileSystem",
-                "_NIOFileSystemFoundationCompat",
+                "NIOFileSystem",
+                "NIOFileSystemFoundationCompat",
             ],
             swiftSettings: strictConcurrencySettings
         ),

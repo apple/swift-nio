@@ -104,6 +104,11 @@ private let sysRead = read
 private let sysPread = pread
 private let sysLseek = lseek
 private let sysPoll = poll
+#else
+private let sysWrite = _write
+private let sysRead = _read
+private let sysLseek = _lseek
+private let sysFtruncate = _chsize_s
 #endif
 
 #if os(Android)
@@ -133,7 +138,11 @@ private let sysSendMsg: @convention(c) (CInt, UnsafePointer<msghdr>, CInt) -> ss
 private let sysRecvMsg: @convention(c) (CInt, UnsafeMutablePointer<msghdr>?, CInt) -> ssize_t = recvmsg
 private let sysSendMsg: @convention(c) (CInt, UnsafePointer<msghdr>?, CInt) -> ssize_t = sendmsg
 #endif
+#if os(Windows)
+private let sysDup: @convention(c) (CInt) -> CInt = _dup
+#else
 private let sysDup: @convention(c) (CInt) -> CInt = dup
+#endif
 #if canImport(Android)
 private let sysGetpeername:
     @convention(c) (CInt, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) -> CInt = getpeername
@@ -541,8 +550,10 @@ internal enum Posix: Sendable {
     static let IPV6_RECVPKTINFO: CInt = CInt(CNIOLinux.IPV6_RECVPKTINFO)
     static let IPV6_PKTINFO: CInt = CInt(CNIOLinux.IPV6_PKTINFO)
     #elseif os(Windows)
+    static let IP_RECVPKTINFO: CInt = CInt(WinSDK.IP_PKTINFO)
     static let IP_PKTINFO: CInt = CInt(WinSDK.IP_PKTINFO)
 
+    static let IPV6_RECVPKTINFO: CInt = CInt(WinSDK.IPV6_PKTINFO)
     static let IPV6_PKTINFO: CInt = CInt(WinSDK.IPV6_PKTINFO)
     #endif
 
@@ -686,21 +697,6 @@ internal enum Posix: Sendable {
     }
 
     @inline(never)
-    @discardableResult
-    public static func ftruncate(descriptor: CInt, size: off_t) throws -> CInt {
-        try syscall(blocking: false) {
-            sysFtruncate(descriptor, size)
-        }.result
-    }
-
-    @inline(never)
-    public static func write(descriptor: CInt, pointer: UnsafeRawPointer, size: Int) throws -> IOResult<Int> {
-        try syscall(blocking: true) {
-            sysWrite(descriptor, pointer, size)
-        }
-    }
-
-    @inline(never)
     public static func pwrite(
         descriptor: CInt,
         pointer: UnsafeRawPointer,
@@ -712,23 +708,10 @@ internal enum Posix: Sendable {
         }
     }
 
-    #if !os(Windows)
     @inline(never)
     public static func writev(descriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         try syscall(blocking: true) {
             sysWritev(descriptor, iovecs.baseAddress!, CInt(iovecs.count))
-        }
-    }
-    #endif
-
-    @inline(never)
-    public static func read(
-        descriptor: CInt,
-        pointer: UnsafeMutableRawPointer,
-        size: size_t
-    ) throws -> IOResult<ssize_t> {
-        try syscallForbiddingEINVAL {
-            sysRead(descriptor, pointer, size)
         }
     }
 
@@ -765,6 +748,42 @@ internal enum Posix: Sendable {
             sysSendMsg(descriptor, msgHdr, flags)
         }
     }
+    #endif
+
+    @inline(never)
+    public static func read(
+        descriptor: CInt,
+        pointer: UnsafeMutableRawPointer,
+        size: size_t
+    ) throws -> IOResult<ssize_t> {
+        try syscallForbiddingEINVAL {
+            #if os(Windows)
+            // Windows read, reads at most UInt32. Lets clamp size there.
+            let size = UInt32(clamping: size)
+            return ssize_t(sysRead(descriptor, pointer, size))
+            #else
+            sysRead(descriptor, pointer, size)
+            #endif
+        }
+    }
+
+    @inline(never)
+    public static func write(descriptor: CInt, pointer: UnsafeRawPointer, size: Int) throws -> IOResult<Int> {
+        try syscall(blocking: true) {
+            #if os(Windows)
+            let size = UInt32(clamping: size)
+            #endif
+            return numericCast(sysWrite(descriptor, pointer, size))
+        }
+    }
+
+    @discardableResult
+    @inline(never)
+    public static func ftruncate(descriptor: CInt, size: off_t) throws -> CInt {
+        try syscall(blocking: false) {
+            sysFtruncate(descriptor, numericCast(size))
+        }.result
+    }
 
     @discardableResult
     @inline(never)
@@ -773,7 +792,6 @@ internal enum Posix: Sendable {
             sysLseek(descriptor, offset, whence)
         }.result
     }
-    #endif
 
     @discardableResult
     @inline(never)

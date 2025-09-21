@@ -25,7 +25,7 @@ extension ChannelPipeline {
         try self.assertDoesNotContain(handlerType: HTTPServerUpgradeHandler.self)
     }
 
-    func assertDoesNotContain<Handler: ChannelHandler>(
+    func assertDoesNotContain<Handler: ChannelHandler & _NIOCoreSendableMetatype>(
         handlerType: Handler.Type,
         file: StaticString = #filePath,
         line: UInt = #line
@@ -49,7 +49,7 @@ extension ChannelPipeline {
         }
     }
 
-    func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) {
+    func assertContains<Handler: ChannelHandler & _NIOCoreSendableMetatype>(handlerType: Handler.Type) {
         XCTAssertNoThrow(try self.containsHandler(type: handlerType).wait(), "did not find handler")
     }
 

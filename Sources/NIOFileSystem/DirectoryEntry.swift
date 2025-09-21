@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -19,13 +19,13 @@ public struct DirectoryEntry: Sendable, Hashable, Equatable {
     /// The path of the directory entry.
     ///
     /// - Precondition: The path must have at least one component.
-    public let path: FilePath
+    public let path: NIOFilePath
 
     /// The name of the entry; the final component of the ``path``.
     ///
     /// If `path` is "/Users/tim/path-to-4T.key" then `name` will be "path-to-4T.key".
-    public var name: FilePath.Component {
-        self.path.lastComponent!
+    public var name: String {
+        self.path.underlying.lastComponent!.string
     }
 
     /// The type of entry.
@@ -36,8 +36,8 @@ public struct DirectoryEntry: Sendable, Hashable, Equatable {
     /// - Parameters:
     ///   - path: The path of the directory entry which must contain at least one component.
     ///   - type: The type of entry.
-    public init?(path: FilePath, type: FileType) {
-        if path.components.isEmpty {
+    public init?(path: NIOFilePath, type: FileType) {
+        if path.underlying.components.isEmpty {
             return nil
         }
 

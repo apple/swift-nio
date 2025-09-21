@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -298,7 +298,7 @@ extension ReadableFileHandleProtocol {
     ///
     /// - Parameters:
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         chunkLength: ByteCount = .kibibytes(128)
@@ -584,7 +584,7 @@ public protocol DirectoryFileHandleProtocol: FileHandleProtocol {
     ///   - options: How the file should be opened.
     /// - Returns: A read-only handle to the opened file.
     func openFile(
-        forReadingAt path: FilePath,
+        forReadingAt path: NIOFilePath,
         options: OpenOptions.Read
     ) async throws -> ReadFileHandle
 
@@ -597,7 +597,7 @@ public protocol DirectoryFileHandleProtocol: FileHandleProtocol {
     ///   - options: How the file should be opened.
     /// - Returns: A write-only handle to the opened file.
     func openFile(
-        forWritingAt path: FilePath,
+        forWritingAt path: NIOFilePath,
         options: OpenOptions.Write
     ) async throws -> WriteFileHandle
 
@@ -609,7 +609,7 @@ public protocol DirectoryFileHandleProtocol: FileHandleProtocol {
     ///   - path: The path of the file to open relative to the open file.
     ///   - options: How the file should be opened.
     func openFile(
-        forReadingAndWritingAt path: FilePath,
+        forReadingAndWritingAt path: NIOFilePath,
         options: OpenOptions.Write
     ) async throws -> ReadWriteFileHandle
 
@@ -623,7 +623,7 @@ public protocol DirectoryFileHandleProtocol: FileHandleProtocol {
     ///   - options: How the file should be opened.
     /// - Returns: A handle to the opened directory.
     func openDirectory(
-        atPath path: FilePath,
+        atPath path: NIOFilePath,
         options: OpenOptions.Directory
     ) async throws -> Self
 }
@@ -645,8 +645,8 @@ extension DirectoryFileHandleProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in write-only and read-write
-    /// mode by calling ``withFileHandle(forWritingAt:options:execute:)``
-    /// and ``withFileHandle(forReadingAndWritingAt:options:execute:)``,
+    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forWritingAt:options:execute:)``
+    /// and ``DirectoryFileHandleProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)``,
     /// respectively.
     ///
     /// If `path` is a relative path then it is opened relative to the handle. The file being
@@ -661,7 +661,7 @@ extension DirectoryFileHandleProtocol {
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
     public func withFileHandle<Result>(
-        forReadingAt path: FilePath,
+        forReadingAt path: NIOFilePath,
         options: OpenOptions.Read = OpenOptions.Read(),
         execute body: (_ read: ReadFileHandle) async throws -> Result
     ) async throws -> Result {
@@ -678,8 +678,8 @@ extension DirectoryFileHandleProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-only or read-write
-    /// mode by calling ``withFileHandle(forReadingAt:options:execute:)`` and
-    /// ``withFileHandle(forReadingAndWritingAt:options:execute:)``,
+    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forReadingAt:options:execute:)`` and
+    /// ``DirectoryFileHandleProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)``,
     /// respectively.
     ///
     /// If `path` is a relative path then it is opened relative to the handle.
@@ -692,7 +692,7 @@ extension DirectoryFileHandleProtocol {
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
     public func withFileHandle<Result>(
-        forWritingAt path: FilePath,
+        forWritingAt path: NIOFilePath,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         execute body: (_ write: WriteFileHandle) async throws -> Result
     ) async throws -> Result {
@@ -714,8 +714,8 @@ extension DirectoryFileHandleProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-only or write-only
-    /// mode by calling ``withFileHandle(forReadingAt:options:execute:)`` and
-    /// ``withFileHandle(forWritingAt:options:execute:)``, respectively.
+    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forReadingAt:options:execute:)`` and
+    /// ``DirectoryFileHandleProtocol/withFileHandle(forWritingAt:options:execute:)``, respectively.
     ///
     /// If `path` is a relative path then it is opened relative to the handle.
     ///
@@ -727,7 +727,7 @@ extension DirectoryFileHandleProtocol {
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
     public func withFileHandle<Result>(
-        forReadingAndWritingAt path: FilePath,
+        forReadingAndWritingAt path: NIOFilePath,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         execute body: (_ readWrite: ReadWriteFileHandle) async throws -> Result
     ) async throws -> Result {
@@ -754,7 +754,7 @@ extension DirectoryFileHandleProtocol {
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
     public func withDirectoryHandle<Result>(
-        atPath path: FilePath,
+        atPath path: NIOFilePath,
         options: OpenOptions.Directory = OpenOptions.Directory(),
         execute body: (_ directory: Self) async throws -> Result
     ) async throws -> Result {

@@ -89,6 +89,7 @@ import func WinSDK.TransmitFile
 import func WinSDK.WriteFile
 import func WinSDK.WSAGetLastError
 import func WinSDK.WSAIoctl
+import func WinSDK.WSASend
 
 import struct WinSDK.socklen_t
 import struct WinSDK.u_long
@@ -114,7 +115,7 @@ internal typealias msghdr = WSAMSG
 internal typealias in_addr = IN_ADDR
 internal typealias in_port_t = USHORT
 internal typealias sa_family_t = ADDRESS_FAMILY
-internal typealias sockaddr = SOCKADDR
+public typealias sockaddr = SOCKADDR
 internal typealias sockaddr_in = SOCKADDR_IN
 internal typealias sockaddr_in6 = SOCKADDR_IN6
 internal typealias sockaddr_un = SOCKADDR_UN
@@ -391,6 +392,20 @@ extension NIOBSDSocket {
             throw IOError(winsock: WSAGetLastError(), reason: "send")
         }
         return .processed(size_t(iResult))
+    }
+
+    @inline(never)
+    static func writev(
+        socket s: NIOBSDSocket.Handle,
+        iovecs: UnsafeBufferPointer<IOVector>
+    ) throws -> IOResult<Int> {
+        var bytesSent: DWORD = 0
+        let ptr = UnsafeMutablePointer(mutating: iovecs.baseAddress)
+        let result = WSASend(s, ptr, UInt32(iovecs.count), &bytesSent, 0, nil, nil)
+        if result == SOCKET_ERROR {
+            throw IOError(winsock: WSAGetLastError(), reason: "WSASend")
+        }
+        return .processed(Int(bytesSent))
     }
 
     @inline(never)
@@ -699,6 +714,92 @@ extension NIOBSDSocket {
 
     static func getUDPReceiveOffload(socket: NIOBSDSocket.Handle) throws -> Bool {
         throw ChannelError.operationUnsupported
+    }
+}
+
+extension IOVector {
+    // An initializer thats maps `ByteBuffer`` derived pointers to WSABUF. This allows us to use the
+    // same initializer, that we use for iovecs on Windows.
+    init(iov_base: UnsafeMutableRawPointer!, iov_len: UInt32) {
+        self = WSABUF(
+            len: iov_len,
+            buf: iov_base.assumingMemoryBound(to: Int8.self)
+        )
+    }
+
+    var iov_len: UInt32 {
+        set {
+            self.len = newValue
+        }
+        get {
+            self.len
+        }
+    }
+
+    var iov_base: UnsafeMutableRawPointer {
+        set {
+            self.buf = newValue.assumingMemoryBound(to: Int8.self)
+        }
+        get {
+            UnsafeMutableRawPointer(self.buf)
+        }
+    }
+}
+
+extension WSAMSG {
+    var msg_name: UnsafeMutableRawPointer? {
+        set {
+            self.name = newValue?.assumingMemoryBound(to: sockaddr.self)
+        }
+        get {
+            UnsafeMutableRawPointer(self.name)
+        }
+    }
+
+    var msg_namelen: socklen_t {
+        set {
+            self.namelen = newValue
+        }
+        get {
+            self.namelen
+        }
+    }
+
+    var msg_iov: UnsafeMutablePointer<IOVector> {
+        set {
+            self.lpBuffers = newValue
+        }
+        get {
+            self.lpBuffers
+        }
+    }
+
+    var msg_iovlen: UInt32 {
+        set {
+            self.dwBufferCount = newValue
+        }
+        get {
+            self.dwBufferCount
+        }
+    }
+
+    var control_ptr: UnsafeMutableRawBufferPointer {
+        set {
+            self.Control.buf = newValue.baseAddress?.bindMemory(to: CHAR.self, capacity: newValue.count)
+            self.Control.len = numericCast(newValue.count)
+        }
+        get {
+            UnsafeMutableRawBufferPointer(start: self.Control.buf, count: Int(self.Control.len))
+        }
+    }
+
+    var msg_flags: Int {
+        set {
+            self.dwFlags = numericCast(newValue)
+        }
+        get {
+            Int(self.dwFlags)
+        }
     }
 }
 #endif

@@ -18,6 +18,10 @@ import XCTest
 
 @testable import NIOEmbedded
 
+#if canImport(Android)
+import Android
+#endif
+
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 class AsyncTestingChannelTests: XCTestCase {
     func testSingleHandlerInit() async throws {
@@ -680,6 +684,19 @@ class AsyncTestingChannelTests: XCTestCase {
 
         try await XCTAsyncAssertEqual(buf, try await channel.waitForOutboundWrite(as: ByteBuffer.self))
         try await XCTAsyncAssertTrue(try await channel.finish().isClean)
+    }
+
+    func testGetSetOption() async throws {
+        let channel = NIOAsyncTestingChannel()
+        let option = ChannelOptions.socket(IPPROTO_IP, IP_TTL)
+        let _ = try await channel.setOption(option, value: 1).get()
+
+        let optionValue1 = try await channel.getOption(option).get()
+        XCTAssertEqual(1, optionValue1)
+
+        let _ = try await channel.setOption(option, value: 2).get()
+        let optionValue2 = try await channel.getOption(option).get()
+        XCTAssertEqual(2, optionValue2)
     }
 }
 

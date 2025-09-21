@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 @usableFromInline
-enum _IntegerBitPacking {}
+enum _IntegerBitPacking: Sendable {}
 
 extension _IntegerBitPacking {
     @inlinable
@@ -58,7 +58,7 @@ extension _IntegerBitPacking {
 }
 
 @usableFromInline
-enum IntegerBitPacking {}
+enum IntegerBitPacking: Sendable {}
 
 extension IntegerBitPacking {
     @inlinable
@@ -105,5 +105,27 @@ extension IntegerBitPacking {
     static func unpackUInt32CInt(_ value: UInt64) -> (UInt32, CInt) {
         let unpacked = _IntegerBitPacking.unpackUU(value, leftType: UInt32.self, rightType: UInt32.self)
         return (unpacked.0, CInt(truncatingIfNeeded: unpacked.1))
+    }
+
+    @inlinable
+    static func packUInt32UInt32(_ left: UInt32, _ right: UInt32) -> UInt64 {
+        _IntegerBitPacking.packUU(left, right)
+    }
+
+    @inlinable
+    static func unpackUInt32UInt32(_ value: UInt64) -> (UInt32, UInt32) {
+        let unpacked = _IntegerBitPacking.unpackUU(value, leftType: UInt32.self, rightType: UInt32.self)
+        return (unpacked.0, unpacked.1)
+    }
+
+    @inlinable
+    static func packUInt16UInt16(_ left: UInt16, _ right: UInt16) -> UInt32 {
+        _IntegerBitPacking.packUU(left, right)
+    }
+
+    @inlinable
+    static func unpackUInt16UInt16(_ value: UInt32) -> (UInt16, UInt16) {
+        let unpacked = _IntegerBitPacking.unpackUU(value, leftType: UInt16.self, rightType: UInt16.self)
+        return (unpacked.0, unpacked.1)
     }
 }

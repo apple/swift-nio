@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -33,7 +33,7 @@ import CNIOLinux
 /// descriptor.
 @_spi(Testing)
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public final class SystemFileHandle {
+public final class SystemFileHandle: Sendable {
     /// The executor on which to execute system calls.
     internal var threadPool: NIOThreadPool { self.sendableView.threadPool }
 
@@ -371,7 +371,7 @@ extension SystemFileHandle: FileHandleProtocol {
     }
 
     @_spi(Testing)
-    public enum UpdatePermissionsOperation { case set, add, remove }
+    public enum UpdatePermissionsOperation: Sendable { case set, add, remove }
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -1178,13 +1178,13 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
     }
 
     public func openFile(
-        forReadingAt path: FilePath,
+        forReadingAt path: NIOFilePath,
         options: OpenOptions.Read
     ) async throws -> SystemFileHandle {
         let opts = options.descriptorOptions.union(.nonBlocking)
         let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
-                atPath: path,
+                atPath: path.underlying,
                 mode: .readOnly,
                 options: opts,
                 transactionalIfPossible: false
@@ -1196,14 +1196,14 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
     }
 
     public func openFile(
-        forReadingAndWritingAt path: FilePath,
+        forReadingAndWritingAt path: NIOFilePath,
         options: OpenOptions.Write
     ) async throws -> SystemFileHandle {
         let perms = options.permissionsForRegularFile
         let opts = options.descriptorOptions.union(.nonBlocking)
         let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
-                atPath: path,
+                atPath: path.underlying,
                 mode: .readWrite,
                 options: opts,
                 permissions: perms,
@@ -1216,14 +1216,14 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
     }
 
     public func openFile(
-        forWritingAt path: FilePath,
+        forWritingAt path: NIOFilePath,
         options: OpenOptions.Write
     ) async throws -> SystemFileHandle {
         let perms = options.permissionsForRegularFile
         let opts = options.descriptorOptions.union(.nonBlocking)
         let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
-                atPath: path,
+                atPath: path.underlying,
                 mode: .writeOnly,
                 options: opts,
                 permissions: perms,
@@ -1236,13 +1236,13 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
     }
 
     public func openDirectory(
-        atPath path: FilePath,
+        atPath path: NIOFilePath,
         options: OpenOptions.Directory
     ) async throws -> SystemFileHandle {
         let opts = options.descriptorOptions.union(.nonBlocking)
         let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
-                atPath: path,
+                atPath: path.underlying,
                 mode: .readOnly,
                 options: opts,
                 transactionalIfPossible: false

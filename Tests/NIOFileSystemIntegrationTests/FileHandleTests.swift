@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,10 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
+@_spi(Testing) import NIOFileSystem
 import NIOFoundationCompat
 import NIOPosix
 import XCTest
-@_spi(Testing) import _NIOFileSystem
 
 @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
 final class FileHandleTests: XCTestCase {
@@ -308,12 +308,13 @@ final class FileHandleTests: XCTestCase {
             try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
-        guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
+        let fifoPath = FilePath(privateTempDirPath).appending("fifo")
+        guard mkfifo(fifoPath.string, 0o644) == 0 else {
             XCTFail("Error calling mkfifo.")
             return
         }
 
-        try await self.withHandle(forFileAtPath: privateTempDirPath.appending("fifo"), accessMode: .readWrite) {
+        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readWrite) {
             handle in
             let someBytes = ByteBuffer(repeating: 42, count: 1546)
             try await handle.write(contentsOf: someBytes.readableBytesView, toAbsoluteOffset: 0)
@@ -329,12 +330,13 @@ final class FileHandleTests: XCTestCase {
             try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
-        guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
+        let fifoPath = FilePath(privateTempDirPath).appending("fifo")
+        guard mkfifo(fifoPath.string, 0o644) == 0 else {
             XCTFail("Error calling mkfifo.")
             return
         }
 
-        try await self.withHandle(forFileAtPath: privateTempDirPath.appending("fifo"), accessMode: .readWrite) {
+        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readWrite) {
             handle in
             let someBytes = [UInt8](repeating: 42, count: 10)
             try await handle.write(contentsOf: someBytes, toAbsoluteOffset: 0)
@@ -353,12 +355,13 @@ final class FileHandleTests: XCTestCase {
             try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
-        guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
+        let fifoPath = FilePath(privateTempDirPath).appending("fifo")
+        guard mkfifo(fifoPath.string, 0o644) == 0 else {
             XCTFail("Error calling mkfifo.")
             return
         }
 
-        try await self.withHandle(forFileAtPath: privateTempDirPath.appending("fifo"), accessMode: .readWrite) {
+        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readWrite) {
             handle in
             let someBytes = [UInt8](repeating: 42, count: 1546)
 
@@ -890,15 +893,15 @@ final class FileHandleTests: XCTestCase {
         recursive: Bool = false
     ) {
         var expected: [DirectoryEntry] = [
-            .init(path: Self.testData.appending("README.md"), type: .regular)!,
-            .init(path: Self.testData.appending("Foo"), type: .directory)!,
-            .init(path: Self.testData.appending("README.md.symlink"), type: .symlink)!,
-            .init(path: Self.testData.appending("Foo.symlink"), type: .symlink)!,
+            .init(path: NIOFilePath(Self.testData.appending("README.md")), type: .regular)!,
+            .init(path: NIOFilePath(Self.testData.appending("Foo")), type: .directory)!,
+            .init(path: NIOFilePath(Self.testData.appending("README.md.symlink")), type: .symlink)!,
+            .init(path: NIOFilePath(Self.testData.appending("Foo.symlink")), type: .symlink)!,
         ]
 
         if recursive {
             let path = Self.testData.appending(["Foo", "README.txt"])
-            expected.append(.init(path: path, type: .regular)!)
+            expected.append(.init(path: NIOFilePath(path), type: .regular)!)
         }
 
         for entry in expected {
@@ -910,7 +913,7 @@ final class FileHandleTests: XCTestCase {
         try await self.withTestDataDirectory { testData in
             for path in ["Foo", "Foo.symlink"] {
                 // Open a subdirectory.
-                try await testData.withDirectoryHandle(atPath: FilePath(path)) { foo in
+                try await testData.withDirectoryHandle(atPath: NIOFilePath(path)) { foo in
                     let fooInfo = try await foo.info()
                     XCTAssertEqual(fooInfo.type, .directory)
 
@@ -970,7 +973,7 @@ final class FileHandleTests: XCTestCase {
             }
 
             try await dir.withFileHandle(
-                forWritingAt: path,
+                forWritingAt: NIOFilePath(path),
                 options: .modifyFile(createIfNecessary: true)
             ) { handle in
                 let info = try await handle.info()
@@ -998,7 +1001,7 @@ final class FileHandleTests: XCTestCase {
         // Takes the path where 'O_TMPFILE' doesn't exist, so materializing the file is done via
         // creating a temporary file and then renaming it using 'renamex_np'/'renameat2' (Darwin/Linux).
         let temporaryDirectory = try await FileSystem.shared.temporaryDirectory
-        let path = temporaryDirectory.appending(Self.temporaryFileName().components)
+        let path = FilePath(temporaryDirectory).appending(Self.temporaryFileName().components)
         let handle = try SystemFileHandle.syncOpenWithMaterialization(
             atPath: path,
             mode: .writeOnly,
@@ -1010,7 +1013,7 @@ final class FileHandleTests: XCTestCase {
 
         // Closing shouldn't throw and the file should now be visible.
         try await handle.close()
-        let info = try await FileSystem.shared.info(forFileAt: path)
+        let info = try await FileSystem.shared.info(forFileAt: NIOFilePath(path))
         XCTAssertNotNil(info)
     }
 
@@ -1020,7 +1023,7 @@ final class FileHandleTests: XCTestCase {
         // fallback path where 'renameat2' returns EINVAL so the 'rename' is used in combination
         // with 'stat'. This path is only reachable on Linux.
         #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
-        let temporaryDirectory = try await FileSystem.shared.temporaryDirectory
+        let temporaryDirectory = FilePath(try await FileSystem.shared.temporaryDirectory)
         let path = temporaryDirectory.appending(Self.temporaryFileName().components)
         let handle = try SystemFileHandle.syncOpenWithMaterialization(
             atPath: path,
@@ -1036,7 +1039,7 @@ final class FileHandleTests: XCTestCase {
         let result = handle.sendableView._close(materialize: true, failRenameat2WithEINVAL: true)
         try result.get()
 
-        let info = try await FileSystem.shared.info(forFileAt: path)
+        let info = try await FileSystem.shared.info(forFileAt: NIOFilePath(path))
         XCTAssertNotNil(info)
         #else
         throw XCTSkip("This test requires 'renameat2' which isn't supported on this platform")
@@ -1051,7 +1054,7 @@ final class FileHandleTests: XCTestCase {
             }
 
             try await dir.withFileHandle(
-                forWritingAt: path,
+                forWritingAt: NIOFilePath(path),
                 options: .newFile(replaceExisting: false)
             ) { handle in
                 let info = try await handle.info()
@@ -1070,7 +1073,7 @@ final class FileHandleTests: XCTestCase {
 
             // Create a file and write some junk to it. We need to truncate it in a moment.
             try await dir.withFileHandle(
-                forWritingAt: path,
+                forWritingAt: NIOFilePath(path),
                 options: .newFile(replaceExisting: false)
             ) { handle in
                 try await handle.write(
@@ -1083,7 +1086,7 @@ final class FileHandleTests: XCTestCase {
 
             // Already exists; shouldn't throw.
             try await dir.withFileHandle(
-                forWritingAt: path,
+                forWritingAt: NIOFilePath(path),
                 options: .newFile(replaceExisting: true)
             ) { file in
                 let info = try await file.info()
@@ -1102,7 +1105,7 @@ final class FileHandleTests: XCTestCase {
 
             // Should not exist, should not throw.
             try await dir.withFileHandle(
-                forWritingAt: path,
+                forWritingAt: NIOFilePath(path),
                 options: .newFile(replaceExisting: true)
             ) { file in
                 let info = try await file.info()
@@ -1131,7 +1134,7 @@ final class FileHandleTests: XCTestCase {
             let path = Self.temporaryFileName()
             await XCTAssertThrowsFileSystemErrorAsync {
                 try await dir.withFileHandle(
-                    forWritingAt: path,
+                    forWritingAt: NIOFilePath(path),
                     options: .modifyFile(createIfNecessary: false)
                 ) { file in
                     XCTFail("Unexpectedly opened \(path)")

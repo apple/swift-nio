@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,16 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOFileSystem
+import NIOFileSystemFoundationCompat
 import XCTest
-import _NIOFileSystem
-import _NIOFileSystemFoundationCompat
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension FileSystem {
     func temporaryFilePath(
         _ function: String = #function,
         inTemporaryDirectory: Bool = true
-    ) async throws -> FilePath {
+    ) async throws -> NIOFilePath {
         if inTemporaryDirectory {
             let directory = try await self.temporaryDirectory
             return self.temporaryFilePath(function, inDirectory: directory)
@@ -32,17 +32,17 @@ extension FileSystem {
 
     func temporaryFilePath(
         _ function: String = #function,
-        inDirectory directory: FilePath?
-    ) -> FilePath {
+        inDirectory directory: NIOFilePath?
+    ) -> NIOFilePath {
         let index = function.firstIndex(of: "(")!
         let functionName = function.prefix(upTo: index)
         let random = UInt32.random(in: .min ... .max)
         let fileName = "\(functionName)-\(random)"
 
         if let directory = directory {
-            return directory.appending(fileName)
+            return NIOFilePath(FilePath(directory).appending(fileName))
         } else {
-            return FilePath(fileName)
+            return NIOFilePath(fileName)
         }
     }
 }

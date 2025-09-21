@@ -17,6 +17,8 @@ import NIOCore
 
 #if os(Linux)
 import CNIOLinux
+#elseif os(Windows)
+import WinSDK
 #endif
 
 @usableFromInline
@@ -46,7 +48,7 @@ extension timespec {
         let nsecPerSec: Int64 = 1_000_000_000
         let ns = amount.nanoseconds
         let sec = ns / nsecPerSec
-        self = timespec(tv_sec: Int(sec), tv_nsec: Int(ns - sec * nsecPerSec))
+        self = timespec(tv_sec: time_t(sec), tv_nsec: Int(ns - sec * nsecPerSec))
     }
 }
 #endif
@@ -123,21 +125,21 @@ protocol _SelectorBackendProtocol {
     func initialiseState0() throws
     func deinitAssertions0()  // allows actual implementation to run some assertions as part of the class deinit
     func register0(
-        selectableFD: CInt,
-        fileDescriptor: CInt,
+        selectableFD: NIOBSDSocket.Handle,
+        fileDescriptor: NIOBSDSocket.Handle,
         interested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws
     func reregister0(
-        selectableFD: CInt,
-        fileDescriptor: CInt,
+        selectableFD: NIOBSDSocket.Handle,
+        fileDescriptor: NIOBSDSocket.Handle,
         oldInterested: SelectorEventSet,
         newInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws
     func deregister0(
-        selectableFD: CInt,
-        fileDescriptor: CInt,
+        selectableFD: NIOBSDSocket.Handle,
+        fileDescriptor: NIOBSDSocket.Handle,
         oldInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws
@@ -210,6 +212,11 @@ internal class Selector<R: Registration> {
     @usableFromInline
     var deferredReregistrationsPending = false  // true if flush needed when reentring whenReady()
     #endif
+    #elseif os(Windows)
+    @usableFromInline
+    typealias EventType = WinSDK.pollfd
+    @usableFromInline
+    var pollFDs = [WinSDK.pollfd]()
     #else
     #error("Unsupported platform, no suitable selector backend (we need kqueue or epoll support)")
     #endif
@@ -220,7 +227,7 @@ internal class Selector<R: Registration> {
     var eventsCapacity = 64
 
     internal func testsOnly_withUnsafeSelectorFD<T>(_ body: (CInt) throws -> T) throws -> T {
-        assert(self.myThread != NIOThread.current)
+        assert(!self.myThread.isCurrentSlow)
         return try self.externalSelectorFDLock.withLock {
             guard self.selectorFD != -1 else {
                 throw EventLoopError._shutdown
@@ -229,10 +236,11 @@ internal class Selector<R: Registration> {
         }
     }
 
-    init() throws {
-        self.myThread = NIOThread.current
+    init(thread: NIOThread) throws {
+        precondition(thread.isCurrentSlow)
+        self.myThread = thread
         self.lifecycleState = .closed
-        events = Selector.allocateEventsArray(capacity: eventsCapacity)
+        self.events = Selector.allocateEventsArray(capacity: self.eventsCapacity)
         try self.initialiseState0()
     }
 
@@ -241,7 +249,7 @@ internal class Selector<R: Registration> {
         assert(self.registrations.count == 0, "left-over registrations: \(self.registrations)")
         assert(self.lifecycleState == .closed, "Selector \(self.lifecycleState) (expected .closed) on deinit")
         assert(self.selectorFD == -1, "self.selectorFD == \(self.selectorFD) on Selector deinit, forgot close?")
-        Selector.deallocateEventsArray(events: events, capacity: eventsCapacity)
+        Selector.deallocateEventsArray(events: self.events, capacity: self.eventsCapacity)
     }
 
     @inlinable
@@ -259,15 +267,15 @@ internal class Selector<R: Registration> {
 
     @inlinable
     func growEventArrayIfNeeded(ready: Int) {
-        assert(self.myThread == NIOThread.current)
-        guard ready == eventsCapacity else {
+        assert(self.myThread.isCurrentSlow)
+        guard ready == self.eventsCapacity else {
             return
         }
-        Selector.deallocateEventsArray(events: events, capacity: eventsCapacity)
+        Selector.deallocateEventsArray(events: self.events, capacity: self.eventsCapacity)
 
         // double capacity
-        eventsCapacity = ready << 1
-        events = Selector.allocateEventsArray(capacity: eventsCapacity)
+        self.eventsCapacity = ready << 1
+        self.events = Selector.allocateEventsArray(capacity: self.eventsCapacity)
     }
 
     /// Register `Selectable` on the `Selector`.
@@ -281,7 +289,7 @@ internal class Selector<R: Registration> {
         interested: SelectorEventSet,
         makeRegistration: (SelectorEventSet, SelectorRegistrationID) -> R
     ) throws {
-        assert(self.myThread == NIOThread.current)
+        assert(self.myThread.isCurrentSlow)
         assert(interested.contains([.reset, .error]))
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
@@ -306,7 +314,7 @@ internal class Selector<R: Registration> {
     ///   - selectable: The `Selectable` to re-register.
     ///   - interested: The `SelectorEventSet` in which we are interested and want to be notified about.
     func reregister<S: Selectable>(selectable: S, interested: SelectorEventSet) throws {
-        assert(self.myThread == NIOThread.current)
+        assert(self.myThread.isCurrentSlow)
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
         }
@@ -335,7 +343,7 @@ internal class Selector<R: Registration> {
     /// - Parameters:
     ///   - selectable: The `Selectable` to deregister.
     func deregister<S: Selectable>(selectable: S) throws {
-        assert(self.myThread == NIOThread.current)
+        assert(self.myThread.isCurrentSlow)
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
         }
@@ -372,7 +380,7 @@ internal class Selector<R: Registration> {
     ///
     /// After closing the `Selector` it's no longer possible to use it.
     public func close() throws {
-        assert(self.myThread == NIOThread.current)
+        assert(self.myThread.isCurrentSlow)
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't close selector as it's \(self.lifecycleState).")
         }
@@ -394,7 +402,7 @@ extension Selector: CustomStringConvertible {
             "Selector { descriptor = \(self.selectorFD) }"
         }
 
-        if NIOThread.current == self.myThread {
+        if self.myThread.isCurrentSlow {
             return makeDescription()
         } else {
             return self.externalSelectorFDLock.withLock {
@@ -431,7 +439,7 @@ extension SelectorEvent: Sendable {}
 extension Selector where R == NIORegistration {
     /// Gently close the `Selector` after all registered `Channel`s are closed.
     func closeGently(eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        assert(self.myThread == NIOThread.current)
+        assert(self.myThread.isCurrentSlow)
         guard self.lifecycleState == .open else {
             return eventLoop.makeFailedFuture(
                 IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState).")

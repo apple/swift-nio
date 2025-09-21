@@ -52,12 +52,11 @@ internal enum NIOOnSocketsBootstraps {
 ///
 ///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
-///             // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-///             channel.pipeline.addHandler(BackPressureHandler()).flatMap { () in
-///                 // make sure to instantiate your `ChannelHandlers` inside of
-///                 // the closure as it will be invoked once per connection.
-///                 channel.pipeline.addHandler(MyChannelHandler())
-///             }
+///            channel.eventLoop.makeCompletedFuture {
+///                // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
+///                try channel.pipeline.syncOperations.addHandler(BackPressureHandler())
+///                try channel.pipeline.syncOperations.addHandler(MyChannelHandler())
+///            }
 ///         }
 ///
 ///         // Enable SO_REUSEADDR for the accepted Channels
@@ -2354,6 +2353,9 @@ public final class NIOPipeBootstrap {
     ///   - inputOutput: The _Unix file descriptor_ for the input & output.
     /// - Returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
     public func takingOwnershipOfDescriptor(inputOutput: CInt) -> EventLoopFuture<Channel> {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         let inputFD = inputOutput
         let outputFD = try! Posix.dup(descriptor: inputOutput)
 
@@ -2361,6 +2363,7 @@ public final class NIOPipeBootstrap {
             try! Posix.close(descriptor: outputFD)
             throw error
         }
+        #endif
     }
 
     /// Create the `PipeChannel` with the provided input and output file descriptors.
@@ -2420,23 +2423,12 @@ public final class NIOPipeBootstrap {
     }
 
     private func _takingOwnershipOfDescriptors(input: CInt?, output: CInt?) -> EventLoopFuture<Channel> {
-        let channelInitializer: @Sendable (Channel) -> EventLoopFuture<Channel> = {
-            let eventLoop = self.group.next()
-            let channelInitializer = self.channelInitializer
-            return { channel in
-                if let channelInitializer = channelInitializer {
-                    return channelInitializer(channel).map { channel }
-                } else {
-                    return eventLoop.makeSucceededFuture(channel)
-                }
-            }
-
-        }()
-        return self._takingOwnershipOfDescriptors(
+        self._takingOwnershipOfDescriptors(
             input: input,
-            output: output,
-            channelInitializer: channelInitializer
-        )
+            output: output
+        ) { channel in
+            channel.eventLoop.makeSucceededFuture(channel)
+        }
     }
 
     @available(*, deprecated, renamed: "takingOwnershipOfDescriptor(inputOutput:)")
@@ -2472,6 +2464,9 @@ extension NIOPipeBootstrap {
         inputOutput: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> Output {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         let inputFD = inputOutput
         let outputFD = try! Posix.dup(descriptor: inputOutput)
 
@@ -2485,6 +2480,7 @@ extension NIOPipeBootstrap {
             try! Posix.close(descriptor: outputFD)
             throw error
         }
+        #endif
     }
 
     /// Create the `PipeChannel` with the provided input and output file descriptors.
@@ -2586,6 +2582,9 @@ extension NIOPipeBootstrap {
         output: CInt?,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>
     ) -> EventLoopFuture<ChannelInitializerResult> {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         precondition(
             input ?? 0 >= 0 && output ?? 0 >= 0 && input != output,
             "illegal file descriptor pair. The file descriptors \(String(describing: input)), \(String(describing: output)) "
@@ -2600,6 +2599,7 @@ extension NIOPipeBootstrap {
         let pipeChannelOutput: SelectablePipeHandle?
         let hasNoInputPipe: Bool
         let hasNoOutputPipe: Bool
+        let bootstrapChannelInitializer = self.channelInitializer
         do {
             if let input = input {
                 try self.validateFileDescriptorIsNotAFile(input)
@@ -2632,6 +2632,13 @@ extension NIOPipeBootstrap {
         func setupChannel() -> EventLoopFuture<ChannelInitializerResult> {
             eventLoop.assertInEventLoop()
             return channelOptions.applyAllChannelOptions(to: channel).flatMap {
+                if let bootstrapChannelInitializer {
+                    bootstrapChannelInitializer(channel)
+                } else {
+                    channel.eventLoop.makeSucceededVoidFuture()
+                }
+            }
+            .flatMap {
                 _ -> EventLoopFuture<ChannelInitializerResult> in
                 channelInitializer(channel)
             }.flatMap { result in
@@ -2660,6 +2667,7 @@ extension NIOPipeBootstrap {
                 setupChannel()
             }
         }
+        #endif
     }
 }
 

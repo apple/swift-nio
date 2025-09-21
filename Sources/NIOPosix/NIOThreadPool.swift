@@ -351,7 +351,7 @@ public final class NIOThreadPool {
         let readyThreads = ConditionLock(value: 0)
         for id in 0..<self.numberOfThreads {
             // We should keep thread names under 16 characters because Linux doesn't allow more.
-            NIOThread.spawnAndRun(name: "\(threadNamePrefix)\(id)", detachThread: false) { thread in
+            NIOThread.spawnAndRun(name: "\(threadNamePrefix)\(id)") { thread in
                 readyThreads.withLock {
                     let threadCount = self._conditionLock.withLock {
                         self.threads!.append(thread)

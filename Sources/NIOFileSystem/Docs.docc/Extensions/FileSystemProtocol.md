@@ -1,4 +1,4 @@
-# ``_NIOFileSystem/FileSystemProtocol``
+# ``NIOFileSystem/FileSystemProtocol``
 
 ## Topics
 
@@ -33,7 +33,7 @@ closing it to avoid leaking resources.
 
 ### Managing files
 
-- ``copyItem(at:to:shouldProceedAfterError:shouldCopyFile:)``
+- ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
 - ``removeItem(at:)``
 - ``moveItem(at:to:)``
 - ``replaceItem(at:withItemAt:)``

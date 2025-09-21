@@ -531,6 +531,43 @@ final class HTTPHeaderValidationTests: XCTestCase {
         }
     }
 
+    func testResponseIsDroppedIfHeadersInvalid() throws {
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+        try channel.primeForResponse()
+
+        func assertReadHead(from channel: EmbeddedChannel) throws {
+            if case .head = try channel.readInbound(as: HTTPServerRequestPart.self) {
+                ()
+            } else {
+                XCTFail("Expected 'head'")
+            }
+        }
+
+        func assertReadEnd(from channel: EmbeddedChannel) throws {
+            if case .end = try channel.readInbound(as: HTTPServerRequestPart.self) {
+                ()
+            } else {
+                XCTFail("Expected 'end'")
+            }
+        }
+
+        // Read the first request.
+        try assertReadHead(from: channel)
+        try assertReadEnd(from: channel)
+        XCTAssertNil(try channel.readInbound(as: HTTPServerRequestPart.self))
+
+        // Respond with bad headers; they should cause an error and result in the rest of the
+        // response being dropped.
+        let head = HTTPResponseHead(version: .http1_1, status: .ok, headers: [":pseudo-header": "not-here"])
+        XCTAssertThrowsError(try channel.writeOutbound(HTTPServerResponsePart.head(head)))
+        XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertThrowsError(try channel.writeOutbound(HTTPServerResponsePart.body(.byteBuffer(ByteBuffer()))))
+        XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertThrowsError(try channel.writeOutbound(HTTPServerResponsePart.end(nil)))
+        XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self))
+    }
+
     func testDisablingValidationClientSide() throws {
         let invalidHeaderName = "HeaderNameWith\"Quote"
         let invalidHeaderValue = "HeaderValueWith\rCR"

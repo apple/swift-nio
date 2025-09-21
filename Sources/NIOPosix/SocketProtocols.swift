@@ -13,7 +13,11 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-protocol BaseSocketProtocol: CustomStringConvertible {
+#if canImport(WinSDK)
+import struct WinSDK.socklen_t
+#endif
+
+protocol BaseSocketProtocol: CustomStringConvertible, _NIOPosixSendableMetatype {
     associatedtype SelectableType: Selectable
 
     var isOpen: Bool { get }

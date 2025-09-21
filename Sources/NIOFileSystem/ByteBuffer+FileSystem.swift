@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -23,7 +23,7 @@ extension ByteBuffer {
     ///   - maximumSizeAllowed: The maximum size of file which can be read, in bytes, as a ``ByteCount``.
     ///   - fileSystem: The ``FileSystemProtocol`` instance to use to read the file.
     public init(
-        contentsOf path: FilePath,
+        contentsOf path: NIOFilePath,
         maximumSizeAllowed: ByteCount,
         fileSystem: some FileSystemProtocol
     ) async throws {
@@ -41,7 +41,7 @@ extension ByteBuffer {
     ///   - path: The path of the file to read.
     ///   - maximumSizeAllowed: The maximum size of file which can be read, as a ``ByteCount``.
     public init(
-        contentsOf path: FilePath,
+        contentsOf path: NIOFilePath,
         maximumSizeAllowed: ByteCount
     ) async throws {
         self = try await Self(
@@ -61,7 +61,7 @@ extension ByteBuffer {
     /// - Returns: The number of bytes written to the file.
     @discardableResult
     public func write(
-        toFileAt path: FilePath,
+        toFileAt path: NIOFilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         fileSystem: some FileSystemProtocol
@@ -83,7 +83,7 @@ extension ByteBuffer {
     /// - Returns: The number of bytes written to the file.
     @discardableResult
     public func write(
-        toFileAt path: FilePath,
+        toFileAt path: NIOFilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false)
     ) async throws -> Int64 {

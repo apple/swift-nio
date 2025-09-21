@@ -19,6 +19,10 @@ import XCTest
 
 @testable import NIOEmbedded
 
+#if canImport(Android)
+import Android
+#endif
+
 final class ChannelLifecycleHandler: ChannelInboundHandler, Sendable {
     public typealias InboundIn = Any
 
@@ -691,5 +695,18 @@ class EmbeddedChannelTest: XCTestCase {
 
         XCTAssertEqual(buf, try channel.readOutbound(as: ByteBuffer.self))
         XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testGetSetOption() throws {
+        let channel = EmbeddedChannel()
+        let option = ChannelOptions.socket(IPPROTO_IP, IP_TTL)
+        let _ = channel.setOption(option, value: 1)
+
+        let optionValue1 = try channel.getOption(option).wait()
+        XCTAssertEqual(1, optionValue1)
+
+        let _ = channel.setOption(option, value: 2)
+        let optionValue2 = try channel.getOption(option).wait()
+        XCTAssertEqual(2, optionValue2)
     }
 }

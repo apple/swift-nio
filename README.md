@@ -218,7 +218,7 @@ The core SwiftNIO repository will contain a few extremely important protocol imp
 
 ## Documentation
 
- - [API documentation](https://swiftpackageindex.com/apple/swift-nio/main/documentation/nio)
+ - [API documentation](https://swiftpackageindex.com/apple/swift-nio/documentation/nio)
 
 ## Example Usage
 
@@ -333,39 +333,26 @@ apt-get install -y git curl libatomic1 libxml2 netcat-openbsd lsof perl
 dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 ```
 
-### Benchmarks
-
-Benchmarks for `swift-nio` are in a separate Swift Package in the `Benchmarks` subfolder of this repository.
-They use the [`package-benchmark`](https://github.com/ordo-one/package-benchmark) plugin.
-Benchmarks depends on the [`jemalloc`](https://jemalloc.net) memory allocation library, which is used by `package-benchmark` to capture memory allocation statistics.
-An installation guide can be found in the [Getting Started article](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark/gettingstarted#Installing-Prerequisites-and-Platform-Support) of `package-benchmark`.
-Afterwards you can run the benchmarks from CLI by going to the `Benchmarks` subfolder (e.g. `cd Benchmarks`) and invoking:
-```
-swift package benchmark
-```
-
-For more information please refer to `swift package benchmark --help` or the [documentation of `package-benchmark`](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark).
-
-[ch]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channelhandler
-[c]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channel
-[chc]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channelhandlercontext
-[ec]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioembedded/embeddedchannel
-[el]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventloop
-[eel]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioembedded/embeddedeventloop
-[elg]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventloopgroup
-[bb]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/bytebuffer
-[elf]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventloopfuture
-[elp]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventlooppromise
-[cp]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channelpipeline
-[sbootstrap]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioposix/serverbootstrap
-[cbootstrap]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioposix/clientbootstrap
-[dbootstrap]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioposix/datagrambootstrap
-[mtelg]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioposix/multithreadedeventloopgroup
-[nioh1]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niohttp1
-[nioh2]: https://swiftpackageindex.com/apple/swift-nio-http2/main/documentation/niohttp2
-[niows]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niowebsocket
-[niossl]: https://swiftpackageindex.com/apple/swift-nio-ssl/main/documentation/niossl
-[niossh]: https://swiftpackageindex.com/apple/swift-nio-ssh/main/documentation/niossh
+[ch]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/channelhandler
+[c]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/channel
+[chc]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/channelhandlercontext
+[ec]: https://swiftpackageindex.com/apple/swift-nio/documentation/nioembedded/embeddedchannel
+[el]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/eventloop
+[eel]: https://swiftpackageindex.com/apple/swift-nio/documentation/nioembedded/embeddedeventloop
+[elg]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/eventloopgroup
+[bb]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/bytebuffer
+[elf]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/eventloopfuture
+[elp]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/eventlooppromise
+[cp]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/channelpipeline
+[sbootstrap]: https://swiftpackageindex.com/apple/swift-nio/documentation/nioposix/serverbootstrap
+[cbootstrap]: https://swiftpackageindex.com/apple/swift-nio/documentation/nioposix/clientbootstrap
+[dbootstrap]: https://swiftpackageindex.com/apple/swift-nio/documentation/nioposix/datagrambootstrap
+[mtelg]: https://swiftpackageindex.com/apple/swift-nio/documentation/nioposix/multithreadedeventloopgroup
+[nioh1]: https://swiftpackageindex.com/apple/swift-nio/documentation/niohttp1
+[nioh2]: https://swiftpackageindex.com/apple/swift-nio-http2/documentation/niohttp2
+[niows]: https://swiftpackageindex.com/apple/swift-nio/documentation/niowebsocket
+[niossl]: https://swiftpackageindex.com/apple/swift-nio-ssl/documentation/niossl
+[niossh]: https://swiftpackageindex.com/apple/swift-nio-ssh/documentation/niossh
 [pthreads]: https://en.wikipedia.org/wiki/POSIX_Threads
 [kqueue]: https://en.wikipedia.org/wiki/Kqueue
 [epoll]: https://en.wikipedia.org/wiki/Epoll

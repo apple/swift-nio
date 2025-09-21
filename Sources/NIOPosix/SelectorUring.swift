@@ -411,7 +411,7 @@ extension Selector: _SelectorBackendProtocol {
 
     // attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`)
     func wakeup0() throws {
-        assert(NIOThread.current != self.myThread)
+        assert(!NIOThread.isCurrentSlow)
         try self.externalSelectorFDLock.withLock {
             guard self.eventFD >= 0 else {
                 throw EventLoopError.shutdown

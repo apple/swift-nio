@@ -51,7 +51,7 @@ function update_cmakelists_source() {
     do
         exts_arg+=(-o -name "${src_exts[$i]}")
     done
-    
+
     # Build an array with the rest of the arguments
     shift
     exceptions=("$@")
@@ -85,20 +85,26 @@ function update_cmakelists_assembly() {
 
     mac_x86_64_asms=$($find "${src_root}" -type f \( -name "*x86_64*" -or -name "*avx2*" \) -name "*apple*" -name "*.S" -printf '    %P\n' | LC_ALL=POSIX sort)
     linux_x86_64_asms=$($find "${src_root}" -type f \( -name "*x86_64*" -or -name "*avx2*" \) -name "*linux*" -name "*.S" -printf '    %P\n' | LC_ALL=POSIX sort)
+    win_x86_64_asms=$($find "${src_root}" -type f \( -name "*x86_64*" -or -name "*avx2*" \) -name "*win*" -name "*.S" -printf '    %P\n' | LC_ALL=POSIX sort)
     mac_aarch64_asms=$($find "${src_root}" -type f -name "*armv8*" -name "*apple*" -name "*.S" -printf '    %P\n' | LC_ALL=POSIX sort)
     linux_aarch64_asms=$($find "${src_root}" -type f -name "*armv8*" -name "*linux*" -name "*.S" -printf '    %P\n' | LC_ALL=POSIX sort)
+    win_aarch64_asms=$($find "${src_root}" -type f -name "*armv8*" -name "*win*" -name "*.S" -printf '    %P\n' | LC_ALL=POSIX sort)
     log "$mac_x86_64_asms"
     log "$linux_x86_64_asms"
+    log "$win_x86_64_asms"
     log "$mac_aarch64_asms"
     log "$linux_aarch64_asms"
-    
+    log "$win_aarch64_asms"
+
     # Update list of assembly files in CMakeLists.txt
     # The first part in `BEGIN` (i.e., `undef $/;`) is for working with multi-line;
     # the second is so that we can pass in a variable to replace with.
     perl -pi -e 'BEGIN { undef $/; $replace = shift } s/Darwin([^\)]+)x86_64"\)\n  target_sources\(([^\n]+)\n([^\)]+)/Darwin$1x86_64"\)\n  target_sources\($2\n$replace/' "$mac_x86_64_asms" "$src_root/CMakeLists.txt"
     perl -pi -e 'BEGIN { undef $/; $replace = shift } s/Linux([^\)]+)x86_64"\)\n  target_sources\(([^\n]+)\n([^\)]+)/Linux$1x86_64"\)\n  target_sources\($2\n$replace/' "$linux_x86_64_asms" "$src_root/CMakeLists.txt"
+    perl -pi -e 'BEGIN { undef $/; $replace = shift } s/Windows([^\)]+)x86_64"\)\n  target_sources\(([^\n]+)\n([^\)]+)/Windows$1x86_64"\)\n  target_sources\($2\n$replace/' "$win_x86_64_asms" "$src_root/CMakeLists.txt"
     perl -pi -e 'BEGIN { undef $/; $replace = shift } s/Darwin([^\)]+)aarch64"\)\n  target_sources\(([^\n]+)\n([^\)]+)/Darwin$1aarch64"\)\n  target_sources\($2\n$replace/' "$mac_aarch64_asms" "$src_root/CMakeLists.txt"
     perl -pi -e 'BEGIN { undef $/; $replace = shift } s/Linux([^\)]+)aarch64"\)\n  target_sources\(([^\n]+)\n([^\)]+)/Linux$1aarch64"\)\n  target_sources\($2\n$replace/' "$linux_aarch64_asms" "$src_root/CMakeLists.txt"
+    perl -pi -e 'BEGIN { undef $/; $replace = shift } s/Windows([^\)]+)aarch64"\)\n  target_sources\(([^\n]+)\n([^\)]+)/Windows$1aarch64"\)\n  target_sources\($2\n$replace/' "$win_aarch64_asms" "$src_root/CMakeLists.txt"
     log "Updated $src_root/CMakeLists.txt"
 }
 
@@ -107,7 +113,7 @@ echo "$config" | jq -c '.targets[]' | while read -r target; do
     type="$(echo "$target" | jq -r .type)"
     exceptions=("$(echo "$target" | jq -r .exceptions | jq -r @sh)")
     log "Updating cmake list for ${name}"
-    
+
     case "$type" in
         source)
             update_cmakelists_source "$name" "${exceptions[@]}"
@@ -123,7 +129,7 @@ done
 
 if [[ "${fail_on_changes}" == true ]]; then
     if [ -n "$(git status --untracked-files=no --porcelain)" ]; then
-        fatal "Changes in the cmake files detected. Please update."
+        fatal "Changes in the cmake files detected. Please update. -- $(git diff)"
     else
         log "✅ CMake files are up-to-date."
     fi

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -104,11 +104,11 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///   - options: How the file should be opened.
     /// - Returns: A readable handle to the opened file.
     public func openFile(
-        forReadingAt path: FilePath,
+        forReadingAt path: NIOFilePath,
         options: OpenOptions.Read
     ) async throws -> ReadFileHandle {
         let handle = try await self.threadPool.runIfActive {
-            let handle = try self._openFile(forReadingAt: path, options: options).get()
+            let handle = try self._openFile(forReadingAt: path.underlying, options: options).get()
             // Okay to transfer: we just created it and are now moving back to the callers task.
             return UnsafeTransfer(handle)
         }
@@ -134,11 +134,11 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///   - options: How the file should be opened.
     /// - Returns: A writable handle to the opened file.
     public func openFile(
-        forWritingAt path: FilePath,
+        forWritingAt path: NIOFilePath,
         options: OpenOptions.Write
     ) async throws -> WriteFileHandle {
         let handle = try await self.threadPool.runIfActive {
-            let handle = try self._openFile(forWritingAt: path, options: options).get()
+            let handle = try self._openFile(forWritingAt: path.underlying, options: options).get()
             // Okay to transfer: we just created it and are now moving back to the callers task.
             return UnsafeTransfer(handle)
         }
@@ -164,11 +164,11 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///   - options: How the file should be opened.
     /// - Returns: A readable and writable handle to the opened file.
     public func openFile(
-        forReadingAndWritingAt path: FilePath,
+        forReadingAndWritingAt path: NIOFilePath,
         options: OpenOptions.Write
     ) async throws -> ReadWriteFileHandle {
         let handle = try await self.threadPool.runIfActive {
-            let handle = try self._openFile(forReadingAndWritingAt: path, options: options).get()
+            let handle = try self._openFile(forReadingAndWritingAt: path.underlying, options: options).get()
             // Okay to transfer: we just created it and are now moving back to the callers task.
             return UnsafeTransfer(handle)
         }
@@ -191,11 +191,11 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///   - options: How the directory should be opened.
     /// - Returns: A handle to the opened directory.
     public func openDirectory(
-        atPath path: FilePath,
+        atPath path: NIOFilePath,
         options: OpenOptions.Directory
     ) async throws -> DirectoryFileHandle {
         let handle = try await self.threadPool.runIfActive {
-            let handle = try self._openDirectory(at: path, options: options).get()
+            let handle = try self._openDirectory(at: path.underlying, options: options).get()
             // Okay to transfer: we just created it and are now moving back to the callers task.
             return UnsafeTransfer(handle)
         }
@@ -229,13 +229,13 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///   - permissions: The permissions to set on the new directory; default permissions will be
     ///       used if not specified.
     public func createDirectory(
-        at path: FilePath,
+        at path: NIOFilePath,
         withIntermediateDirectories createIntermediateDirectories: Bool,
         permissions: FilePermissions?
     ) async throws {
         try await self.threadPool.runIfActive {
             try self._createDirectory(
-                at: path,
+                at: path.underlying,
                 withIntermediateDirectories: createIntermediateDirectories,
                 permissions: permissions ?? .defaultsForDirectory
             ).get()
@@ -261,10 +261,10 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// - Returns:
     ///   - The path to the new temporary directory.
     public func createTemporaryDirectory(
-        template: FilePath
-    ) async throws -> FilePath {
+        template: NIOFilePath
+    ) async throws -> NIOFilePath {
         try await self.threadPool.runIfActive {
-            try self._createTemporaryDirectory(template: template).get()
+            NIOFilePath(try self._createTemporaryDirectory(template: template.underlying).get())
         }
     }
 
@@ -281,17 +281,17 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///        destination of the symbolic link is returned.
     /// - Returns: Information about the file at the given path or `nil` if no file exists.
     public func info(
-        forFileAt path: FilePath,
+        forFileAt path: NIOFilePath,
         infoAboutSymbolicLink: Bool
     ) async throws -> FileInfo? {
         try await self.threadPool.runIfActive {
-            try self._info(forFileAt: path, infoAboutSymbolicLink: infoAboutSymbolicLink).get()
+            try self._info(forFileAt: path.underlying, infoAboutSymbolicLink: infoAboutSymbolicLink).get()
         }
     }
 
     // MARK: - File copying, removal, and moving
 
-    /// See ``FileSystemProtocol/copyItem(at:to:shouldProceedAfterError:shouldCopyFile:)``
+    /// Copies the item at the specified path to a new location.
     ///
     /// The item to be copied must be a:
     /// - regular file,
@@ -311,8 +311,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// This function is platform dependent. On Darwin the `copyfile(2)` system call is used and
     /// items are cloned where possible. On Linux the `sendfile(2)` system call is used.
     public func copyItem(
-        at sourcePath: FilePath,
-        to destinationPath: FilePath,
+        at sourcePath: NIOFilePath,
+        to destinationPath: NIOFilePath,
         strategy copyStrategy: CopyStrategy,
         shouldProceedAfterError: @escaping @Sendable (
             _ source: DirectoryEntry,
@@ -320,7 +320,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         ) async throws -> Void,
         shouldCopyItem: @escaping @Sendable (
             _ source: DirectoryEntry,
-            _ destination: FilePath
+            _ destination: NIOFilePath
         ) async -> Bool
     ) async throws {
         guard let info = try await self.info(forFileAt: sourcePath, infoAboutSymbolicLink: true)
@@ -338,19 +338,20 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         if await shouldCopyItem(.init(path: sourcePath, type: info.type)!, destinationPath) {
             switch info.type {
             case .regular:
-                try await self.copyRegularFile(from: sourcePath, to: destinationPath)
+                try await self.copyRegularFile(from: sourcePath.underlying, to: destinationPath.underlying)
 
             case .symlink:
-                try await self.copySymbolicLink(from: sourcePath, to: destinationPath)
+                try await self.copySymbolicLink(from: sourcePath.underlying, to: destinationPath.underlying)
 
             case .directory:
                 try await self.copyDirectory(
-                    from: sourcePath,
-                    to: destinationPath,
+                    from: sourcePath.underlying,
+                    to: destinationPath.underlying,
                     strategy: copyStrategy,
-                    shouldProceedAfterError: shouldProceedAfterError,
-                    shouldCopyItem: shouldCopyItem
-                )
+                    shouldProceedAfterError: shouldProceedAfterError
+                ) { source, destination in
+                    await shouldCopyItem(source, .init(destination))
+                }
 
             default:
                 throw FileSystemError(
@@ -395,12 +396,12 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// - Returns: The number of deleted items which may be zero if `path` did not exist.
     @discardableResult
     public func removeItem(
-        at path: FilePath,
+        at path: NIOFilePath,
         strategy removalStrategy: RemovalStrategy,
         recursively removeItemRecursively: Bool
     ) async throws -> Int {
         // Try to remove the item: we might just get lucky.
-        let result = try await self.threadPool.runIfActive { Libc.remove(path) }
+        let result = try await self.threadPool.runIfActive { Libc.remove(path.underlying) }
 
         switch result {
         case .success:
@@ -428,13 +429,13 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
             switch removalStrategy.wrapped {
             case .sequential:
-                return try await self.removeItemSequentially(at: path)
+                return try await self.removeItemSequentially(at: path.underlying)
             case let .parallel(maxDescriptors):
-                return try await self.removeConcurrently(at: path, maxDescriptors)
+                return try await self.removeConcurrently(at: path.underlying, maxDescriptors)
             }
 
         case let .failure(errno):
-            throw FileSystemError.remove(errno: errno, path: path, location: .here())
+            throw FileSystemError.remove(errno: errno, path: path.underlying, location: .here())
         }
     }
 
@@ -443,7 +444,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at path: FilePath
     ) async throws -> Int {
         var (subdirectories, filesRemoved) = try await self.withDirectoryHandle(
-            atPath: path
+            atPath: NIOFilePath(path)
         ) { directory in
             var subdirectories = [FilePath]()
             var filesRemoved = 0
@@ -452,10 +453,10 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                 for entry in batch {
                     switch entry.type {
                     case .directory:
-                        subdirectories.append(entry.path)
+                        subdirectories.append(entry.path.underlying)
 
                     default:
-                        filesRemoved += try await self.removeOneItem(at: entry.path)
+                        filesRemoved += try await self.removeOneItem(at: entry.path.underlying)
                     }
                 }
             }
@@ -505,9 +506,9 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// - Parameters:
     ///   - sourcePath: The path to the item to move.
     ///   - destinationPath: The path at which to place the item.
-    public func moveItem(at sourcePath: FilePath, to destinationPath: FilePath) async throws {
+    public func moveItem(at sourcePath: NIOFilePath, to destinationPath: NIOFilePath) async throws {
         let result = try await self.threadPool.runIfActive {
-            try self._moveItem(at: sourcePath, to: destinationPath).get()
+            try self._moveItem(at: sourcePath.underlying, to: destinationPath.underlying).get()
         }
 
         switch result {
@@ -540,8 +541,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///   - destinationPath: The path of the file or directory to replace.
     ///   - existingPath: The path of the existing file or directory.
     public func replaceItem(
-        at destinationPath: FilePath,
-        withItemAt existingPath: FilePath
+        at destinationPath: NIOFilePath,
+        withItemAt existingPath: NIOFilePath
     ) async throws {
         do {
             try await self.removeItem(at: destinationPath, strategy: .platformDefault)
@@ -576,11 +577,11 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///   - linkPath: The path at which to create the symbolic link.
     ///   - destinationPath: The path that contains the item that the symbolic link points to.`
     public func createSymbolicLink(
-        at linkPath: FilePath,
-        withDestination destinationPath: FilePath
+        at linkPath: NIOFilePath,
+        withDestination destinationPath: NIOFilePath
     ) async throws {
         try await self.threadPool.runIfActive {
-            try self._createSymbolicLink(at: linkPath, withDestination: destinationPath).get()
+            try self._createSymbolicLink(at: linkPath.underlying, withDestination: destinationPath.underlying).get()
         }
     }
 
@@ -608,10 +609,10 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// - Parameter path: The path of a file or directory.
     /// - Returns: The path of the file or directory to which the symbolic link points to.
     public func destinationOfSymbolicLink(
-        at path: FilePath
-    ) async throws -> FilePath {
+        at path: NIOFilePath
+    ) async throws -> NIOFilePath {
         try await self.threadPool.runIfActive {
-            try self._destinationOfSymbolicLink(at: path).get()
+            NIOFilePath(try self._destinationOfSymbolicLink(at: path.underlying).get())
         }
     }
 
@@ -622,13 +623,14 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// Uses the `getcwd(2)` system call.
     ///
     /// - Returns: The path to the current working directory.
-    public var currentWorkingDirectory: FilePath {
+    public var currentWorkingDirectory: NIOFilePath {
         get async throws {
-            try await self.threadPool.runIfActive {
+            let result = try await self.threadPool.runIfActive {
                 try Libc.getcwd().mapError { errno in
                     FileSystemError.getcwd(errno: errno, location: .here())
                 }.get()
             }
+            return .init(result)
         }
     }
 
@@ -645,10 +647,10 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// - On other platforms this returns "/tmp".
     ///
     /// - Returns: The path to a temporary directory.
-    public var temporaryDirectory: FilePath {
+    public var temporaryDirectory: NIOFilePath {
         get async throws {
             if let tmpdir = getenv("TMPDIR") {
-                return FilePath(String(cString: tmpdir))
+                return NIOFilePath(String(cString: tmpdir))
             }
 
             #if canImport(Darwin)
@@ -656,35 +658,21 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                 let result = Libc.constr(_CS_DARWIN_USER_TEMP_DIR)
                 switch result {
                 case .success(let path):
-                    return FilePath(path)
+                    return NIOFilePath(path)
                 case .failure(_):
-                    return FilePath("/tmp")
+                    return NIOFilePath("/tmp")
                 }
             }
             #elseif os(Android)
-            return FilePath("/data/local/tmp")
+            return NIOFilePath("/data/local/tmp")
             #else
-            return FilePath("/tmp")
+            return NIOFilePath("/tmp")
             #endif
         }
     }
 }
 
 // MARK: - Creating FileSystems
-
-extension NIOSingletons {
-    /// A suggestion of how many threads the global singleton ``FileSystem`` uses for blocking I/O.
-    ///
-    /// The thread count is the system's available core count unless the environment variable
-    /// `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` is set or this value was set manually by the user.
-    ///
-    /// - Note: This value must be set _before_ any singletons are used and must only be set once.
-    @available(*, deprecated, renamed: "blockingPoolThreadCountSuggestion")
-    public static var fileSystemThreadCountSuggestion: Int {
-        set { Self.blockingPoolThreadCountSuggestion = newValue }
-        get { Self.blockingPoolThreadCountSuggestion }
-    }
-}
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 private let globalFileSystem: FileSystem = {
@@ -918,11 +906,11 @@ extension FileSystem {
             _ destination: FilePath
         ) async -> Bool
     ) async throws -> [DirCopyItem] {
-        try await self.withDirectoryHandle(atPath: sourcePath) { dir in
+        try await self.withDirectoryHandle(atPath: NIOFilePath(sourcePath)) { dir in
             // Grab the directory info to copy permissions.
             let info = try await dir.info()
             try await self.createDirectory(
-                at: destinationPath,
+                at: NIOFilePath(destinationPath),
                 withIntermediateDirectories: false,
                 permissions: info.permissions
             )
@@ -933,7 +921,9 @@ extension FileSystem {
                 let attributes = try await dir.attributeNames()
 
                 if !attributes.isEmpty {
-                    try await self.withDirectoryHandle(atPath: destinationPath) { destinationDir in
+                    try await self.withDirectoryHandle(
+                        atPath: NIOFilePath(destinationPath)
+                    ) { destinationDir in
                         for attribute in attributes {
                             let value = try await dir.valueForAttribute(attribute)
                             try await destinationDir.updateValueForAttribute(
@@ -1029,7 +1019,7 @@ extension FileSystem {
                 case .regular:
                     do {
                         try await self.copyRegularFile(
-                            from: source.path,
+                            from: source.path.underlying,
                             to: destination
                         )
                     } catch {
@@ -1039,7 +1029,7 @@ extension FileSystem {
                 case .symlink:
                     do {
                         try await self.copySymbolicLink(
-                            from: source.path,
+                            from: source.path.underlying,
                             to: destination
                         )
                     } catch {
@@ -1048,7 +1038,7 @@ extension FileSystem {
 
                 case .directory:
                     try await self.copyDirectorySequential(
-                        from: source.path,
+                        from: source.path.underlying,
                         to: destination,
                         shouldProceedAfterError: shouldProceedAfterError,
                         shouldCopyItem: shouldCopyItem
@@ -1133,7 +1123,7 @@ extension FileSystem {
         case .regular:
             do {
                 try await self.copyRegularFile(
-                    from: from.path,
+                    from: from.path.underlying,
                     to: to
                 )
             } catch {
@@ -1143,7 +1133,7 @@ extension FileSystem {
         case .symlink:
             do {
                 try await self.copySymbolicLink(
-                    from: from.path,
+                    from: from.path.underlying,
                     to: to
                 )
             } catch {
@@ -1152,7 +1142,7 @@ extension FileSystem {
 
         case .directory:
             let addToQueue = try await self.prepareDirectoryForRecusiveCopy(
-                from: from.path,
+                from: from.path.underlying,
                 to: to,
                 shouldProceedAfterError: shouldProceedAfterError,
                 shouldCopyItem: shouldCopyItem

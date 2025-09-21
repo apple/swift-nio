@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2024 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,4 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_exported import _NIOFileSystem
+#if compiler(>=6.2)
+public typealias _NIOCoreSendableMetatype = SendableMetatype
+#else
+public typealias _NIOCoreSendableMetatype = Any
+#endif

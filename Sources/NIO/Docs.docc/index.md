@@ -142,6 +142,13 @@ Applications that need extremely high performance from their networking stack ma
 
 The core SwiftNIO repository will contain a few extremely important protocol implementations, such as HTTP, directly in tree. However, we believe that most protocol implementations should be decoupled from the release cycle of the underlying networking stack, as the release cadence is likely to be very different (either much faster or much slower). For this reason, we actively encourage the community to develop and maintain their protocol implementations out-of-tree. Indeed, some first-party SwiftNIO protocol implementations, including our TLS and HTTP/2 bindings, are developed out-of-tree!
 
+## Topics
+
+### Allocation Tests
+
+- <doc:Running-Alloction-Counting-Tests>
+- <doc:Debugging-Allocation-Regressions>
+
 
 <!-- links -->
 
@@ -161,7 +168,7 @@ The core SwiftNIO repository will contain a few extremely important protocol imp
 [module-tls]: ./NIOTLS
 [module-websocket]: ./NIOWebSocket
 [module-test-utilities]: ./NIOTestUtils
-[module-filesystem]: ./_NIOFileSystem
+[module-filesystem]: ./NIOFileSystem
 
 [ch]: ./NIOCore/ChannelHandler
 [c]: ./NIOCore/Channel

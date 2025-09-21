@@ -110,7 +110,7 @@ private class BetterHTTPParser {
                 versionMinor: Int(opaque!.pointee.http_minor),
                 statusCode: Int(opaque!.pointee.status_code),
                 isUpgrade: opaque!.pointee.upgrade != 0,
-                method: llhttp_method(rawValue: CUnsignedInt(opaque!.pointee.method)),
+                method: llhttp_method(rawValue: numericCast(opaque!.pointee.method)),
                 keepAliveState: opaque!.keepAliveState
             ) {
             case .normal:

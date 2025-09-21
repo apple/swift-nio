@@ -15,8 +15,16 @@
 import CNIOLinux
 import NIOCore
 
+#if canImport(WinSDK)
+import WinSDK
+#endif
+
 /// The container used for writing multiple buffers via `writev`.
+#if canImport(WinSDK)
+typealias IOVector = WSABUF
+#else
 typealias IOVector = iovec
+#endif
 
 // TODO: scattering support
 class Socket: BaseSocket, SocketProtocol {
@@ -167,7 +175,7 @@ class Socket: BaseSocket, SocketProtocol {
     /// - Throws: An `IOError` if the operation failed.
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         try withUnsafeHandle {
-            try Posix.writev(descriptor: $0, iovecs: iovecs)
+            try NIOBSDSocket.writev(socket: $0, iovecs: iovecs)
         }
     }
 
@@ -195,37 +203,15 @@ class Socket: BaseSocket, SocketProtocol {
         )
         let notConstCorrectDestinationPtr = UnsafeMutableRawPointer(mutating: destinationPtr)
 
-        return try withUnsafeHandle { handle in
+        return try self.withUnsafeHandle { handle in
             try withUnsafeMutablePointer(to: &vec) { vecPtr in
-                #if os(Windows)
-                var messageHeader =
-                    WSAMSG(
-                        name:
-                            notConstCorrectDestinationPtr
-                            .assumingMemoryBound(to: sockaddr.self),
-                        namelen: destinationSize,
-                        lpBuffers: vecPtr,
-                        dwBufferCount: 1,
-                        Control: WSABUF(
-                            len: ULONG(controlBytes.count),
-                            buf: controlBytes.baseAddress?
-                                .bindMemory(
-                                    to: CHAR.self,
-                                    capacity: controlBytes.count
-                                )
-                        ),
-                        dwFlags: 0
-                    )
-                #else
                 var messageHeader = msghdr()
                 messageHeader.msg_name = notConstCorrectDestinationPtr
                 messageHeader.msg_namelen = destinationSize
                 messageHeader.msg_iov = vecPtr
                 messageHeader.msg_iovlen = 1
-                messageHeader.msg_control = controlBytes.baseAddress
-                messageHeader.msg_controllen = .init(controlBytes.count)
+                messageHeader.control_ptr = controlBytes
                 messageHeader.msg_flags = 0
-                #endif
                 return try NIOBSDSocket.sendmsg(socket: handle, msgHdr: &messageHeader, flags: 0)
             }
         }
@@ -238,8 +224,12 @@ class Socket: BaseSocket, SocketProtocol {
     /// - Returns: The `IOResult` which indicates how much data could be read and if the operation returned before all could be read (because the socket is in non-blocking mode).
     /// - Throws: An `IOError` if the operation failed.
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
-        try withUnsafeHandle {
-            try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
+        try withUnsafeHandle { (handle) -> IOResult<Int> in
+            #if os(Windows)
+            try Windows.recv(socket: handle, pointer: pointer.baseAddress!, size: Int32(pointer.count), flags: 0)
+            #else
+            try Posix.read(descriptor: handle, pointer: pointer.baseAddress!, size: pointer.count)
+            #endif
         }
     }
 
@@ -263,41 +253,17 @@ class Socket: BaseSocket, SocketProtocol {
 
         return try withUnsafeMutablePointer(to: &vec) { vecPtr in
             try storage.withMutableSockAddr { (sockaddrPtr, _) in
-                #if os(Windows)
-                var messageHeader =
-                    WSAMSG(
-                        name: sockaddrPtr,
-                        namelen: storageLen,
-                        lpBuffers: vecPtr,
-                        dwBufferCount: 1,
-                        Control: WSABUF(
-                            len: ULONG(controlBytes.controlBytesBuffer.count),
-                            buf: controlBytes.controlBytesBuffer.baseAddress?
-                                .bindMemory(
-                                    to: CHAR.self,
-                                    capacity: controlBytes.controlBytesBuffer.count
-                                )
-                        ),
-                        dwFlags: 0
-                    )
-                defer {
-                    // We need to write back the length of the message.
-                    storageLen = messageHeader.namelen
-                }
-                #else
                 var messageHeader = msghdr()
                 messageHeader.msg_name = .init(sockaddrPtr)
                 messageHeader.msg_namelen = storageLen
                 messageHeader.msg_iov = vecPtr
                 messageHeader.msg_iovlen = 1
-                messageHeader.msg_control = controlBytes.controlBytesBuffer.baseAddress
-                messageHeader.msg_controllen = .init(controlBytes.controlBytesBuffer.count)
+                messageHeader.control_ptr = controlBytes.controlBytesBuffer
                 messageHeader.msg_flags = 0
                 defer {
                     // We need to write back the length of the message.
                     storageLen = messageHeader.msg_namelen
                 }
-                #endif
 
                 let result = try withUnsafeMutablePointer(to: &messageHeader) { messageHeader in
                     try withUnsafeHandle { fd in

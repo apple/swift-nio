@@ -37,8 +37,12 @@ extension NIOSingletons {
     ///
     /// - warning: You may only call this method from the main thread.
     /// - warning: You may only call this method once.
+    /// - warning: This method is currently not supported on Windows and will return false.
     @discardableResult
     public static func unsafeTryInstallSingletonPosixEventLoopGroupAsConcurrencyGlobalExecutor() -> Bool {
+        #if os(Windows)
+        return false
+        #else
         // Guard between the minimum and maximum supported version for the hook
         #if compiler(>=5.9) && compiler(<6.3)
         guard #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) else {
@@ -122,6 +126,7 @@ extension NIOSingletons {
         #else
         return false
         #endif
+        #endif  // windows unimplemented
     }
 }
 

@@ -140,8 +140,7 @@ enum ThreadOpsPosix: ThreadOps {
 
     static func run(
         handle: inout ThreadOpsSystem.ThreadHandle?,
-        args: Box<NIOThread.ThreadBoxValue>,
-        detachThread: Bool
+        args: Box<NIOThread.ThreadBoxValue>
     ) {
         let argv0 = Unmanaged.passRetained(args).toOpaque()
         let res = handle.withHandlePointer { handlePtr in
@@ -182,11 +181,6 @@ enum ThreadOpsPosix: ThreadOps {
             )
         }
         precondition(res == 0, "Unable to create thread: \(res)")
-
-        if detachThread {
-            let detachError = pthread_detach(handle!.handle)
-            precondition(detachError == 0, "pthread_detach failed with error \(detachError)")
-        }
     }
 
     static func isCurrentThread(_ thread: ThreadOpsSystem.ThreadHandle) -> Bool {

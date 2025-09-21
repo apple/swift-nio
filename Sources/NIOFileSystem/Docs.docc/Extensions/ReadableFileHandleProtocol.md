@@ -1,4 +1,4 @@
-# ``_NIOFileSystem/ReadableFileHandleProtocol``
+# ``NIOFileSystem/ReadableFileHandleProtocol``
 
 ## Topics
 
@@ -6,12 +6,12 @@
 
 - ``bufferedReader(startingAtAbsoluteOffset:capacity:)``
 - ``readChunks(chunkLength:)``
-- ``readChunks(in:chunkLength:)-2j7r7``
-- ``readChunks(in:chunkLength:)-63rn``
-- ``readChunks(in:chunkLength:)-3fxd``
-- ``readChunks(in:chunkLength:)-9oae1``
-- ``readChunks(in:chunkLength:)-7rjf6``
-- ``readChunks(in:chunkLength:)-7a8x2``
+- ``readChunks(in:chunkLength:)``
+- ``readChunks(in:chunkLength:)``
+- ``readChunks(in:chunkLength:)``
+- ``readChunks(in:chunkLength:)``
+- ``readChunks(in:chunkLength:)``
+- ``readChunks(in:chunkLength:)``
 - ``readToEnd(fromAbsoluteOffset:maximumSizeAllowed:)``
 
 ### Read part of a file

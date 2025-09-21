@@ -508,6 +508,34 @@ public struct ByteBuffer {
         targetPtr.copyMemory(from: bytes)
     }
 
+    #if compiler(>=6.2)
+    @inlinable
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    mutating func _setBytes(_ bytes: RawSpan, at index: _Index) -> _Capacity {
+        let bytesCount = bytes.byteCount
+        let newEndIndex: _Index = index + _toIndex(bytesCount)
+        if !isKnownUniquelyReferenced(&self._storage) {
+            let extraCapacity = newEndIndex > self._slice.upperBound ? newEndIndex - self._slice.upperBound : 0
+            self._copyStorageAndRebase(extraCapacity: extraCapacity)
+        }
+        self._ensureAvailableCapacity(_Capacity(bytesCount), at: index)
+        self._setBytesAssumingUniqueBufferAccess(bytes, at: index)
+        return _toCapacity(bytesCount)
+    }
+
+    @inlinable
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    mutating func _setBytesAssumingUniqueBufferAccess(_ bytes: RawSpan, at index: _Index) {
+        let targetPtr = UnsafeMutableRawBufferPointer(
+            rebasing: self._slicedStorageBuffer.dropFirst(Int(index))
+        )
+
+        bytes.withUnsafeBytes {
+            targetPtr.copyMemory(from: $0)
+        }
+    }
+    #endif
+
     @inline(never)
     @inlinable
     @_specialize(where Bytes == CircularBuffer<UInt8>)
@@ -1035,6 +1063,16 @@ extension ByteBuffer {
         Int(self._setBytes(bytes, at: _toIndex(index)))
     }
 
+    #if compiler(>=6.2)
+    /// Copy `bytes` from a `RawSpan` into the `ByteBuffer` at `index`. Does not move the writer index.
+    @discardableResult
+    @inlinable
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    public mutating func setBytes(_ bytes: RawSpan, at index: Int) -> Int {
+        Int(self._setBytes(bytes, at: _toIndex(index)))
+    }
+    #endif
+
     /// Move the reader index forward by `offset` bytes.
     ///
     /// - warning: By contract the bytes between (including) `readerIndex` and (excluding) `writerIndex` must be
@@ -1248,3 +1286,6 @@ extension ByteBuffer {
         return Range<Int>(uncheckedBounds: (lower: indexFromReaderIndex, upper: upperBound))
     }
 }
+
+@available(*, unavailable)
+extension ByteBuffer._Storage: Sendable {}

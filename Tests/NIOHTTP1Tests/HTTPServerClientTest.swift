@@ -390,7 +390,7 @@ class HTTPServerClientTest: XCTestCase {
 
                 // Set the handlers that are appled to the accepted Channels
                 .childChannelInitializer { channel in
-                    // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
+                    // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
                     channel.eventLoop.makeCompletedFuture {
                         let sync = channel.pipeline.syncOperations
                         try sync.configureHTTPServerPipeline(withPipeliningAssistance: false)
@@ -462,7 +462,7 @@ class HTTPServerClientTest: XCTestCase {
 
                 // Set the handlers that are appled to the accepted Channels
                 .childChannelInitializer { channel in
-                    // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
+                    // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
                     channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                         channel.eventLoop.makeCompletedFuture {
                             let httpHandler = SimpleHTTPServer(mode)
@@ -534,7 +534,7 @@ class HTTPServerClientTest: XCTestCase {
 
                 // Set the handlers that are appled to the accepted Channels
                 .childChannelInitializer { channel in
-                    // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
+                    // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
                     channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
                         channel.eventLoop.makeCompletedFuture {
                             let httpHandler = SimpleHTTPServer(.byteBuffer)
@@ -677,7 +677,7 @@ class HTTPServerClientTest: XCTestCase {
 
                 // Set the handlers that are appled to the accepted Channels
                 .childChannelInitializer { channel in
-                    // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
+                    // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
                     channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
                         channel.eventLoop.makeCompletedFuture {
                             let httpHandler = SimpleHTTPServer(mode)

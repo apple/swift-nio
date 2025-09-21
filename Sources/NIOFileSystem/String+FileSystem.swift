@@ -25,7 +25,7 @@ extension String {
     ///
     /// - Throws: If the file is larger than `maximumSizeAllowed`, an ``FileSystemError/Code-swift.struct/resourceExhausted`` error will be thrown.
     public init(
-        contentsOf path: FilePath,
+        contentsOf path: NIOFilePath,
         maximumSizeAllowed: ByteCount,
         fileSystem: some FileSystemProtocol
     ) async throws {
@@ -44,7 +44,7 @@ extension String {
     ///
     /// - Throws: If the file is larger than `maximumSizeAllowed`, an ``FileSystemError/Code-swift.struct/resourceExhausted`` error will be thrown.
     public init(
-        contentsOf path: FilePath,
+        contentsOf path: NIOFilePath,
         maximumSizeAllowed: ByteCount
     ) async throws {
         self = try await Self(

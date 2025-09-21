@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+@_spi(Testing) import NIOFileSystem
 import SystemPackage
 import XCTest
-@_spi(Testing) import _NIOFileSystem
 
 #if ENABLE_MOCKING
 final class SyscallTests: XCTestCase {

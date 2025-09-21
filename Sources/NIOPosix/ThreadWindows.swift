@@ -33,8 +33,7 @@ enum ThreadOpsWindows: ThreadOps {
 
     static func run(
         handle: inout ThreadOpsSystem.ThreadHandle?,
-        args: Box<NIOThread.ThreadBoxValue>,
-        detachThread: Bool
+        args: Box<NIOThread.ThreadBoxValue>
     ) {
         let argv0 = Unmanaged.passRetained(args).toOpaque()
 
@@ -56,10 +55,6 @@ enum ThreadOpsWindows: ThreadOps {
         }
         let hThread: HANDLE =
             HANDLE(bitPattern: _beginthreadex(nil, 0, routine, argv0, 0, nil))!
-
-        if detachThread {
-            CloseHandle(hThread)
-        }
     }
 
     static func isCurrentThread(_ thread: ThreadOpsSystem.ThreadHandle) -> Bool {

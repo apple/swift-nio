@@ -458,8 +458,10 @@ extension ChannelError: CustomStringConvertible {
             "Bad interface address family"
         case let .illegalMulticastAddress(address):
             "Illegal multicast address \(address)"
+        #if !os(WASI)
         case let .multicastNotSupported(interface):
             "Multicast not supported on interface \(interface)"
+        #endif
         case .inappropriateOperationForState:
             "Inappropriate operation for state"
         case .unremovableHandler:
@@ -471,7 +473,7 @@ extension ChannelError: CustomStringConvertible {
 /// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
 public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}
 
-public enum DatagramChannelError {
+public enum DatagramChannelError: Sendable {
     public struct WriteOnUnconnectedSocketWithoutAddress: Error {
         public init() {}
     }

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -14,18 +14,20 @@
 
 import NIOConcurrencyHelpers
 import NIOCore
+@_spi(Testing) @testable import NIOFileSystem
 import SystemPackage
 import XCTest
-@_spi(Testing) @testable import _NIOFileSystem
 
-extension FilePath {
-    static let testData = FilePath(#filePath)
-        .removingLastComponent()  // FileHandleTests.swift
-        .appending("Test Data")
-        .lexicallyNormalized()
+extension NIOFilePath {
+    static let testData = NIOFilePath(
+        FilePath(#filePath)
+            .removingLastComponent()  // FileHandleTests.swift
+            .appending("Test Data")
+            .lexicallyNormalized()
+    )
 
-    static let testDataReadme = Self.testData.appending("README.md")
-    static let testDataReadmeSymlink = Self.testData.appending("README.md.symlink")
+    static let testDataReadme = NIOFilePath(Self.testData.underlying.appending("README.md"))
+    static let testDataReadmeSymlink = NIOFilePath(Self.testData.underlying.appending("README.md.symlink"))
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -33,9 +35,9 @@ extension FileSystem {
     func temporaryFilePath(
         _ function: String = #function,
         inTemporaryDirectory: Bool = true
-    ) async throws -> FilePath {
+    ) async throws -> NIOFilePath {
         if inTemporaryDirectory {
-            let directory = try await self.temporaryDirectory
+            let directory = (try await self.temporaryDirectory).underlying
             return self.temporaryFilePath(function, inDirectory: directory)
         } else {
             return self.temporaryFilePath(function, inDirectory: nil)
@@ -45,16 +47,16 @@ extension FileSystem {
     func temporaryFilePath(
         _ function: String = #function,
         inDirectory directory: FilePath?
-    ) -> FilePath {
+    ) -> NIOFilePath {
         let index = function.firstIndex(of: "(")!
         let functionName = function.prefix(upTo: index)
         let random = UInt32.random(in: .min ... .max)
         let fileName = "\(functionName)-\(random)"
 
         if let directory = directory {
-            return directory.appending(fileName)
+            return NIOFilePath(directory.appending(fileName))
         } else {
-            return FilePath(fileName)
+            return NIOFilePath(fileName)
         }
     }
 }
@@ -100,7 +102,7 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testOpenFileWhereIntermediateIsNotADirectory() async throws {
-        let path = FilePath(#filePath).appending("foobar")
+        let path = NIOFilePath(FilePath(#filePath).appending("foobar"))
 
         // For reading:
         await XCTAssertThrowsFileSystemErrorAsync {
@@ -186,7 +188,7 @@ final class FileSystemTests: XCTestCase {
     func testOpenNonExistentFileForWritingWithMaterialization() async throws {
         for isAbsolute in [true, false] {
             let path = try await self.fs.temporaryFilePath(inTemporaryDirectory: isAbsolute)
-            XCTAssertEqual(path.isAbsolute, isAbsolute)
+            XCTAssertEqual(path.underlying.isAbsolute, isAbsolute)
 
             await XCTAssertThrowsErrorAsync {
                 try await self.fs.withFileHandle(
@@ -217,10 +219,10 @@ final class FileSystemTests: XCTestCase {
     func testOpenExistingFileForWritingWithMaterialization() async throws {
         for isAbsolute in [true, false] {
             let path = try await self.fs.temporaryFilePath(inTemporaryDirectory: isAbsolute)
-            XCTAssertEqual(path.isAbsolute, isAbsolute)
+            XCTAssertEqual(path.underlying.isAbsolute, isAbsolute)
 
             // Avoid dirtying the current working directory.
-            if path.isRelative {
+            if path.underlying.isRelative {
                 self.addTeardownBlock { [fileSystem = self.fs] in
                     try await fileSystem.removeItem(at: path, strategy: .platformDefault)
                 }
@@ -346,10 +348,10 @@ final class FileSystemTests: XCTestCase {
             let directoryPath = try await self.fs.temporaryFilePath(
                 inTemporaryDirectory: isDirectoryAbsolute
             )
-            XCTAssertEqual(directoryPath.isAbsolute, isDirectoryAbsolute)
+            XCTAssertEqual(directoryPath.underlying.isAbsolute, isDirectoryAbsolute)
 
             // Avoid dirtying the current working directory.
-            if directoryPath.isRelative {
+            if directoryPath.underlying.isRelative {
                 self.addTeardownBlock { [fileSystem = self.fs] in
                     try await fileSystem.removeItem(at: directoryPath, strategy: .platformDefault)
                 }
@@ -362,7 +364,7 @@ final class FileSystemTests: XCTestCase {
                     inTemporaryDirectory: isFileAbsolute
                 )
 
-                XCTAssertEqual(filePath.isAbsolute, isFileAbsolute)
+                XCTAssertEqual(filePath.underlying.isAbsolute, isFileAbsolute)
 
                 // Create the file and throw.
                 await XCTAssertThrowsErrorAsync {
@@ -395,9 +397,9 @@ final class FileSystemTests: XCTestCase {
                 inTemporaryDirectory: isDirectoryAbsolute
             )
 
-            XCTAssertEqual(directoryPath.isAbsolute, isDirectoryAbsolute)
+            XCTAssertEqual(directoryPath.underlying.isAbsolute, isDirectoryAbsolute)
 
-            if directoryPath.isRelative {
+            if directoryPath.underlying.isRelative {
                 self.addTeardownBlock { [fileSystem = self.fs] in
                     try await fileSystem.removeItem(at: directoryPath, strategy: .platformDefault, recursively: true)
                 }
@@ -410,7 +412,7 @@ final class FileSystemTests: XCTestCase {
                     inTemporaryDirectory: isFileAbsolute
                 )
 
-                XCTAssertEqual(filePath.isAbsolute, isFileAbsolute)
+                XCTAssertEqual(filePath.underlying.isAbsolute, isFileAbsolute)
 
                 // Create the file and write some bytes.
                 try await directory.withFileHandle(
@@ -460,18 +462,18 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCreateDirectoryWithIntermediatePaths() async throws {
-        var path = try await self.fs.temporaryFilePath()
+        var path = try await self.fs.temporaryFilePath().underlying
         for i in 0..<100 {
             path.append("\(i)")
         }
 
         try await self.fs.createDirectory(
-            at: path,
+            at: NIOFilePath(path),
             withIntermediateDirectories: true,
             permissions: nil
         )
 
-        try await self.fs.withDirectoryHandle(atPath: path) { dir in
+        try await self.fs.withDirectoryHandle(atPath: NIOFilePath(path)) { dir in
             let info = try await dir.info()
             XCTAssertEqual(info.type, .directory)
             XCTAssertGreaterThan(info.size, 0)
@@ -493,8 +495,8 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCreateDirectoryAtPathWhereParentDoesNotExist() async throws {
-        let parent = try await self.fs.temporaryFilePath()
-        let path = parent.appending("path")
+        let parent = try await self.fs.temporaryFilePath().underlying
+        let path = NIOFilePath(parent.appending("path"))
 
         await XCTAssertThrowsFileSystemErrorAsync {
             try await self.fs.createDirectory(at: path, withIntermediateDirectories: false)
@@ -505,14 +507,14 @@ final class FileSystemTests: XCTestCase {
 
     func testCurrentWorkingDirectory() async throws {
         let directory = try await self.fs.currentWorkingDirectory
-        XCTAssert(!directory.isEmpty)
-        XCTAssert(directory.isAbsolute)
+        XCTAssert(!directory.underlying.isEmpty)
+        XCTAssert(directory.underlying.isAbsolute)
     }
 
     func testTemporaryDirectory() async throws {
         let directory = try await self.fs.temporaryDirectory
-        XCTAssert(!directory.isEmpty)
-        XCTAssert(directory.isAbsolute)
+        XCTAssert(!directory.underlying.isEmpty)
+        XCTAssert(directory.underlying.isAbsolute)
     }
 
     func testInfo() async throws {
@@ -541,7 +543,7 @@ final class FileSystemTests: XCTestCase {
 
     func testCreateSymbolicLink() async throws {
         let path = try await self.fs.temporaryFilePath()
-        let destination = FilePath.testDataReadme
+        let destination = NIOFilePath.testDataReadme
 
         try await self.fs.createSymbolicLink(at: path, withDestination: destination)
         let info = try await self.fs.info(forFileAt: destination, infoAboutSymbolicLink: true)
@@ -763,7 +765,7 @@ final class FileSystemTests: XCTestCase {
             throw error
         } shouldCopyItem: { source, destination in
             // Copy the directory and 'file-1-regular'
-            (source.path == path) || (source.path.lastComponent!.string == "file-0-regular")
+            (source.path == path) || (source.path.underlying.lastComponent!.string == "file-0-regular")
         }
 
         let paths = try await self.fs.withDirectoryHandle(atPath: copyPath) { dir in
@@ -815,14 +817,14 @@ final class FileSystemTests: XCTestCase {
             // inside that phase so don't try.
             if maxDescriptors >= 4 {
                 try await testCopyCancelledPartWayThrough(copyStrategy, "early_complete", path) {
-                    $0.path.lastComponent!.string == "dir-0"
+                    $0.name == "dir-0"
                 }
             }
 
             // This covers completing after we reach the steady state phase.
             let triggerAt = "dir-\(maxDescriptors / 2 + 1)"
             try await testCopyCancelledPartWayThrough(copyStrategy, "late_complete", path) {
-                $0.path.lastComponent!.string == triggerAt
+                $0.name == triggerAt
             }
         case .sequential:
             // nothing much to whitebox test here
@@ -846,14 +848,14 @@ final class FileSystemTests: XCTestCase {
             "randomly generated",
             randomPath
         ) { source in
-            source.path != randomPath && source.path.removingLastComponent() != randomPath
+            source.path != randomPath && NIOFilePath(source.path.underlying.removingLastComponent()) != randomPath
         }
     }
 
     private func testCopyCancelledPartWayThrough(
         _ copyStrategy: CopyStrategy,
         _ description: String,
-        _ path: FilePath,
+        _ path: NIOFilePath,
         triggerCancel: @escaping @Sendable (DirectoryEntry) -> Bool,
         line: UInt = #line
     ) async throws {
@@ -1118,7 +1120,7 @@ final class FileSystemTests: XCTestCase {
 
         try await self.fs.createDirectory(at: source, withIntermediateDirectories: true)
         try await self.fs.withFileHandle(
-            forWritingAt: source.appending("foo"),
+            forWritingAt: NIOFilePath(source.underlying.appending("foo")),
             options: .newFile(replaceExisting: false)
         ) { _ in }
 
@@ -1172,22 +1174,22 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testReplaceFile(_ existingType: FileType?, with replacementType: FileType) async throws {
-        func makeRegularFile(at path: FilePath) async throws {
+        func makeRegularFile(at path: NIOFilePath) async throws {
             try await self.fs.withFileHandle(
                 forWritingAt: path,
                 options: .newFile(replaceExisting: false)
             ) { _ in }
         }
 
-        func makeSymbolicLink(at path: FilePath) async throws {
+        func makeSymbolicLink(at path: NIOFilePath) async throws {
             try await self.fs.createSymbolicLink(at: path, withDestination: "/whatever")
         }
 
-        func makeDirectory(at path: FilePath) async throws {
+        func makeDirectory(at path: NIOFilePath) async throws {
             try await self.fs.createDirectory(at: path, withIntermediateDirectories: true)
         }
 
-        func makeFile(ofType type: FileType, at path: FilePath) async throws {
+        func makeFile(ofType type: FileType, at path: NIOFilePath) async throws {
             switch type {
             case .regular:
                 try await makeRegularFile(at: path)
@@ -1296,13 +1298,13 @@ final class FileSystemTests: XCTestCase {
         try await self.fs.withDirectoryHandle(atPath: path) { handle in
             for i in 0..<1024 {
                 try await self.fs.withFileHandle(
-                    forWritingAt: path.appending("\(i)"),
+                    forWritingAt: NIOFilePath(path.underlying.appending("\(i)")),
                     options: .newFile(replaceExisting: false)
                 ) { _ in }
             }
 
             let names = try await handle.listContents().reduce(into: []) {
-                $0.append($1.name.string)
+                $0.append($1.name)
             }
 
             let expected = (0..<1024).map {
@@ -1318,7 +1320,7 @@ final class FileSystemTests: XCTestCase {
 
         let createdPath = try await fs.withTemporaryDirectory { directory, path in
             let root = try await fs.temporaryDirectory
-            XCTAssert(path.starts(with: root))
+            XCTAssert(path.underlying.starts(with: root.underlying))
             return path
         }
 
@@ -1332,7 +1334,7 @@ final class FileSystemTests: XCTestCase {
         let prefix = try await fs.currentWorkingDirectory
 
         let createdPath = try await fs.withTemporaryDirectory(prefix: prefix) { directory, path in
-            XCTAssert(path.starts(with: prefix))
+            XCTAssert(path.underlying.starts(with: prefix.underlying))
             return path
         }
 
@@ -1345,13 +1347,13 @@ final class FileSystemTests: XCTestCase {
         let fs = FileSystem.shared
         let createdPath = try await fs.withTemporaryDirectory { directory, path in
             for name in ["foo", "bar", "baz"] {
-                try await directory.withFileHandle(forWritingAt: FilePath(name)) { fh in
+                try await directory.withFileHandle(forWritingAt: NIOFilePath(name)) { fh in
                     _ = try await fh.write(contentsOf: [1, 2, 3], toAbsoluteOffset: 0)
                 }
             }
 
             let entries = try await directory.listContents().reduce(into: []) { $0.append($1) }
-            let names = entries.map { $0.name.string }
+            let names = entries.map { $0.name }
             XCTAssertEqual(names.sorted(), ["bar", "baz", "foo"])
 
             return path
@@ -1365,13 +1367,13 @@ final class FileSystemTests: XCTestCase {
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension FileSystemTests {
-    private func checkDirectoriesMatch(_ root1: FilePath, _ root2: FilePath) async throws {
-        func namesAndTypes(_ root: FilePath) async throws -> [(FilePath.Component, FileType)] {
+    private func checkDirectoriesMatch(_ root1: NIOFilePath, _ root2: NIOFilePath) async throws {
+        func namesAndTypes(_ root: NIOFilePath) async throws -> [(String, FileType)] {
             try await self.fs.withDirectoryHandle(atPath: root) { dir in
                 try await dir.listContents()
                     .reduce(into: []) { $0.append($1) }
                     .map { ($0.name, $0.type) }
-                    .sorted(by: { lhs, rhs in lhs.0.string < rhs.0.string })
+                    .sorted(by: { lhs, rhs in lhs.0 < rhs.0 })
             }
         }
 
@@ -1383,21 +1385,30 @@ extension FileSystemTests {
 
         // Now look at regular files: are they all the same?
         for (path, type) in root1Entries where type == .regular {
-            try await self.checkRegularFilesMatch(root1.appending(path), root2.appending(path))
+            try await self.checkRegularFilesMatch(
+                NIOFilePath(root1.underlying.appending(path)),
+                NIOFilePath(root2.underlying.appending(path))
+            )
         }
 
         // Are symbolic links all the same?
         for (path, type) in root1Entries where type == .symlink {
-            try await self.checkSymbolicLinksMatch(root1.appending(path), root2.appending(path))
+            try await self.checkSymbolicLinksMatch(
+                NIOFilePath(root1.underlying.appending(path)),
+                NIOFilePath(root2.underlying.appending(path))
+            )
         }
 
         // Finally, check directories.
         for (path, type) in root1Entries where type == .directory {
-            try await self.checkDirectoriesMatch(root1.appending(path), root2.appending(path))
+            try await self.checkDirectoriesMatch(
+                NIOFilePath(root1.underlying.appending(path)),
+                NIOFilePath(root2.underlying.appending(path))
+            )
         }
     }
 
-    private func checkRegularFilesMatch(_ path1: FilePath, _ path2: FilePath) async throws {
+    private func checkRegularFilesMatch(_ path1: NIOFilePath, _ path2: NIOFilePath) async throws {
         try await self.fs.withFileHandle(forReadingAt: path1) { file1 in
             try await self.fs.withFileHandle(forReadingAt: path2) { file2 in
                 let info1 = try await file1.info()
@@ -1432,7 +1443,7 @@ extension FileSystemTests {
         }
     }
 
-    private func checkSymbolicLinksMatch(_ path1: FilePath, _ path2: FilePath) async throws {
+    private func checkSymbolicLinksMatch(_ path1: NIOFilePath, _ path2: NIOFilePath) async throws {
         let destination1 = try await self.fs.destinationOfSymbolicLink(at: path1)
         let destination2 = try await self.fs.destinationOfSymbolicLink(at: path2)
         XCTAssertEqual(destination1, destination2)
@@ -1466,7 +1477,7 @@ extension FileSystemTests {
 
     /// This generates a directory structure to cover specific scenarios easily
     private func generateDeterministicDirectoryStructure(
-        root: FilePath,
+        root: NIOFilePath,
         structure: [TestFileStructure]
     ) async throws {
         // always make root
@@ -1480,14 +1491,14 @@ extension FileSystemTests {
             switch item {
             case let .dir(name, contents):
                 try await self.generateDeterministicDirectoryStructure(
-                    root: root.appending(name),
+                    root: NIOFilePath(root.underlying.appending(name)),
                     structure: contents
                 )
             case let .file(name):
-                try await self.makeTestFile(root.appending(name))
+                try await self.makeTestFile(NIOFilePath(root.underlying.appending(name)))
             case let .symbolicLink(name):
                 try await self.fs.createSymbolicLink(
-                    at: root.appending(name),
+                    at: NIOFilePath(root.underlying.appending(name)),
                     withDestination: "nonexistent-destination"
                 )
             }
@@ -1495,7 +1506,7 @@ extension FileSystemTests {
     }
 
     fileprivate func makeTestFile(
-        _ path: FilePath,
+        _ path: NIOFilePath,
         tryAddAttribute: String? = .none
     ) async throws {
         try await self.fs.withFileHandle(
@@ -1525,7 +1536,7 @@ extension FileSystemTests {
     }
 
     private func generateDirectoryStructure(
-        root: FilePath,
+        root: NIOFilePath,
         maxDepth: Int,
         maxFilesPerDirectory: Int,
         directoryProbability: Double = 0.3,
@@ -1559,18 +1570,18 @@ extension FileSystemTests {
 
             for i in 0..<itemsInThisDir {
                 if makeDirectory() {
-                    directoriesToMake.append(root.appending("file-\(i)-directory"))
+                    directoriesToMake.append(root.underlying.appending("file-\(i)-directory"))
                 } else if makeSymbolicLink() {
                     let path = "file-\(i)-symlink"
                     try await self.fs.createSymbolicLink(
-                        at: root.appending(path),
+                        at: NIOFilePath(root.underlying.appending(path)),
                         withDestination: "nonexistent-destination"
                     )
                     itemsCreated += 1
                 } else {
-                    let path = root.appending("file-\(i)-regular")
+                    let path = root.underlying.appending("file-\(i)-regular")
                     let attribute: String? = Bool.random() ? .some("attribute-{\(i)}") : .none
-                    try await makeTestFile(path, tryAddAttribute: attribute)
+                    try await makeTestFile(NIOFilePath(path), tryAddAttribute: attribute)
                     itemsCreated += 1
                 }
             }
@@ -1580,7 +1591,7 @@ extension FileSystemTests {
 
         for path in dirsToMake {
             itemsCreated += try await self.generateDirectoryStructure(
-                root: path,
+                root: NIOFilePath(path),
                 maxDepth: maxDepth - 1,
                 maxFilesPerDirectory: maxFilesPerDirectory,
                 directoryProbability: directoryProbability,
@@ -1599,12 +1610,12 @@ extension FileSystemTests {
         ]
 
         for templateString in validTemporaryDirectoryTemplates {
-            let template = FilePath(templateString)
+            let template = NIOFilePath(templateString)
 
             // A random ending consisting only of 'X's could be generated, making the template
             // equal to the generated file path, but the probability of this happening three
             // times in a row is very low.
-            var temporaryDirectoryPath: FilePath?
+            var temporaryDirectoryPath: NIOFilePath?
 
             attempt: for _ in 1...3 {
                 do {
@@ -1645,7 +1656,7 @@ extension FileSystemTests {
             "InvalidTemporaryDirectoryXX", "Invalidxxx", "InvalidXxX",
         ]
         for templateString in invalidTemporaryDirectoryTemplates {
-            let template = FilePath(templateString)
+            let template = NIOFilePath(templateString)
             await XCTAssertThrowsFileSystemErrorAsync {
                 try await self.fs.createTemporaryDirectory(template: template)
             } onError: { error in
@@ -1662,10 +1673,16 @@ extension FileSystemTests {
             template.append("\(i)")
         }
         template.append("pattern-XXXXXX")
-        let temporaryDirectoryPath = try await self.fs.createTemporaryDirectory(template: template)
+        let temporaryDirectoryPath = try await self.fs.createTemporaryDirectory(
+            template: NIOFilePath(template)
+        )
 
         self.addTeardownBlock { [fileSystem = self.fs] in
-            try await fileSystem.removeItem(at: templateRoot, strategy: .platformDefault, recursively: true)
+            try await fileSystem.removeItem(
+                at: NIOFilePath(templateRoot),
+                strategy: .platformDefault,
+                recursively: true
+            )
         }
 
         guard
@@ -1685,12 +1702,12 @@ extension FileSystemTests {
         if let envTmpDir = getenv("TMPDIR") {
             let envTmpDirString = String(cString: envTmpDir)
             let fsTempDirectory = try await fs.temporaryDirectory
-            XCTAssertEqual(fsTempDirectory, FilePath(envTmpDirString))
+            XCTAssertEqual(fsTempDirectory.underlying, FilePath(envTmpDirString))
         }
     }
 
     func testReadChunksRange() async throws {
-        try await self.fs.withFileHandle(forReadingAt: FilePath(#filePath)) { handle in
+        try await self.fs.withFileHandle(forReadingAt: NIOFilePath(#filePath)) { handle in
             let info = try await handle.info()
             let size = info.size
             let endIndex = size + 1
@@ -1716,7 +1733,7 @@ extension FileSystemTests {
     }
 
     func testReadChunksClosedRange() async throws {
-        try await self.fs.withFileHandle(forReadingAt: FilePath(#filePath)) { handle in
+        try await self.fs.withFileHandle(forReadingAt: NIOFilePath(#filePath)) { handle in
             let info = try await handle.info()
             let size = info.size
             let endIndex = size + 1
@@ -1743,7 +1760,7 @@ extension FileSystemTests {
     }
 
     func testReadChunksPartialRangeUpTo() async throws {
-        try await self.fs.withFileHandle(forReadingAt: FilePath(#filePath)) { handle in
+        try await self.fs.withFileHandle(forReadingAt: NIOFilePath(#filePath)) { handle in
             let info = try await handle.info()
             let size = info.size
             let endIndex = size + 1
@@ -1771,7 +1788,7 @@ extension FileSystemTests {
     }
 
     func testReadChunksPartialRangeThrough() async throws {
-        try await self.fs.withFileHandle(forReadingAt: FilePath(#filePath)) { handle in
+        try await self.fs.withFileHandle(forReadingAt: NIOFilePath(#filePath)) { handle in
             let info = try await handle.info()
             let size = info.size
             let endIndex = size + 1
@@ -1800,7 +1817,7 @@ extension FileSystemTests {
     }
 
     func testReadChunksPartialRangeFrom() async throws {
-        try await self.fs.withFileHandle(forReadingAt: FilePath(#filePath)) { handle in
+        try await self.fs.withFileHandle(forReadingAt: NIOFilePath(#filePath)) { handle in
             let info = try await handle.info()
             let size = info.size
             let endIndex = size + 1
@@ -1824,7 +1841,7 @@ extension FileSystemTests {
     }
 
     func testReadChunksUnboundedRange() async throws {
-        try await self.fs.withFileHandle(forReadingAt: FilePath(#filePath)) { handle in
+        try await self.fs.withFileHandle(forReadingAt: NIOFilePath(#filePath)) { handle in
             let info = try await handle.info()
             let size = info.size
 

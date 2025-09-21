@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -15,7 +15,7 @@
 import SystemPackage
 
 /// Options for opening file handles.
-public enum OpenOptions {
+public enum OpenOptions: Sendable {
     /// Options for opening a file for reading.
     public struct Read: Hashable, Sendable {
         /// If the last path component is a symbolic link then this flag determines whether the

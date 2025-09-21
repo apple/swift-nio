@@ -11,26 +11,38 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
 import NIOCore
 
+#if canImport(WinSDK)
+import struct WinSDK.socklen_t
+#endif
+
 final class SelectablePipeHandle {
-    var fileDescriptor: CInt
+    var fileDescriptor: NIOBSDSocket.Handle
 
     var isOpen: Bool {
         self.fileDescriptor >= 0
     }
 
-    init(takingOwnershipOfDescriptor fd: CInt) {
+    init(takingOwnershipOfDescriptor fd: NIOBSDSocket.Handle) {
         precondition(fd >= 0)
         self.fileDescriptor = fd
     }
 
     func close() throws {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         let fd = try self.takeDescriptorOwnership()
         try Posix.close(descriptor: fd)
+        #endif
     }
 
-    func takeDescriptorOwnership() throws -> CInt {
+    func takeDescriptorOwnership() throws -> NIOBSDSocket.Handle {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         guard self.isOpen else {
             throw IOError(errnoCode: EBADF, reason: "SelectablePipeHandle already closed [in close]")
         }
@@ -38,6 +50,7 @@ final class SelectablePipeHandle {
             self.fileDescriptor = -1
         }
         return self.fileDescriptor
+        #endif
     }
 
     deinit {
@@ -46,7 +59,7 @@ final class SelectablePipeHandle {
 }
 
 extension SelectablePipeHandle: Selectable {
-    func withUnsafeHandle<T>(_ body: (CInt) throws -> T) throws -> T {
+    func withUnsafeHandle<T>(_ body: (NIOBSDSocket.Handle) throws -> T) throws -> T {
         guard self.isOpen else {
             throw IOError(errnoCode: EBADF, reason: "SelectablePipeHandle already closed [in wUH]")
         }
@@ -67,6 +80,9 @@ final class PipePair: SocketProtocol {
     let output: SelectablePipeHandle?
 
     init(input: SelectablePipeHandle?, output: SelectablePipeHandle?) throws {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         self.input = input
         self.output = output
         try self.ignoreSIGPIPE()
@@ -75,14 +91,19 @@ final class PipePair: SocketProtocol {
                 try NIOFileHandle.setNonBlocking(fileDescriptor: fd)
             }
         }
+        #endif
     }
 
     func ignoreSIGPIPE() throws {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         for fileHandle in [self.input, self.output].compactMap({ $0 }) {
             try fileHandle.withUnsafeHandle {
                 try PipePair.ignoreSIGPIPE(descriptor: $0)
             }
         }
+        #endif
     }
 
     var description: String {
@@ -98,30 +119,42 @@ final class PipePair: SocketProtocol {
     }
 
     func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         guard let outputSPH = self.output else {
             fatalError("Internal inconsistency inside NIO: outputSPH closed on write. Please file a bug")
         }
         return try outputSPH.withUnsafeHandle {
             try Posix.write(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
+        #endif
     }
 
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         guard let outputSPH = self.output else {
             fatalError("Internal inconsistency inside NIO: outputSPH closed on writev. Please file a bug")
         }
         return try outputSPH.withUnsafeHandle {
             try Posix.writev(descriptor: $0, iovecs: iovecs)
         }
+        #endif
     }
 
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         guard let inputSPH = self.input else {
             fatalError("Internal inconsistency inside NIO: inputSPH closed on read. Please file a bug")
         }
         return try inputSPH.withUnsafeHandle {
             try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
+        #endif
     }
 
     func recvmsg(

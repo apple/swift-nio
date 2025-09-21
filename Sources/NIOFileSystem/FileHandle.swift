@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -95,7 +95,7 @@ extension _HasFileHandle {
 
 /// Implements ``FileHandleProtocol`` by making system calls to interact with the local file system.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct FileHandle: FileHandleProtocol {
+public struct FileHandle: FileHandleProtocol, Sendable {
     internal let systemFileHandle: SystemFileHandle
 
     internal init(wrapping handle: SystemFileHandle) {
@@ -171,7 +171,7 @@ public struct FileHandle: FileHandleProtocol {
 /// Implements ``ReadableFileHandleProtocol`` by making system calls to interact with the local
 /// file system.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct ReadFileHandle: ReadableFileHandleProtocol, _HasFileHandle {
+public struct ReadFileHandle: ReadableFileHandleProtocol, _HasFileHandle, Sendable {
     public let fileHandle: FileHandle
 
     internal init(wrapping systemFileHandle: SystemFileHandle) {
@@ -206,7 +206,7 @@ public struct ReadFileHandle: ReadableFileHandleProtocol, _HasFileHandle {
 /// Implements ``WritableFileHandleProtocol`` by making system calls to interact with the local
 /// file system.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct WriteFileHandle: WritableFileHandleProtocol, _HasFileHandle {
+public struct WriteFileHandle: WritableFileHandleProtocol, _HasFileHandle, Sendable {
     public let fileHandle: FileHandle
 
     internal init(wrapping systemFileHandle: SystemFileHandle) {
@@ -246,7 +246,7 @@ public struct WriteFileHandle: WritableFileHandleProtocol, _HasFileHandle {
 /// Implements ``ReadableAndWritableFileHandleProtocol`` by making system calls to interact with the
 /// local file system.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct ReadWriteFileHandle: ReadableAndWritableFileHandleProtocol, _HasFileHandle {
+public struct ReadWriteFileHandle: ReadableAndWritableFileHandleProtocol, _HasFileHandle, Sendable {
     public let fileHandle: FileHandle
 
     internal init(wrapping systemFileHandle: SystemFileHandle) {
@@ -300,7 +300,7 @@ public struct ReadWriteFileHandle: ReadableAndWritableFileHandleProtocol, _HasFi
 /// Implements ``DirectoryFileHandleProtocol`` by making system calls to interact with the local
 /// file system.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle {
+public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle, Sendable {
     public let fileHandle: FileHandle
 
     internal init(wrapping systemFileHandle: SystemFileHandle) {
@@ -312,7 +312,7 @@ public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle {
     }
 
     public func openFile(
-        forReadingAt path: FilePath,
+        forReadingAt path: NIOFilePath,
         options: OpenOptions.Read
     ) async throws -> ReadFileHandle {
         let systemFileHandle = try await self.fileHandle.systemFileHandle.openFile(
@@ -323,7 +323,7 @@ public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle {
     }
 
     public func openFile(
-        forWritingAt path: FilePath,
+        forWritingAt path: NIOFilePath,
         options: OpenOptions.Write
     ) async throws -> WriteFileHandle {
         let systemFileHandle = try await self.fileHandle.systemFileHandle.openFile(
@@ -334,7 +334,7 @@ public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle {
     }
 
     public func openFile(
-        forReadingAndWritingAt path: FilePath,
+        forReadingAndWritingAt path: NIOFilePath,
         options: OpenOptions.Write
     ) async throws -> ReadWriteFileHandle {
         let systemFileHandle = try await self.fileHandle.systemFileHandle.openFile(
@@ -345,7 +345,7 @@ public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle {
     }
 
     public func openDirectory(
-        atPath path: FilePath,
+        atPath path: NIOFilePath,
         options: OpenOptions.Directory
     ) async throws -> DirectoryFileHandle {
         let systemFileHandle = try await self.fileHandle.systemFileHandle.openDirectory(
