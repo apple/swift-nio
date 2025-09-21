@@ -59,8 +59,8 @@ extension ByteBuffer {
     }
 
     #if compiler(>=6.2)
-    @_spi(InlineArray)
     @inlinable
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
     public mutating func readInlineArray<
         let count: Int,
         IntegerType: FixedWidthInteger

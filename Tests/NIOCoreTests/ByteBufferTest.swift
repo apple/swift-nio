@@ -19,7 +19,7 @@ import _NIOBase64
 
 import struct Foundation.Data
 
-@testable @_spi(InlineArray) import NIOCore
+@testable import NIOCore
 
 class ByteBufferTest: XCTestCase {
     private let allocator = ByteBufferAllocator()
@@ -3932,53 +3932,6 @@ extension ByteBufferTest {
         XCTAssertEqual(0, self.buf.readableBytes, "Buffer should be fully consumed after all reads.")
     }
 
-    func testReadInlineArrayOfUInt8() throws {
-        #if compiler(>=6.2)
-        let bytes = (0..<10).map { _ in UInt8.random(in: .min ... .max) }
-
-        let startWriterIndex = self.buf.writerIndex
-        let written = self.buf.writeBytes(bytes)
-        XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
-        XCTAssertEqual(written, self.buf.readableBytes)
-
-        let result = try XCTUnwrap(
-            self.buf.readInlineArray(as: InlineArray<10, UInt8>.self)
-        )
-        XCTAssertEqual(10, result.count)
-        for idx in result.indices {
-            XCTAssertEqual(bytes[idx], result[idx])
-        }
-        XCTAssertEqual(0, self.buf.readableBytes)
-        #else
-        throw XCTSkip("'InlineArray' is only available in Swift 6.2 and later")
-        #endif  // compiler(>=6.2)
-    }
-
-    func testReadInlineArrayOfUInt64() throws {
-        #if compiler(>=6.2)
-        let bytes = (0..<10).map { _ in UInt64.random(in: .min ... .max) }
-
-        let startWriterIndex = self.buf.writerIndex
-        var written = 0
-        for byte in bytes {
-            written += self.buf.writeInteger(byte)
-        }
-        XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
-        XCTAssertEqual(written, self.buf.readableBytes)
-
-        let result = try XCTUnwrap(
-            self.buf.readInlineArray(as: InlineArray<10, UInt64>.self)
-        )
-        XCTAssertEqual(10, result.count)
-        for idx in result.indices {
-            XCTAssertEqual(bytes[idx], result[idx])
-        }
-        XCTAssertEqual(0, self.buf.readableBytes)
-        #else
-        throw XCTSkip("'InlineArray' is only available in Swift 6.2 and later")
-        #endif  // compiler(>=6.2)
-    }
-
     func testByteBufferEncode() throws {
         let encoder = JSONEncoder()
         let hello = "Hello, world!"
@@ -4507,6 +4460,49 @@ extension ByteBufferTest {
         self.buf.moveWriterIndex(to: 4)
         let result = self.buf.readBytes(length: 4)
         XCTAssertEqual(Array(0..<4), result!)
+    }
+
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    func testReadInlineArrayOfUInt8() throws {
+        let bytes = (0..<10).map { _ in UInt8.random(in: .min ... .max) }
+
+        let startWriterIndex = self.buf.writerIndex
+        let written = self.buf.writeBytes(bytes)
+        XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
+        XCTAssertEqual(written, self.buf.readableBytes)
+
+        let result = try XCTUnwrap(
+            self.buf.readInlineArray(as: InlineArray<10, UInt8>.self)
+        )
+        XCTAssertEqual(10, result.count)
+        for idx in result.indices {
+            XCTAssertEqual(bytes[idx], result[idx])
+        }
+        XCTAssertEqual(0, self.buf.readableBytes)
+        XCTAssertEqual(10, self.buf.readerIndex)
+    }
+
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    func testReadInlineArrayOfUInt64() throws {
+        let bytes = (0..<10).map { _ in UInt64.random(in: .min ... .max) }
+
+        let startWriterIndex = self.buf.writerIndex
+        var written = 0
+        for byte in bytes {
+            written += self.buf.writeInteger(byte)
+        }
+        XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
+        XCTAssertEqual(written, self.buf.readableBytes)
+
+        let result = try XCTUnwrap(
+            self.buf.readInlineArray(as: InlineArray<10, UInt64>.self)
+        )
+        XCTAssertEqual(10, result.count)
+        for idx in result.indices {
+            XCTAssertEqual(bytes[idx], result[idx])
+        }
+        XCTAssertEqual(0, self.buf.readableBytes)
+        XCTAssertEqual(80, self.buf.readerIndex)
     }
 }
 #endif
