@@ -77,18 +77,20 @@ extension ByteBuffer {
         }
 
         do {
-            let inlineArray = try InlineArray<count, IntegerType> { index in
-                guard
-                    let integer = self.getInteger(
-                        // this is less than 'bytesRequired' so is safe to multiply
-                        at: stride &* index,
-                        endianness: endianness,
-                        as: IntegerType.self
-                    )
-                else {
-                    throw InlineArrayFailedToGetElementError()
+            let inlineArray = try InlineArray<count, IntegerType> { (outputSpan: inout OutputSpan<IntegerType>) in
+                for index in 0..<count {
+                    guard
+                        let integer = self.getInteger(
+                            // this is less than 'bytesRequired' so is safe to multiply
+                            at: stride &* index,
+                            endianness: endianness,
+                            as: IntegerType.self
+                        )
+                    else {
+                        throw InlineArrayFailedToGetElementError()
+                    }
+                    outputSpan.append(integer)
                 }
-                return integer
             }
             // already made sure of 'self.readableBytes >= bytesRequired' above
             self._moveReaderIndex(forwardBy: bytesRequired)
