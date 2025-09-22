@@ -4484,7 +4484,7 @@ extension ByteBufferTest {
 
     @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
     func testReadInlineArrayOfUInt64() throws {
-        let bytes = (0..<10).map { _ in UInt64.random(in: .min ... .max) }
+        let bytes = (0..<15).map { _ in UInt64.random(in: .min ... .max) }
 
         let startWriterIndex = self.buf.writerIndex
         var written = 0
@@ -4495,14 +4495,32 @@ extension ByteBufferTest {
         XCTAssertEqual(written, self.buf.readableBytes)
 
         let result = try XCTUnwrap(
-            self.buf.readInlineArray(as: InlineArray<10, UInt64>.self)
+            self.buf.readInlineArray(as: InlineArray<15, UInt64>.self)
         )
-        XCTAssertEqual(10, result.count)
+        XCTAssertEqual(15, result.count)
         for idx in result.indices {
             XCTAssertEqual(bytes[idx], result[idx])
         }
         XCTAssertEqual(0, self.buf.readableBytes)
-        XCTAssertEqual(80, self.buf.readerIndex)
+        XCTAssertEqual(120, self.buf.readerIndex)
+    }
+
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    func testNotEnoughBytesToReadInlineArrayOfInt32() throws {
+        let startWriterIndex = self.buf.writerIndex
+        var written = 0
+        /// Write 15 bytes. This won't be enough to read an `InlineArray<5, Int32>`.
+        for _ in 0..<15 {
+            written += self.buf.writeInteger(UInt8.random(in: .min ... .max))
+        }
+        XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
+        XCTAssertEqual(written, self.buf.readableBytes)
+
+        let result = self.buf.readInlineArray(as: InlineArray<5, Int32>.self)
+
+        XCTAssertNil(result)
+        XCTAssertEqual(written, self.buf.readableBytes)
+        XCTAssertEqual(0, self.buf.readerIndex)
     }
 }
 #endif
