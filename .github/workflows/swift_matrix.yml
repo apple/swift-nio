@@ -165,7 +165,7 @@ jobs:
           COMMAND_OVERRIDE_NIGHTLY_MAIN: ${{ inputs.matrix_linux_nightly_main_command_override }}
         run: |
           apt-get -qq update && apt-get -qq -y install curl
-          curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/matrix_custom_env_vars/scripts/check-matrix-job.sh | bash
+          curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.sh | bash
 
   windows:
     name: Windows (${{ matrix.swift.swift_version }})

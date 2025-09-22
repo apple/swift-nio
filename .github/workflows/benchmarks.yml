@@ -94,9 +94,9 @@ jobs:
             exit 1
           fi
 
-          echo "benchmarks-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/matrix_custom_env_vars/scripts/generate_matrix.sh | MATRIX_LINUX_ENV_VARS_JSON="${linux_env_vars_json}" bash)" >> "$GITHUB_OUTPUT"
+          echo "benchmarks-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | MATRIX_LINUX_ENV_VARS_JSON="${linux_env_vars_json}" bash)" >> "$GITHUB_OUTPUT"
         env:
-          MATRIX_LINUX_COMMAND: "curl -s https://raw.githubusercontent.com/apple/swift-nio/matrix_custom_env_vars/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} bash"
+          MATRIX_LINUX_COMMAND: "curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} bash"
           MATRIX_LINUX_SETUP_COMMAND: "swift --version && apt-get update -y -q && apt-get install -y -q curl libjemalloc-dev && git config --global --add safe.directory /$(basename ${{ github.workspace }})"
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
           MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
@@ -110,7 +110,7 @@ jobs:
     name: Benchmarks
     needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@matrix_custom_env_vars
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
       name: "Benchmarks"
       matrix_string: '${{ needs.construct-matrix.outputs.benchmarks-matrix }}'
