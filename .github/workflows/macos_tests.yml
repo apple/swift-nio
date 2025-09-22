@@ -195,16 +195,8 @@ on:
 
       env_vars:
         type: string
-        description: "Environment variables for jobs (e.g., 'DEBUG=1,LOG_LEVEL=info')."
-        default: ""
-      env_var_pair_separator:
-        type: string
-        description: "Separator between key and value for environment variables."
-        default: "="
-      env_var_list_separator:
-        type: string
-        description: "Separator between environment variable pairs."
-        default: ","
+        description: "Environment variables for jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
+        default: "{}"
 
 jobs:
   construct-matrix:
@@ -219,8 +211,14 @@ jobs:
           persist-credentials: false
       - id: generate-matrix
         run: |
-          # Parse environment variables using the parse_env_vars script
-          env_vars_json=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/parse_env_vars.sh | ENV_VARS="$MATRIX_ENV_VARS" ENV_VAR_PAIR_SEPARATOR="$MATRIX_ENV_VAR_PAIR_SEPARATOR" ENV_VAR_LIST_SEPARATOR="$MATRIX_ENV_VAR_LIST_SEPARATOR" bash)
+          # Validate and use JSON environment variables directly
+          env_vars_json='${{ inputs.env_vars }}'
+
+          # Validate JSON format
+          if ! echo "$env_vars_json" | jq empty 2>/dev/null; then
+            echo "Error: env_vars is not valid JSON"
+            exit 1
+          fi
 
           cat >> "$GITHUB_OUTPUT" << EOM
           darwin-matrix=$(
@@ -349,9 +347,6 @@ jobs:
           )"
           EOM
         env:
-          MATRIX_ENV_VARS: ${{ inputs.env_vars }}
-          MATRIX_ENV_VAR_PAIR_SEPARATOR: ${{ inputs.env_var_pair_separator }}
-          MATRIX_ENV_VAR_LIST_SEPARATOR: ${{ inputs.env_var_list_separator }}
           MATRIX_RUNNER_POOL: ${{ inputs.runner_pool }}
           MATRIX_MACOS_15_4_ENABLED: ${{ inputs.xcode_15_4_enabled }}
           MATRIX_MACOS_15_4_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_15_4_build_arguments_override }}

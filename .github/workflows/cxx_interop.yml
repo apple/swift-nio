@@ -63,28 +63,12 @@ on:
 
       linux_env_vars:
         type: string
-        description: "Environment variables for Linux jobs (e.g., 'DEBUG=1,LOG_LEVEL=info')."
-        default: ""
-      linux_env_var_pair_separator:
-        type: string
-        description: "Separator between key and value for Linux environment variables."
-        default: "="
-      linux_env_var_list_separator:
-        type: string
-        description: "Separator between environment variable pairs for Linux."
-        default: ","
+        description: "Environment variables for Linux jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
+        default: "{}"
       windows_env_vars:
         type: string
-        description: "Environment variables for Windows jobs (e.g., 'DEBUG=1,LOG_LEVEL=info')."
-        default: ""
-      windows_env_var_pair_separator:
-        type: string
-        description: "Separator between key and value for Windows environment variables."
-        default: "="
-      windows_env_var_list_separator:
-        type: string
-        description: "Separator between environment variable pairs for Windows."
-        default: ","
+        description: "Environment variables for Windows jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
+        default: "{}"
 
 jobs:
   construct-matrix:
@@ -98,13 +82,25 @@ jobs:
         with:
           persist-credentials: false
       - id: generate-matrix
-        run: echo "cxx-interop-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        run: |
+          # Validate JSON environment variables
+          linux_env_vars_json='${{ inputs.linux_env_vars }}'
+          windows_env_vars_json='${{ inputs.windows_env_vars }}'
+
+          if ! echo "$linux_env_vars_json" | jq empty 2>/dev/null; then
+            echo "Error: linux_env_vars is not valid JSON"
+            exit 1
+          fi
+
+          if ! echo "$windows_env_vars_json" | jq empty 2>/dev/null; then
+            echo "Error: windows_env_vars is not valid JSON"
+            exit 1
+          fi
+
+          echo "cxx-interop-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | MATRIX_LINUX_ENV_VARS_JSON="${linux_env_vars_json}" MATRIX_WINDOWS_ENV_VARS_JSON="${windows_env_vars_json}" bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_COMMAND: "curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-cxx-interop-compatibility.sh | bash"
           MATRIX_LINUX_SETUP_COMMAND: "swift --version && apt-get update -y -q && apt-get install -y -q curl jq"
-          MATRIX_LINUX_ENV_VARS: ${{ inputs.linux_env_vars }}
-          MATRIX_LINUX_ENV_VAR_PAIR_SEPARATOR: ${{ inputs.linux_env_var_pair_separator }}
-          MATRIX_LINUX_ENV_VAR_LIST_SEPARATOR: ${{ inputs.linux_env_var_list_separator }}
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
           MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
           MATRIX_LINUX_6_0_ENABLED: ${{ inputs.linux_6_0_enabled }}
@@ -112,9 +108,6 @@ jobs:
           MATRIX_LINUX_6_2_ENABLED: ${{ inputs.linux_6_2_enabled }}
           MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_6_1_enabled && inputs.linux_nightly_next_enabled }}
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
-          MATRIX_WINDOWS_ENV_VARS: ${{ inputs.windows_env_vars }}
-          MATRIX_WINDOWS_ENV_VAR_PAIR_SEPARATOR: ${{ inputs.windows_env_var_pair_separator }}
-          MATRIX_WINDOWS_ENV_VAR_LIST_SEPARATOR: ${{ inputs.windows_env_var_list_separator }}
 
   cxx-interop:
     name: Cxx interop
