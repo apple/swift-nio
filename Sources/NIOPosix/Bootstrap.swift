@@ -610,22 +610,72 @@ extension ServerBootstrap {
     /// Bind the `ServerSocketChannel` to the ``BindTarget``. This method will returns once all connections that
     /// were spawned have been closed.
     ///
+    /// # Supporting graceful shutdown
+    ///
+    /// To support a graceful server shutdown we recommend using the `ServerQuiescingHelper` from the
+    /// SwiftNIO extras package. The `ServerQuiescingHelper` can be installed using the
+    /// ``ServerBootstrap/serverChannelInitializer`` callback.
+    ///
+    /// Below you can find the code to setup a simple TCP echo server that supports graceful server closure.
+    ///
+    /// ```swift
+    /// let quiesce = ServerQuiescingHelper(group: group)
+    /// let signalSource = DispatchSource.makeSignalSource(signal: SIGINT, queue: signalQueue)
+    /// signalSource.setEventHandler {
+    ///     signalSource.cancel()
+    ///     print("\nreceived signal, initiating shutdown which should complete after the last request finished.")
+    ///
+    ///     quiesce.initiateShutdown(promise: fullyShutdownPromise)
+    /// }
+    /// try await ServerBootstrap(group: self.eventLoopGroup)
+    ///    .serverChannelInitializer { channel in
+    ///        channel.eventLoop.makeCompletedFuture {
+    ///            try channel.pipeline.syncOperations.addHandler(quiesce.makeServerChannelHandler(channel: channel))
+    ///        }
+    ///    }
+    ///    .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+    ///    .bind(
+    ///        target: .hostAndPort(self.host, self.port),
+    ///        childChannelInitializer: { channel in
+    ///            channel.eventLoop.makeCompletedFuture {
+    ///                try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(NewlineDelimiterCoder()))
+    ///                try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(NewlineDelimiterCoder()))
+    ///
+    ///                return try NIOAsyncChannel(
+    ///                    wrappingChannelSynchronously: channel,
+    ///                    configuration: NIOAsyncChannel.Configuration(
+    ///                        inboundType: String.self,
+    ///                        outboundType: String.self
+    ///                    )
+    ///                )
+    ///            }
+    ///        }
+    ///    ) { channel in
+    ///        print("Handling new connection")
+    ///        await self.handleConnection(channel: channel)
+    ///        print("Done handling connection")
+    ///    }
+    ///
+    /// ```
+    ///
     /// - Parameters:
     ///   - target: The ``BindTarget`` to use.
     ///   - serverBackPressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childChannelInitializer: A closure to initialize the channel. The return value of this closure is used in the `onConnection`
     ///                              closure.
-    ///   - onConnection: A closure to handle the connection. Use `inbound` to read from the connection and `outbound` to write
-    ///                   to the connection.
-    /// - Note: This method must be cancelled to return.
+    ///   - onConnection: A closure to handle the connection. Use the channel's `inbound` property to read from
+    ///                   the connection and channel's `outbound` to write to the connection.
+    ///
+    /// - Note: If the server is not closed using a closure mechanism like above, the bind method must be cancelled using task
+    ///         cancellation for the method to return. Task cancellation will force close the server and wait for all remaining
+    ///         sub task (connection callbacks) to finish.
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     public func bind<Inbound: Sendable, Outbound: Sendable>(
         target: BindTarget,
         serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<NIOAsyncChannel<Inbound, Outbound>>,
         _ onConnection: @escaping @Sendable (
-            _ inbound: NIOAsyncChannelInboundStream<Inbound>,
-            _ outbound: NIOAsyncChannelOutboundWriter<Outbound>
+            _ channel: NIOAsyncChannel<Inbound, Outbound>
         ) async throws -> ()
     ) async throws {
         let channel = try await self.makeConnectedChannel(
@@ -634,18 +684,22 @@ extension ServerBootstrap {
             childChannelInitializer: childChannelInitializer
         )
 
-        try await channel.executeThenClose { inbound, outbound in
-            try await withThrowingDiscardingTaskGroup { group in
-                try await channel.executeThenClose { inbound in
-                    for try await connectionChannel in inbound {
-                        group.addTask {
-                            try await connectionChannel.executeThenClose { inbound, outbound in
-                                try await onConnection(inbound, outbound)
+        try await withTaskCancellationHandler {
+            try await channel.executeThenClose { inbound, outbound in
+                try await withThrowingDiscardingTaskGroup { group in
+                    try await channel.executeThenClose { inbound in
+                        for try await connectionChannel in inbound {
+                            group.addTask {
+                                try await connectionChannel.executeThenClose { _, _ in
+                                    try await onConnection(connectionChannel)
+                                }
                             }
                         }
                     }
                 }
             }
+        } onCancel: {
+            channel.channel.close(promise: nil)
         }
     }
 
