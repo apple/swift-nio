@@ -76,29 +76,22 @@ extension ByteBuffer {
             return nil
         }
 
-        do {
-            let inlineArray = try InlineArray<count, IntegerType> { (outputSpan: inout OutputSpan<IntegerType>) in
-                for index in 0..<count {
-                    guard
-                        let integer = self.getInteger(
-                            // this is less than 'bytesRequired' so is safe to multiply
-                            at: stride &* index,
-                            endianness: endianness,
-                            as: IntegerType.self
-                        )
-                    else {
-                        throw InlineArrayFailedToGetElementError()
-                    }
-                    outputSpan.append(integer)
-                }
+        let inlineArray = InlineArray<count, IntegerType> { (outputSpan: inout OutputSpan<IntegerType>) in
+            for index in 0..<count {
+                // already made sure of 'self.readableBytes >= bytesRequired' above,
+                // so this is safe to force-unwrap as it's guaranteed to exist
+                let integer = self.getInteger(
+                    // this is less than 'bytesRequired' so is safe to multiply
+                    at: stride &* index,
+                    endianness: endianness,
+                    as: IntegerType.self
+                )!
+                outputSpan.append(integer)
             }
-            // already made sure of 'self.readableBytes >= bytesRequired' above
-            self._moveReaderIndex(forwardBy: bytesRequired)
-            return inlineArray
-        } catch {
-            // only 'InlineArrayFailedToGetElementError' could have been thrown
-            return nil
         }
+        // already made sure of 'self.readableBytes >= bytesRequired' above
+        self._moveReaderIndex(forwardBy: bytesRequired)
+        return inlineArray
     }
     #endif
 
@@ -1085,9 +1078,3 @@ extension ByteBuffer {
     }
 }
 #endif  // compiler(>=6)
-
-@usableFromInline
-struct InlineArrayFailedToGetElementError: Error {
-    @usableFromInline
-    init() {}
-}
