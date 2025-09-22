@@ -531,9 +531,9 @@ extension ServerBootstrap {
 
         enum Base {
             case hostAndPort(host: String, port: Int)
-            case address(SocketAddress)
+            case socketAddress(SocketAddress)
             case unixDomainSocketPath(String)
-            case vsock(VsockAddress)
+            case vsockAddress(VsockAddress)
             case socket(NIOBSDSocket.Handle)
         }
 
@@ -560,8 +560,8 @@ extension ServerBootstrap {
         /// specifies the exact binding location, including IPv4, IPv6, or Unix domain addresses.
         ///
         /// - Parameter address: The socket address to bind to
-        public static func address(_ address: SocketAddress) -> BindTarget {
-            BindTarget(base: .address(address))
+        public static func socketAddress(_ address: SocketAddress) -> BindTarget {
+            BindTarget(base: .socketAddress(address))
         }
 
         /// Creates a binding target for a Unix domain socket.
@@ -587,8 +587,8 @@ extension ServerBootstrap {
         /// - Parameter vsockAddress: The VSOCK address to bind to, containing both 
         ///                          context ID (CID) and port number
         /// - Note: VSOCK support depends on the underlying platform and virtualization technology
-        public static func vsock(_ vsockAddress: VsockAddress) -> BindTarget {
-            BindTarget(base: .vsock(vsockAddress))
+        public static func vsockAddress(_ vsockAddress: VsockAddress) -> BindTarget {
+            BindTarget(base: .vsockAddress(vsockAddress))
         }
 
         /// Creates a binding target for an existing socket handle.
@@ -623,7 +623,7 @@ extension ServerBootstrap {
     /// let signalSource = DispatchSource.makeSignalSource(signal: SIGINT, queue: signalQueue)
     /// signalSource.setEventHandler {
     ///     signalSource.cancel()
-    ///     print("\nreceived signal, initiating shutdown which should complete after the last request finished.")
+    ///     print("received signal, initiating shutdown which should complete after the last request finished.")
     ///
     ///     quiesce.initiateShutdown(promise: fullyShutdownPromise)
     /// }
@@ -666,9 +666,8 @@ extension ServerBootstrap {
     ///   - onConnection: A closure to handle the connection. Use the channel's `inbound` property to read from
     ///                   the connection and channel's `outbound` to write to the connection.
     ///
-    /// - Note: If the server is not closed using a closure mechanism like above, the bind method must be cancelled using task
-    ///         cancellation for the method to return. Task cancellation will force close the server and wait for all remaining
-    ///         sub task (connection callbacks) to finish.
+    /// - Note: The bind method respects task cancellation which will force close the server. If you want to gracefully
+    ///         shut-down use the quiescing helper approach as outlined above.
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     public func bind<Inbound: Sendable, Outbound: Sendable>(
         target: BindTarget,
@@ -676,7 +675,7 @@ extension ServerBootstrap {
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<NIOAsyncChannel<Inbound, Outbound>>,
         _ onConnection: @escaping @Sendable (
             _ channel: NIOAsyncChannel<Inbound, Outbound>
-        ) async throws -> ()
+        ) async -> ()
     ) async throws {
         let channel = try await self.makeConnectedChannel(
             target: target,
@@ -695,10 +694,10 @@ extension ServerBootstrap {
                                 group.addTask {
                                     do {
                                         try await connectionChannel.executeThenClose { _, _ in
-                                            try await onConnection(connectionChannel)
+                                            await onConnection(connectionChannel)
                                         }
                                     } catch {
-                                        // ignore single connection failures?
+                                        // ignore single connection failures
                                     }
                                 }
                             }
@@ -868,14 +867,14 @@ extension ServerBootstrap {
                 childChannelInitializer: childChannelInitializer
             )
 
-        case .address(let address):
+        case .socketAddress(let address):
             try await self.bind(
                 to: address,
                 serverBackPressureStrategy: serverBackPressureStrategy,
                 childChannelInitializer: childChannelInitializer
             )
 
-        case .vsock(let vsockAddress):
+        case .vsockAddress(let vsockAddress):
             try await self._bind(
                 to: vsockAddress,
                 serverBackPressureStrategy: serverBackPressureStrategy,
