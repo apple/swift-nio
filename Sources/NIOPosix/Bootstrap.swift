@@ -686,17 +686,29 @@ extension ServerBootstrap {
 
         try await withTaskCancellationHandler {
             try await channel.executeThenClose { inbound, outbound in
-                try await withThrowingDiscardingTaskGroup { group in
-                    try await channel.executeThenClose { inbound in
-                        for try await connectionChannel in inbound {
-                            group.addTask {
-                                try await connectionChannel.executeThenClose { _, _ in
-                                    try await onConnection(connectionChannel)
+                // we need to dance the result dance here, since we can't throw from the
+                // withDiscardingTaskGroup closure.
+                let result = await withDiscardingTaskGroup { group -> Result<Void, any Error> in
+                    do {
+                        try await channel.executeThenClose { inbound in
+                            for try await connectionChannel in inbound {
+                                group.addTask {
+                                    do {
+                                        try await connectionChannel.executeThenClose { _, _ in
+                                            try await onConnection(connectionChannel)
+                                        }
+                                    } catch {
+                                        // ignore single connection failures?
+                                    }
                                 }
                             }
                         }
+                        return .success(())
+                    } catch {
+                        return .failure(error)
                     }
                 }
+                try result.get()
             }
         } onCancel: {
             channel.channel.close(promise: nil)
