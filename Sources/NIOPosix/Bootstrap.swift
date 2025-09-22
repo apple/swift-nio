@@ -521,6 +521,134 @@ public final class ServerBootstrap {
 // MARK: Async bind methods
 
 extension ServerBootstrap {
+
+    /// Represents a target address or socket for binding a server socket.
+    ///
+    /// `BindTarget` provides a type-safe way to specify different types of binding targets
+    /// for server bootstraps. It supports various address types including network addresses,
+    /// Unix domain sockets, VSOCK addresses, and existing socket handles.
+    public struct BindTarget: Sendable {
+
+        enum Base {
+            case hostAndPort(host: String, port: Int)
+            case address(SocketAddress)
+            case unixDomainSocketPath(String)
+            case vsock(VsockAddress)
+            case socket(NIOBSDSocket.Handle)
+        }
+
+        var base: Base
+        
+        /// Creates a binding target for a hostname and port.
+        ///
+        /// This method creates a target that will resolve the hostname and bind to the
+        /// specified port. The hostname resolution follows standard system behavior
+        /// and may resolve to both IPv4 and IPv6 addresses depending on system configuration.
+        ///
+        /// - Parameters:
+        ///   - host: The hostname or IP address to bind to. Can be a domain name like 
+        ///           "localhost" or "example.com", or an IP address like "127.0.0.1" or "::1"
+        ///   - port: The port number to bind to (0-65535). Use 0 to let the system 
+        ///           choose an available port
+        public static func hostAndPort(_ host: String, _ port: Int) -> BindTarget {
+            BindTarget(base: .hostAndPort(host: host, port: port))
+        }
+
+        /// Creates a binding target for a specific socket address.
+        ///
+        /// Use this method when you have a pre-constructed ``SocketAddress`` that
+        /// specifies the exact binding location, including IPv4, IPv6, or Unix domain addresses.
+        ///
+        /// - Parameter address: The socket address to bind to
+        public static func address(_ address: SocketAddress) -> BindTarget {
+            BindTarget(base: .address(address))
+        }
+
+        /// Creates a binding target for a Unix domain socket.
+        ///
+        /// Unix domain sockets provide high-performance inter-process communication 
+        /// on the same machine using filesystem paths. The socket file will be created 
+        /// at the specified path when binding occurs.
+        ///
+        /// - Parameter path: The filesystem path for the Unix domain socket. 
+        ///                   Must be a valid filesystem path and should not exist 
+        ///                   unless cleanup is enabled in the binding operation
+        /// - Warning: The path must not exist.
+        public static func unixDomainSocketPath(_ path: String) -> BindTarget {
+            BindTarget(base: .unixDomainSocketPath(path))
+        }
+
+        /// Creates a binding target for a VSOCK address.
+        ///
+        /// VSOCK (Virtual Socket) provides communication between virtual machines and their hosts,
+        /// or between different virtual machines on the same host. This is commonly used
+        /// in virtualized environments for guest-host communication.
+        ///
+        /// - Parameter vsockAddress: The VSOCK address to bind to, containing both 
+        ///                          context ID (CID) and port number
+        /// - Note: VSOCK support depends on the underlying platform and virtualization technology
+        public static func vsock(_ vsockAddress: VsockAddress) -> BindTarget {
+            BindTarget(base: .vsock(vsockAddress))
+        }
+
+        /// Creates a binding target for an existing socket handle.
+        ///
+        /// This method allows you to use a pre-existing socket that has already been
+        /// created and optionally configured. This is useful for advanced scenarios where you
+        /// need custom socket setup before binding, or when integrating with external libraries.
+        ///
+        /// - Parameters:
+        ///   - handle: The existing socket handle to use. Must be a valid, open socket
+        ///            that is compatible with the intended server bootstrap type
+        /// - Note: The bootstrap will take ownership of the socket handle and will close
+        ///         it when the server shuts down
+        public static func socket(_ handle: NIOBSDSocket.Handle) -> BindTarget {
+            BindTarget(base: .socket(handle))
+        }
+    }
+
+    /// Bind the `ServerSocketChannel` to the ``BindTarget``. This method will returns once all connections that
+    /// were spawned have been closed.
+    ///
+    /// - Parameters:
+    ///   - target: The ``BindTarget`` to use.
+    ///   - serverBackPressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - childChannelInitializer: A closure to initialize the channel. The return value of this closure is used in the `onConnection`
+    ///                              closure.
+    ///   - onConnection: A closure to handle the connection. Use `inbound` to read from the connection and `outbound` to write
+    ///                   to the connection.
+    /// - Note: This method must be cancelled to return.
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    public func bind<Inbound: Sendable, Outbound: Sendable>(
+        target: BindTarget,
+        serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<NIOAsyncChannel<Inbound, Outbound>>,
+        _ onConnection: @escaping @Sendable (
+            _ inbound: NIOAsyncChannelInboundStream<Inbound>,
+            _ outbound: NIOAsyncChannelOutboundWriter<Outbound>
+        ) async throws -> ()
+    ) async throws {
+        let channel = try await self.makeConnectedChannel(
+            target: target,
+            serverBackPressureStrategy: serverBackPressureStrategy,
+            childChannelInitializer: childChannelInitializer
+        )
+
+        try await channel.executeThenClose { inbound, outbound in
+            try await withThrowingDiscardingTaskGroup { group in
+                try await channel.executeThenClose { inbound in
+                    for try await connectionChannel in inbound {
+                        group.addTask {
+                            try await connectionChannel.executeThenClose { inbound, outbound in
+                                try await onConnection(inbound, outbound)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /// Bind the `ServerSocketChannel` to the `host` and `port` parameters.
     ///
     /// - Parameters:
@@ -623,6 +751,87 @@ extension ServerBootstrap {
         serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> NIOAsyncChannel<Output, Never> {
+        try await self._bind(
+            to: vsockAddress,
+            serverBackPressureStrategy: serverBackPressureStrategy,
+            childChannelInitializer: childChannelInitializer
+        )
+    }
+
+    /// Use the existing bound socket file descriptor.
+    ///
+    /// - Parameters:
+    ///   - socket: The _Unix file descriptor_ representing the bound stream socket.
+    ///   - cleanupExistingSocketFile: Unused.
+    ///   - serverBackPressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - childChannelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    public func bind<Output: Sendable>(
+        _ socket: NIOBSDSocket.Handle,
+        cleanupExistingSocketFile: Bool = false,
+        serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> NIOAsyncChannel<Output, Never> {
+        try await self._bind(
+            socket,
+            serverBackPressureStrategy: serverBackPressureStrategy,
+            childChannelInitializer: childChannelInitializer
+        )
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func makeConnectedChannel<Inbound: Sendable, Outbound: Sendable>(
+        target: BindTarget,
+        serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<NIOAsyncChannel<Inbound, Outbound>>
+    ) async throws -> NIOAsyncChannel<NIOAsyncChannel<Inbound, Outbound>, Never> {
+        switch target.base {
+        case .hostAndPort(let host, let port):
+            try await self.bind(
+                to: try SocketAddress.makeAddressResolvingHost(host, port: port),
+                serverBackPressureStrategy: serverBackPressureStrategy,
+                childChannelInitializer: childChannelInitializer
+            )
+
+        case .unixDomainSocketPath(let unixDomainSocketPath):
+            try await self.bind(
+                to: try SocketAddress(unixDomainSocketPath: unixDomainSocketPath),
+                serverBackPressureStrategy: serverBackPressureStrategy,
+                childChannelInitializer: childChannelInitializer
+            )
+
+        case .address(let address):
+            try await self.bind(
+                to: address,
+                serverBackPressureStrategy: serverBackPressureStrategy,
+                childChannelInitializer: childChannelInitializer
+            )
+
+        case .vsock(let vsockAddress):
+            try await self._bind(
+                to: vsockAddress,
+                serverBackPressureStrategy: serverBackPressureStrategy,
+                childChannelInitializer: childChannelInitializer
+            )
+
+        case .socket(let handle):
+            try await self._bind(
+                handle,
+                serverBackPressureStrategy: serverBackPressureStrategy,
+                childChannelInitializer: childChannelInitializer
+            )
+        }
+    }
+
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func _bind<Output: Sendable>(
+        to vsockAddress: VsockAddress,
+        serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> NIOAsyncChannel<Output, Never> {
         func makeChannel(
             _ eventLoop: SelectableEventLoop,
             _ childEventLoopGroup: EventLoopGroup,
@@ -652,19 +861,9 @@ extension ServerBootstrap {
         }.get()
     }
 
-    /// Use the existing bound socket file descriptor.
-    ///
-    /// - Parameters:
-    ///   - socket: The _Unix file descriptor_ representing the bound stream socket.
-    ///   - cleanupExistingSocketFile: Unused.
-    ///   - serverBackPressureStrategy: The back pressure strategy used by the server socket channel.
-    ///   - childChannelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
-    ///   method.
-    /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func bind<Output: Sendable>(
+    private func _bind<Output: Sendable>(
         _ socket: NIOBSDSocket.Handle,
-        cleanupExistingSocketFile: Bool = false,
         serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> NIOAsyncChannel<Output, Never> {
