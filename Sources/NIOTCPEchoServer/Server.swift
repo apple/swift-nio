@@ -36,44 +36,29 @@ struct Server {
 
     /// This method starts the server and handles incoming connections.
     func run() async throws {
-        let channel = try await ServerBootstrap(group: self.eventLoopGroup)
+        try await ServerBootstrap(group: self.eventLoopGroup)
             .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
             .bind(
-                host: self.host,
-                port: self.port
-            ) { channel in
-                channel.eventLoop.makeCompletedFuture {
-                    // We are using two simple handlers here to frame our messages with "\n"
-                    try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(NewlineDelimiterCoder()))
-                    try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(NewlineDelimiterCoder()))
+                target: .hostAndPort(self.host, self.port),
+                childChannelInitializer: { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(NewlineDelimiterCoder()))
+                        try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(NewlineDelimiterCoder()))
 
-                    return try NIOAsyncChannel(
-                        wrappingChannelSynchronously: channel,
-                        configuration: NIOAsyncChannel.Configuration(
-                            inboundType: String.self,
-                            outboundType: String.self
+                        return try NIOAsyncChannel(
+                            wrappingChannelSynchronously: channel,
+                            configuration: NIOAsyncChannel.Configuration(
+                                inboundType: String.self,
+                                outboundType: String.self
+                            )
                         )
-                    )
-                }
-            }
-
-        // We are handling each incoming connection in a separate child task. It is important
-        // to use a discarding task group here which automatically discards finished child tasks.
-        // A normal task group retains all child tasks and their outputs in memory until they are
-        // consumed by iterating the group or by exiting the group. Since, we are never consuming
-        // the results of the group we need the group to automatically discard them; otherwise, this
-        // would result in a memory leak over time.
-        try await withThrowingDiscardingTaskGroup { group in
-            try await channel.executeThenClose { inbound in
-                for try await connectionChannel in inbound {
-                    group.addTask {
-                        print("Handling new connection")
-                        await self.handleConnection(channel: connectionChannel)
-                        print("Done handling connection")
                     }
                 }
+            ) { channel in
+                print("Handling new connection")
+                await self.handleConnection(channel: channel)
+                print("Done handling connection")
             }
-        }
     }
 
     /// This method handles a single connection by echoing back all inbound data.
@@ -82,11 +67,9 @@ struct Server {
         // We do this since we don't want to tear down the whole server when a single connection
         // encounters an error.
         do {
-            try await channel.executeThenClose { inbound, outbound in
-                for try await inboundData in inbound {
-                    print("Received request (\(inboundData))")
-                    try await outbound.write(inboundData)
-                }
+            for try await inboundData in channel.inbound {
+                print("Received request (\(inboundData))")
+                try await channel.outbound.write(inboundData)
             }
         } catch {
             print("Hit error: \(error)")
