@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-@_spi(Testing) import NIOFileSystem
+@_spi(Testing) import NIOFS
 import NIOFoundationCompat
 import NIOPosix
 import XCTest

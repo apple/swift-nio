@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOFileSystem
+import NIOFS
 import XCTest
 
 class ByteCountTests: XCTestCase {

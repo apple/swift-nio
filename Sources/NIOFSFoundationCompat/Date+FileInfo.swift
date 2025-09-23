@@ -12,16 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_spi(Testing) import NIOFileSystem
-import SystemPackage
-import XCTest
+import NIOFS
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension FileSystemTests {
-    func testRemoveOneItemIgnoresNonExistentFile() async throws {
-        let fs = FileSystem.shared
-        let path = try await fs.temporaryFilePath()
-        let removed = try await fs.removeOneItem(at: FilePath(path))
-        XCTAssertEqual(removed, 0)
+import struct Foundation.Date
+
+extension Date {
+    public init(timespec: FileInfo.Timespec) {
+        let timeInterval = Double(timespec.seconds) + Double(timespec.nanoseconds) / 1_000_000_000
+        self = Date(timeIntervalSince1970: timeInterval)
+    }
+}
+
+extension FileInfo.Timespec {
+    /// The UTC time of the timestamp.
+    public var date: Date {
+        Date(timespec: self)
     }
 }
