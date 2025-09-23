@@ -64,8 +64,8 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
-        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem"]),
-        .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
+        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem", "NIOFileSystem"]),
+        .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"])
     ],
     targets: [
         // MARK: - Targets
@@ -294,6 +294,11 @@ let package = Package(
                 "NIOFoundationCompat",
             ],
             path: "Sources/_NIOFileSystemFoundationCompat",
+            swiftSettings: strictConcurrencySettings
+        ),
+        .target(
+            name: "NIOFileSystem",
+            dependencies: ["_NIOFileSystem"],
             swiftSettings: strictConcurrencySettings
         ),
 
