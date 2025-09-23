@@ -93,6 +93,15 @@ on:
         description: "The arguments passed to swift test in the Windows nightly main Swift version matrix job."
         default: ""
 
+      linux_env_vars:
+        type: string
+        description: "Environment variables for Linux jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
+        default: "{}"
+      windows_env_vars:
+        type: string
+        description: "Environment variables for Windows jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
+        default: "{}"
+
 jobs:
   construct-matrix:
     name: Construct release build matrix
@@ -105,7 +114,22 @@ jobs:
         with:
           persist-credentials: false
       - id: generate-matrix
-        run: echo "release-build-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        run: |
+          # Validate JSON environment variables
+          linux_env_vars_json='${{ inputs.linux_env_vars }}'
+          windows_env_vars_json='${{ inputs.windows_env_vars }}'
+
+          if ! echo "$linux_env_vars_json" | jq empty 2>/dev/null; then
+            echo "Error: linux_env_vars is not valid JSON"
+            exit 1
+          fi
+
+          if ! echo "$windows_env_vars_json" | jq empty 2>/dev/null; then
+            echo "Error: windows_env_vars is not valid JSON"
+            exit 1
+          fi
+
+          echo "release-build-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | MATRIX_LINUX_ENV_VARS_JSON="${linux_env_vars_json}" MATRIX_WINDOWS_ENV_VARS_JSON="${windows_env_vars_json}" bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_SETUP_COMMAND: "swift --version"
           MATRIX_LINUX_COMMAND: "swift build -c release"

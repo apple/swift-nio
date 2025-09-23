@@ -3,41 +3,72 @@ name: Static SDK
 on:
   workflow_call:
     inputs:
+      env_vars:
+        type: string
+        description: "Environment variables for jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
+        default: "{}"
       command_arguments:
         type: string
         description: "The arguments passed to swift build. Defaults to '--swift-sdk x86_64-swift-linux-musl'."
         default: "--swift-sdk x86_64-swift-linux-musl"
+
 jobs:
+  construct-matrix:
+    name: Construct Static SDK matrix
+    runs-on: ubuntu-latest
+    outputs:
+      static-sdk-matrix: '${{ steps.generate-matrix.outputs.static-sdk-matrix }}'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - id: generate-matrix
+        run: |
+          # Validate and use JSON environment variables directly
+          env_vars_json='${{ inputs.env_vars }}'
+
+          # Validate JSON format
+          if ! echo "$env_vars_json" | jq empty 2>/dev/null; then
+            echo "Error: env_vars is not valid JSON"
+            exit 1
+          fi
+
+          # Generate matrix with parsed environment variables
+          cat >> "$GITHUB_OUTPUT" << EOM
+          static-sdk-matrix=$(echo '{
+            "config":[
+              {
+                "name":"latest-release Jammy",
+                "swift_version":"latest-release",
+                "platform":"Linux",
+                "runner":"ubuntu-latest",
+                "image":"ubuntu:jammy",
+                "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_static_sdk.sh | INSTALL_SWIFT_STATIC_SDK_VERSION=latest INSTALL_SWIFT_STATIC_SDK_ARCH=x86_64 bash && hash -r",
+                "command":"swift build",
+                "command_arguments":"${{ inputs.command_arguments }}",
+                "env":'"$env_vars_json"'
+              },
+              {
+                "name":"main Jammy",
+                "swift_version":"main",
+                "platform":"Linux",
+                "runner":"ubuntu-latest",
+                "image":"ubuntu:jammy",
+                "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_static_sdk.sh | INSTALL_SWIFT_STATIC_SDK_BRANCH=main INSTALL_SWIFT_STATIC_SDK_ARCH=x86_64 bash && hash -r",
+                "command":"swift build",
+                "command_arguments":"${{ inputs.command_arguments }}",
+                "env":'"$env_vars_json"'
+              }
+            ]
+          }' | jq -c)
+          EOM
+
   static-sdk:
     name: Static SDK
+    needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
       name: "Static SDK"
-      matrix_string: >-
-        {
-          "config":[
-            {
-              "name":"latest-release Jammy",
-              "swift_version":"latest-release",
-              "platform":"Linux",
-              "runner":"ubuntu-latest",
-              "image":"ubuntu:jammy",
-              "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_static_sdk.sh | INSTALL_SWIFT_STATIC_SDK_VERSION=latest INSTALL_SWIFT_STATIC_SDK_ARCH=x86_64 bash && hash -r",
-              "command":"swift build",
-              "command_arguments":"${{ inputs.command_arguments }}",
-              "env":{}
-            },
-            {
-              "name":"main Jammy",
-              "swift_version":"main",
-              "platform":"Linux",
-              "runner":"ubuntu-latest",
-              "image":"ubuntu:jammy",
-              "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_static_sdk.sh | INSTALL_SWIFT_STATIC_SDK_BRANCH=main INSTALL_SWIFT_STATIC_SDK_ARCH=x86_64 bash && hash -r",
-              "command":"swift build",
-              "command_arguments":"${{ inputs.command_arguments }}",
-              "env":{}
-            }
-          ]
-        }
+      matrix_string: '${{ needs.construct-matrix.outputs.static-sdk-matrix }}'
