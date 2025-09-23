@@ -49,9 +49,10 @@ extension NIOSingletons {
             return false
         }
 
-        typealias ConcurrencyEnqueueGlobalHook = @convention(thin) (
-            UnownedJob, @convention(thin) (UnownedJob) -> Void
-        ) -> Void
+        typealias ConcurrencyEnqueueGlobalHook =
+            @convention(thin) (
+                UnownedJob, @convention(thin) (UnownedJob) -> Void
+            ) -> Void
 
         guard
             _haveWeTakenOverTheConcurrencyPool.compareExchange(

@@ -233,14 +233,16 @@ public protocol FileSystemProtocol: Sendable {
         at sourcePath: NIOFilePath,
         to destinationPath: NIOFilePath,
         strategy copyStrategy: CopyStrategy,
-        shouldProceedAfterError: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ error: Error
-        ) async throws -> Void,
-        shouldCopyItem: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ destination: NIOFilePath
-        ) async -> Bool
+        shouldProceedAfterError:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ error: Error
+            ) async throws -> Void,
+        shouldCopyItem:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ destination: NIOFilePath
+            ) async -> Bool
     ) async throws
 
     /// Deletes the file or directory (and its contents) at `path`.
@@ -516,14 +518,16 @@ extension FileSystemProtocol {
     public func copyItem(
         at sourcePath: NIOFilePath,
         to destinationPath: NIOFilePath,
-        shouldProceedAfterError: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ error: Error
-        ) async throws -> Void,
-        shouldCopyItem: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ destination: NIOFilePath
-        ) async -> Bool
+        shouldProceedAfterError:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ error: Error
+            ) async throws -> Void,
+        shouldCopyItem:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ destination: NIOFilePath
+            ) async -> Bool
     ) async throws {
         try await self.copyItem(
             at: sourcePath,
