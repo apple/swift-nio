@@ -663,6 +663,8 @@ extension ServerBootstrap {
     ///   - serverBackPressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childChannelInitializer: A closure to initialize the channel. The return value of this closure is used in the `onConnection`
     ///                              closure.
+    ///   - onceStartup: A closure that will be called once the server has been started. Use this to get access to
+    ///                  the port number, if you used port `0` in the ``BindTarget``.
     ///   - onConnection: A closure to handle the connection. Use the channel's `inbound` property to read from
     ///                   the connection and channel's `outbound` to write to the connection.
     ///
@@ -673,7 +675,8 @@ extension ServerBootstrap {
         target: BindTarget,
         serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<NIOAsyncChannel<Inbound, Outbound>>,
-        _ onConnection: @escaping @Sendable (
+        onceStartup: (Channel) -> () = { _  in },
+        onConnection: @escaping @Sendable (
             _ channel: NIOAsyncChannel<Inbound, Outbound>
         ) async -> ()
     ) async throws {
@@ -682,6 +685,8 @@ extension ServerBootstrap {
             serverBackPressureStrategy: serverBackPressureStrategy,
             childChannelInitializer: childChannelInitializer
         )
+
+        onceStartup(channel.channel)
 
         try await withTaskCancellationHandler {
             try await channel.executeThenClose { inbound, outbound in
