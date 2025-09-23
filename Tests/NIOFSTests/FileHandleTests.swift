@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_spi(Testing) import NIOFileSystem
+@_spi(Testing) import NIOFS
 import NIOPosix
 import XCTest
 

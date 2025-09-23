@@ -14,7 +14,7 @@
 
 import XCTest
 
-@testable import NIOFileSystem
+@testable import NIOFS
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class BufferedStreamTests: XCTestCase {

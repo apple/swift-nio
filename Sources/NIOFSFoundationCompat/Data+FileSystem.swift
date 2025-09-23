@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Darwin) || os(Linux) || os(Android)
-import NIOFileSystem
+import NIOFS
 import NIOCore
 import NIOFoundationCompat
 import struct Foundation.Data

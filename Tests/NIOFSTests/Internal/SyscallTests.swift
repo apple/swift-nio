@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
-@_spi(Testing) import NIOFileSystem
+@_spi(Testing) import NIOFS
 import SystemPackage
 import XCTest
 
