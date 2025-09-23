@@ -314,14 +314,16 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at sourcePath: NIOFilePath,
         to destinationPath: NIOFilePath,
         strategy copyStrategy: CopyStrategy,
-        shouldProceedAfterError: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ error: Error
-        ) async throws -> Void,
-        shouldCopyItem: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ destination: NIOFilePath
-        ) async -> Bool
+        shouldProceedAfterError:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ error: Error
+            ) async throws -> Void,
+        shouldCopyItem:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ destination: NIOFilePath
+            ) async -> Bool
     ) async throws {
         guard let info = try await self.info(forFileAt: sourcePath, infoAboutSymbolicLink: true)
         else {
@@ -897,14 +899,16 @@ extension FileSystem {
     private func prepareDirectoryForRecusiveCopy(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
-        shouldProceedAfterError: @escaping @Sendable (
-            _ entry: DirectoryEntry,
-            _ error: Error
-        ) async throws -> Void,
-        shouldCopyItem: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ destination: FilePath
-        ) async -> Bool
+        shouldProceedAfterError:
+            @escaping @Sendable (
+                _ entry: DirectoryEntry,
+                _ error: Error
+            ) async throws -> Void,
+        shouldCopyItem:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ destination: FilePath
+            ) async -> Bool
     ) async throws -> [DirCopyItem] {
         try await self.withDirectoryHandle(atPath: NIOFilePath(sourcePath)) { dir in
             // Grab the directory info to copy permissions.
@@ -987,14 +991,16 @@ extension FileSystem {
     private func copyDirectorySequential(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
-        shouldProceedAfterError: @escaping @Sendable (
-            _ entry: DirectoryEntry,
-            _ error: Error
-        ) async throws -> Void,
-        shouldCopyItem: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ destination: FilePath
-        ) async -> Bool
+        shouldProceedAfterError:
+            @escaping @Sendable (
+                _ entry: DirectoryEntry,
+                _ error: Error
+            ) async throws -> Void,
+        shouldCopyItem:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ destination: FilePath
+            ) async -> Bool
     ) async throws {
         // Strategy: find all needed items to copy/recurse into while the directory is open; defer
         // actual copying and recursion until after the source directory has been closed to avoid
@@ -1066,14 +1072,16 @@ extension FileSystem {
         from sourcePath: FilePath,
         to destinationPath: FilePath,
         strategy copyStrategy: CopyStrategy,
-        shouldProceedAfterError: @escaping @Sendable (
-            _ entry: DirectoryEntry,
-            _ error: Error
-        ) async throws -> Void,
-        shouldCopyItem: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ destination: FilePath
-        ) async -> Bool
+        shouldProceedAfterError:
+            @escaping @Sendable (
+                _ entry: DirectoryEntry,
+                _ error: Error
+            ) async throws -> Void,
+        shouldCopyItem:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ destination: FilePath
+            ) async -> Bool
     ) async throws {
         switch copyStrategy.wrapped {
         case .sequential:
@@ -1110,14 +1118,16 @@ extension FileSystem {
         from: DirectoryEntry,
         to: FilePath,
         yield: @Sendable ([DirCopyItem]) -> Void,
-        shouldProceedAfterError: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ error: Error
-        ) async throws -> Void,
-        shouldCopyItem: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ destination: FilePath
-        ) async -> Bool
+        shouldProceedAfterError:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ error: Error
+            ) async throws -> Void,
+        shouldCopyItem:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ destination: FilePath
+            ) async -> Bool
     ) async throws {
         switch from.type {
         case .regular:

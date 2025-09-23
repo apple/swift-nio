@@ -755,9 +755,10 @@ extension EventLoopFuture {
     ) -> EventLoopFuture<NewValue> {
         self._flatMapResult(body)
     }
-    @usableFromInline typealias FlatMapResultCallback<NewValue, SomeError: Error> = @Sendable (Value) -> Result<
-        NewValue, SomeError
-    >
+    @usableFromInline typealias FlatMapResultCallback<NewValue, SomeError: Error> =
+        @Sendable (Value) -> Result<
+            NewValue, SomeError
+        >
 
     @inlinable
     func _flatMapResult<NewValue, SomeError: Error>(
