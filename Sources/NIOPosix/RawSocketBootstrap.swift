@@ -260,9 +260,10 @@ extension NIORawSocketBootstrap {
         host: String,
         ipProtocol: NIOIPProtocol,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
-            PostRegistrationTransformationResult
-        >
+        postRegisterTransformation:
+            @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+                PostRegistrationTransformationResult
+            >
     ) async throws -> PostRegistrationTransformationResult {
         let address = try SocketAddress.makeAddressResolvingHost(host, port: 0)
 
@@ -292,9 +293,10 @@ extension NIORawSocketBootstrap {
         host: String,
         ipProtocol: NIOIPProtocol,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
-            PostRegistrationTransformationResult
-        >
+        postRegisterTransformation:
+            @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+                PostRegistrationTransformationResult
+            >
     ) async throws -> PostRegistrationTransformationResult {
         let address = try SocketAddress.makeAddressResolvingHost(host, port: 0)
 
@@ -328,9 +330,10 @@ extension NIORawSocketBootstrap {
         makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
         registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
-            PostRegistrationTransformationResult
-        >
+        postRegisterTransformation:
+            @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+                PostRegistrationTransformationResult
+            >
     ) -> EventLoopFuture<PostRegistrationTransformationResult> {
         let eventLoop = self.group.next()
         let bootstrapInitializer = self.channelInitializer ?? { @Sendable _ in eventLoop.makeSucceededFuture(()) }

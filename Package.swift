@@ -64,7 +64,7 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
-        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem"]),
+        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem", "NIOFileSystem"]),
         .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
     ],
     targets: [
@@ -242,7 +242,7 @@ let package = Package(
             swiftSettings: strictConcurrencySettings
         ),
         .target(
-            name: "NIOFileSystem",
+            name: "NIOFS",
             dependencies: [
                 "NIOCore",
                 "NIOPosix",
@@ -252,7 +252,7 @@ let package = Package(
                 swiftCollections,
                 swiftSystem,
             ],
-            path: "Sources/NIOFileSystem",
+            path: "Sources/NIOFS",
             exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
             resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
             swiftSettings: strictConcurrencySettings + [
@@ -260,12 +260,12 @@ let package = Package(
             ]
         ),
         .target(
-            name: "NIOFileSystemFoundationCompat",
+            name: "NIOFSFoundationCompat",
             dependencies: [
-                "NIOFileSystem",
+                "NIOFS",
                 "NIOFoundationCompat",
             ],
-            path: "Sources/NIOFileSystemFoundationCompat",
+            path: "Sources/NIOFSFoundationCompat",
             swiftSettings: strictConcurrencySettings
         ),
 
@@ -294,6 +294,11 @@ let package = Package(
                 "NIOFoundationCompat",
             ],
             path: "Sources/_NIOFileSystemFoundationCompat",
+            swiftSettings: strictConcurrencySettings
+        ),
+        .target(
+            name: "NIOFileSystem",
+            dependencies: ["_NIOFileSystem"],
             swiftSettings: strictConcurrencySettings
         ),
 
@@ -578,10 +583,10 @@ let package = Package(
             swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
-            name: "NIOFileSystemTests",
+            name: "NIOFSTests",
             dependencies: [
                 "NIOCore",
-                "NIOFileSystem",
+                "NIOFS",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
@@ -591,11 +596,11 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "NIOFileSystemIntegrationTests",
+            name: "NIOFSIntegrationTests",
             dependencies: [
                 "NIOCore",
                 "NIOPosix",
-                "NIOFileSystem",
+                "NIOFS",
                 "NIOFoundationCompat",
             ],
             exclude: [
@@ -607,10 +612,10 @@ let package = Package(
             swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
-            name: "NIOFileSystemFoundationCompatTests",
+            name: "NIOFSFoundationCompatTests",
             dependencies: [
-                "NIOFileSystem",
-                "NIOFileSystemFoundationCompat",
+                "NIOFS",
+                "NIOFSFoundationCompat",
             ],
             swiftSettings: strictConcurrencySettings
         ),

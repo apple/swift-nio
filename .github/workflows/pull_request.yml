@@ -10,6 +10,8 @@ jobs:
     uses: swiftlang/github-workflows/.github/workflows/soundness.yml@main
     with:
       license_header_check_project_name: "SwiftNIO"
+      # Workaround https://github.com/swiftlang/swift-docc/issues/1280
+      docs_check_container_image: "swift:6.1-noble"
 
   unit-tests:
     name: Unit tests

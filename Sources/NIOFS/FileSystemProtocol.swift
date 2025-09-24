@@ -45,7 +45,7 @@ public protocol FileSystemProtocol: Sendable {
     ///   - options: How the file should be opened.
     /// - Returns: A readable handle to the opened file.
     func openFile(
-        forReadingAt path: FilePath,
+        forReadingAt path: NIOFilePath,
         options: OpenOptions.Read
     ) async throws -> ReadFileHandle
 
@@ -56,7 +56,7 @@ public protocol FileSystemProtocol: Sendable {
     ///   - options: How the file should be opened.
     /// - Returns: A writable handle to the opened file.
     func openFile(
-        forWritingAt path: FilePath,
+        forWritingAt path: NIOFilePath,
         options: OpenOptions.Write
     ) async throws -> WriteFileHandle
 
@@ -66,7 +66,7 @@ public protocol FileSystemProtocol: Sendable {
     ///   - path: The path of the file to open relative to the open file.
     ///   - options: How the file should be opened.
     func openFile(
-        forReadingAndWritingAt path: FilePath,
+        forReadingAndWritingAt path: NIOFilePath,
         options: OpenOptions.Write
     ) async throws -> ReadWriteFileHandle
 
@@ -80,7 +80,7 @@ public protocol FileSystemProtocol: Sendable {
     ///   - options: How the directory should be opened.
     /// - Returns: A handle to the opened directory.
     func openDirectory(
-        atPath path: FilePath,
+        atPath path: NIOFilePath,
         options: OpenOptions.Directory
     ) async throws -> DirectoryFileHandle
 
@@ -98,7 +98,7 @@ public protocol FileSystemProtocol: Sendable {
     ///   - permissions: The permissions to set on the new directory; default permissions will be
     ///       used if not specified.
     func createDirectory(
-        at path: FilePath,
+        at path: NIOFilePath,
         withIntermediateDirectories createIntermediateDirectories: Bool,
         permissions: FilePermissions?
     ) async throws
@@ -106,10 +106,10 @@ public protocol FileSystemProtocol: Sendable {
     // MARK: - Common directories
 
     /// Returns the current working directory.
-    var currentWorkingDirectory: FilePath { get async throws }
+    var currentWorkingDirectory: NIOFilePath { get async throws }
 
     /// Returns the path of the temporary directory.
-    var temporaryDirectory: FilePath { get async throws }
+    var temporaryDirectory: NIOFilePath { get async throws }
 
     /// Create a temporary directory at the given path, from a template.
     ///
@@ -125,8 +125,8 @@ public protocol FileSystemProtocol: Sendable {
     /// - Returns:
     ///   - The path to the new temporary directory.
     func createTemporaryDirectory(
-        template: FilePath
-    ) async throws -> FilePath
+        template: NIOFilePath
+    ) async throws -> NIOFilePath
 
     // MARK: - File information
 
@@ -139,7 +139,7 @@ public protocol FileSystemProtocol: Sendable {
     ///        destination of the symbolic link is returned.
     /// - Returns: Information about the file at the given path or `nil` if no file exists.
     func info(
-        forFileAt path: FilePath,
+        forFileAt path: NIOFilePath,
         infoAboutSymbolicLink: Bool
     ) async throws -> FileInfo?
 
@@ -153,8 +153,8 @@ public protocol FileSystemProtocol: Sendable {
     ///   - path: The path at which to create the symbolic link.
     ///   - destinationPath: The path that contains the item that the symbolic link points to.`
     func createSymbolicLink(
-        at path: FilePath,
-        withDestination destinationPath: FilePath
+        at path: NIOFilePath,
+        withDestination destinationPath: NIOFilePath
     ) async throws
 
     /// Returns the path of the item pointed to by a symbolic link.
@@ -162,8 +162,8 @@ public protocol FileSystemProtocol: Sendable {
     /// - Parameter path: The path of a file or directory.
     /// - Returns: The path of the file or directory to which the symbolic link points to.
     func destinationOfSymbolicLink(
-        at path: FilePath
-    ) async throws -> FilePath
+        at path: NIOFilePath
+    ) async throws -> NIOFilePath
 
     // MARK: - File copying, removal, and moving
 
@@ -230,8 +230,8 @@ public protocol FileSystemProtocol: Sendable {
     ///  - invoke the function multiple times concurrently (except when using ``CopyStrategy/sequential``)
     ///  - invoke the function an arbitrary point before actually trying to copy the file
     func copyItem(
-        at sourcePath: FilePath,
-        to destinationPath: FilePath,
+        at sourcePath: NIOFilePath,
+        to destinationPath: NIOFilePath,
         strategy copyStrategy: CopyStrategy,
         shouldProceedAfterError:
             @escaping @Sendable (
@@ -241,7 +241,7 @@ public protocol FileSystemProtocol: Sendable {
         shouldCopyItem:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
-                _ destination: FilePath
+                _ destination: NIOFilePath
             ) async -> Bool
     ) async throws
 
@@ -266,7 +266,7 @@ public protocol FileSystemProtocol: Sendable {
     /// - Returns: The number of deleted items which may be zero if `path` did not exist.
     @discardableResult
     func removeItem(
-        at path: FilePath,
+        at path: NIOFilePath,
         strategy removalStrategy: RemovalStrategy,
         recursively removeItemRecursively: Bool
     ) async throws -> Int
@@ -285,7 +285,7 @@ public protocol FileSystemProtocol: Sendable {
     /// - Parameters:
     ///   - sourcePath: The path to the item to move.
     ///   - destinationPath: The path at which to place the item.
-    func moveItem(at sourcePath: FilePath, to destinationPath: FilePath) async throws
+    func moveItem(at sourcePath: NIOFilePath, to destinationPath: NIOFilePath) async throws
 
     /// Replaces the item at `destinationPath` with the item at `existingPath`.
     ///
@@ -304,7 +304,7 @@ public protocol FileSystemProtocol: Sendable {
     /// - Parameters:
     ///   - destinationPath: The path of the file or directory to replace.
     ///   - existingPath: The path of the existing file or directory.
-    func replaceItem(at destinationPath: FilePath, withItemAt existingPath: FilePath) async throws
+    func replaceItem(at destinationPath: NIOFilePath, withItemAt existingPath: NIOFilePath) async throws
 }
 
 // MARK: - Open existing files/directories
@@ -315,8 +315,8 @@ extension FileSystemProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-write or write-only
-    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-9nqu3`` and
-    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)-1p6ka``.
+    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)`` and
+    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading.
@@ -326,7 +326,7 @@ extension FileSystemProtocol {
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
     public func withFileHandle<Result>(
-        forReadingAt path: FilePath,
+        forReadingAt path: NIOFilePath,
         options: OpenOptions.Read = OpenOptions.Read(),
         execute: (_ read: ReadFileHandle) async throws -> Result
     ) async throws -> Result {
@@ -342,8 +342,8 @@ extension FileSystemProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-write or read-only
-    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-9nqu3`` and
-    /// ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)-nsue``.
+    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)`` and
+    /// ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading.
@@ -353,7 +353,7 @@ extension FileSystemProtocol {
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
     public func withFileHandle<Result>(
-        forWritingAt path: FilePath,
+        forWritingAt path: NIOFilePath,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         execute: (_ write: WriteFileHandle) async throws -> Result
     ) async throws -> Result {
@@ -374,8 +374,8 @@ extension FileSystemProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the function returns. Files may also be opened in read-only or
-    /// write-only mode by with ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)-nsue`` and
-    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)-1p6ka``.
+    /// write-only mode by with ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)`` and
+    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading and writing.
@@ -385,7 +385,7 @@ extension FileSystemProtocol {
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
     public func withFileHandle<Result>(
-        forReadingAndWritingAt path: FilePath,
+        forReadingAndWritingAt path: NIOFilePath,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         execute: (_ readWrite: ReadWriteFileHandle) async throws -> Result
     ) async throws -> Result {
@@ -406,7 +406,7 @@ extension FileSystemProtocol {
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
     public func withDirectoryHandle<Result>(
-        atPath path: FilePath,
+        atPath path: NIOFilePath,
         options: OpenOptions.Directory = OpenOptions.Directory(),
         execute: (_ directory: DirectoryFileHandle) async throws -> Result
     ) async throws -> Result {
@@ -430,7 +430,7 @@ extension FileSystemProtocol {
     ///   - path: The path of the file to open.
     /// - Returns: A readable handle to the opened file.
     public func openFile(
-        forReadingAt path: FilePath
+        forReadingAt path: NIOFilePath
     ) async throws -> ReadFileHandle {
         try await self.openFile(forReadingAt: path, options: OpenOptions.Read())
     }
@@ -444,7 +444,7 @@ extension FileSystemProtocol {
     ///   - path: The path of the directory to open.
     /// - Returns: A handle to the opened directory.
     public func openDirectory(
-        atPath path: FilePath
+        atPath path: NIOFilePath
     ) async throws -> DirectoryFileHandle {
         try await self.openDirectory(atPath: path, options: OpenOptions.Directory())
     }
@@ -456,7 +456,7 @@ extension FileSystemProtocol {
     /// - Parameters:
     ///    - path: The path to get information about.
     /// - Returns: Information about the file at the given path or `nil` if no file exists.
-    public func info(forFileAt path: FilePath) async throws -> FileInfo? {
+    public func info(forFileAt path: NIOFilePath) async throws -> FileInfo? {
         try await self.info(forFileAt: path, infoAboutSymbolicLink: false)
     }
 
@@ -478,8 +478,8 @@ extension FileSystemProtocol {
     ///   - destinationPath: The path at which to place the copy.
     ///   - copyStrategy: This controls the concurrency used if the file at `sourcePath` is a directory.
     public func copyItem(
-        at sourcePath: FilePath,
-        to destinationPath: FilePath,
+        at sourcePath: NIOFilePath,
+        to destinationPath: NIOFilePath,
         strategy copyStrategy: CopyStrategy = .platformDefault
     ) async throws {
         try await self.copyItem(at: sourcePath, to: destinationPath, strategy: copyStrategy) { path, error in
@@ -487,61 +487,6 @@ extension FileSystemProtocol {
         } shouldCopyItem: { source, destination in
             true
         }
-    }
-
-    /// Copies the item at the specified path to a new location.
-    ///
-    /// The item to be copied must be a:
-    /// - regular file,
-    /// - symbolic link, or
-    /// - directory.
-    ///
-    /// If `sourcePath` is a symbolic link then only the link is copied. The copied file will
-    /// preserve permissions and any extended attributes (if supported by the file system).
-    ///
-    /// #### Errors
-    ///
-    /// Error codes thrown include:
-    /// - ``FileSystemError/Code-swift.struct/notFound`` if `sourcePath` doesn't exist.
-    /// - ``FileSystemError/Code-swift.struct/fileAlreadyExists`` if `destinationPath` exists.
-    ///
-    /// #### Backward Compatibility details
-    ///
-    /// This is implemented in terms of ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
-    /// using ``CopyStrategy/sequential`` to avoid changing the concurrency semantics of the should callbacks
-    ///
-    /// - Parameters:
-    ///   - sourcePath: The path to the item to copy.
-    ///   - destinationPath: The path at which to place the copy.
-    ///   - shouldProceedAfterError: Determines whether to continue copying files if an error is
-    ///       thrown during the operation. This error does not have to match the error passed
-    ///       to the closure.
-    ///   - shouldCopyFile: A closure which is executed before each file to determine whether the
-    ///       file should be copied.
-    @available(*, deprecated, message: "please use copyItem overload taking CopyStrategy")
-    public func copyItem(
-        at sourcePath: FilePath,
-        to destinationPath: FilePath,
-        shouldProceedAfterError:
-            @escaping @Sendable (
-                _ entry: DirectoryEntry,
-                _ error: Error
-            ) async throws -> Void,
-        shouldCopyFile:
-            @escaping @Sendable (
-                _ source: FilePath,
-                _ destination: FilePath
-            ) async -> Bool
-    ) async throws {
-        try await self.copyItem(
-            at: sourcePath,
-            to: destinationPath,
-            strategy: .sequential,
-            shouldProceedAfterError: shouldProceedAfterError,
-            shouldCopyItem: { (source, destination) in
-                await shouldCopyFile(source.path, destination)
-            }
-        )
     }
 
     /// Copies the item at the specified path to a new location.
@@ -571,8 +516,8 @@ extension FileSystemProtocol {
     /// See the detailed description on ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
     /// for the implications of this with respect to the `shouldProceedAfterError` and `shouldCopyItem` callbacks
     public func copyItem(
-        at sourcePath: FilePath,
-        to destinationPath: FilePath,
+        at sourcePath: NIOFilePath,
+        to destinationPath: NIOFilePath,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -581,7 +526,7 @@ extension FileSystemProtocol {
         shouldCopyItem:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
-                _ destination: FilePath
+                _ destination: NIOFilePath
             ) async -> Bool
     ) async throws {
         try await self.copyItem(
@@ -610,7 +555,7 @@ extension FileSystemProtocol {
     /// - Returns: The number of deleted items which may be zero if `path` did not exist.
     @discardableResult
     public func removeItem(
-        at path: FilePath
+        at path: NIOFilePath
     ) async throws -> Int {
         try await self.removeItem(at: path, strategy: .platformDefault, recursively: true)
     }
@@ -636,7 +581,7 @@ extension FileSystemProtocol {
     /// - Returns: The number of deleted items which may be zero if `path` did not exist.
     @discardableResult
     public func removeItem(
-        at path: FilePath,
+        at path: NIOFilePath,
         recursively removeItemRecursively: Bool
     ) async throws -> Int {
         try await self.removeItem(at: path, strategy: .platformDefault, recursively: removeItemRecursively)
@@ -658,7 +603,7 @@ extension FileSystemProtocol {
     /// - Returns: The number of deleted items which may be zero if `path` did not exist.
     @discardableResult
     public func removeItem(
-        at path: FilePath,
+        at path: NIOFilePath,
         strategy removalStrategy: RemovalStrategy
     ) async throws -> Int {
         try await self.removeItem(at: path, strategy: removalStrategy, recursively: true)
@@ -679,7 +624,7 @@ extension FileSystemProtocol {
     ///   - path: The directory to create.
     ///   - createIntermediateDirectories: Whether intermediate directories should be created.
     public func createDirectory(
-        at path: FilePath,
+        at path: NIOFilePath,
         withIntermediateDirectories createIntermediateDirectories: Bool
     ) async throws {
         try await self.createDirectory(
@@ -703,19 +648,19 @@ extension FileSystemProtocol {
     ///   - execute: A closure which provides access to the directory and its path.
     /// - Returns: The result of `execute`.
     public func withTemporaryDirectory<Result>(
-        prefix: FilePath? = nil,
+        prefix: NIOFilePath? = nil,
         options: OpenOptions.Directory = OpenOptions.Directory(),
-        execute: (_ directory: DirectoryFileHandle, _ path: FilePath) async throws -> Result
+        execute: (_ directory: DirectoryFileHandle, _ path: NIOFilePath) async throws -> Result
     ) async throws -> Result {
         let template: FilePath
 
         if let prefix = prefix {
-            template = prefix.appending("XXXXXXXX")
+            template = prefix.underlying.appending("XXXXXXXX")
         } else {
-            template = try await self.temporaryDirectory.appending("XXXXXXXX")
+            template = try await self.temporaryDirectory.underlying.appending("XXXXXXXX")
         }
 
-        let directory = try await self.createTemporaryDirectory(template: template)
+        let directory = try await self.createTemporaryDirectory(template: NIOFilePath(template))
         return try await withUncancellableTearDown {
             try await withDirectoryHandle(atPath: directory, options: options) { handle in
                 try await execute(handle, directory)
