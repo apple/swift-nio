@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-import NIOPosix
+@_spi(StructuredConcurrencyNIOAsyncChannel) import NIOPosix
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 @main
