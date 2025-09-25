@@ -58,6 +58,43 @@ extension ByteBuffer {
         return result
     }
 
+    #if compiler(>=6.2)
+    @inlinable
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    public mutating func readInlineArray<
+        let count: Int,
+        IntegerType: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: InlineArray<count, IntegerType>.Type = InlineArray<count, IntegerType>.self
+    ) -> InlineArray<count, IntegerType>? {
+        // use stride to account for padding bytes
+        let stride = MemoryLayout<IntegerType>.stride
+        let bytesRequired = stride * count
+
+        guard self.readableBytes >= bytesRequired else {
+            return nil
+        }
+
+        let inlineArray = InlineArray<count, IntegerType> { (outputSpan: inout OutputSpan<IntegerType>) in
+            for index in 0..<count {
+                // already made sure of 'self.readableBytes >= bytesRequired' above,
+                // so this is safe to force-unwrap as it's guaranteed to exist
+                let integer = self.getInteger(
+                    // this is less than 'bytesRequired' so is safe to multiply
+                    at: stride &* index,
+                    endianness: endianness,
+                    as: IntegerType.self
+                )!
+                outputSpan.append(integer)
+            }
+        }
+        // already made sure of 'self.readableBytes >= bytesRequired' above
+        self._moveReaderIndex(forwardBy: bytesRequired)
+        return inlineArray
+    }
+    #endif
+
     /// Returns the Bytes at the current reader index without advancing it.
     ///
     /// This method is equivalent to calling `getBytes(at: readerIndex, ...)`
