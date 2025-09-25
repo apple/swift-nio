@@ -567,12 +567,12 @@ extension ServerBootstrap {
 
         /// Creates a binding target for a Unix domain socket.
         ///
-        /// Unix domain sockets provide high-performance inter-process communication 
-        /// on the same machine using filesystem paths. The socket file will be created 
+        /// Unix domain sockets provide high-performance inter-process communication
+        /// on the same machine using filesystem paths. The socket file will be created
         /// at the specified path when binding occurs.
         ///
-        /// - Parameter path: The filesystem path for the Unix domain socket. 
-        ///                   Must be a valid filesystem path and should not exist 
+        /// - Parameter path: The filesystem path for the Unix domain socket.
+        ///                   Must be a valid filesystem path and should not exist
         ///                   unless cleanup is enabled in the binding operation
         /// - Warning: The path must not exist.
         public static func unixDomainSocketPath(_ path: String) -> BindTarget {
@@ -677,10 +677,11 @@ extension ServerBootstrap {
         target: BindTarget,
         serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<NIOAsyncChannel<Inbound, Outbound>>,
-        handleChildChannel: @escaping @Sendable (
-            _ channel: NIOAsyncChannel<Inbound, Outbound>
-        ) async -> (),
-        handleServerChannel: @Sendable @escaping (Channel) async -> () = { _  in },
+        handleChildChannel:
+            @escaping @Sendable (
+                _ channel: NIOAsyncChannel<Inbound, Outbound>
+            ) async -> (),
+        handleServerChannel: @Sendable @escaping (Channel) async -> () = { _  in }
     ) async throws {
         let channel = try await self.makeConnectedChannel(
             target: target,
@@ -899,7 +900,6 @@ extension ServerBootstrap {
             )
         }
     }
-
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     private func _bind<Output: Sendable>(
@@ -1569,6 +1569,38 @@ extension ClientBootstrap {
                 eventLoop.makeSucceededFuture(output)
             }
         )
+    }
+
+    /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
+    ///
+    /// - Parameters:
+    ///   - host: The host to connect to.
+    ///   - port: The port to connect to.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   - channelHandler: A closure that provides scoped access to the `NIOAsyncChannel`. Use the `inbound`
+    ///                     property to read from the channel and the `outbound` property to write to the channel.
+    /// - Returns: The result of the `channelHandler` closure.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    public func connect<Inbound, Outbound, Result>(
+        host: String,
+        port: Int,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<NIOAsyncChannel<Inbound, Outbound>>,
+        channelHandler: (NIOAsyncChannel<Inbound, Outbound>) async throws -> sending Result
+    ) async throws -> sending Result {
+        let eventLoop = self.group.next()
+        let channel = try await self.connect(
+            host: host,
+            port: port,
+            eventLoop: eventLoop,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }
+        )
+
+        return try await channel.executeThenClose { _, _ in
+            try await channelHandler(channel)
+        }
     }
 
     /// Specify the `address` to connect to for the TCP `Channel` that will be established.
