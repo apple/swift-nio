@@ -664,14 +664,11 @@ extension ServerBootstrap {
     ///   - serverBackPressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childChannelInitializer: A closure to initialize the channel. The return value of this closure is used in the `onConnection`
     ///                              closure.
-    ///   - onceStartup: A closure that will be called once the server has been started. Use this to get access to
-    ///                  the port number, if you used port `0` in the ``BindTarget``.
-    ///   - handleConnection: A closure to handle the connection. Use the channel's `inbound` property to read from
-    ///                       the connection and channel's `outbound` to write to the connection.
-    ///   - onListeningChannel: A closure that will be called once the server has been started. Use this to get access to
-    ///                         the serverChannel, if you used port `0` in the ``BindTarget``. You can also use it to
-    ///                         send events on the server channel pipeline. You must not call the channels `inbound` or
-    ///                         `outbound` properties.
+    ///   - handleChildChannel: A closure to handle the connection. Use the channel's `inbound` property to read from
+    ///                         the connection and channel's `outbound` to write to the connection.
+    ///   - handleServerChannel: A closure that will be called once the server has been started. Use this to get access to
+    ///                          the serverChannel, if you used port `0` in the ``BindTarget``. You can also use it to
+    ///                          send events on the server channel pipeline.
     /// - Note: The bind method respects task cancellation which will force close the server. If you want to gracefully
     ///         shut-down use the quiescing helper approach as outlined above.
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
@@ -680,12 +677,10 @@ extension ServerBootstrap {
         target: BindTarget,
         serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<NIOAsyncChannel<Inbound, Outbound>>,
-        handleConnection: @escaping @Sendable (
+        handleChildChannel: @escaping @Sendable (
             _ channel: NIOAsyncChannel<Inbound, Outbound>
         ) async -> (),
-        onListeningChannel: @Sendable @escaping (
-            NIOAsyncChannel<NIOAsyncChannel<Inbound, Outbound>, Never>
-        ) async -> () = { _  in },
+        handleServerChannel: @Sendable @escaping (Channel) async -> () = { _  in },
     ) async throws {
         let channel = try await self.makeConnectedChannel(
             target: target,
@@ -700,7 +695,7 @@ extension ServerBootstrap {
                 let result = await withDiscardingTaskGroup { group -> Result<Void, any Error> in
 
                     group.addTask {
-                        await onListeningChannel(channel)
+                        await handleServerChannel(channel.channel)
                     }
 
                     do {
@@ -709,7 +704,7 @@ extension ServerBootstrap {
                                 group.addTask {
                                     do {
                                         try await connectionChannel.executeThenClose { _, _ in
-                                            await handleConnection(connectionChannel)
+                                            await handleChildChannel(connectionChannel)
                                         }
                                     } catch {
                                         // ignore single connection failures
@@ -1549,10 +1544,6 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
 // MARK: Async connect methods
 
 extension ClientBootstrap {
-
-    struct Endpoint {
-
-    }
 
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
     ///

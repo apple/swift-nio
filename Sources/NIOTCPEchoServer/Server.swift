@@ -39,26 +39,25 @@ struct Server {
         try await ServerBootstrap(group: self.eventLoopGroup)
             .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
             .bind(
-                target: .hostAndPort(self.host, self.port),
-                childChannelInitializer: { channel in
-                    channel.eventLoop.makeCompletedFuture {
-                        try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(NewlineDelimiterCoder()))
-                        try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(NewlineDelimiterCoder()))
-
-                        return try NIOAsyncChannel(
-                            wrappingChannelSynchronously: channel,
-                            configuration: NIOAsyncChannel.Configuration(
-                                inboundType: String.self,
-                                outboundType: String.self
-                            )
-                        )
-                    }
-                }
+                target: .hostAndPort(self.host, self.port)
             ) { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(NewlineDelimiterCoder()))
+                    try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(NewlineDelimiterCoder()))
+
+                    return try NIOAsyncChannel(
+                        wrappingChannelSynchronously: channel,
+                        configuration: NIOAsyncChannel.Configuration(
+                            inboundType: String.self,
+                            outboundType: String.self
+                        )
+                    )
+                }
+            } handleChildChannel: { channel in
                 print("Handling new connection")
                 await self.handleConnection(channel: channel)
                 print("Done handling connection")
-            } onListeningChannel: { serverChannel in
+            } handleServerChannel: { serverChannel in
                 // you can access the server channel here. You must not use call
                 // `inbound` or `outbound` on it.
             }
