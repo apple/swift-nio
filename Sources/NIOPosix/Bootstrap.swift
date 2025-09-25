@@ -539,7 +539,7 @@ extension ServerBootstrap {
         }
 
         var base: Base
-        
+
         /// Creates a binding target for a hostname and port.
         ///
         /// This method creates a target that will resolve the hostname and bind to the
@@ -547,9 +547,9 @@ extension ServerBootstrap {
         /// and may resolve to both IPv4 and IPv6 addresses depending on system configuration.
         ///
         /// - Parameters:
-        ///   - host: The hostname or IP address to bind to. Can be a domain name like 
+        ///   - host: The hostname or IP address to bind to. Can be a domain name like
         ///           "localhost" or "example.com", or an IP address like "127.0.0.1" or "::1"
-        ///   - port: The port number to bind to (0-65535). Use 0 to let the system 
+        ///   - port: The port number to bind to (0-65535). Use 0 to let the system
         ///           choose an available port
         public static func hostAndPort(_ host: String, _ port: Int) -> BindTarget {
             BindTarget(base: .hostAndPort(host: host, port: port))
@@ -585,7 +585,7 @@ extension ServerBootstrap {
         /// or between different virtual machines on the same host. This is commonly used
         /// in virtualized environments for guest-host communication.
         ///
-        /// - Parameter vsockAddress: The VSOCK address to bind to, containing both 
+        /// - Parameter vsockAddress: The VSOCK address to bind to, containing both
         ///                          context ID (CID) and port number
         /// - Note: VSOCK support depends on the underlying platform and virtualization technology
         public static func vsockAddress(_ vsockAddress: VsockAddress) -> BindTarget {
@@ -680,8 +680,8 @@ extension ServerBootstrap {
         handleChildChannel:
             @escaping @Sendable (
                 _ channel: NIOAsyncChannel<Inbound, Outbound>
-            ) async -> (),
-        handleServerChannel: @Sendable @escaping (Channel) async -> () = { _  in }
+            ) async -> Void,
+        handleServerChannel: @Sendable @escaping (Channel) async -> Void = { _  in }
     ) async throws {
         let channel = try await self.makeConnectedChannel(
             target: target,
@@ -1569,38 +1569,6 @@ extension ClientBootstrap {
                 eventLoop.makeSucceededFuture(output)
             }
         )
-    }
-
-    /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
-    ///
-    /// - Parameters:
-    ///   - host: The host to connect to.
-    ///   - port: The port to connect to.
-    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
-    ///   - channelHandler: A closure that provides scoped access to the `NIOAsyncChannel`. Use the `inbound`
-    ///                     property to read from the channel and the `outbound` property to write to the channel.
-    /// - Returns: The result of the `channelHandler` closure.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func connect<Inbound, Outbound, Result>(
-        host: String,
-        port: Int,
-        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<NIOAsyncChannel<Inbound, Outbound>>,
-        channelHandler: (NIOAsyncChannel<Inbound, Outbound>) async throws -> sending Result
-    ) async throws -> sending Result {
-        let eventLoop = self.group.next()
-        let channel = try await self.connect(
-            host: host,
-            port: port,
-            eventLoop: eventLoop,
-            channelInitializer: channelInitializer,
-            postRegisterTransformation: { output, eventLoop in
-                eventLoop.makeSucceededFuture(output)
-            }
-        )
-
-        return try await channel.executeThenClose { _, _ in
-            try await channelHandler(channel)
-        }
     }
 
     /// Specify the `address` to connect to for the TCP `Channel` that will be established.
