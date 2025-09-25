@@ -527,6 +527,7 @@ extension ServerBootstrap {
     /// `BindTarget` provides a type-safe way to specify different types of binding targets
     /// for server bootstraps. It supports various address types including network addresses,
     /// Unix domain sockets, VSOCK addresses, and existing socket handles.
+    @_spi(StructuredConcurrencyNIOAsyncChannel)
     public struct BindTarget: Sendable {
 
         enum Base {
@@ -665,20 +666,26 @@ extension ServerBootstrap {
     ///                              closure.
     ///   - onceStartup: A closure that will be called once the server has been started. Use this to get access to
     ///                  the port number, if you used port `0` in the ``BindTarget``.
-    ///   - onConnection: A closure to handle the connection. Use the channel's `inbound` property to read from
-    ///                   the connection and channel's `outbound` to write to the connection.
-    ///
+    ///   - handleConnection: A closure to handle the connection. Use the channel's `inbound` property to read from
+    ///                       the connection and channel's `outbound` to write to the connection.
+    ///   - onListeningChannel: A closure that will be called once the server has been started. Use this to get access to
+    ///                         the serverChannel, if you used port `0` in the ``BindTarget``. You can also use it to
+    ///                         send events on the server channel pipeline. You must not call the channels `inbound` or
+    ///                         `outbound` properties.
     /// - Note: The bind method respects task cancellation which will force close the server. If you want to gracefully
     ///         shut-down use the quiescing helper approach as outlined above.
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    @_spi(StructuredConcurrencyNIOAsyncChannel)
     public func bind<Inbound: Sendable, Outbound: Sendable>(
         target: BindTarget,
         serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<NIOAsyncChannel<Inbound, Outbound>>,
-        onceStartup: (Channel) -> () = { _  in },
-        onConnection: @escaping @Sendable (
+        handleConnection: @escaping @Sendable (
             _ channel: NIOAsyncChannel<Inbound, Outbound>
-        ) async -> ()
+        ) async -> (),
+        onListeningChannel: @Sendable @escaping (
+            NIOAsyncChannel<NIOAsyncChannel<Inbound, Outbound>, Never>
+        ) async -> () = { _  in },
     ) async throws {
         let channel = try await self.makeConnectedChannel(
             target: target,
@@ -686,20 +693,23 @@ extension ServerBootstrap {
             childChannelInitializer: childChannelInitializer
         )
 
-        onceStartup(channel.channel)
-
         try await withTaskCancellationHandler {
             try await channel.executeThenClose { inbound, outbound in
                 // we need to dance the result dance here, since we can't throw from the
                 // withDiscardingTaskGroup closure.
                 let result = await withDiscardingTaskGroup { group -> Result<Void, any Error> in
+
+                    group.addTask {
+                        await onListeningChannel(channel)
+                    }
+
                     do {
                         try await channel.executeThenClose { inbound in
                             for try await connectionChannel in inbound {
                                 group.addTask {
                                     do {
                                         try await connectionChannel.executeThenClose { _, _ in
-                                            await onConnection(connectionChannel)
+                                            await handleConnection(connectionChannel)
                                         }
                                     } catch {
                                         // ignore single connection failures
@@ -1539,6 +1549,11 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
 // MARK: Async connect methods
 
 extension ClientBootstrap {
+
+    struct Endpoint {
+
+    }
+
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
     ///
     /// - Parameters:

@@ -58,6 +58,9 @@ struct Server {
                 print("Handling new connection")
                 await self.handleConnection(channel: channel)
                 print("Done handling connection")
+            } onListeningChannel: { serverChannel in
+                // you can access the server channel here. You must not use call
+                // `inbound` or `outbound` on it.
             }
     }
 
