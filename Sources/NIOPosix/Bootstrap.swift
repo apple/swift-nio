@@ -1638,16 +1638,13 @@ extension ClientBootstrap {
     ///                              closure.
     ///   - handleChannel: A closure to handle the client connection. Use the channel's `inbound` property to read from
     ///                    the connection and channel's `outbound` to write to the connection.
-    @_spi(StructuredConcurrencyNIOAsyncChannel)
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    @_spi(StructuredConcurrencyNIOAsyncChannel)
     public func connect<Inbound: Sendable, Outbound: Sendable, Result>(
         target: ConnectTarget,
         backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<NIOAsyncChannel<Inbound, Outbound>>,
-        handleChannel:
-            @escaping @Sendable (
-                _ channel: NIOAsyncChannel<Inbound, Outbound>
-            ) async -> sending Result
+        handleChannel: (_ channel: NIOAsyncChannel<Inbound, Outbound>) async -> sending Result
     ) async throws -> sending Result {
         let channel: NIOAsyncChannel<Inbound, Outbound>
         switch target.base {
