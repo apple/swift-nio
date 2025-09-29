@@ -572,8 +572,7 @@ extension ServerBootstrap {
         /// at the specified path when binding occurs.
         ///
         /// - Parameter path: The filesystem path for the Unix domain socket.
-        ///                   Must be a valid filesystem path and should not exist
-        ///                   unless cleanup is enabled in the binding operation
+        ///                   Must be a valid filesystem path and should not exist.
         /// - Warning: The path must not exist.
         public static func unixDomainSocketPath(_ path: String) -> BindTarget {
             BindTarget(base: .unixDomainSocketPath(path))
@@ -662,8 +661,8 @@ extension ServerBootstrap {
     /// - Parameters:
     ///   - target: The ``BindTarget`` to use.
     ///   - serverBackPressureStrategy: The back pressure strategy used by the server socket channel.
-    ///   - childChannelInitializer: A closure to initialize the channel. The return value of this closure is used in the `onConnection`
-    ///                              closure.
+    ///   - childChannelInitializer: A closure to initialize the channel. The return value of this closure is used in the
+    ///                             `handleChildChannel` closure.
     ///   - handleChildChannel: A closure to handle the connection. Use the channel's `inbound` property to read from
     ///                         the connection and channel's `outbound` to write to the connection.
     ///   - handleServerChannel: A closure that will be called once the server has been started. Use this to get access to
@@ -1544,6 +1543,134 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
 // MARK: Async connect methods
 
 extension ClientBootstrap {
+
+    /// Represents a target address or socket for creating a client socket.
+    ///
+    /// `ConnectTarget` provides a type-safe way to specify different types of connecting targets
+    /// for client bootstraps. It supports various address types including network addresses,
+    /// Unix domain sockets, VSOCK addresses, and existing socket handles.
+    @_spi(StructuredConcurrencyNIOAsyncChannel)
+    public struct ConnectTarget: Sendable {
+
+        enum Base {
+            case hostAndPort(host: String, port: Int)
+            case socketAddress(SocketAddress)
+            case unixDomainSocketPath(String)
+            case vsockAddress(VsockAddress)
+            case socket(NIOBSDSocket.Handle)
+        }
+
+        var base: Base
+
+        /// Creates a connect target for a hostname and port.
+        ///
+        /// This method creates a target that will resolve the hostname and connect to the
+        /// specified port. The hostname resolution follows standard system behavior
+        /// and may resolve to both IPv4 and IPv6 addresses depending on system configuration.
+        ///
+        /// - Parameters:
+        ///   - host: The hostname or IP address to bind to. Can be a domain name like
+        ///           "localhost" or "example.com", or an IP address like "189.201.14.13" or "::1"
+        ///   - port: The port number to connect to (0-65535).
+        public static func hostAndPort(_ host: String, _ port: Int) -> ConnectTarget {
+            ConnectTarget(base: .hostAndPort(host: host, port: port))
+        }
+
+        /// Creates a connect target for a specific socket address.
+        ///
+        /// Use this method when you have a pre-constructed ``SocketAddress`` that
+        /// specifies the exact connect location, including IPv4, IPv6, or Unix domain addresses.
+        ///
+        /// - Parameter address: The socket address to connect to
+        public static func socketAddress(_ address: SocketAddress) -> ConnectTarget {
+            ConnectTarget(base: .socketAddress(address))
+        }
+
+        /// Creates a connect target for a Unix domain socket.
+        ///
+        /// Unix domain sockets provide high-performance inter-process communication
+        /// on the same machine using filesystem paths. The socket file needs to exist in
+        /// order to connect to it.
+        ///
+        /// - Parameter path: The filesystem path for the Unix domain socket.
+        ///                   Must be a valid filesystem path and should exist.
+        /// - Warning: The path must exist.
+        public static func unixDomainSocketPath(_ path: String) -> ConnectTarget {
+            ConnectTarget(base: .unixDomainSocketPath(path))
+        }
+
+        /// Creates a connect target for a VSOCK address.
+        ///
+        /// VSOCK (Virtual Socket) provides communication between virtual machines and their hosts,
+        /// or between different virtual machines on the same host. This is commonly used
+        /// in virtualized environments for guest-host communication.
+        ///
+        /// - Parameter vsockAddress: The VSOCK address to connect to, containing both
+        ///                           context ID (CID) and port number
+        /// - Note: VSOCK support depends on the underlying platform and virtualization technology
+        public static func vsockAddress(_ vsockAddress: VsockAddress) -> ConnectTarget {
+            ConnectTarget(base: .vsockAddress(vsockAddress))
+        }
+
+        /// Creates a connect target for an existing socket handle.
+        ///
+        /// This method allows you to use a pre-existing socket that has already been
+        /// created and optionally configured. This is useful for advanced scenarios where you
+        /// need custom socket setup before binding, or when integrating with external libraries.
+        ///
+        /// - Parameters:
+        ///   - handle: The existing socket handle to use. Must be a valid, open socket
+        ///            that is compatible with the intended server bootstrap type
+        /// - Note: The bootstrap will take ownership of the socket handle and will close
+        ///         it when the server shuts down
+        public static func socket(_ handle: NIOBSDSocket.Handle) -> ConnectTarget {
+            ConnectTarget(base: .socket(handle))
+        }
+    }
+
+    /// Create a client connection to the ``ConnectTarget``. The connection will be closed once the scope of the
+    /// `handleChannel` closure is exited.
+    ///
+    /// - Parameters:
+    ///   - target: The ``ConnectTarget`` to use.
+    ///   - backPressureStrategy: The back pressure strategy used by the channel.
+    ///   - childChannelInitializer: A closure to initialize the channel. The return value of this closure is used in handleChannel
+    ///                              closure.
+    ///   - handleChannel: A closure to handle the client connection. Use the channel's `inbound` property to read from
+    ///                    the connection and channel's `outbound` to write to the connection.
+    @_spi(StructuredConcurrencyNIOAsyncChannel)
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    public func connect<Inbound: Sendable, Outbound: Sendable, Result>(
+        target: ConnectTarget,
+        backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<NIOAsyncChannel<Inbound, Outbound>>,
+        handleChannel:
+            @escaping @Sendable (
+                _ channel: NIOAsyncChannel<Inbound, Outbound>
+            ) async -> sending Result
+    ) async throws -> sending Result {
+        let channel: NIOAsyncChannel<Inbound, Outbound>
+        switch target.base {
+        case .socketAddress(let socketAddress):
+            channel = try await self.connect(to: socketAddress, channelInitializer: channelInitializer)
+
+        case .hostAndPort(let host, let port):
+            channel = try await self.connect(host: host, port: port, channelInitializer: channelInitializer)
+
+        case .unixDomainSocketPath(let path):
+            channel = try await self.connect(unixDomainSocketPath: path, channelInitializer: channelInitializer)
+
+        case .vsockAddress(let vsockAddress):
+            channel = try await self.connect(to: vsockAddress, channelInitializer: channelInitializer)
+
+        case .socket(let handle):
+            channel = try await self.withConnectedSocket(handle, channelInitializer: channelInitializer)
+        }
+
+        return try await channel.executeThenClose { _, _ in
+            await handleChannel(channel)
+        }
+    }
 
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
     ///
