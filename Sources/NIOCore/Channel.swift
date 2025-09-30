@@ -161,8 +161,18 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker, _NIOPreconcurrencySe
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
+    func write<T>(_ any: sending T) -> EventLoopFuture<Void>
+
+    /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
+    ///
+    /// - seealso: `ChannelOutboundInvoker.write`.
     @preconcurrency
     func write<T: Sendable>(_ any: T, promise: EventLoopPromise<Void>?)
+
+    /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
+    ///
+    /// - seealso: `ChannelOutboundInvoker.write`.
+    func write<T>(_ any: sending T, promise: EventLoopPromise<Void>?)
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
