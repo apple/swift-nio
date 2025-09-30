@@ -680,7 +680,7 @@ extension ServerBootstrap {
             @escaping @Sendable (
                 _ channel: NIOAsyncChannel<Inbound, Outbound>
             ) async -> Void,
-        handleServerChannel: @Sendable @escaping (Channel) async -> Void = { _  in }
+        handleServerChannel: @Sendable @escaping (Channel) async -> Void = { _ in }
     ) async throws {
         let channel = try await self.makeConnectedChannel(
             target: target,
