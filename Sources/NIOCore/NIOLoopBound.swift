@@ -174,6 +174,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         }
     }
 
+    #if compiler(>=6.0)
     /// Safely access and potentially modify the contained value with a closure.
     ///
     /// This method provides a way to perform operations on the contained value while ensuring
@@ -192,4 +193,5 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         defer { self._value = value }
         return try handler(&value)
     }
+    #endif
 }
