@@ -173,4 +173,23 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
             yield &self._value
         }
     }
+
+    /// Safely access and potentially modify the contained value with a closure.
+    ///
+    /// This method provides a way to perform operations on the contained value while ensuring
+    /// thread safety through EventLoop verification. The closure receives an `inout` parameter
+    /// allowing both read and write access to the value.
+    ///
+    /// - Parameter handler: A closure that receives an `inout` reference to the contained value.
+    ///   The closure can read from and write to this value. Any modifications made within the
+    ///   closure will be reflected in the box after the closure completes, even if the closure throws.
+    /// - Returns: The value returned by the `handler` closure.
+    /// - Note: This method is particularly useful when you need to perform read and write operations
+    ///         on the value because it reduces the on EventLoop checks.
+    public func withValue<T, E: Error>(_ handler: (inout Value) throws(E) -> T) throws(E) -> T {
+        self.eventLoop.preconditionInEventLoop()
+        var value = self._value
+        defer { self._value = value }
+        return try handler(&value)
+    }
 }
