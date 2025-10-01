@@ -17,7 +17,7 @@ on:
       linux_5_10_enabled:
         type: boolean
         description: "Boolean to enable the Linux 5.10 Swift version matrix job. Defaults to true."
-        default: false
+        default: true
       linux_6_0_enabled:
         type: boolean
         description: "Boolean to enable the Linux 6.0 Swift version matrix job. Defaults to true."
