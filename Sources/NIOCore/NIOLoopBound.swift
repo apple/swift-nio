@@ -187,11 +187,11 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     /// - Returns: The value returned by the `handler` closure.
     /// - Note: This method is particularly useful when you need to perform read and write operations
     ///         on the value because it reduces the on EventLoop checks.
-    public func withValue<T, E: Error>(_ handler: (inout Value) throws(E) -> T) throws(E) -> T {
+    public func withValue<Success, Failure: Error>(
+        _ handler: (inout Value) throws(Failure) -> Success
+    ) throws(Failure) -> Success {
         self.eventLoop.preconditionInEventLoop()
-        var value = self._value
-        defer { self._value = value }
-        return try handler(&value)
+        return try handler(&self._value)
     }
     #endif
 }
