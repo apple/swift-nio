@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=6)
-
 import NIOTestUtils
 import Synchronization
 import XCTest
@@ -65,5 +63,3 @@ class ManualTaskExecutorTest: XCTestCase {
         }
     }
 }
-
-#endif  // compiler(>=6)

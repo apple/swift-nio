@@ -323,7 +323,6 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
         return result
     }
 
-    #if compiler(>=6.0)
     // Note: Whitespace changes are used to workaround compiler bug
     // Remove when compiler version 5.10 is no longer supported.
     // https://github.com/swiftlang/swift/issues/79285
@@ -370,7 +369,6 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
 
         return result
     }
-    #endif
 }
 
 // swift-format-ignore: AmbiguousTrailingClosureOverload

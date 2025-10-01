@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=6)
-
 import DequeModule
 import Synchronization
 
@@ -162,5 +160,3 @@ package final class ManualTaskExecutor: TaskExecutor {
         }
     }
 }
-
-#endif  // compiler(>=6)

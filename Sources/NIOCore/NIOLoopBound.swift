@@ -139,7 +139,6 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         .init(_value: value, uncheckedEventLoop: eventLoop)
     }
 
-    #if compiler(>=6.0)
     // Note: Whitespace changes are used to workaround compiler bug
     // Remove when compiler version 5.10 is no longer supported.
     // https://github.com/swiftlang/swift/issues/79285
@@ -159,7 +158,6 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         // - The only way to ever write (or read indeed) `self._value` is by proving to be inside the `EventLoop`.
         .init(_value: value, uncheckedEventLoop: eventLoop)
     }
-    #endif
 
     /// Access the `value` with the precondition that the code is running on `eventLoop`.
     ///

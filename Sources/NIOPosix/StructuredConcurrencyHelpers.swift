@@ -29,7 +29,6 @@
 // Note: Whitespace changes are used to workaround compiler bug
 // https://github.com/swiftlang/swift/issues/79285
 
-#if compiler(>=6.0)
 @inlinable
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 internal func asyncDo<R>(
@@ -62,36 +61,3 @@ internal func asyncDo<R>(
     }.value
     return result
 }
-#else
-@inlinable
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-internal func asyncDo<R: Sendable>(
-    _ body: () async throws -> R,
-    finally: @escaping @Sendable ((any Error)?) async throws -> Void
-) async throws -> R {
-    let result: R
-    do {
-        result = try await body()
-    } catch {
-        // `body` failed, we need to invoke `finally` with the `error`.
-
-        // This _looks_ unstructured but isn't really because we unconditionally always await the return.
-        // We need to have an uncancelled task here to assure this is actually running in case we hit a
-        // cancellation error.
-        try await Task {
-            try await finally(error)
-        }.value
-        throw error
-    }
-
-    // `body` succeeded, we need to invoke `finally` with `nil` (no error).
-
-    // This _looks_ unstructured but isn't really because we unconditionally always await the return.
-    // We need to have an uncancelled task here to assure this is actually running in case we hit a
-    // cancellation error.
-    try await Task {
-        try await finally(nil)
-    }.value
-    return result
-}
-#endif

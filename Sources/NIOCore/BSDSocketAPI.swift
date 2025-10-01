@@ -102,15 +102,9 @@ private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMut
 #endif
 
 #if os(Android)
-#if compiler(>=6.0)
 @usableFromInline let IFF_BROADCAST: CUnsignedInt = numericCast(Android.IFF_BROADCAST.rawValue)
 @usableFromInline let IFF_POINTOPOINT: CUnsignedInt = numericCast(Android.IFF_POINTOPOINT.rawValue)
 @usableFromInline let IFF_MULTICAST: CUnsignedInt = numericCast(Android.IFF_MULTICAST.rawValue)
-#else
-@usableFromInline let IFF_BROADCAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_BROADCAST.rawValue)
-@usableFromInline let IFF_POINTOPOINT: CUnsignedInt = numericCast(SwiftGlibc.IFF_POINTOPOINT.rawValue)
-@usableFromInline let IFF_MULTICAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_MULTICAST.rawValue)
-#endif
 #if arch(arm)
 @usableFromInline let SO_RCVTIMEO = SO_RCVTIMEO_OLD
 @usableFromInline let SO_TIMESTAMP = SO_TIMESTAMP_OLD

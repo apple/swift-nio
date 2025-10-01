@@ -2015,7 +2015,6 @@ final class EventLoopTest: XCTestCase {
         }
     }
 
-    #if compiler(>=6.0)
     func testStructuredConcurrencyMTELGStartStop() async throws {
         let loops = try await MultiThreadedEventLoopGroup.withEventLoopGroup(
             numberOfThreads: 3
@@ -2069,7 +2068,6 @@ final class EventLoopTest: XCTestCase {
         }
         XCTAssertEqual("cool", actual)
     }
-    #endif
 
     func testRegressionSelectableEventLoopDeadlock() throws {
         let iterations = 1_000

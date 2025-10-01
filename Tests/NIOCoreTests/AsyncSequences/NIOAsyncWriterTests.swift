@@ -607,7 +607,6 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 1)
     }
 
-    #if compiler(>=6)
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     func testWriterFinish_AndSuspendBufferedYield() async throws {
         try await withThrowingTaskGroup(of: Void.self) { group in
@@ -654,7 +653,6 @@ final class NIOAsyncWriterTests: XCTestCase {
             }
         }
     }
-    #endif  // compiler(>=6)
 
     func testWriterFinish_whenFinished() {
         // This tests just checks that finishing again is a no-op
