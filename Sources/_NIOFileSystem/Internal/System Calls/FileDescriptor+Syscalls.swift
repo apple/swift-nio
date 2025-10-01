@@ -218,9 +218,9 @@ extension FileDescriptor {
                 var slice = buffer.prefix(size)
                 while let index = slice.firstIndex(of: 0) {
                     // TODO: can we do this more cheaply?
-                    let prefix = slice[...index]
+                    let prefix = slice[..<index]
                     attributes.append(String(decoding: Array(prefix), as: UTF8.self))
-                    slice = slice.dropFirst(prefix.count)
+                    slice = slice.dropFirst(prefix.count + 1)
                 }
 
                 return attributes
