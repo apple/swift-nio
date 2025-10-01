@@ -65,6 +65,7 @@ let package = Package(
             dependencies: [
                 "NIOConcurrencyHelpers",
                 "_NIOBase64",
+                "CNIOBSD",
                 "CNIODarwin",
                 "CNIOLinux",
                 "CNIOWindows",
@@ -97,6 +98,7 @@ let package = Package(
         .target(
             name: "NIOPosix",
             dependencies: [
+                "CNIOBSD",
                 "CNIOLinux",
                 "CNIODarwin",
                 "CNIOWindows",
@@ -152,6 +154,10 @@ let package = Package(
         .target(
             name: "CNIOSHA1",
             dependencies: []
+        ),
+        .target(
+            name: "CNIOBSD",
+            dependencies: [],
         ),
         .target(
             name: "CNIOLinux",
@@ -488,6 +494,7 @@ let package = Package(
                 "NIOTestUtils",
                 "NIOConcurrencyHelpers",
                 "NIOEmbedded",
+                "CNIOBSD",
                 "CNIOLinux",
                 "CNIODarwin",
                 "NIOTLS",

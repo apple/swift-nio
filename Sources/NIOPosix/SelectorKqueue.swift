@@ -15,7 +15,7 @@
 import NIOConcurrencyHelpers
 import NIOCore
 
-#if canImport(Darwin)
+#if canImport(Darwin) || os(OpenBSD)
 
 /// Represents the `kqueue` filters we might use:
 ///
@@ -131,7 +131,13 @@ extension Selector: _SelectorBackendProtocol {
             // Clamp the timespec tv_sec value to the maximum supported by the Darwin-kernel.
             // Whilst this schedules the event far into the future (several years) it will still be triggered provided
             // the system stays up.
+            #if os(OpenBSD)
+            // Should double-check if this makes sense for OpenBSD, but
+            // let's just get this to compile for now.
+            ts.tv_sec = min(ts.tv_sec, time_t(sysIntervalTimerMaxSec))
+            #else
             ts.tv_sec = min(ts.tv_sec, sysIntervalTimerMaxSec)
+            #endif
 
             return ts
         }
@@ -388,6 +394,7 @@ extension kevent {
         // we do it with NOTE_LOWAT set to Int.max, which will ensure that there is never enough data
         // in the send buffer to trigger EVFILT_EXCEPT. Thanks to the sensible design of kqueue,
         // this only affects our EXCEPT filter: EVFILT_READ behaves separately.
+        #if canImport(Darwin)
         if filter == EVFILT_EXCEPT {
             self.fflags = CUnsignedInt(NOTE_LOWAT)
             self.data = Int.max
@@ -395,6 +402,10 @@ extension kevent {
             self.fflags = 0
             self.data = 0
         }
+        #else
+        self.fflags = 0
+        self.data = 0
+        #endif
     }
 }
 
