@@ -38,7 +38,7 @@ class ManualTaskExecutorTest: XCTestCase {
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     func testTwoManualTaskExecutors() async {
         await withDiscardingTaskGroup { group in
-            await withManualTaskExecutor { taskExecutor1, taskExecutor2 in
+            await withManualTaskExecutors { taskExecutor1, taskExecutor2 in
                 let task1DidRun = Mutex(false)
                 let task2DidRun = Mutex(false)
 

@@ -610,7 +610,7 @@ final class NIOAsyncWriterTests: XCTestCase {
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     func testWriterFinish_AndSuspendBufferedYield() async throws {
         try await withThrowingTaskGroup(of: Void.self) { group in
-            try await withManualTaskExecutor { taskExecutor1, taskExecutor2 in
+            try await withManualTaskExecutors { taskExecutor1, taskExecutor2 in
                 self.sink.setWritability(to: false)
 
                 self.delegate.didYieldHandler = { _ in

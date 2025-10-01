@@ -85,7 +85,7 @@ package func withManualTaskExecutor<T, Failure>(
 /// - Returns: The value returned by `body`.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 @inlinable
-package func withManualTaskExecutor<T, Failure>(
+package func withManualTaskExecutors<T, Failure>(
     body: (ManualTaskExecutor, ManualTaskExecutor) async throws(Failure) -> T
 ) async throws(Failure) -> T {
     let taskExecutor1 = ManualTaskExecutor()
