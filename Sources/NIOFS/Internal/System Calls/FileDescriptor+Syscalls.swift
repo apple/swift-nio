@@ -207,9 +207,11 @@ extension FileDescriptor {
             }
 
             // Read and decode.
-            var buffer = [CChar](repeating: 0, count: capacity)
+            var buffer = [UInt8](repeating: 0, count: capacity)
             return buffer.withUnsafeMutableBufferPointer { pointer in
-                self.listExtendedAttributes(pointer)
+                pointer.withMemoryRebound(to: CChar.self) { pointer in
+                    self.listExtendedAttributes(pointer)
+                }
             }.map { size in
                 // The buffer contains null terminated C-strings.
                 var attributes = [String]()
@@ -217,7 +219,7 @@ extension FileDescriptor {
                 while let index = slice.firstIndex(of: 0) {
                     // TODO: can we do this more cheaply?
                     let prefix = slice[...index]
-                    attributes.append(String(cString: Array(prefix)))
+                    attributes.append(String(decoding: Array(prefix), as: Unicode.UTF8.self))
                     slice = slice.dropFirst(prefix.count)
                 }
 
