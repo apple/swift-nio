@@ -23,8 +23,6 @@ let swiftSystem: PackageDescription.Target.Dependency = .product(name: "SystemPa
 // compatibility with previous NIO versions.
 let historicalNIOPosixDependencyRequired: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android]
 
-let strictConcurrencyDevelopment = false
-
 let swiftSettings: [SwiftSetting] = []
 
 // This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and
