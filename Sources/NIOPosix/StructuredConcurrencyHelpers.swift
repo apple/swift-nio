@@ -25,17 +25,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-// swift-format-ignore
-// Note: Whitespace changes are used to workaround compiler bug
-// https://github.com/swiftlang/swift/issues/79285
 
 @inlinable
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 internal func asyncDo<R>(
     isolation: isolated (any Actor)? = #isolation,
-    // DO NOT FIX THE WHITESPACE IN THE NEXT LINE UNTIL 5.10 IS UNSUPPORTED
-    // https://github.com/swiftlang/swift/issues/79285
-    _ body: () async throws -> sending R, finally: sending @escaping ((any Error)?) async throws -> Void) async throws -> sending R {
+    _ body: () async throws -> sending R,
+    finally: sending @escaping ((any Error)?) async throws -> Void
+) async throws -> sending R {
     let result: R
     do {
         result = try await body()
