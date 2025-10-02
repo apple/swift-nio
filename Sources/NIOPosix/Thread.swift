@@ -16,6 +16,8 @@ import NIOConcurrencyHelpers
 
 #if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#elseif os(OpenBSD)
+import CNIOBSD
 #elseif os(Windows)
 import WinSDK
 #endif
