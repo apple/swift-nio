@@ -167,7 +167,7 @@ let package = Package(
         ),
         .target(
             name: "CNIOBSD",
-            dependencies: [],
+            dependencies: []
         ),
         .target(
             name: "CNIOLinux",
