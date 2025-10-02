@@ -440,6 +440,17 @@ internal func libc_getcwd(
     getcwd(buffer, size)
 }
 
+/// getpwuid_r(3): Get password file entry
+internal func libc_getpwuid_r(
+    _ uid: uid_t,
+    _ pwd: UnsafeMutablePointer<passwd>,
+    _ buffer: UnsafeMutablePointer<CChar>,
+    _ bufferSize: Int,
+    _ result: UnsafeMutablePointer<UnsafeMutablePointer<passwd>?>
+) -> CInt {
+    getpwuid_r(uid, pwd, buffer, bufferSize, result)
+}
+
 /// confstr(3)
 #if !os(Android)
 internal func libc_confstr(
