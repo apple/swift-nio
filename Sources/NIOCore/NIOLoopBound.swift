@@ -174,7 +174,6 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         }
     }
 
-    #if compiler(>=6.0)
     /// Safely access and potentially modify the contained value with a closure.
     ///
     /// This method provides a way to perform operations on the contained value while ensuring
@@ -187,11 +186,11 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     /// - Returns: The value returned by the `handler` closure.
     /// - Note: This method is particularly useful when you need to perform read and write operations
     ///         on the value because it reduces the on EventLoop checks.
+    @inlinable
     public func withValue<Success, Failure: Error>(
         _ handler: (inout Value) throws(Failure) -> Success
     ) throws(Failure) -> Success {
         self.eventLoop.preconditionInEventLoop()
         return try handler(&self._value)
     }
-    #endif
 }
