@@ -1,5 +1,8 @@
 name: Benchmarks
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -72,9 +75,6 @@ on:
         type: string
         description: "Environment variables for Linux jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
         default: "{}"
-
-permissions:
-  contents: read
 
 jobs:
   construct-matrix:

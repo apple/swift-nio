@@ -1,5 +1,8 @@
 name: Cxx interop
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -69,9 +72,6 @@ on:
         type: string
         description: "Environment variables for Windows jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
         default: "{}"
-
-permissions:
-  contents: read
 
 jobs:
   construct-matrix:

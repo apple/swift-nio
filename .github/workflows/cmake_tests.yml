@@ -1,5 +1,8 @@
 name: CMake build
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
