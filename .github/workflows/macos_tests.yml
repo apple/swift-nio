@@ -1,5 +1,8 @@
 name: macOS tests
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
