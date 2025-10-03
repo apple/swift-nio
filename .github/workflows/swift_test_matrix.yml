@@ -12,6 +12,9 @@ on:
         description: "The test matrix definition."
         required: true
 
+permissions:
+  contents: read
+
 # We will cancel previously triggered workflow runs
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.name }}
