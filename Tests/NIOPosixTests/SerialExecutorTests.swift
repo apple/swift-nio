@@ -36,13 +36,11 @@ actor EventLoopBoundActor {
         XCTAssertFalse(loop.inEventLoop)
     }
 
-    #if compiler(>=6.0)
     nonisolated func assumeInLoop() -> Int {
         self.assumeIsolated { actor in
             actor.counter
         }
     }
-    #endif
 }
 
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
@@ -78,10 +76,6 @@ final class SerialExecutorTests: XCTestCase {
     }
 
     func testAssumeIsolation() async throws {
-        #if compiler(<6.0)
-        throw XCTSkip("Custom executors are only supported in 5.9")
-        #else
-
         let el = self.group.next()
 
         let testActor = EventLoopBoundActor(loop: el)
@@ -89,7 +83,6 @@ final class SerialExecutorTests: XCTestCase {
             testActor.assumeInLoop()
         }.get()
         XCTAssertEqual(result, 0)
-        #endif
     }
 
     override func setUp() {

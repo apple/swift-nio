@@ -348,7 +348,7 @@ extension String {
 
     internal init?(_platformString platformString: UnsafePointer<CInterop.PlatformChar>) {
         // Need to #if because CChar may be signed
-        self.init(validatingUTF8: platformString)
+        self.init(validatingCString: platformString)
     }
 
     internal init(

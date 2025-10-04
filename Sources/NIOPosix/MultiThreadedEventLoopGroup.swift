@@ -624,7 +624,6 @@ extension NIODeadline {
 }
 
 extension MultiThreadedEventLoopGroup {
-    #if compiler(>=6.0)
     /// Start & automatically shut down a new ``MultiThreadedEventLoopGroup``.
     ///
     /// This method allows to start & automatically dispose of a ``MultiThreadedEventLoopGroup`` following the principle of Structured Concurrency.
@@ -660,5 +659,4 @@ extension MultiThreadedEventLoopGroup {
             }
         }
     }
-    #endif
 }

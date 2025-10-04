@@ -75,7 +75,6 @@ final class NIOLoopBoundTests: XCTestCase {
         )
     }
 
-    #if compiler(>=6.0)
     func testLoopBoundBoxCanBeInitialisedWithTakingValueOffLoopAndLaterSetToValue() {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -106,7 +105,6 @@ final class NIOLoopBoundTests: XCTestCase {
             }.wait()
         )
     }
-    #endif
 
     func testInPlaceMutation() {
         var loopBound = NIOLoopBound(CoWValue(), eventLoop: loop)

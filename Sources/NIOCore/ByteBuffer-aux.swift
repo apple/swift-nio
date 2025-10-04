@@ -1003,7 +1003,6 @@ extension Optional where Wrapped == ByteBuffer {
     }
 }
 
-#if compiler(>=6)
 extension ByteBuffer {
     /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.
     /// The selected bytes must be readable or else `nil` will be returned.
@@ -1077,4 +1076,3 @@ extension ByteBuffer {
         try self.getUTF8ValidatedString(at: self.readerIndex, length: length)
     }
 }
-#endif  // compiler(>=6)

@@ -17,7 +17,7 @@ import XCTest
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 func XCTAssertThrowsErrorAsync<R>(
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line,
     expression: () async throws -> R,
     onError: (Error) -> Void = { _ in }
@@ -32,7 +32,7 @@ func XCTAssertThrowsErrorAsync<R>(
 
 func XCTAssertThrowsFileSystemError<R>(
     _ expression: @autoclosure () throws -> R,
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line,
     _ onError: (FileSystemError) -> Void = { _ in }
 ) {
@@ -53,7 +53,7 @@ func XCTAssertSystemCallError(
     _ error: (any Error)?,
     name: String,
     errno: Errno,
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line
 ) {
     guard let systemCallError = error as? FileSystemError.SystemCallError else {

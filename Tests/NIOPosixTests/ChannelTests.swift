@@ -3293,7 +3293,7 @@ final class ChannelTests: XCTestCase {
     func _testTCP_NODELAYDefaultValue(
         value: Bool,
         _ socketAddress: SocketAddress,
-        file: StaticString = #file,
+        file: StaticString = #filePath,
         line: UInt = #line
     ) throws {
         let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
