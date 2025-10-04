@@ -4409,8 +4409,10 @@ extension ByteBufferTest {
 
 #if compiler(>=6.2)
 extension ByteBufferTest {
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
-    func testWriteBytesRawSpan() {
+    func testWriteBytesRawSpan() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
         // Write 16 bytes into buffer using a RawSpan
         let byteArray: [UInt8] = Array(0..<16)
         let rawSpan = byteArray.span.bytes
@@ -4430,8 +4432,10 @@ extension ByteBufferTest {
         XCTAssertEqual(buf.readerIndex, 16)
     }
 
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
-    func testSetBytesRawSpan() {
+    func testSetBytesRawSpan() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
         // Write 4 bytes using setBytes
         let byteArray: [UInt8] = Array(0..<4)
         let rawSpan = byteArray.span.bytes
@@ -4448,8 +4452,10 @@ extension ByteBufferTest {
         XCTAssertEqual(Array(0..<4), result!)
     }
 
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
     func testReadInlineArrayOfUInt8() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
         let bytes = (0..<10).map { _ in UInt8.random(in: .min ... .max) }
 
         let startWriterIndex = self.buf.writerIndex
@@ -4468,8 +4474,10 @@ extension ByteBufferTest {
         XCTAssertEqual(10, self.buf.readerIndex)
     }
 
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
     func testReadInlineArrayOfUInt64() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
         let bytes = (0..<15).map { _ in UInt64.random(in: .min ... .max) }
 
         let startWriterIndex = self.buf.writerIndex
@@ -4491,8 +4499,10 @@ extension ByteBufferTest {
         XCTAssertEqual(120, self.buf.readerIndex)
     }
 
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
     func testNotEnoughBytesToReadInlineArrayOfInt32() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
         let startWriterIndex = self.buf.writerIndex
         var written = 0
         /// Write 15 bytes. This won't be enough to read an `InlineArray<5, Int32>`.
