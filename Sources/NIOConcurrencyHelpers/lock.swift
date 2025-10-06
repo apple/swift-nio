@@ -145,7 +145,7 @@ public final class ConditionLock<T: Equatable> {
     #if os(Windows)
     private let cond: UnsafeMutablePointer<CONDITION_VARIABLE> =
         UnsafeMutablePointer.allocate(capacity: 1)
-    #elseif (compiler(<6.1) && (os(FreeBSD) || os(OpenBSD))) || (compiler(>=6.1) && _runtime(_multithreaded))
+    #elseif (os(FreeBSD) || os(OpenBSD)) && ((compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded)))
      private let cond: UnsafeMutablePointer<pthread_cond_t?> =
         UnsafeMutablePointer.allocate(capacity: 1)
     #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
