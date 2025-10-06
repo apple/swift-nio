@@ -340,7 +340,7 @@ internal func system_renameat(
     _ oldFD: FileDescriptor.RawValue,
     _ old: UnsafePointer<CInterop.PlatformChar>,
     _ newFD: FileDescriptor.RawValue,
-    _ new: UnsafePointer<CInterop.PlatformChar>,
+    _ new: UnsafePointer<CInterop.PlatformChar>
 ) -> CInt {
     #if ENABLE_MOCKING
     if mockingEnabled {

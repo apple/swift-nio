@@ -177,7 +177,7 @@ internal final class FileHandleTests: XCTestCase {
     func testValueForAttribute() async throws {
         var nonThrowingErrnos: [Errno] = []
         var knownErrnos: [Errno: FileSystemError.Code] = [.notSupported: .unsupported]
-        #if canImport(Darwin)
+        #if canImport(Darwin) || os(FreeBSD)
         nonThrowingErrnos.append(.attributeNotFound)
         knownErrnos[.fileNameTooLong] = .invalidArgument
         #else

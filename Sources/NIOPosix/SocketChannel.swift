@@ -599,14 +599,16 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             let valueAsInt: CInt = value as! Bool ? 1 : 0
             switch self.localAddress?.protocol {
             case .some(.inet):
+                #if os(FreeBSD)
+                fallthrough
+                #else
                 self.receivePacketInfo = true
-                /* XXX: pktinfo
                 try self.socket.setOption(
                     level: .ip,
                     name: .ip_recv_pktinfo,
                     value: valueAsInt
                 )
-                */
+                #endif
             case .some(.inet6):
                 self.receivePacketInfo = true
                 try self.socket.setOption(
