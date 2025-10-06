@@ -672,14 +672,15 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
         case _ as ChannelOptions.Types.ReceivePacketInfo:
             switch self.localAddress?.protocol {
             case .some(.inet):
-                return "" as! Option.Value
-            /* XXX: pktinfo
+                #if os(FreeBSD)
+                fallthrough
+                #else
                 return try
                     (self.socket.getOption(
                         level: .ip,
                         name: .ip_recv_pktinfo
                     ) != 0) as! Option.Value
-                    */
+                #endif
             case .some(.inet6):
                 return try
                     (self.socket.getOption(
