@@ -364,19 +364,22 @@ public enum Libc: Sendable {
 
     #if !os(Android)
     static func constr(_ name: CInt) -> Result<String, Errno> {
-        var buffer = [CInterop.PlatformChar](repeating: 0, count: 128)
+        var buffer = [UInt8](repeating: 0, count: 128)
 
         repeat {
             let result = valueOrErrno(retryOnInterrupt: false) {
                 buffer.withUnsafeMutableBufferPointer { pointer in
-                    libc_confstr(name, pointer.baseAddress!, pointer.count)
+                    pointer.withMemoryRebound(to: CInterop.PlatformChar.self) { pointer in
+                        libc_confstr(name, pointer.baseAddress!, pointer.count)
+                    }
                 }
             }
 
             switch result {
             case let .success(length):
+                let nullTerminationIndex = buffer.firstIndex(of: 0) ?? buffer.endIndex
                 if length <= buffer.count {
-                    return .success(String(cString: buffer))
+                    return .success(String(decoding: buffer[..<nullTerminationIndex], as: UTF8.self))
                 } else {
                     // The buffer wasn't long enough. Double and try again.
                     buffer.append(contentsOf: repeatElement(0, count: buffer.capacity))
