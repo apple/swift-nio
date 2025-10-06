@@ -22,6 +22,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fts.h>
+#include <net/if_dl.h>
 
 extern const int CNIOFreeBSD_AT_EMPTY_PATH;
 

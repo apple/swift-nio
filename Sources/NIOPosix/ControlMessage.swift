@@ -197,10 +197,23 @@ struct ControlMessageParser {
     var ecnValue: NIOExplicitCongestionNotificationState = .transportNotCapable  // Default
     var packetInfo: NIOPacketInfo? = nil
 
+    #if os(FreeBSD)
+    var destinationAddress: SocketAddress? = nil
+    var interfaceIndex: Int? = nil
+    #endif
+
     init(parsing controlMessagesReceived: UnsafeControlMessageCollection) {
         for controlMessage in controlMessagesReceived {
             self.receiveMessage(controlMessage)
         }
+        #if os(FreeBSD)
+        if let destinationAddress, let interfaceIndex {
+            self.packetInfo = NIOPacketInfo(
+                destinationAddress: destinationAddress,
+                interfaceIndex: interfaceIndex
+            )
+        }
+        #endif
     }
 
     #if canImport(Darwin)
@@ -229,6 +242,24 @@ struct ControlMessageParser {
 
     private mutating func receiveIPv4Message(_ controlMessage: UnsafeControlMessage) {
 #if os(FreeBSD)
+        if controlMessage.type == ControlMessageParser.ipv4TosType {
+            if let data = controlMessage.data {
+                assert(data.count == 1)
+                precondition(data.count >= 1)
+                let readValue = CInt(data[0])
+                self.ecnValue = .init(receivedValue: readValue)
+            }
+        } else if controlMessage.type == Posix.IP_ORIGDSTADDR {
+            if let data = controlMessage.data {
+                let addr = data.load(as: sockaddr_in.self)
+                self.destinationAddress = SocketAddress(addr, host: "")
+            }
+        } else if controlMessage.type == Posix.IP_RECVIF {
+            if let data = controlMessage.data {
+                let addr = data.load(as: sockaddr_dl.self)
+                self.interfaceIndex = Int(addr.sdl_index)
+            }
+        }
 #else
         if controlMessage.type == ControlMessageParser.ipv4TosType {
             if let data = controlMessage.data {

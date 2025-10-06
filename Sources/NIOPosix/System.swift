@@ -582,6 +582,9 @@ internal enum Posix: Sendable {
     #elseif os(FreeBSD)
     static let IPV6_RECVPKTINFO: CInt = Glibc.IPV6_RECVPKTINFO
     static let IPV6_PKTINFO: CInt = Glibc.IPV6_PKTINFO
+
+    static let IP_RECVIF: CInt = Glibc.IP_RECVIF
+    static let IP_ORIGDSTADDR: CInt = Glibc.IP_ORIGDSTADDR
     #endif
 
     #if !os(Windows)
