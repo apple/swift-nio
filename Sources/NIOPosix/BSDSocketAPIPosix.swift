@@ -276,6 +276,14 @@ private let CMSG_DATA = CNIODarwin_CMSG_DATA
 private let CMSG_DATA_MUTABLE = CNIODarwin_CMSG_DATA_MUTABLE
 private let CMSG_SPACE = CNIODarwin_CMSG_SPACE
 private let CMSG_LEN = CNIODarwin_CMSG_LEN
+#elseif os(FreeBSD)
+import CNIOFreeBSD
+private let CMSG_FIRSTHDR = CNIOFreeBSD_CMSG_FIRSTHDR
+private let CMSG_NXTHDR = CNIOFreeBSD_CMSG_NXTHDR
+private let CMSG_DATA = CNIOFreeBSD_CMSG_DATA
+private let CMSG_DATA_MUTABLE = CNIOFreeBSD_CMSG_DATA_MUTABLE
+private let CMSG_SPACE = CNIOFreeBSD_CMSG_SPACE
+private let CMSG_LEN = CNIOFreeBSD_CMSG_LEN
 #else
 import CNIOLinux
 private let CMSG_FIRSTHDR = CNIOLinux_CMSG_FIRSTHDR

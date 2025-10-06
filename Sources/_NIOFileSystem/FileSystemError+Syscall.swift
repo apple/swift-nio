@@ -130,6 +130,34 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
+    public static func extattr_get_fd(
+        attribute name: String,
+        errno: Errno,
+        path: FilePath,
+        location: SourceLocation
+    ) -> Self {
+        let code: FileSystemError.Code
+        let message: String
+
+        switch errno {
+        case .badFileDescriptor:
+            code = .closed
+            message = "Could not get value for extended attribute ('\(name)'), '\(path)' is closed."
+        default:
+            code = .unknown
+            message = "Could not get value for extended attribute ('\(name)') for '\(path)'"
+        }
+
+        return FileSystemError(
+            code: code,
+            message: message,
+            systemCall: "extattr_get_fd",
+            errno: errno,
+            location: location
+        )
+    }
+
+    @_spi(Testing)
     public static func flistxattr(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
         let code: FileSystemError.Code
         let message: String
@@ -1116,6 +1144,55 @@ extension FileSystemError {
             location: location
         )
     }
+
+    #if os(FreeBSD)
+    @_spi(Testing)
+    public static func copy_file_range(
+        errno: Errno,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
+        location: SourceLocation
+    ) -> FileSystemError {
+        let code: FileSystemError.Code
+        let message: String
+
+        switch errno {
+        case .invalidArgument:
+            code = .invalidArgument
+            message = """
+            """
+        case .fileTooLarge:
+            code = .resourceExhausted
+            message = """
+                The copy exceeds process's file size limit or maximum file size for \
+                the file system '\(destinationPath)' resides on.
+                """
+        case .ioError:
+            code = .io
+            message = """
+                An I/O error occurred while reading from '\(sourcePath)', can't copy to \
+                '\(destinationPath)'.
+                """
+        case .noMemory:
+            code = .io
+            message = """
+                Insufficient memory to read from '\(sourcePath)', can't copy to \
+                '\(destinationPath)'.
+                """
+        default:
+            code = .unknown
+            message = "Can't copy file from '\(sourcePath)' to '\(destinationPath)'."
+        }
+
+        return FileSystemError(
+            code: code,
+            message: message,
+            systemCall: "copy_file_range",
+            errno: errno,
+            location: location
+        )
+    }
+    #endif
 
     @_spi(Testing)
     public static func futimens(

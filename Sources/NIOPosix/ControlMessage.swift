@@ -15,10 +15,12 @@ import NIOCore
 
 #if canImport(Darwin)
 import CNIODarwin
-#elseif os(Linux) || os(FreeBSD) || os(Android)
+#elseif os(Linux) || os(Android)
 import CNIOLinux
 #elseif os(Windows)
 import CNIOWindows
+#elseif os(FreeBSD)
+import CNIOFreeBSD
 #endif
 
 #if os(Windows)
@@ -226,6 +228,8 @@ struct ControlMessageParser {
     }
 
     private mutating func receiveIPv4Message(_ controlMessage: UnsafeControlMessage) {
+#if os(FreeBSD)
+#else
         if controlMessage.type == ControlMessageParser.ipv4TosType {
             if let data = controlMessage.data {
                 assert(data.count == 1)
@@ -247,6 +251,7 @@ struct ControlMessageParser {
             }
 
         }
+#endif
     }
 
     private mutating func receiveIPv6Message(_ controlMessage: UnsafeControlMessage) {

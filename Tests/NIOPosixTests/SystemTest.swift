@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import CNIOFreeBSD
 import NIOCore
 import XCTest
 
@@ -54,7 +55,7 @@ class SystemTest: XCTestCase {
         }
     }
 
-    #if canImport(Darwin)
+    #if canImport(Darwin) || os(FreeBSD)
     // Example twin data options captured on macOS
     private static let cmsghdrExample: [UInt8] = [
         0x10, 0x00, 0x00, 0x00,  // Length 16 including header

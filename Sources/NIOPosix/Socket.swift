@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import CNIOFreeBSD
 import NIOCore
 
 #if canImport(WinSDK)

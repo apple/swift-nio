@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin) || os(Linux) || os(Android)
+#if canImport(Darwin) || os(Linux) || os(Android) || os(FreeBSD)
 import _NIOFileSystem
 import NIOCore
 import NIOFoundationCompat

@@ -17,6 +17,9 @@ import SystemPackage
 
 #if canImport(Darwin)
 import Darwin
+#elseif os(FreeBSD)
+import Glibc
+import CNIOFreeBSD
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
 import CNIOLinux
@@ -111,7 +114,11 @@ extension FileDescriptor {
         _ buffer: UnsafeMutableBufferPointer<CChar>?
     ) -> Result<Int, Errno> {
         valueOrErrno(retryOnInterrupt: false) {
+            #if os(FreeBSD)
+            system_extattr_list_fd(self.rawValue, EXTATTR_NAMESPACE_USER, buffer?.baseAddress, buffer?.count ?? 0)
+            #else
             system_flistxattr(self.rawValue, buffer?.baseAddress, buffer?.count ?? 0)
+            #endif
         }
     }
 
@@ -132,7 +139,11 @@ extension FileDescriptor {
     ) -> Result<Int, Errno> {
         valueOrErrno(retryOnInterrupt: false) {
             name.withPlatformString {
+                #if os(FreeBSD)
+                system_extattr_get_fd(self.rawValue, EXTATTR_NAMESPACE_USER, $0, buffer?.baseAddress, buffer?.count ?? 0)
+                #else
                 system_fgetxattr(self.rawValue, $0, buffer?.baseAddress, buffer?.count ?? 0)
+                #endif
             }
         }
     }
@@ -151,7 +162,11 @@ extension FileDescriptor {
     ) -> Result<Void, Errno> {
         nothingOrErrno(retryOnInterrupt: false) {
             name.withPlatformString { namePointer in
+                #if os(FreeBSD)
+                system_extattr_set_fd(self.rawValue, EXTATTR_NAMESPACE_USER, namePointer, value?.baseAddress, value?.count ?? 0)
+                #else
                 system_fsetxattr(self.rawValue, namePointer, value?.baseAddress, value?.count ?? 0)
+                #endif
             }
         }
     }
@@ -166,7 +181,11 @@ extension FileDescriptor {
     public func removeExtendedAttribute(_ name: String) -> Result<Void, Errno> {
         nothingOrErrno(retryOnInterrupt: false) {
             name.withPlatformString {
+                #if os(FreeBSD)
+                system_extattr_delete_fd(self.rawValue, EXTATTR_NAMESPACE_USER, $0)
+                #else
                 system_fremovexattr(self.rawValue, $0)
+                #endif
             }
         }
     }
@@ -312,11 +331,14 @@ extension FileDescriptor {
 }
 
 #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+
+#if !os(FreeBSD)
 extension FileDescriptor.OpenOptions {
     static var temporaryFile: Self {
         Self(rawValue: CNIOLinux_O_TMPFILE)
     }
 }
+#endif
 
 extension FileDescriptor {
     static var currentWorkingDirectory: Self {

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import CNIOFreeBSD
 @_spi(Testing) import NIOFS
 import SystemPackage
 import XCTest
@@ -304,7 +305,7 @@ final class SyscallTests: XCTestCase {
         throw XCTSkip("'renamex_np' is only supported on Darwin")
         #endif
     }
-
+#if !os(FreeBSD)
     func test_renameat2() throws {
         #if canImport(Glibc) || canImport(Bionic)
         let fd1 = FileDescriptor(rawValue: 13)
@@ -372,7 +373,7 @@ final class SyscallTests: XCTestCase {
         throw XCTSkip("'sendfile' is only supported on Linux")
         #endif
     }
-
+#endif
     func test_fcopyfile() throws {
         #if canImport(Darwin)
         let input = FileDescriptor(rawValue: 42)

@@ -273,6 +273,9 @@ class EchoServerClientTest: XCTestCase {
         let connectAddress = VsockAddress(cid: .any, port: port)
         #elseif os(Linux) || os(Android)
         let connectAddress = VsockAddress(cid: .local, port: port)
+        #else
+        // this platform does not support vsock loopback
+        let connectAddress: VsockAddress!
         #endif
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group).connect(to: connectAddress).wait())
 
