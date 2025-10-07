@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-import NIOPosix
+@_spi(StructuredConcurrencyNIOAsyncChannel) import NIOPosix
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 @main
@@ -48,11 +48,10 @@ struct Client {
     }
 
     private func sendRequest(number: Int) async throws {
-        let channel = try await ClientBootstrap(group: self.eventLoopGroup)
+        try await ClientBootstrap(group: self.eventLoopGroup)
             .connect(
-                host: self.host,
-                port: self.port
-            ) { channel in
+                target: ClientBootstrap.ConnectTarget.hostAndPort(self.host, self.port)
+            ) { channel -> EventLoopFuture<NIOAsyncChannel<String, String>> in
                 channel.eventLoop.makeCompletedFuture {
                     // We are using two simple handlers here to frame our messages with "\n"
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(NewlineDelimiterCoder()))
@@ -66,21 +65,23 @@ struct Client {
                         )
                     )
                 }
+            } handleChannel: { channel in
+                print("Connection(\(number)): Writing request")
+                do {
+                    try await channel.outbound.write("Hello on connection \(number)")
+
+                    for try await inboundData in channel.inbound {
+                        print("Connection(\(number)): Received response (\(inboundData))")
+
+                        // We only expect a single response so we can exit here.
+                        // Once, we exit out of this loop and the references to the `NIOAsyncChannel` are dropped
+                        // the connection is going to close itself.
+                        break
+                    }
+                } catch {
+                    print("Unexpected error occured: \(error)")
+                }
             }
-
-        try await channel.executeThenClose { inbound, outbound in
-            print("Connection(\(number)): Writing request")
-            try await outbound.write("Hello on connection \(number)")
-
-            for try await inboundData in inbound {
-                print("Connection(\(number)): Received response (\(inboundData))")
-
-                // We only expect a single response so we can exit here.
-                // Once, we exit out of this loop and the references to the `NIOAsyncChannel` are dropped
-                // the connection is going to close itself.
-                break
-            }
-        }
     }
 }
 

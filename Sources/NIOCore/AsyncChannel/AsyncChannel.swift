@@ -79,12 +79,11 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     /// The stream of inbound messages.
     ///
     /// - Important: The `inbound` stream is a unicast `AsyncSequence` and only one iterator can be created.
-    @available(*, deprecated, message: "Use the executeThenClose scoped method instead.")
     public var inbound: NIOAsyncChannelInboundStream<Inbound> {
         self._inbound
     }
+
     /// The writer for writing outbound messages.
-    @available(*, deprecated, message: "Use the executeThenClose scoped method instead.")
     public var outbound: NIOAsyncChannelOutboundWriter<Outbound> {
         self._outbound
     }
