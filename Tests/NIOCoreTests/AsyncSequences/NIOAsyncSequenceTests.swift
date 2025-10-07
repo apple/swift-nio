@@ -53,9 +53,9 @@ final class MockNIOElementStreamBackPressureStrategy: NIOAsyncSequenceProducerBa
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class MockNIOBackPressuredStreamSourceDelegate: NIOAsyncSequenceProducerDelegate, @unchecked Sendable {
-    enum Event {
+    enum Event: Hashable {
         case produceMore
-        case didTerminate
+        case didTerminate(buffer: [Int])
     }
     let events: AsyncStream<Event>
     private let eventsContinuation: AsyncStream<Event>.Continuation
@@ -74,12 +74,16 @@ final class MockNIOBackPressuredStreamSourceDelegate: NIOAsyncSequenceProducerDe
         }
     }
 
-    var didTerminateHandler: (() -> Void)?
-    func didTerminate() {
-        self.eventsContinuation.yield(.didTerminate)
+    var didTerminateHandler: (([Int]) -> Void)?
+    func didTerminate(remainingBuffer: some Collection<Any>) {
+        self.eventsContinuation.yield(.didTerminate(buffer: remainingBuffer.map { $0 as! Int }))
         if let didTerminateHandler = self.didTerminateHandler {
-            return didTerminateHandler()
+            return didTerminateHandler(remainingBuffer.map { $0 as! Int })
         }
+    }
+    
+    func didTerminate() {
+        fatalError()
     }
 }
 
@@ -182,7 +186,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         XCTAssertEqualWithoutAutoclosure(await iterator.next(), 8)
         source.finish()
         XCTAssertEqualWithoutAutoclosure(await iterator.next(), nil)
-        XCTAssertEqualWithoutAutoclosure(await eventsIterator.next(), .didTerminate)
+        XCTAssertEqualWithoutAutoclosure(await eventsIterator.next(), .didTerminate(buffer: []))
     }
 
     // MARK: - Yield
@@ -324,7 +328,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         self.source.finish()
 
         XCTAssertEqualWithoutAutoclosure(await element, nil)
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
     }
 
     func testFinish_whenStreaming_andNotSuspended_andBufferEmpty() async throws {
@@ -334,7 +338,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         let element = await self.sequence.first { _ in true }
         XCTAssertNil(element)
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
     }
 
     func testFinish_whenStreaming_andNotSuspended_andBufferNotEmpty() async throws {
@@ -345,7 +349,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let element = await self.sequence.first { _ in true }
         XCTAssertEqual(element, 1)
 
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
     }
 
     func testFinish_whenFinished() async throws {
@@ -353,7 +357,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         _ = await self.sequence.first { _ in true }
 
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
 
         self.source.finish()
     }
@@ -415,7 +419,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         XCTAssertEqual(element, nil)
         XCTAssertNil(source)
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
     }
 
     func testSourceDeinited_whenStreaming_andNotSuspended_andBufferEmpty() async throws {
@@ -447,7 +451,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         }
 
         XCTAssertNil(element)
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
     }
 
     func testSourceDeinited_whenStreaming_andNotSuspended_andBufferNotEmpty() async throws {
@@ -480,7 +484,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         XCTAssertEqual(element, 1)
 
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
     }
 
     // MARK: - Task cancel
@@ -500,8 +504,29 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         task.cancel()
         let value = await task.value
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
         XCTAssertNil(value)
+    }
+    
+    func testTaskCancel_whenYielded_andSuspended() async throws {
+        let sequence = try XCTUnwrap(self.sequence)
+
+        let suspended = expectation(description: "task suspended")
+        sequence._throwingSequence._storage._setDidSuspend { suspended.fulfill() }
+
+        let task: Task<Int?, Never> = Task {
+            let iterator = sequence.makeAsyncIterator()
+            return await iterator.next()
+        }
+
+        await fulfillment(of: [suspended], timeout: 1)
+
+        _ = self.source.yield(1)
+        _ = self.source.yield(2)
+        task.cancel()
+        let value = await task.value
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [2])])
+        XCTAssertEqual(value, 1)
     }
 
     func testTaskCancel_whenStreaming_andNotSuspended() async throws {
@@ -531,7 +556,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         cancelled.fulfill()
 
         let value = await task.value
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
         XCTAssertEqual(value, 1)
     }
 
@@ -550,7 +575,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         self.source.finish()
 
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
         task.cancel()
         let value = await task.value
         XCTAssertNil(value)
@@ -701,7 +726,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
     func testSequenceDeinitialized() async {
         self.sequence = nil
 
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
     }
 
     func testSequenceDeinitialized_whenIteratorReferenced() async {
@@ -711,7 +736,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         XCTAssertNotNil(iterator)
         iterator = nil
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
     }
 
     // MARK: - IteratorDeinitialized
@@ -721,7 +746,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         XCTAssertNotNil(iterator)
         iterator = nil
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
 
         self.sequence = nil
     }
@@ -734,7 +759,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         XCTAssertNotNil(iterator)
         iterator = nil
 
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [])])
     }
 
     func testIteratorDeinitialized_whenStreaming() async {
@@ -744,7 +769,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         XCTAssertNotNil(iterator)
         iterator = nil
 
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate(buffer: [1])])
     }
 }
 
