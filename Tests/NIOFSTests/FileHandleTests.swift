@@ -180,7 +180,9 @@ internal final class FileHandleTests: XCTestCase {
         #if canImport(Darwin) || os(FreeBSD)
         nonThrowingErrnos.append(.attributeNotFound)
         knownErrnos[.fileNameTooLong] = .invalidArgument
-        #else
+        #endif
+
+        #if !os(FreeBSD)
         nonThrowingErrnos.append(.noData)
         #endif
 

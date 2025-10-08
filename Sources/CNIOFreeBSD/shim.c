@@ -72,8 +72,6 @@ const int CNIOFreeBSD_IPV6_RECVPKTINFO = IPV6_RECVPKTINFO;
 const int CNIOFreeBSD_IPV6_PKTINFO = IPV6_PKTINFO;
 const int CNIOFreeBSD_AT_EMPTY_PATH = AT_EMPTY_PATH;
 
-// const unsigned long CNIOFreeBSD_IOCTL_VM_SOCKETS_GET_LOCAL_CID = IOCTL_VM_SOCKETS_GET_LOCAL_CID;
-
 const char* CNIOFreeBSD_dirent_dname(struct dirent* ent) {
     return ent->d_name;
 }
