@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-#if os(Linux) || os(Android) || os(FreeBSD) || canImport(Darwin)
+#if os(Linux) || os(Android) || os(FreeBSD) || canImport(Darwin) || os(OpenBSD)
 
 extension Shutdown {
     internal var cValue: CInt {
@@ -276,6 +276,14 @@ private let CMSG_DATA = CNIODarwin_CMSG_DATA
 private let CMSG_DATA_MUTABLE = CNIODarwin_CMSG_DATA_MUTABLE
 private let CMSG_SPACE = CNIODarwin_CMSG_SPACE
 private let CMSG_LEN = CNIODarwin_CMSG_LEN
+#elseif os(OpenBSD)
+import CNIOBSD
+private let CMSG_FIRSTHDR = CNIOBSD_CMSG_FIRSTHDR
+private let CMSG_NXTHDR = CNIOBSD_CMSG_NXTHDR
+private let CMSG_DATA = CNIOBSD_CMSG_DATA
+private let CMSG_DATA_MUTABLE = CNIOBSD_CMSG_DATA_MUTABLE
+private let CMSG_SPACE = CNIOBSD_CMSG_SPACE
+private let CMSG_LEN = CNIOBSD_CMSG_LEN
 #else
 import CNIOLinux
 private let CMSG_FIRSTHDR = CNIOLinux_CMSG_FIRSTHDR
