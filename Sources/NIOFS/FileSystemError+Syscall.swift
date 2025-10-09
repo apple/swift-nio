@@ -975,6 +975,17 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
+    public static func homeDirectory(errno: Errno, location: SourceLocation) -> Self {
+        FileSystemError(
+            code: .unavailable,
+            message: "Can't get home directory for current user.",
+            systemCall: "getpwuid_r",
+            errno: errno,
+            location: location
+        )
+    }
+
+    @_spi(Testing)
     public static func confstr(name: String, errno: Errno, location: SourceLocation) -> Self {
         FileSystemError(
             code: .unavailable,
