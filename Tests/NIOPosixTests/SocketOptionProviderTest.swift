@@ -332,7 +332,11 @@ final class SocketOptionProviderTest: XCTestCase {
         let tcpInfo = try assertNoThrowWithValue(channel.getTCPInfo().wait())
 
         // We just need to soundness check something here to ensure that the data is vaguely reasonable.
+        #if os(FreeBSD)
+        XCTAssertEqual(tcpInfo.tcpi_state, UInt8(TCPS_ESTABLISHED))
+        #else
         XCTAssertEqual(tcpInfo.tcpi_state, UInt8(TCP_ESTABLISHED))
+        #endif
         #endif
     }
 

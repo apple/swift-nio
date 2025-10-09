@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import CNIOFreeBSD
 import NIOConcurrencyHelpers
 import NIOCore
 
