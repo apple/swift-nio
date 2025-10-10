@@ -44,7 +44,9 @@
  * implemented by Jun-ichiro itojun Itoh <itojun@itojun.org>
  */
 
+
 #include "include/CNIOSHA1.h"
+#include <stdint.h>
 #include <string.h>
 #if !defined(bzero)
 #define bzero(b,l) memset((b), '\0', (l))
@@ -57,15 +59,15 @@
 #elif defined(__linux__) || defined(__APPLE__) || defined(__wasm32__)
 #include <sys/types.h>
 #elif defined(_WIN32) || defined(_WIN64)
-	#ifndef LITTLE_ENDIAN
-	#define LITTLE_ENDIAN 1234
-	#endif
-	#ifndef BIG_ENDIAN
-	#define BIG_ENDIAN 4321
-	#endif
-	#ifndef BYTE_ORDER
-	#define BYTE_ORDER LITTLE_ENDIAN
-	#endif
+#ifndef LITTLE_ENDIAN
+#define LITTLE_ENDIAN 1234
+#endif
+#ifndef BIG_ENDIAN
+#define BIG_ENDIAN 4321
+ #endif
+#ifndef BYTE_ORDER
+#define BYTE_ORDER LITTLE_ENDIAN
+#endif
 #endif
 
 
@@ -102,7 +104,7 @@ static uint32_t _K[] = { 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6 };
 	COUNT %= 64;				\
 	ctxt->c.b64[0] += 8;			\
 	if (COUNT % 64 == 0)			\
-		sha1_step(ctxt);		\
+		c_nio_sha1_step(ctxt);		\
      }
 
 #define	PUTPAD(x)	{ \
@@ -110,13 +112,13 @@ static uint32_t _K[] = { 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6 };
 	COUNT++;				\
 	COUNT %= 64;				\
 	if (COUNT % 64 == 0)			\
-		sha1_step(ctxt);		\
+		c_nio_sha1_step(ctxt);		\
      }
 
-static void sha1_step(struct sha1_ctxt *);
+static void c_nio_sha1_step(struct sha1_ctxt *);
 
 static void
-sha1_step(struct sha1_ctxt *ctxt)
+c_nio_sha1_step(struct sha1_ctxt *ctxt)
 {
 	uint32_t	a, b, c, d, e;
 	size_t t, s;
@@ -224,7 +226,7 @@ c_nio_sha1_pad(struct sha1_ctxt *ctxt)
 		bzero(&ctxt->m.b8[padstart], padlen);
 		COUNT += padlen;
 		COUNT %= 64;
-		sha1_step(ctxt);
+		c_nio_sha1_step(ctxt);
 		padstart = COUNT % 64;	/* should be 0 */
 		padlen = 64 - padstart;	/* should be 64 */
 	}
@@ -264,7 +266,7 @@ c_nio_sha1_loop(struct sha1_ctxt *ctxt, const uint8_t *input, size_t len)
 		COUNT %= 64;
 		ctxt->c.b64[0] += copysiz * 8;
 		if (COUNT % 64 == 0)
-			sha1_step(ctxt);
+			c_nio_sha1_step(ctxt);
 		off += copysiz;
 	}
 }
