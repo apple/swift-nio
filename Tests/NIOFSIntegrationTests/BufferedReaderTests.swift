@@ -202,7 +202,7 @@ final class BufferedReaderTests: XCTestCase {
         }
     }
 
-    func testBufferedReaderReadingText() async throws {
+    func testBufferedReaderSplitOmittingEmptySubsequences() async throws {
         let fs = FileSystem.shared
         let path = try await fs.temporaryFilePath()
 
@@ -221,32 +221,27 @@ final class BufferedReaderTests: XCTestCase {
         }
 
         try await fs.withFileHandle(forReadingAt: path) { file in
-            var reader = file.bufferedReader()
+            let reader = file.bufferedReader()
             var words = [String]()
 
-            func isWordIsh(_ byte: UInt8) -> Bool {
+            @Sendable func isNotWordIsh(_ byte: UInt8) -> Bool {
                 switch byte {
                 case UInt8(ascii: "a")...UInt8(ascii: "z"),
                     UInt8(ascii: "A")...UInt8(ascii: "Z"),
                     UInt8(ascii: "'"):
-                    return true
-                default:
                     return false
+                default:
+                    return true
                 }
             }
 
-            repeat {
-                // Gobble up whitespace etc..
-                try await reader.drop(while: { !isWordIsh($0) })
-                // Read the next word.
-                var (characters, _) = try await reader.read(while: isWordIsh(_:))
-
-                if characters.readableBytes == 0 {
-                    break  // Done.
-                } else {
-                    words.append(characters.readString(length: characters.readableBytes)!)
-                }
-            } while true
+            // Gobble up whitespace etc..
+            for try await var characters in reader.split(
+                omittingEmptySubsequences: true,
+                whereSeparator: isNotWordIsh(_:)
+            ) {
+                words.append(characters.readString(length: characters.readableBytes)!)
+            }
 
             let expected: [String] = [
                 "Here's",
@@ -273,6 +268,62 @@ final class BufferedReaderTests: XCTestCase {
                 "see",
                 "things",
                 "differently",
+            ]
+
+            XCTAssertEqual(words, expected)
+        }
+    }
+
+    func testBufferedReaderSplitNotOmittingEmptySubsequences() async throws {
+        let fs = FileSystem.shared
+        let path = try await fs.temporaryFilePath()
+
+        try await fs.withFileHandle(
+            forWritingAt: path,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            let text = "  Here's  to the crazy ones,   the misfits, the rebels,  the ones who see things differently.  "
+
+            var writer = handle.bufferedWriter()
+            try await writer.write(contentsOf: text.utf8)
+            try await writer.flush()
+        }
+
+        try await fs.withFileHandle(forReadingAt: path) { file in
+            let reader = file.bufferedReader()
+            var words = [String]()
+
+            for try await var characters in reader.split(
+                separator: UInt8(ascii: " "),
+                omittingEmptySubsequences: false
+            ) {
+                words.append(characters.readString(length: characters.readableBytes)!)
+            }
+
+            let expected: [String] = [
+                "",
+                "",
+                "Here\'s",
+                "",
+                "to",
+                "the",
+                "crazy",
+                "ones,",
+                "",
+                "",
+                "the",
+                "misfits,",
+                "the",
+                "rebels,",
+                "",
+                "the",
+                "ones",
+                "who",
+                "see",
+                "things",
+                "differently.",
+                "",
+                "",
             ]
 
             XCTAssertEqual(words, expected)
