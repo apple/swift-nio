@@ -90,11 +90,14 @@ extension BufferedReader {
     ///
     /// Use ``BufferedReader/split(omittingEmptySubsequences:whereSeparator:)`` or ``BufferedReader/split(separator:omittingEmptySubsequences:)`` to create an instance of this sequence.
     public struct SplitSequence {
+        @usableFromInline
         var reader: BufferedReader<Handle>
+        @usableFromInline
         var omittingEmptySubsequences: Bool
+        @usableFromInline
         var isSeparator: @Sendable (UInt8) -> Bool
 
-        @usableFromInline
+        @inlinable
         init(
             reader: BufferedReader<Handle>,
             omittingEmptySubsequences: Bool,
@@ -110,16 +113,25 @@ extension BufferedReader {
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension BufferedReader.SplitSequence: AsyncSequence {
     /// Returns an iterator over the elements of this sequence.
+    @inlinable
     public func makeAsyncIterator() -> AsyncIterator {
         AsyncIterator(base: self)
     }
 
     /// An iterator over the elements of this sequence.
     public struct AsyncIterator: AsyncIteratorProtocol {
+        @usableFromInline
         var base: BufferedReader<Handle>.SplitSequence
+        @usableFromInline
         var ended = false
 
+        @inlinable
+        init(base: BufferedReader<Handle>.SplitSequence) {
+            self.base = base
+        }
+
         /// Returns the next element in the sequence, or `nil` if the sequence has ended.
+        @inlinable
         public mutating func next() async throws -> ByteBuffer? {
             if self.ended { return nil }
 
