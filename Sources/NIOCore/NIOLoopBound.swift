@@ -139,17 +139,16 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         .init(_value: value, uncheckedEventLoop: eventLoop)
     }
 
-    #if compiler(>=6.0)
-    // Note: Whitespace changes are used to workaround compiler bug
-    // Remove when compiler version 5.10 is no longer supported.
-    // https://github.com/swiftlang/swift/issues/79285
-    // swift-format-ignore
     /// Initialise a ``NIOLoopBoundBox`` by sending a  value, validly callable off `eventLoop`.
     ///
     /// Contrary to ``init(_:eventLoop:)``, this method can be called off `eventLoop` because `value` is moved into the box and can no longer be accessed outside the box.
     /// So we don't need to protect `value` itself, we just need to protect the ``NIOLoopBoundBox`` against mutations which we do because the ``value``
     /// accessors are checking that we're on `eventLoop`.
-    public static func makeBoxSendingValue(_ value: sending Value, as: Value.Type = Value.self, eventLoop: EventLoop) -> NIOLoopBoundBox<Value> {
+    public static func makeBoxSendingValue(
+        _ value: sending Value,
+        as: Value.Type = Value.self,
+        eventLoop: EventLoop
+    ) -> NIOLoopBoundBox<Value> {
         // Here, we -- possibly surprisingly -- do not precondition being on the EventLoop. This is okay for a few
         // reasons:
         // - This function takes its value as `sending` so we don't need to worry about somebody
@@ -159,7 +158,6 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         // - The only way to ever write (or read indeed) `self._value` is by proving to be inside the `EventLoop`.
         .init(_value: value, uncheckedEventLoop: eventLoop)
     }
-    #endif
 
     /// Access the `value` with the precondition that the code is running on `eventLoop`.
     ///

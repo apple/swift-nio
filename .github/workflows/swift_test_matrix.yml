@@ -1,5 +1,8 @@
 name: Matrix
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -11,9 +14,6 @@ on:
         type: string
         description: "The test matrix definition."
         required: true
-
-permissions:
-  contents: read
 
 # We will cancel previously triggered workflow runs
 concurrency:

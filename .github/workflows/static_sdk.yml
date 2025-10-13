@@ -1,5 +1,8 @@
 name: Static SDK
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

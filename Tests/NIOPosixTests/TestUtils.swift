@@ -32,7 +32,9 @@ extension System {
 
     static var supportsVsockLoopback: Bool {
         #if os(Linux) || os(Android)
-        guard let modules = try? String(contentsOf: URL(fileURLWithPath: "/proc/modules")) else { return false }
+        guard let modules = try? String(contentsOf: URL(fileURLWithPath: "/proc/modules"), encoding: .utf8) else {
+            return false
+        }
         return modules.split(separator: "\n").compactMap({ $0.split(separator: " ").first }).contains("vsock_loopback")
         #else
         return false
