@@ -213,7 +213,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     }
 
     @inlinable
-    func _append(_ buffer: ByteBuffer) {
+    func append(_ buffer: ByteBuffer) {
         if self._buffer == nil || self._buffer!.readableBytes == 0 {
             self._buffer = buffer
         } else {
@@ -247,7 +247,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     ) throws {
         // we want to call decodeLast once with an empty buffer if we have nothing
         if decodeMode == .last && (self._buffer == nil || self._buffer!.readableBytes == 0) {
-            var emptyBuffer = self._buffer == nil ? ByteBuffer() : self._buffer!
+            var emptyBuffer = self._buffer ?? ByteBuffer()
             if let message = try self.decoder.decodeLast(buffer: &emptyBuffer, seenEOF: seenEOF) {
                 try messageReceiver(message)
             }
@@ -269,6 +269,68 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
             try messageReceiver(message)
         }
 
+        try _postDecodeCheck()
+    }
+
+    /// Decode the next message from the `NIOSingleStepByteToMessageProcessor`
+    ///
+    /// This function is useful to manually decode the next message from the `NIOSingleStepByteToMessageProcessor`.
+    /// It should be used in combination with the `append(_:)` function.
+    /// Whenever you receive a new chunk of data, feed it into the `NIOSingleStepByteToMessageProcessor` using `append(_:)`,
+    /// then call this function to decode the next message.
+    ///
+    /// When you've already received the last chunk of data, call this function with `receivedLastChunk` set to `true`.
+    /// In this case, if the function returns `nil`, you are done decoding and there are no more messages to decode.
+    /// Note that you might need to call `decodeNext` _multiple times_, even if `receivedLastChunk` is true, as there
+    /// might be multiple messages left in the buffer.
+    ///
+    /// If `receivedLastChunk` is `false`, this function will never return `ended == true`.
+    ///
+    /// If `receivedLastChunk` is `true`, this function will never return `nil`. It'll try to decode a message
+    /// from an empty buffer, and return `ended == true`. When you've received `ended == true`, you shouldn't
+    /// call this function again, otherwise it'll try to decode using an empty buffer again.
+    ///
+    /// `seenEOF` should only be true if `decodeMode == .last`. Otherwise it'll be ignored.
+    ///
+    /// - Parameters:
+    ///   - receivedLastChunk: Whether the current chunk is the last chunk
+    ///   - seenEOF: Whether an EOF was seen on the stream
+    /// - Returns: A tuple containing the decoded message and a boolean indicating whether the decoding has ended.
+    @inlinable
+    func decodeNext(
+        decodeMode: DecodeMode,
+        seenEOF: Bool = false
+    ) throws -> (decoded: Decoder.InboundOut?, ended: Bool) {
+        // we want to call decodeLast once with an empty buffer if we have nothing
+        if decodeMode == .last && (self._buffer == nil || self._buffer!.readableBytes == 0) {
+            var emptyBuffer = self._buffer ?? ByteBuffer()
+            if let message = try self.decoder.decodeLast(buffer: &emptyBuffer, seenEOF: seenEOF) {
+                return (message, true)
+            }
+            return (nil, true)
+        }
+
+        if self._buffer == nil {
+            return (nil, false)
+        }
+
+        func decodeOnce(buffer: inout ByteBuffer) throws -> Decoder.InboundOut? {
+            if decodeMode == .normal {
+                return try self.decoder.decode(buffer: &buffer)
+            } else {
+                return try self.decoder.decodeLast(buffer: &buffer, seenEOF: seenEOF)
+            }
+        }
+
+        let message = try self._withNonCoWBuffer(decodeOnce)
+
+        try _postDecodeCheck()
+
+        return (message, false)
+    }
+
+    @inlinable
+    func _postDecodeCheck() throws {
         if let maximumBufferSize = self.maximumBufferSize, self._buffer!.readableBytes > maximumBufferSize {
             throw ByteToMessageDecoderError.PayloadTooLargeError()
         }
@@ -292,19 +354,25 @@ extension NIOSingleStepByteToMessageProcessor {
         self._buffer?.readableBytes ?? 0
     }
 
-    /// Feed data into the `NIOSingleStepByteToMessageProcessor`
+    /// Feed data into the `NIOSingleStepByteToMessageProcessor` and process it
+    ///
+    /// This function will decode as many `Decoder.InboundOut` messages from the `NIOSingleStepByteToMessageProcessor` as possible,
+    /// and call the `messageReceiver` closure for each message.
     ///
     /// - Parameters:
     ///   - buffer: The `ByteBuffer` containing the next data in the stream
     ///   - messageReceiver: A closure called for each message produced by the `Decoder`
     @inlinable
     public func process(buffer: ByteBuffer, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
-        self._append(buffer)
+        self.append(buffer)
         try self._decodeLoop(decodeMode: .normal, messageReceiver)
     }
 
     /// Call when there is no data left in the stream. Calls `Decoder`.`decodeLast` one or more times. If there is no data left
     /// `decodeLast` will be called one time with an empty `ByteBuffer`.
+    ///
+    /// This function will decode as many `Decoder.InboundOut` messages from the `NIOSingleStepByteToMessageProcessor` as possible,
+    /// and call the `messageReceiver` closure for each message.
     ///
     /// - Parameters:
     ///   - seenEOF: Whether an EOF was seen on the stream.
