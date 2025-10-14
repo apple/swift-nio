@@ -21,19 +21,19 @@ extension AsyncSequence where Element == ByteBuffer {
 /// Use the ``AsyncSequence/decode(using:)`` function to create a ``NIODecodedAsyncSequence``.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public struct NIODecodedAsyncSequence<
-    AsyncSeq: AsyncSequence,
+    Base: AsyncSequence,
     Decoder: NIOSingleStepByteToMessageDecoder,
     Element
-> where AsyncSeq.Element == ByteBuffer, Decoder.InboundOut == Element {
+> where Base.Element == ByteBuffer, Decoder.InboundOut == Element {
     @usableFromInline
-    var asyncSequence: AsyncSeq
+    var asyncSequence: Base
     @usableFromInline
     var decoder: Decoder
     @usableFromInline
     var maximumBufferSize: Int?
 
     @inlinable
-    init(asyncSequence: AsyncSeq, decoder: Decoder, maximumBufferSize: Int? = nil) {
+    init(asyncSequence: Base, decoder: Decoder, maximumBufferSize: Int? = nil) {
         self.asyncSequence = asyncSequence
         self.decoder = decoder
         self.maximumBufferSize = maximumBufferSize
@@ -58,7 +58,7 @@ extension NIODecodedAsyncSequence: AsyncSequence {
         }
 
         @usableFromInline
-        var baseIterator: AsyncSeq.AsyncIterator
+        var baseIterator: Base.AsyncIterator
         @usableFromInline
         var processor: NIOSingleStepByteToMessageProcessor<Decoder>
         @usableFromInline
@@ -74,12 +74,15 @@ extension NIODecodedAsyncSequence: AsyncSequence {
             self.state = .readingFromBuffer
         }
 
-        /// Retrieve the next element from the ``DecodeSequence``.
         @inlinable
-        public mutating func next() async throws -> Element? {
-            if self.state == .finishedDecoding { return nil }
-
-            let readLastChunkFromBuffer = self.state == .readLastChunkFromBuffer
+        mutating func decodeFromBuffer() throws -> Element? {
+            let readLastChunkFromBuffer =
+                switch self.state {
+                case .readLastChunkFromBuffer:
+                    true
+                case .finishedDecoding, .readingFromBuffer:
+                    false
+                }
 
             // Decode from the buffer if possible
             let (decoded, ended) = try self.processor.decodeNext(
@@ -95,32 +98,70 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                 return decoded
             }
 
-            // If we've managed to decode a message, return it
-            if let decoded {
+            // If `ended == false` and if `readLastChunkFromBuffer == true` then we must have manged
+            // to decode a message. Otherwise something is wrong in `decodeNext()`.
+            assert(!readLastChunkFromBuffer || decoded != nil)
+
+            return decoded
+        }
+
+        /// Retrieve the next element from the ``NIODecodedAsyncSequence``.
+        @inlinable
+        public mutating func next() async throws -> Element? {
+            switch self.state {
+            case .finishedDecoding:
+                return nil
+            case .readingFromBuffer, .readLastChunkFromBuffer:
+                break
+            }
+
+            if let decoded = try self.decodeFromBuffer() {
                 return decoded
             }
 
-            // If `ended == false` and if `readLastChunkFromBuffer == true` then we must have manged
-            // to decode a message. Otherwise something is wrong in `decodeNext()`.
-            // We precondition here to avoid infinite recursion.
-            precondition(!readLastChunkFromBuffer)
+            loop: while true {
+                sw: switch self.state {
+                case .readingFromBuffer:
+                    break sw
+                case .finishedDecoding, .readLastChunkFromBuffer:
+                    break loop
+                }
 
-            // Read more data into the buffer so we can decode more messages
-            guard let nextBuffer = try await self.baseIterator.next() else {
-                // Ran out of data to read.
-                self.state = .readLastChunkFromBuffer
-                return try await self.next()
+                // Read more data into the buffer so we can decode more messages
+                guard let nextBuffer = try await self.baseIterator.next() else {
+                    // Ran out of data to read.
+                    self.state = .readLastChunkFromBuffer
+                    let decoded = try self.decodeFromBuffer()
+
+                    // `decodeFromBuffer()` must have set the state to `.finishedDecoding` if it returned `nil`.
+                    if decoded == nil {
+                        switch self.state {
+                        case .finishedDecoding:
+                            break
+                        case .readingFromBuffer, .readLastChunkFromBuffer:
+                            assertionFailure(
+                                "'decodeFromBuffer()' must have set the 'state' to '.finishedDecoding' if it returned 'nil'."
+                            )
+                        }
+                    }
+
+                    return decoded
+                }
+
+                self.processor.append(nextBuffer)
+
+                if let decoded = try self.decodeFromBuffer() {
+                    return decoded
+                }
             }
 
-            self.processor.append(nextBuffer)
-
-            return try await self.next()
+            return nil
         }
     }
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension NIODecodedAsyncSequence: Sendable where AsyncSeq: Sendable, Decoder: Sendable {}
+extension NIODecodedAsyncSequence: Sendable where Base: Sendable, Decoder: Sendable {}
 
 @available(*, unavailable)
 extension NIODecodedAsyncSequence.AsyncIterator: Sendable {}
