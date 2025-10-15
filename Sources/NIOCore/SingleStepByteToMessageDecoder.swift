@@ -206,7 +206,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     /// - Parameters:
     ///   - decoder: The `NIOSingleStepByteToMessageDecoder` to decode the bytes into message.
     ///   - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
-    ///     An error will be thrown if after decoding an element there is more aggregated data than this amount.
+    ///     An error will be thrown if after decoding elements there is more aggregated data than this amount.
     @inlinable
     public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
         self.decoder = decoder

@@ -5,6 +5,17 @@ extension AsyncSequence where Element == ByteBuffer {
     /// Decode the `AsyncSequence<ByteBuffer>` into a sequence of ``Element``s,
     /// using the ``Decoder``, where ``Decoder.InboundOut`` matches ``Element``.
     ///
+    /// Usage:
+    /// ```swift
+    /// let myDecoder = MyNIOSingleStepByteToMessageDecoder()
+    /// let baseSequence = MyAsyncSequence<ByteBuffer>(...)
+    /// let decodedSequence = baseSequence.decode(using: myDecoder)
+    ///
+    /// for try await element in decodedSequence {
+    ///     print("Decoded an element!", element)
+    /// }
+    /// ```
+    ///
     /// - Parameters:
     ///   - decoder: The ``Decoder`` to use to decode the ``ByteBuffer``s.
     ///   - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
