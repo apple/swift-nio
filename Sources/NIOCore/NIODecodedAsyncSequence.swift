@@ -105,26 +105,6 @@ extension NIODecodedAsyncSequence: AsyncSequence {
             self.state = .readingFromBuffer
         }
 
-        /// Decode from the existing buffer of data, if possible.
-        @inlinable
-        mutating func decodeFromBuffer(readLastChunk: Bool) throws -> Element? {
-            // Decode from the buffer if possible
-            let (decoded, ended) = try self.processor.decodeNext(
-                decodeMode: readLastChunk ? .last : .normal,
-                seenEOF: readLastChunk
-            )
-
-            if ended {
-                // We expect `decodeNext()` to only return `ended == true` only if we've notified it
-                // that we've read the last chunk from the buffer.
-                assert(readLastChunk)
-                self.state = .finishedDecoding
-                return decoded
-            }
-
-            return decoded
-        }
-
         /// Retrieve the next element from the ``NIODecodedAsyncSequence``.
         ///
         /// The same as `next(isolation:)` but not isolated to an actor, which allows
@@ -136,7 +116,16 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                 case .finishedDecoding:
                     return nil
                 case .readingFromBuffer:
-                    if let decoded = try self.decodeFromBuffer(readLastChunk: false) {
+                    let (decoded, ended) = try self.processor.decodeNext(
+                        decodeMode: .normal,
+                        seenEOF: false
+                    )
+
+                    // We expect `decodeNext()` to only return `ended == true` only if we've notified it
+                    // that we've read the last chunk from the buffer, using `decodeMode: .last`.
+                    assert(!ended)
+
+                    if let decoded {
                         return decoded
                     }
 
@@ -146,15 +135,18 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                         self.state = .readLastChunkFromBuffer
                         continue
                     }
-
                     self.processor.append(nextBuffer)
                 case .readLastChunkFromBuffer:
-                    if let decoded = try self.decodeFromBuffer(readLastChunk: true) {
-                        return decoded
-                    } else {
+                    let (decoded, ended) = try self.processor.decodeNext(
+                        decodeMode: .last,
+                        seenEOF: true
+                    )
+
+                    if ended {
                         self.state = .finishedDecoding
-                        return nil
                     }
+
+                    return decoded
                 }
             }
 
@@ -172,7 +164,16 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                 case .finishedDecoding:
                     return nil
                 case .readingFromBuffer:
-                    if let decoded = try self.decodeFromBuffer(readLastChunk: false) {
+                    let (decoded, ended) = try self.processor.decodeNext(
+                        decodeMode: .normal,
+                        seenEOF: false
+                    )
+
+                    // We expect `decodeNext()` to only return `ended == true` only if we've notified it
+                    // that we've read the last chunk from the buffer, using `decodeMode: .last`.
+                    assert(!ended)
+
+                    if let decoded {
                         return decoded
                     }
 
@@ -182,15 +183,18 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                         self.state = .readLastChunkFromBuffer
                         continue
                     }
-
                     self.processor.append(nextBuffer)
                 case .readLastChunkFromBuffer:
-                    if let decoded = try self.decodeFromBuffer(readLastChunk: true) {
-                        return decoded
-                    } else {
+                    let (decoded, ended) = try self.processor.decodeNext(
+                        decodeMode: .last,
+                        seenEOF: true
+                    )
+
+                    if ended {
                         self.state = .finishedDecoding
-                        return nil
                     }
+
+                    return decoded
                 }
             }
 
