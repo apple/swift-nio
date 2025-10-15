@@ -96,25 +96,17 @@ extension NIODecodedAsyncSequence: AsyncSequence {
 
         /// Decode from the existing buffer of data, if possible.
         @inlinable
-        mutating func decodeFromBuffer() throws -> Element? {
-            let readLastChunkFromBuffer =
-                switch self.state {
-                case .readLastChunkFromBuffer:
-                    true
-                case .finishedDecoding, .readingFromBuffer:
-                    false
-                }
-
+        mutating func decodeFromBuffer(readLastChunk: Bool) throws -> Element? {
             // Decode from the buffer if possible
             let (decoded, ended) = try self.processor.decodeNext(
-                decodeMode: readLastChunkFromBuffer ? .last : .normal,
-                seenEOF: readLastChunkFromBuffer
+                decodeMode: readLastChunk ? .last : .normal,
+                seenEOF: readLastChunk
             )
 
             if ended {
                 // We expect `decodeNext()` to only return `ended == true` only if we've notified it
                 // that we've read the last chunk from the buffer.
-                assert(readLastChunkFromBuffer)
+                assert(readLastChunk)
                 self.state = .finishedDecoding
                 return decoded
             }
@@ -128,46 +120,34 @@ extension NIODecodedAsyncSequence: AsyncSequence {
         /// for less availability restrictions.
         @inlinable
         public mutating func next() async throws -> Element? {
-            switch self.state {
-            case .finishedDecoding:
-                return nil
-            case .readingFromBuffer, .readLastChunkFromBuffer:
-                break
-            }
-
-            if let decoded = try self.decodeFromBuffer() {
-                return decoded
-            }
-
-            loop: while true {
-                sw: switch self.state {
+            while true {
+                switch self.state {
+                case .finishedDecoding:
+                    return nil
                 case .readingFromBuffer:
-                    /// Loop while we have more data to read.
-                    break sw
-                case .finishedDecoding, .readLastChunkFromBuffer:
-                    break loop
-                }
+                    if let decoded = try self.decodeFromBuffer(readLastChunk: false) {
+                        return decoded
+                    }
 
-                // Read more data into the buffer so we can decode more messages
-                guard let nextBuffer = try await self.baseIterator.next() else {
-                    // Ran out of data to read.
-                    self.state = .readLastChunkFromBuffer
-                    if let decoded = try self.decodeFromBuffer() {
+                    // Read more data into the buffer so we can decode more messages
+                    guard let nextBuffer = try await self.baseIterator.next() else {
+                        // Ran out of data to read.
+                        self.state = .readLastChunkFromBuffer
+                        continue
+                    }
+
+                    self.processor.append(nextBuffer)
+                case .readLastChunkFromBuffer:
+                    if let decoded = try self.decodeFromBuffer(readLastChunk: true) {
                         return decoded
                     } else {
                         self.state = .finishedDecoding
                         return nil
                     }
                 }
-
-                self.processor.append(nextBuffer)
-
-                if let decoded = try self.decodeFromBuffer() {
-                    return decoded
-                }
             }
 
-            return nil
+            fatalError("Unreachable code")
         }
 
         /// Retrieve the next element from the ``NIODecodedAsyncSequence``.
@@ -176,46 +156,34 @@ extension NIODecodedAsyncSequence: AsyncSequence {
         @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
         @inlinable
         public mutating func next(isolation actor: isolated (any Actor)? = #isolation) async throws -> Element? {
-            switch self.state {
-            case .finishedDecoding:
-                return nil
-            case .readingFromBuffer, .readLastChunkFromBuffer:
-                break
-            }
-
-            if let decoded = try self.decodeFromBuffer() {
-                return decoded
-            }
-
-            loop: while true {
-                sw: switch self.state {
+            while true {
+                switch self.state {
+                case .finishedDecoding:
+                    return nil
                 case .readingFromBuffer:
-                    /// Loop while we have more data to read.
-                    break sw
-                case .finishedDecoding, .readLastChunkFromBuffer:
-                    break loop
-                }
+                    if let decoded = try self.decodeFromBuffer(readLastChunk: false) {
+                        return decoded
+                    }
 
-                // Read more data into the buffer so we can decode more messages
-                guard let nextBuffer = try await self.baseIterator.next(isolation: actor) else {
-                    // Ran out of data to read.
-                    self.state = .readLastChunkFromBuffer
-                    if let decoded = try self.decodeFromBuffer() {
+                    // Read more data into the buffer so we can decode more messages
+                    guard let nextBuffer = try await self.baseIterator.next(isolation: actor) else {
+                        // Ran out of data to read.
+                        self.state = .readLastChunkFromBuffer
+                        continue
+                    }
+
+                    self.processor.append(nextBuffer)
+                case .readLastChunkFromBuffer:
+                    if let decoded = try self.decodeFromBuffer(readLastChunk: true) {
                         return decoded
                     } else {
                         self.state = .finishedDecoding
                         return nil
                     }
                 }
-
-                self.processor.append(nextBuffer)
-
-                if let decoded = try self.decodeFromBuffer() {
-                    return decoded
-                }
             }
 
-            return nil
+            fatalError("Unreachable code")
         }
     }
 }
