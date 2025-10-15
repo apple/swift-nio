@@ -1,4 +1,4 @@
-// swift-tools-version:5.10
+// swift-tools-version:6.0
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -23,23 +23,7 @@ let swiftSystem: PackageDescription.Target.Dependency = .product(name: "SystemPa
 // compatibility with previous NIO versions.
 let historicalNIOPosixDependencyRequired: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android]
 
-let strictConcurrencyDevelopment = false
-
-let strictConcurrencySettings: [SwiftSetting] = {
-    var initialSettings: [SwiftSetting] = []
-    initialSettings.append(contentsOf: [
-        .enableUpcomingFeature("StrictConcurrency"),
-        .enableUpcomingFeature("InferSendableFromCaptures"),
-    ])
-
-    if strictConcurrencyDevelopment {
-        // -warnings-as-errors here is a workaround so that IDE-based development can
-        // get tripped up on -require-explicit-sendable.
-        initialSettings.append(.unsafeFlags(["-require-explicit-sendable", "-warnings-as-errors"]))
-    }
-
-    return initialSettings
-}()
+let swiftSettings: [SwiftSetting] = []
 
 // This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and
 // Foundation will be linked. This is, however, strictly better than unconditionally adding the
@@ -64,7 +48,7 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
-        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem"]),
+        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem", "NIOFileSystem"]),
         .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
     ],
     targets: [
@@ -83,15 +67,15 @@ let package = Package(
                 swiftCollections,
                 swiftAtomics,
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "_NIODataStructures",
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "_NIOBase64",
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "NIOEmbedded",
@@ -102,7 +86,7 @@ let package = Package(
                 swiftAtomics,
                 swiftCollections,
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "NIOPosix",
@@ -118,7 +102,7 @@ let package = Package(
             ],
             exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
             resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "NIO",
@@ -127,7 +111,7 @@ let package = Package(
                 "NIOEmbedded",
                 "NIOPosix",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "_NIOConcurrency",
@@ -135,7 +119,7 @@ let package = Package(
                 .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "NIOFoundationCompat",
@@ -143,7 +127,7 @@ let package = Package(
                 .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "CNIOAtomics",
@@ -190,7 +174,7 @@ let package = Package(
             dependencies: [
                 "CNIOAtomics"
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "NIOHTTP1",
@@ -201,7 +185,7 @@ let package = Package(
                 "CNIOLLHTTP",
                 swiftCollections,
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "NIOWebSocket",
@@ -212,7 +196,7 @@ let package = Package(
                 "CNIOSHA1",
                 "_NIOBase64",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "CNIOLLHTTP",
@@ -228,7 +212,7 @@ let package = Package(
                 "NIOCore",
                 swiftCollections,
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
             name: "NIOTestUtils",
@@ -239,10 +223,10 @@ let package = Package(
                 "NIOHTTP1",
                 swiftAtomics,
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .target(
-            name: "NIOFileSystem",
+            name: "NIOFS",
             dependencies: [
                 "NIOCore",
                 "NIOPosix",
@@ -252,21 +236,21 @@ let package = Package(
                 swiftCollections,
                 swiftSystem,
             ],
-            path: "Sources/NIOFileSystem",
+            path: "Sources/NIOFS",
             exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
             resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
-            swiftSettings: strictConcurrencySettings + [
+            swiftSettings: swiftSettings + [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
             ]
         ),
         .target(
-            name: "NIOFileSystemFoundationCompat",
+            name: "NIOFSFoundationCompat",
             dependencies: [
-                "NIOFileSystem",
+                "NIOFS",
                 "NIOFoundationCompat",
             ],
-            path: "Sources/NIOFileSystemFoundationCompat",
-            swiftSettings: strictConcurrencySettings
+            path: "Sources/NIOFSFoundationCompat",
+            swiftSettings: swiftSettings
         ),
 
         .target(
@@ -283,7 +267,7 @@ let package = Package(
             path: "Sources/_NIOFileSystem",
             exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
             resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
-            swiftSettings: strictConcurrencySettings + [
+            swiftSettings: swiftSettings + [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
             ]
         ),
@@ -294,7 +278,12 @@ let package = Package(
                 "NIOFoundationCompat",
             ],
             path: "Sources/_NIOFileSystemFoundationCompat",
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
+        ),
+        .target(
+            name: "NIOFileSystem",
+            dependencies: ["_NIOFileSystem"],
+            swiftSettings: swiftSettings
         ),
 
         // MARK: - Examples
@@ -306,7 +295,7 @@ let package = Package(
                 "NIOCore",
             ],
             exclude: ["README.md"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOTCPEchoClient",
@@ -315,7 +304,7 @@ let package = Package(
                 "NIOCore",
             ],
             exclude: ["README.md"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOEchoServer",
@@ -325,7 +314,7 @@ let package = Package(
                 "NIOConcurrencyHelpers",
             ],
             exclude: ["README.md"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOEchoClient",
@@ -335,7 +324,7 @@ let package = Package(
                 "NIOConcurrencyHelpers",
             ],
             exclude: ["README.md"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOHTTP1Server",
@@ -346,7 +335,7 @@ let package = Package(
                 "NIOConcurrencyHelpers",
             ],
             exclude: ["README.md"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOHTTP1Client",
@@ -357,7 +346,7 @@ let package = Package(
                 "NIOConcurrencyHelpers",
             ],
             exclude: ["README.md"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOChatServer",
@@ -367,7 +356,7 @@ let package = Package(
                 "NIOConcurrencyHelpers",
             ],
             exclude: ["README.md"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOChatClient",
@@ -377,7 +366,7 @@ let package = Package(
                 "NIOConcurrencyHelpers",
             ],
             exclude: ["README.md"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOWebSocketServer",
@@ -388,7 +377,7 @@ let package = Package(
                 "NIOWebSocket",
             ],
             exclude: ["README.md"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOWebSocketClient",
@@ -399,7 +388,7 @@ let package = Package(
                 "NIOWebSocket",
             ],
             exclude: ["README.md"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOMulticastChat",
@@ -407,7 +396,7 @@ let package = Package(
                 "NIOPosix",
                 "NIOCore",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOUDPEchoServer",
@@ -416,7 +405,7 @@ let package = Package(
                 "NIOCore",
             ],
             exclude: ["README.md"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOUDPEchoClient",
@@ -425,7 +414,7 @@ let package = Package(
                 "NIOCore",
             ],
             exclude: ["README.md"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOAsyncAwaitDemo",
@@ -434,7 +423,7 @@ let package = Package(
                 "NIOCore",
                 "NIOHTTP1",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
 
         // MARK: - Tests
@@ -449,7 +438,7 @@ let package = Package(
                 "NIOFoundationCompat",
                 "NIOWebSocket",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .executableTarget(
             name: "NIOCrashTester",
@@ -461,7 +450,7 @@ let package = Package(
                 "NIOWebSocket",
                 "NIOFoundationCompat",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIOCoreTests",
@@ -473,7 +462,7 @@ let package = Package(
                 "NIOTestUtils",
                 swiftAtomics,
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIOEmbeddedTests",
@@ -482,7 +471,7 @@ let package = Package(
                 "NIOCore",
                 "NIOEmbedded",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIOPosixTests",
@@ -497,7 +486,7 @@ let package = Package(
                 "CNIODarwin",
                 "NIOTLS",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIOConcurrencyHelpersTests",
@@ -505,17 +494,17 @@ let package = Package(
                 "NIOConcurrencyHelpers",
                 "NIOCore",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIODataStructuresTests",
             dependencies: ["_NIODataStructures"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIOBase64Tests",
             dependencies: ["_NIOBase64"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIOHTTP1Tests",
@@ -527,7 +516,7 @@ let package = Package(
                 "NIOFoundationCompat",
                 "NIOTestUtils",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIOTLSTests",
@@ -538,7 +527,7 @@ let package = Package(
                 "NIOFoundationCompat",
                 "NIOTestUtils",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIOWebSocketTests",
@@ -547,7 +536,7 @@ let package = Package(
                 "NIOEmbedded",
                 "NIOWebSocket",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIOTestUtilsTests",
@@ -557,7 +546,7 @@ let package = Package(
                 "NIOEmbedded",
                 "NIOPosix",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIOFoundationCompatTests",
@@ -565,37 +554,37 @@ let package = Package(
                 "NIOCore",
                 "NIOFoundationCompat",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIOTests",
             dependencies: ["NIO"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "NIOSingletonsTests",
             dependencies: ["NIOCore", "NIOPosix"],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
-            name: "NIOFileSystemTests",
+            name: "NIOFSTests",
             dependencies: [
                 "NIOCore",
-                "NIOFileSystem",
+                "NIOFS",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
             ],
-            swiftSettings: strictConcurrencySettings + [
+            swiftSettings: swiftSettings + [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
             ]
         ),
         .testTarget(
-            name: "NIOFileSystemIntegrationTests",
+            name: "NIOFSIntegrationTests",
             dependencies: [
                 "NIOCore",
                 "NIOPosix",
-                "NIOFileSystem",
+                "NIOFS",
                 "NIOFoundationCompat",
             ],
             exclude: [
@@ -604,15 +593,15 @@ let package = Package(
                 // the build.
                 "Test Data"
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
         .testTarget(
-            name: "NIOFileSystemFoundationCompatTests",
+            name: "NIOFSFoundationCompatTests",
             dependencies: [
-                "NIOFileSystem",
-                "NIOFileSystemFoundationCompat",
+                "NIOFS",
+                "NIOFSFoundationCompat",
             ],
-            swiftSettings: strictConcurrencySettings
+            swiftSettings: swiftSettings
         ),
     ]
 )

@@ -390,7 +390,7 @@ private final class MockScheduledCallbackHandler: NIOScheduledCallbackHandler, S
         self.cancelCount.wrappingIncrement(by: 1, ordering: .sequentiallyConsistent)
     }
 
-    func assert(callbackCount: Int, cancelCount: Int, file: StaticString = #file, line: UInt = #line) {
+    func assert(callbackCount: Int, cancelCount: Int, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(
             self.callbackCount.load(ordering: .sequentiallyConsistent),
             callbackCount,
@@ -407,7 +407,7 @@ private final class MockScheduledCallbackHandler: NIOScheduledCallbackHandler, S
         )
     }
 
-    func waitForCallback(timeout: TimeAmount, file: StaticString = #file, line: UInt = #line) async throws {
+    func waitForCallback(timeout: TimeAmount, file: StaticString = #filePath, line: UInt = #line) async throws {
         try await XCTWithTimeout(timeout, file: file, line: line) { await self.callbackStream.first { _ in true } }
     }
 }
@@ -424,7 +424,7 @@ private final class NonSendableMockScheduledCallbackHandler: NIOScheduledCallbac
         self.cancelCount += 1
     }
 
-    func assert(callbackCount: Int, cancelCount: Int, file: StaticString = #file, line: UInt = #line) {
+    func assert(callbackCount: Int, cancelCount: Int, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(
             self.callbackCount,
             callbackCount,
@@ -457,7 +457,7 @@ private final class NonSendableMockScheduledCallbackHandler: NIOScheduledCallbac
 /// This function is probably a good balance of pragmatism and clarity.
 func XCTWithTimeout<Result>(
     _ timeout: TimeAmount,
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line,
     operation: @escaping @Sendable () async throws -> Result
 ) async throws -> Result where Result: Sendable {

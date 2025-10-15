@@ -207,9 +207,10 @@ internal struct HappyEyeballsConnector<ChannelBuilderResult: Sendable>: Sendable
         connectTimeout: TimeAmount,
         resolutionDelay: TimeAmount = .milliseconds(50),
         connectionDelay: TimeAmount = .milliseconds(250),
-        channelBuilderCallback: @escaping @Sendable (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<
-            (Channel, ChannelBuilderResult)
-        >
+        channelBuilderCallback:
+            @escaping @Sendable (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<
+                (Channel, ChannelBuilderResult)
+            >
     ) {
         self.resolver = resolver
         self.loop = loop

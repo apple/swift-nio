@@ -233,14 +233,16 @@ public protocol FileSystemProtocol: Sendable {
         at sourcePath: FilePath,
         to destinationPath: FilePath,
         strategy copyStrategy: CopyStrategy,
-        shouldProceedAfterError: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ error: Error
-        ) async throws -> Void,
-        shouldCopyItem: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ destination: FilePath
-        ) async -> Bool
+        shouldProceedAfterError:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ error: Error
+            ) async throws -> Void,
+        shouldCopyItem:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ destination: FilePath
+            ) async -> Bool
     ) async throws
 
     /// Deletes the file or directory (and its contents) at `path`.
@@ -520,14 +522,16 @@ extension FileSystemProtocol {
     public func copyItem(
         at sourcePath: FilePath,
         to destinationPath: FilePath,
-        shouldProceedAfterError: @escaping @Sendable (
-            _ entry: DirectoryEntry,
-            _ error: Error
-        ) async throws -> Void,
-        shouldCopyFile: @escaping @Sendable (
-            _ source: FilePath,
-            _ destination: FilePath
-        ) async -> Bool
+        shouldProceedAfterError:
+            @escaping @Sendable (
+                _ entry: DirectoryEntry,
+                _ error: Error
+            ) async throws -> Void,
+        shouldCopyFile:
+            @escaping @Sendable (
+                _ source: FilePath,
+                _ destination: FilePath
+            ) async -> Bool
     ) async throws {
         try await self.copyItem(
             at: sourcePath,
@@ -569,14 +573,16 @@ extension FileSystemProtocol {
     public func copyItem(
         at sourcePath: FilePath,
         to destinationPath: FilePath,
-        shouldProceedAfterError: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ error: Error
-        ) async throws -> Void,
-        shouldCopyItem: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ destination: FilePath
-        ) async -> Bool
+        shouldProceedAfterError:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ error: Error
+            ) async throws -> Void,
+        shouldCopyItem:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ destination: FilePath
+            ) async -> Bool
     ) async throws {
         try await self.copyItem(
             at: sourcePath,
