@@ -55,49 +55,50 @@ struct NIODecodedAsyncSequenceTests {
 
     @Test(arguments: Self.testingArguments)
     func decodingWorks(elementCount: Int, chunkSize: Int) async throws {
-        let baseSequence = AsyncStream<ByteBuffer>.makeStream()
-
-        var randomElements: [UInt8] = (0..<elementCount).map {
-            _ in UInt8.random(in: .min ... .max)
+        var randomElements: [Int32] = (0..<elementCount).map {
+            _ in Int32.random(in: .min ... .max)
         }
 
-        let buffers =
-            randomElements
-            .chunks(ofSize: chunkSize)
-            .map(ByteBuffer.init(bytes:))
+        var buffer = ByteBuffer()
+        buffer.reserveCapacity(minimumWritableBytes: elementCount)
+        for element in randomElements {
+            buffer.writeInteger(element)
+        }
 
-        for buffer in buffers {
-            baseSequence.continuation.yield(buffer)
+        let baseSequence = AsyncStream<ByteBuffer>.makeStream()
+        while buffer.readableBytes > 0 {
+            let length = min(buffer.readableBytes, chunkSize)
+            let _slice = buffer.readSlice(length: length)
+            let slice = try #require(_slice)
+            baseSequence.continuation.yield(slice)
         }
         baseSequence.continuation.finish()
 
         let decodedSequence = baseSequence.stream.decode(using: ByteToInt32Decoder())
 
         for try await element in decodedSequence {
-            // Create an Int32 from the first 4 UInt8s
-            let int32 = randomElements[0..<4].enumerated().reduce(into: Int32(0)) { result, next in
-                result |= Int32(next.element) << ((3 - next.offset) * 8)
-            }
-            randomElements = Array(randomElements[4...])
-            #expect(element == int32)
+            #expect(element == randomElements.removeFirst())
         }
     }
 
     @Test(arguments: Self.testingArguments)
     func decodingThrowsWhenDecoderThrows(elementCount: Int, chunkSize: Int) async throws {
-        let baseSequence = AsyncStream<ByteBuffer>.makeStream()
-
-        let randomElements: [UInt8] = (0..<elementCount).map {
-            _ in UInt8.random(in: .min ... .max)
+        let randomElements: [Int32] = (0..<elementCount).map {
+            _ in Int32.random(in: .min ... .max)
         }
 
-        let buffers =
-            randomElements
-            .chunks(ofSize: chunkSize)
-            .map(ByteBuffer.init(bytes:))
+        var buffer = ByteBuffer()
+        buffer.reserveCapacity(minimumWritableBytes: elementCount)
+        for element in randomElements {
+            buffer.writeInteger(element)
+        }
 
-        for buffer in buffers {
-            baseSequence.continuation.yield(buffer)
+        let baseSequence = AsyncStream<ByteBuffer>.makeStream()
+        while buffer.readableBytes > 0 {
+            let length = min(buffer.readableBytes, chunkSize)
+            let _slice = buffer.readSlice(length: length)
+            let slice = try #require(_slice)
+            baseSequence.continuation.yield(slice)
         }
         baseSequence.continuation.finish()
 
@@ -114,9 +115,6 @@ struct NIODecodedAsyncSequenceTests {
         struct StreamError: Error {}
 
         let baseSequence = AsyncThrowingStream<ByteBuffer, any Error>.makeStream()
-
-        /// Sleep for 50ms to simulate asynchronous work
-        try await Task.sleep(nanoseconds: 50_000_000)
         baseSequence.continuation.finish(throwing: StreamError())
 
         let decodedSequence = baseSequence.stream.decode(using: ByteToInt32Decoder())
@@ -125,14 +123,6 @@ struct NIODecodedAsyncSequenceTests {
             for try await _ in decodedSequence {
                 Issue.record("Should not have reached here")
             }
-        }
-    }
-}
-
-extension Array {
-    fileprivate func chunks(ofSize size: Int) -> [[Element]] {
-        stride(from: 0, to: self.count, by: size).map {
-            Array(self[$0..<Swift.min($0 + size, self.count)])
         }
     }
 }
