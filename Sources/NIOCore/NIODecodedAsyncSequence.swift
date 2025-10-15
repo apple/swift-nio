@@ -133,7 +133,6 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                     self.state = .readLastChunkFromBuffer
                     let decoded = try self.decodeFromBuffer()
 
-                    // `decodeFromBuffer()` must have set the state to `.finishedDecoding` if it returned `nil`.
                     if decoded == nil {
                         switch self.state {
                         case .finishedDecoding:
@@ -165,93 +164,3 @@ extension NIODecodedAsyncSequence: Sendable where Base: Sendable, Decoder: Senda
 
 @available(*, unavailable)
 extension NIODecodedAsyncSequence.AsyncIterator: Sendable {}
-
-// MARK: NIOSplitMessageDecoder
-
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension AsyncSequence where Element == ByteBuffer {
-    @inlinable
-    public func split(
-        separator: UInt8,
-        omittingEmptySubsequences: Bool = true,
-        maximumBufferSize: Int? = nil
-    ) -> NIODecodedAsyncSequence<Self, NIOSplitMessageDecoder, ByteBuffer> {
-        self.split(
-            omittingEmptySubsequences: omittingEmptySubsequences,
-            whereSeparator: { $0 == separator }
-        )
-    }
-
-    @inlinable
-    public func split(
-        omittingEmptySubsequences: Bool = true,
-        maximumBufferSize: Int? = nil,
-        whereSeparator isSeparator: @Sendable @escaping (UInt8) -> Bool
-    ) -> NIODecodedAsyncSequence<Self, NIOSplitMessageDecoder, ByteBuffer> {
-        self.decode(
-            using: NIOSplitMessageDecoder(
-                omittingEmptySubsequences: omittingEmptySubsequences,
-                whereSeparator: isSeparator
-            ),
-            maximumBufferSize: maximumBufferSize
-        )
-    }
-}
-
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct NIOSplitMessageDecoder: NIOSingleStepByteToMessageDecoder, Sendable {
-    public typealias InboundOut = ByteBuffer
-
-    @usableFromInline
-    let omittingEmptySubsequences: Bool
-    @usableFromInline
-    let isSeparator: @Sendable (UInt8) -> Bool
-
-    @inlinable
-    init(
-        omittingEmptySubsequences: Bool,
-        whereSeparator isSeparator: @Sendable @escaping (UInt8) -> Bool
-    ) {
-        self.omittingEmptySubsequences = omittingEmptySubsequences
-        self.isSeparator = isSeparator
-    }
-
-    @inlinable
-    func decode(buffer: inout ByteBuffer, isLast: Bool) -> ByteBuffer? {
-        guard let index = buffer.readableBytesView.firstIndex(where: isSeparator) else {
-            if isLast {
-                /// Safe to force-unwrap because buffer.readableBytes >= 0.
-                let decoded = buffer.readSlice(length: buffer.readableBytes)!
-                return self.process(decoded, buffer: &buffer)
-            }
-            /// This line will be reached also when the buffer is empty and we're not at the last chunk.
-            return nil
-        }
-
-        // Safe to force-unwrap. We wouldn't have found an index if the slice wasn't valid.
-        let decoded = buffer.readSlice(length: index - buffer.readerIndex)!
-
-        /// Mark the separator itself as read
-        buffer._moveReaderIndex(forwardBy: 1)
-
-        return self.process(decoded, buffer: &buffer)
-    }
-
-    @inlinable
-    func process(_ decoded: ByteBuffer, buffer: inout ByteBuffer) -> ByteBuffer? {
-        if self.omittingEmptySubsequences, decoded.readableBytes == 0 {
-            return self.decode(buffer: &buffer, isLast: false)
-        }
-        return decoded
-    }
-
-    @inlinable
-    public func decode(buffer: inout ByteBuffer) -> ByteBuffer? {
-        self.decode(buffer: &buffer, isLast: false)
-    }
-
-    @inlinable
-    public func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) -> ByteBuffer? {
-        self.decode(buffer: &buffer, isLast: true)
-    }
-}
