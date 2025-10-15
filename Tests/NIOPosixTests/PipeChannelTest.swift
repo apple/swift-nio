@@ -99,10 +99,17 @@ final class PipeChannelTest: XCTestCase {
 
     func testWriteErrorsCloseChannel() {
         XCTAssertNoThrow(try self.channel.setOption(.allowRemoteHalfClosure, value: true).wait())
-        self.fromChannel.closeFile()
-        var buffer = self.channel.allocator.buffer(capacity: 1)
-        buffer.writeString("X")
-        XCTAssertThrowsError(try self.channel.writeAndFlush(buffer).wait()) { error in
+
+        // We need to wedge the EL open here to make sure that the close of `fromChannel` does
+        // not potentially cause us to handle writeEOF before we attempt to make the write. We
+        // want the _write_ to discover the issue first, not writeEOF.
+        let writeFuture = self.channel.eventLoop.flatSubmit { [fromChannel, channel] in
+            fromChannel!.closeFile()
+            var buffer = channel!.allocator.buffer(capacity: 1)
+            buffer.writeString("X")
+            return channel!.writeAndFlush(buffer)
+        }
+        XCTAssertThrowsError(try writeFuture.wait()) { error in
             if let error = error as? IOError {
                 XCTAssert([EPIPE, EBADF].contains(error.errnoCode), "unexpected errno: \(error)")
             } else {
@@ -198,6 +205,47 @@ final class PipeChannelTest: XCTestCase {
             }
         )
         XCTAssertEqual(UInt8(ascii: "X"), spaceForX)
+    }
+
+    func testWriteEndGoingAway() throws {
+        try withPipe { readHandle, writeHandle in
+            let chan = try NIOPipeBootstrap(group: self.group)
+                .takingOwnershipOfDescriptor(output: try writeHandle.takeDescriptorOwnership())
+                .wait()
+
+            let writeResult = chan.writeAndFlush(ByteBuffer(repeating: 0x41, count: 32 * 1024 * 1024))
+            try chan.eventLoop.submit {}.wait()  // wait for write to be enqueued
+
+            try readHandle.close()
+
+            XCTAssertThrowsError(try writeResult.wait()) { error in
+                XCTAssertTrue(error is IOError, "Expected IOError but got \(type(of: error))")
+                if let ioError = error as? IOError {
+                    XCTAssertEqual(ioError.errnoCode, EPIPE, "Expected EPIPE but got \(ioError.errnoCode)")
+                }
+            }
+
+            // Channel should be closed after the write error
+            XCTAssertNoThrow(try chan.closeFuture.wait())
+
+            return []
+        }
+    }
+
+    func testReadEndGoingAway() throws {
+        try withPipe { readHandle, writeHandle in
+            let chan = try NIOPipeBootstrap(group: self.group)
+                .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+                .takingOwnershipOfDescriptor(input: try readHandle.takeDescriptorOwnership())
+                .wait()
+
+            try writeHandle.close()
+
+            // Channel should be closed because the read side is dead.
+            XCTAssertNoThrow(try chan.closeFuture.wait())
+
+            return []
+        }
     }
 }
 
