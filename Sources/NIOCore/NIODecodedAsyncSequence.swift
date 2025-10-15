@@ -118,26 +118,7 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                 return decoded
             }
 
-            // If `ended == false` and if `readLastChunkFromBuffer == true` then we must have manged
-            // to decode a message. Otherwise something is wrong in `decodeNext()`.
-            assert(!readLastChunkFromBuffer || decoded != nil)
-
             return decoded
-        }
-
-        @inlinable
-        func assertFinishedDecodingIfNoDecoded(_ decoded: Element?) {
-            guard decoded == nil else {
-                return
-            }
-            switch self.state {
-            case .finishedDecoding:
-                break
-            case .readingFromBuffer, .readLastChunkFromBuffer:
-                assertionFailure(
-                    "'decodeFromBuffer()' must have set the 'state' to '.finishedDecoding' if it returned 'nil'."
-                )
-            }
         }
 
         /// Retrieve the next element from the ``NIODecodedAsyncSequence``.
@@ -170,9 +151,12 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                 guard let nextBuffer = try await self.baseIterator.next() else {
                     // Ran out of data to read.
                     self.state = .readLastChunkFromBuffer
-                    let decoded = try self.decodeFromBuffer()
-                    self.assertFinishedDecodingIfNoDecoded(decoded)
-                    return decoded
+                    if let decoded = try self.decodeFromBuffer() {
+                        return decoded
+                    } else {
+                        self.state = .finishedDecoding
+                        return nil
+                    }
                 }
 
                 self.processor.append(nextBuffer)
@@ -215,9 +199,12 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                 guard let nextBuffer = try await self.baseIterator.next(isolation: actor) else {
                     // Ran out of data to read.
                     self.state = .readLastChunkFromBuffer
-                    let decoded = try self.decodeFromBuffer()
-                    self.assertFinishedDecodingIfNoDecoded(decoded)
-                    return decoded
+                    if let decoded = try self.decodeFromBuffer() {
+                        return decoded
+                    } else {
+                        self.state = .finishedDecoding
+                        return nil
+                    }
                 }
 
                 self.processor.append(nextBuffer)
