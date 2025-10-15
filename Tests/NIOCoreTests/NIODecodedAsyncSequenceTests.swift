@@ -57,7 +57,7 @@ struct NIODecodedAsyncSequenceTests {
     func decodingWorks(elementCount: Int, chunkSize: Int) async throws {
         let baseSequence = AsyncStream<ByteBuffer>.makeStream()
 
-        let randomElements: [UInt8] = (0..<elementCount).map {
+        var randomElements: [UInt8] = (0..<elementCount).map {
             _ in UInt8.random(in: .min ... .max)
         }
 
@@ -66,31 +66,20 @@ struct NIODecodedAsyncSequenceTests {
             .chunks(ofSize: chunkSize)
             .map(ByteBuffer.init(bytes:))
 
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                for buffer in buffers {
-                    /// Sleep for 10ms to simulate asynchronous work
-                    try await Task.sleep(nanoseconds: 10_000_000)
-                    baseSequence.continuation.yield(buffer)
-                }
-                baseSequence.continuation.finish()
+        for buffer in buffers {
+            baseSequence.continuation.yield(buffer)
+        }
+        baseSequence.continuation.finish()
+
+        let decodedSequence = baseSequence.stream.decode(using: ByteToInt32Decoder())
+
+        for try await element in decodedSequence {
+            // Create an Int32 from the first 4 UInt8s
+            let int32 = randomElements[0..<4].enumerated().reduce(into: Int32(0)) { result, next in
+                result |= Int32(next.element) << ((3 - next.offset) * 8)
             }
-
-            group.addTask {
-                var randomElements = randomElements
-                let decodedSequence = baseSequence.stream.decode(using: ByteToInt32Decoder())
-
-                for try await element in decodedSequence {
-                    // Create an Int32 from the first 4 UInt8s
-                    let int32 = randomElements[0..<4].enumerated().reduce(into: Int32(0)) { result, next in
-                        result |= Int32(next.element) << ((3 - next.offset) * 8)
-                    }
-                    randomElements = Array(randomElements[4...])
-                    #expect(element == int32)
-                }
-            }
-
-            try await group.waitForAll()
+            randomElements = Array(randomElements[4...])
+            #expect(element == int32)
         }
     }
 
@@ -107,54 +96,34 @@ struct NIODecodedAsyncSequenceTests {
             .chunks(ofSize: chunkSize)
             .map(ByteBuffer.init(bytes:))
 
-        await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                for buffer in buffers {
-                    /// Sleep for 10ms to simulate asynchronous work
-                    try await Task.sleep(nanoseconds: 10_000_000)
-                    baseSequence.continuation.yield(buffer)
-                }
-                baseSequence.continuation.finish()
-            }
+        for buffer in buffers {
+            baseSequence.continuation.yield(buffer)
+        }
+        baseSequence.continuation.finish()
 
-            group.addTask {
-                let decodedSequence = baseSequence.stream.decode(using: ThrowingDecoder())
-
-                for try await _ in decodedSequence {
-                    Issue.record("Should not have reached here")
-                }
-            }
-
-            await #expect(throws: ThrowingDecoder.DecoderError.self) {
-                try await group.waitForAll()
+        let decodedSequence = baseSequence.stream.decode(using: ThrowingDecoder())
+        await #expect(throws: ThrowingDecoder.DecoderError.self) {
+            for try await _ in decodedSequence {
+                Issue.record("Should not have reached here")
             }
         }
     }
 
-    @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     @Test
     func decodingThrowsWhenStreamThrows() async throws {
         struct StreamError: Error {}
 
         let baseSequence = AsyncThrowingStream<ByteBuffer, any Error>.makeStream()
 
-        await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                /// Sleep for 50ms to simulate asynchronous work
-                try await Task.sleep(nanoseconds: 50_000_000)
-                baseSequence.continuation.finish(throwing: StreamError())
-            }
+        /// Sleep for 50ms to simulate asynchronous work
+        try await Task.sleep(nanoseconds: 50_000_000)
+        baseSequence.continuation.finish(throwing: StreamError())
 
-            group.addTask {
-                let decodedSequence = baseSequence.stream.decode(using: ByteToInt32Decoder())
+        let decodedSequence = baseSequence.stream.decode(using: ByteToInt32Decoder())
 
-                for try await _ in decodedSequence {
-                    Issue.record("Should not have reached here")
-                }
-            }
-
-            await #expect(throws: StreamError.self) {
-                try await group.waitForAll()
+        await #expect(throws: StreamError.self) {
+            for try await _ in decodedSequence {
+                Issue.record("Should not have reached here")
             }
         }
     }
