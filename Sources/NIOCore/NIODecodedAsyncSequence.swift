@@ -14,8 +14,8 @@
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension AsyncSequence where Element == ByteBuffer {
-    /// Decode the `AsyncSequence<ByteBuffer>` into a sequence of ``Element``s,
-    /// using the ``Decoder``, where ``Decoder.InboundOut`` matches ``Element``.
+    /// Decode the `AsyncSequence<ByteBuffer>` into a sequence of `Element`s,
+    /// using the `Decoder`, where `Decoder.InboundOut` matches `Element`.
     ///
     /// Usage:
     /// ```swift
@@ -29,10 +29,10 @@ extension AsyncSequence where Element == ByteBuffer {
     /// ```
     ///
     /// - Parameters:
-    ///   - decoder: The ``Decoder`` to use to decode the ``ByteBuffer``s.
+    ///   - decoder: The `Decoder` to use to decode the ``ByteBuffer``s.
     ///   - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
     ///     An error will be thrown if after decoding an element there is more aggregated data than this amount.
-    /// - Returns: A ``NIODecodedAsyncSequence`` that decodes the ``ByteBuffer``s into a sequence of ``Element``s.
+    /// - Returns: A ``NIODecodedAsyncSequence`` that decodes the ``ByteBuffer``s into a sequence of `Element`s.
     @inlinable
     public func decode<Decoder: NIOSingleStepByteToMessageDecoder>(
         using decoder: Decoder,
@@ -47,9 +47,9 @@ extension AsyncSequence where Element == ByteBuffer {
 }
 
 /// A type that decodes an `AsyncSequence<ByteBuffer>` into a sequence of ``Element``s,
-/// using the ``Decoder``, where ``Decoder.InboundOut`` matches ``Element``.
+/// using the `Decoder`, where `Decoder.InboundOut` matches ``Element``.
 ///
-/// Use ``AsyncSequence/decode(using:maximumBufferSize:)`` to create a ``NIODecodedAsyncSequence``.
+/// Use `AsyncSequence/decode(using:maximumBufferSize:)` to create a ``NIODecodedAsyncSequence``.
 ///
 /// Usage:
 /// ```swift
