@@ -206,12 +206,14 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     /// - Parameters:
     ///   - decoder: The `NIOSingleStepByteToMessageDecoder` to decode the bytes into message.
     ///   - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
+    ///     An error will be thrown if after decoding an element there is more aggregated data than this amount.
     @inlinable
     public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
         self.decoder = decoder
         self.maximumBufferSize = maximumBufferSize
     }
 
+    /// Append a new buffer to this processor.
     @inlinable
     func append(_ buffer: ByteBuffer) {
         if self._buffer == nil || self._buffer!.readableBytes == 0 {
@@ -284,16 +286,16 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     /// Note that you might need to call `decodeNext` _multiple times_, even if `receivedLastChunk` is true, as there
     /// might be multiple messages left in the buffer.
     ///
-    /// If `receivedLastChunk` is `false`, this function will never return `ended == true`.
+    /// If `decodeMode` is `.normal`, this function will never return `ended == true`.
     ///
-    /// If `receivedLastChunk` is `true`, this function will never return `nil`. It'll try to decode a message
-    /// from an empty buffer, and return `ended == true`. When you've received `ended == true`, you shouldn't
-    /// call this function again, otherwise it'll try to decode using an empty buffer again.
+    /// If `decodeMode` is `.last`, this function will try to decode a message even if it means only with an empty buffer.
+    /// It'll then return the decoded message with `ended == true`. When you've received `ended == true`, you should
+    /// simply end the decoding process.
     ///
     /// `seenEOF` should only be true if `decodeMode == .last`. Otherwise it'll be ignored.
     ///
     /// - Parameters:
-    ///   - receivedLastChunk: Whether the current chunk is the last chunk
+    ///   - decodeMode: Either 'normal', or 'last' if the last chunk has been received and appended to the processor.
     ///   - seenEOF: Whether an EOF was seen on the stream
     /// - Returns: A tuple containing the decoded message and a boolean indicating whether the decoding has ended.
     @inlinable
@@ -304,10 +306,8 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
         // we want to call decodeLast once with an empty buffer if we have nothing
         if decodeMode == .last && (self._buffer == nil || self._buffer!.readableBytes == 0) {
             var emptyBuffer = self._buffer ?? ByteBuffer()
-            if let message = try self.decoder.decodeLast(buffer: &emptyBuffer, seenEOF: seenEOF) {
-                return (message, true)
-            }
-            return (nil, true)
+            let message = try self.decoder.decodeLast(buffer: &emptyBuffer, seenEOF: seenEOF)
+            return (message, true)
         }
 
         if self._buffer == nil {

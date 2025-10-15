@@ -2,6 +2,14 @@
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension AsyncSequence where Element == ByteBuffer {
+    /// Decode the `AsyncSequence<ByteBuffer>` into a sequence of ``Element``s,
+    /// using the ``Decoder``, where ``Decoder.InboundOut`` matches ``Element``.
+    ///
+    /// - Parameters:
+    ///   - decoder: The ``Decoder`` to use to decode the ``ByteBuffer``s.
+    ///   - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
+    ///     An error will be thrown if after decoding an element there is more aggregated data than this amount.
+    /// - Returns: A ``NIODecodedAsyncSequence`` that decodes the ``ByteBuffer``s into a sequence of ``Element``s.
     @inlinable
     public func decode<Decoder: NIOSingleStepByteToMessageDecoder, Decoded>(
         using decoder: Decoder,
@@ -15,10 +23,21 @@ extension AsyncSequence where Element == ByteBuffer {
     }
 }
 
-/// A sequence that decodes an ``AsyncSequence`` of ``ByteBuffer``s into a sequence of `Element`s,
-/// using the ``Decoder``.
+/// A type that decodes an `AsyncSequence<ByteBuffer>` into a sequence of ``Element``s,
+/// using the ``Decoder``, where ``Decoder.InboundOut`` matches ``Element``.
 ///
-/// Use the ``AsyncSequence/decode(using:)`` function to create a ``NIODecodedAsyncSequence``.
+/// Use ``AsyncSequence/decode(using:maximumBufferSize:)`` to create a ``NIODecodedAsyncSequence``.
+///
+/// Usage:
+/// ```swift
+/// let myDecoder = MyNIOSingleStepByteToMessageDecoder()
+/// let baseSequence = MyAsyncSequence<ByteBuffer>(...)
+/// let decodedSequence = baseSequence.decode(using: myDecoder)
+///
+/// for try await element in decodedSequence {
+///     print("Decoded an element!", element)
+/// }
+/// ```
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public struct NIODecodedAsyncSequence<
     Base: AsyncSequence,
@@ -42,13 +61,13 @@ public struct NIODecodedAsyncSequence<
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension NIODecodedAsyncSequence: AsyncSequence {
-    /// Create an ``AsyncIterator`` for this ``DecodeSequence``.
+    /// Create an ``AsyncIterator`` for this ``NIODecodedAsyncSequence``.
     @inlinable
     public func makeAsyncIterator() -> AsyncIterator {
         AsyncIterator(base: self)
     }
 
-    /// An ``AsyncIterator`` over a ``DecodeSequence``.
+    /// An ``AsyncIterator`` over a ``NIODecodedAsyncSequence``.
     public struct AsyncIterator: AsyncIteratorProtocol {
         @usableFromInline
         enum State: Sendable {
@@ -74,6 +93,7 @@ extension NIODecodedAsyncSequence: AsyncSequence {
             self.state = .readingFromBuffer
         }
 
+        /// Decode from the existing buffer of data, if possible.
         @inlinable
         mutating func decodeFromBuffer() throws -> Element? {
             let readLastChunkFromBuffer =
@@ -121,6 +141,9 @@ extension NIODecodedAsyncSequence: AsyncSequence {
         }
 
         /// Retrieve the next element from the ``NIODecodedAsyncSequence``.
+        ///
+        /// The same as `next(isolation:)` but not isolated to an actor, which allows
+        /// for less availability restrictions.
         @inlinable
         public mutating func next() async throws -> Element? {
             switch self.state {
