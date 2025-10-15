@@ -273,10 +273,12 @@ public protocol FileSystemProtocol: Sendable {
 
     /// Moves the file or directory at the specified path to a new location.
     ///
+    /// The item at `sourcePath` will be removed after the move completes successfully.
+    ///
     /// The following error codes may be thrown:
     /// - ``FileSystemError/Code-swift.struct/notFound`` if the item at `sourcePath` does not exist,
     /// - ``FileSystemError/Code-swift.struct/invalidArgument`` if an item at `destinationPath`
-    ///   exists prior to the copy or its parent directory does not exist.
+    ///   exists prior to the move or its parent directory does not exist.
     ///
     /// Note that other errors may also be thrown.
     ///
@@ -289,6 +291,10 @@ public protocol FileSystemProtocol: Sendable {
 
     /// Replaces the item at `destinationPath` with the item at `existingPath`.
     ///
+    /// This is similar to ``moveItem(at:to:)`` except that it will replace an existing item at
+    /// `destinationPath` if one exists. The item at `existingPath` will be removed after the
+    /// operation completes successfully.
+    ///
     /// The following error codes may be thrown:
     /// - ``FileSystemError/Code-swift.struct/notFound`` if the item at `existingPath` does
     ///    not exist,
@@ -298,8 +304,7 @@ public protocol FileSystemProtocol: Sendable {
     /// Note that other errors may also be thrown.
     ///
     /// The item at `destinationPath` is not required to exist. Note that it is possible to replace
-    /// a file with a directory and vice versa. After the file or directory at `destinationPath`
-    /// has been replaced, the item at `existingPath` will be removed.
+    /// a file with a directory and vice versa.
     ///
     /// - Parameters:
     ///   - destinationPath: The path of the file or directory to replace.
