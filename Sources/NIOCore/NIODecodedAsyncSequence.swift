@@ -11,10 +11,10 @@ extension AsyncSequence where Element == ByteBuffer {
     ///     An error will be thrown if after decoding an element there is more aggregated data than this amount.
     /// - Returns: A ``NIODecodedAsyncSequence`` that decodes the ``ByteBuffer``s into a sequence of ``Element``s.
     @inlinable
-    public func decode<Decoder: NIOSingleStepByteToMessageDecoder, Decoded>(
+    public func decode<Decoder: NIOSingleStepByteToMessageDecoder>(
         using decoder: Decoder,
         maximumBufferSize: Int? = nil
-    ) -> NIODecodedAsyncSequence<Self, Decoder, Decoded> where Decoder.InboundOut == Decoded {
+    ) -> NIODecodedAsyncSequence<Self, Decoder> {
         NIODecodedAsyncSequence(
             asyncSequence: self,
             decoder: decoder,
@@ -41,9 +41,8 @@ extension AsyncSequence where Element == ByteBuffer {
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public struct NIODecodedAsyncSequence<
     Base: AsyncSequence,
-    Decoder: NIOSingleStepByteToMessageDecoder,
-    Element
-> where Base.Element == ByteBuffer, Decoder.InboundOut == Element {
+    Decoder: NIOSingleStepByteToMessageDecoder
+> where Base.Element == ByteBuffer {
     @usableFromInline
     var asyncSequence: Base
     @usableFromInline
@@ -61,6 +60,8 @@ public struct NIODecodedAsyncSequence<
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension NIODecodedAsyncSequence: AsyncSequence {
+    public typealias Element = Decoder.InboundOut
+
     /// Create an ``AsyncIterator`` for this ``NIODecodedAsyncSequence``.
     @inlinable
     public func makeAsyncIterator() -> AsyncIterator {
