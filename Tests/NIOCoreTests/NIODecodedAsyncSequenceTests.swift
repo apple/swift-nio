@@ -95,7 +95,7 @@ struct NIODecodedAsyncSequenceTests {
     }
 
     @Test(arguments: Self.testingArguments)
-    func throwsWhenDecoderThrows(elementCount: Int, chunkSize: Int) async throws {
+    func decodingThrowsWhenDecoderThrows(elementCount: Int, chunkSize: Int) async throws {
         let baseSequence = AsyncStream<ByteBuffer>.makeStream()
 
         let randomElements: [UInt8] = (0..<elementCount).map {
@@ -131,8 +131,9 @@ struct NIODecodedAsyncSequenceTests {
         }
     }
 
+    @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     @Test(arguments: Self.testingArguments)
-    func throwsWhenStreamThrows(elementCount: Int, chunkSize: Int) async throws {
+    func decodingThrowsWhenStreamThrows(elementCount: Int, chunkSize: Int) async throws {
         struct StreamError: Error {}
 
         let baseSequence = AsyncThrowingStream<ByteBuffer, any Error>.makeStream()

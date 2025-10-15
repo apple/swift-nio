@@ -294,6 +294,10 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     ///
     /// `seenEOF` should only be true if `decodeMode == .last`. Otherwise it'll be ignored.
     ///
+    /// After a `decoder.decode(buffer:)` or `decoder.decodeLast(buffer:seenEOF:)` returns without throwing,
+    /// the aggregated buffer will have to contain less than or equal to `maximumBufferSize` amount of bytes.
+    /// Otherwise an error will be thrown.
+    ///
     /// - Parameters:
     ///   - decodeMode: Either 'normal', or 'last' if the last chunk has been received and appended to the processor.
     ///   - seenEOF: Whether an EOF was seen on the stream
