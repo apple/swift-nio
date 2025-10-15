@@ -132,8 +132,8 @@ struct NIODecodedAsyncSequenceTests {
     }
 
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-    @Test(arguments: Self.testingArguments)
-    func decodingThrowsWhenStreamThrows(elementCount: Int, chunkSize: Int) async throws {
+    @Test
+    func decodingThrowsWhenStreamThrows() async throws {
         struct StreamError: Error {}
 
         let baseSequence = AsyncThrowingStream<ByteBuffer, any Error>.makeStream()
