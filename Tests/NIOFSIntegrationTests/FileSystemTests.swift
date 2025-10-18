@@ -505,6 +505,37 @@ final class FileSystemTests: XCTestCase {
         }
     }
 
+    func testCreateDirectoryIsIdempotentWhenAlreadyExists() async throws {
+        let path = try await self.fs.temporaryFilePath()
+
+        try await self.fs.createDirectory(at: path, withIntermediateDirectories: false)
+
+        try await self.fs.createDirectory(at: path, withIntermediateDirectories: false)
+        try await self.fs.createDirectory(at: path, withIntermediateDirectories: true)
+
+        try await self.fs.withDirectoryHandle(atPath: path) { dir in
+            let info = try await dir.info()
+            XCTAssertEqual(info.type, .directory)
+            XCTAssertGreaterThan(info.size, 0)
+        }
+    }
+
+    func testCreateDirectoryThroughSymlinkToExistingDirectoryIsIdempotent() async throws {
+        let realDir = try await self.fs.temporaryFilePath()
+        try await self.fs.createDirectory(at: realDir, withIntermediateDirectories: false)
+
+        let linkPath = try await self.fs.temporaryFilePath()
+        try await self.fs.createSymbolicLink(at: linkPath, withDestination: realDir)
+
+        try await self.fs.createDirectory(at: linkPath, withIntermediateDirectories: false)
+
+        try await self.fs.withDirectoryHandle(atPath: linkPath) { dir in
+            let info = try await dir.info()
+            XCTAssertEqual(info.type, .directory)
+            XCTAssertGreaterThan(info.size, 0)
+        }
+    }
+
     func testCurrentWorkingDirectory() async throws {
         let directory = try await self.fs.currentWorkingDirectory
         XCTAssert(!directory.underlying.isEmpty)

@@ -804,25 +804,6 @@ extension FileSystem {
             DirectoryFileHandle(wrapping: $0)
         }
     }
-    /// Handle _createDirectory failure if the directory already exists.
-    private func _handleCreateDirectoryFileExists(
-        at path: FilePath,
-    ) -> Result<Void, FileSystemError> {
-        // This function is called when _createDirectory fails with (errno = .fileExists), 
-        // - If the path exists and is a directory, if so return success.
-        // - If the path exists and is not a directory, return failure.
-        switch Syscall.stat(path: path) {
-        case .success(let stat):
-            // Check if it's a directory
-            if (stat.st_mode & S_IFMT) == S_IFDIR {
-                return .success(())
-            } else {
-                return .failure(.mkdir(errno: .fileExists, path: path, location: .here()))
-            }
-        case let .failure(errno):
-            return .failure(.mkdir(errno: errno, path: path, location: .here()))
-        }
-    }
 
     /// Creates a directory at `fullPath`, potentially creating other directories along the way.
     private func _createDirectory(
@@ -858,8 +839,19 @@ extension FileSystem {
                 break loop
 
             case let .failure(errno):
-                if errno == .fileExists {
-                   return self._handleCreateDirectoryFileExists(at: path)
+                if errno == .fileExists {                    
+                    switch self._info(forFileAt: path, infoAboutSymbolicLink: false) {
+                    case let .success(maybeInfo):
+                        if let info = maybeInfo, info.type == .directory {
+                            break loop
+                        } else {
+                            // A file exists at this path.
+                            return .failure(.mkdir(errno: errno, path: path, location: .here()))
+                        }
+                    case let .failure(error):
+                        // Unable to determine what exists at this path.
+                        return .failure(error)
+                    }
                 } 
                 guard createIntermediateDirectories, errno == .noSuchFileOrDirectory else {
                     return .failure(.mkdir(errno: errno, path: path, location: .here()))
@@ -883,9 +875,6 @@ extension FileSystem {
             case .success:
                 continue
             case let .failure(errno):
-                if errno == .fileExists {
-                   return self._handleCreateDirectoryFileExists(at: path)
-                }
                 return .failure(.mkdir(errno: errno, path: path, location: .here()))
             }
         }

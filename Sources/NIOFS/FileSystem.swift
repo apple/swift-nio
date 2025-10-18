@@ -825,6 +825,20 @@ extension FileSystem {
                 break loop
 
             case let .failure(errno):
+                if errno == .fileExists {                    
+                    switch self._info(forFileAt: path, infoAboutSymbolicLink: false) {
+                    case let .success(maybeInfo):
+                        if let info = maybeInfo, info.type == .directory {
+                            break loop
+                        } else {
+                            // A file exists at this path.
+                            return .failure(.mkdir(errno: errno, path: path, location: .here()))
+                        }
+                    case let .failure(error):
+                        // Unable to determine what exists at this path.
+                        return .failure(error)
+                    }
+                }
                 guard createIntermediateDirectories, errno == .noSuchFileOrDirectory else {
                     return .failure(.mkdir(errno: errno, path: path, location: .here()))
                 }
