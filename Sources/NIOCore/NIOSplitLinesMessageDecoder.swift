@@ -134,6 +134,8 @@ struct SplitMessageDecoder: NIOSingleStepByteToMessageDecoder {
     let isSeparator: (UInt8) -> Bool
     @usableFromInline
     var ended: Bool
+    @usableFromInline
+    var bytesWithNoSeparatorsCount: Int
 
     @inlinable
     init(
@@ -143,6 +145,7 @@ struct SplitMessageDecoder: NIOSingleStepByteToMessageDecoder {
         self.omittingEmptySubsequences = omittingEmptySubsequences
         self.isSeparator = isSeparator
         self.ended = false
+        self.bytesWithNoSeparatorsCount = 0
     }
 
     /// Decode the next message from the given buffer.
@@ -154,9 +157,12 @@ struct SplitMessageDecoder: NIOSingleStepByteToMessageDecoder {
         if self.ended { return nil }
 
         while true {
-            if let separatorIndex = buffer.readableBytesView.firstIndex(where: self.isSeparator) {
+            let startIndex = buffer.readerIndex + self.bytesWithNoSeparatorsCount
+            if let separatorIndex = buffer.readableBytesView[startIndex...].firstIndex(where: self.isSeparator) {
                 // Safe to force unwrap. We just found a separator somewhere in the buffer.
                 let slice = buffer.readSlice(length: separatorIndex - buffer.readerIndex)!
+                // Reset for the next search since we found a separator.
+                self.bytesWithNoSeparatorsCount = 0
 
                 if self.omittingEmptySubsequences,
                     slice.readableBytes == 0
@@ -173,10 +179,13 @@ struct SplitMessageDecoder: NIOSingleStepByteToMessageDecoder {
                 return (slice, separator)
             } else {
                 guard hasReceivedLastChunk else {
+                    // Make sure we don't double-check these no-separator bytes again.
+                    self.bytesWithNoSeparatorsCount = buffer.readableBytes
                     // Need more data
                     return nil
                 }
 
+                // At this point, we're ending the decoding process.
                 self.ended = true
 
                 if self.omittingEmptySubsequences,
