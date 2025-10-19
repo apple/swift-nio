@@ -15,7 +15,7 @@
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension AsyncSequence where Element == ByteBuffer {
     /// Returns the longest possible subsequences of the sequence, in order,
-    /// that are separated by a line break.
+    /// that are separated by line breaks.
     ///
     /// The following Characters are considered line breaks, similar to
     /// standard library's `String.split(whereSeparator: \.isNewline)`:
@@ -64,8 +64,8 @@ extension AsyncSequence where Element == ByteBuffer {
         )
     }
 
-    /// Returns the longest possible String of the sequence, in order,
-    /// that are separated by a line break.
+    /// Returns the longest possible `String`s of the sequence, in order,
+    /// that are separated by line breaks.
     ///
     /// The following Characters are considered line breaks, similar to
     /// standard library's `String.split(whereSeparator: \.isNewline)`:
@@ -87,7 +87,7 @@ extension AsyncSequence where Element == ByteBuffer {
     /// Usage:
     /// ```swift
     /// let baseSequence = MyAsyncSequence<ByteBuffer>(...)
-    /// let splitLinesSequence = baseSequence.splitLines()
+    /// let splitLinesSequence = baseSequence.splitUTF8Lines()
     ///
     /// for try await string in splitLinesSequence {
     ///     print("Split by line breaks!\n", string)
@@ -115,13 +115,13 @@ extension AsyncSequence where Element == ByteBuffer {
     }
 }
 
-//MARK: - SplitMessageDecoder
+// MARK: - SplitMessageDecoder
 
 /// A decoder which splits the data into subsequences that are separated by a given separator.
 /// Similar to standard library's `String.split(separator:maxSplits:omittingEmptySubsequences:)`.
 ///
-/// This decoder can be used to introduce `AsyncSequence/split(omittingEmptySubsequences:maximumBufferSize:whereSeparator:)`
-/// functions. We could not come up with valid usages for such a function so we held off on introducing them.
+/// This decoder can be used to introduce a `AsyncSequence/split(omittingEmptySubsequences:maximumBufferSize:whereSeparator:)`
+/// function. We could not come up with valid use-cases for such a function so we held off on introducing it.
 /// See https://github.com/apple/swift-nio/pull/3411 for more info if you need such a function.
 @usableFromInline
 struct SplitMessageDecoder: NIOSingleStepByteToMessageDecoder {
@@ -223,9 +223,10 @@ extension SplitMessageDecoder: Sendable {}
 
 // MARK: - NIOSplitLinesMessageDecoder
 
-/// A decoder which splits the data into subsequences that are separated by a line break.
+/// A decoder which splits the data into subsequences that are separated by line breaks.
 ///
-/// Use `AsyncSequence/splitLines(omittingEmptySubsequences:maximumBufferSize:)` to create a
+/// Use `AsyncSequence/splitLines(omittingEmptySubsequences:maximumBufferSize:)`
+/// or `AsyncSequence/splitUTF8Lines(omittingEmptySubsequences:maximumBufferSize:)` to create a
 /// `NIODecodedAsyncSequence` that uses this decoder.
 ///
 /// The following Characters are considered line breaks, similar to
@@ -248,10 +249,10 @@ extension SplitMessageDecoder: Sendable {}
 /// Usage:
 /// ```swift
 /// let baseSequence = MyAsyncSequence<ByteBuffer>(...)
-/// let splitLinesSequence = baseSequence.splitLines()
+/// let splitLinesSequence = baseSequence.splitUTF8Lines() // or `.splitLines()`
 ///
-/// for try await buffer in splitLinesSequence {
-///     print("Split by line breaks!\n", buffer.hexDump(format: .detailed))
+/// for try await string in splitLinesSequence {
+///     print("Split by line breaks!\n", string)
 /// }
 /// ```
 public struct NIOSplitLinesMessageDecoder: NIOSingleStepByteToMessageDecoder {
@@ -297,7 +298,7 @@ public struct NIOSplitLinesMessageDecoder: NIOSingleStepByteToMessageDecoder {
             }
 
             // If we are getting rid of empty subsequences then it doesn't matter if we detect
-            // \r\n as CR+LF, or as a CR + a LF. The backing decoder gets rid of the empty subsequence
+            // \r\n as a CR-LF, or as a CR + a LF. The backing decoder gets rid of the empty subsequence
             // anyway. Therefore, we can return early right here and skip the rest of the logic.
             if self.splitDecoder.omittingEmptySubsequences {
                 return slice
