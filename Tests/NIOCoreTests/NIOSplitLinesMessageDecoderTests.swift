@@ -119,6 +119,11 @@ struct NIOSplitLinesMessageDecoderTests {
         var buffer = buffer
         let sequence = AsyncStream<ByteBuffer>.makeStream()
         while buffer.readableBytes > 0 {
+            if Int.random(in: 0..<4) == 0 {
+                // Insert an empty buffer to test the behavior of the decoder.
+                sequence.continuation.yield(ByteBuffer())
+                continue
+            }
             let length = min(buffer.readableBytes, chunkSize)
             let _slice = buffer.readSlice(length: length)
             let slice = try #require(_slice)
