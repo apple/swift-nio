@@ -1,5 +1,8 @@
 name: Release builds
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

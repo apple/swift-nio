@@ -1,5 +1,8 @@
 name: Cxx interop
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

@@ -373,13 +373,22 @@ final class SocketChannelTest: XCTestCase {
     }
 
     public func testWithConfiguredStreamSocket() throws {
+        let didAccept = ConditionLock<Int>(value: 0)
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverSock = try Socket(protocolFamily: .inet, type: .stream)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
         let serverChannelFuture = try serverSock.withUnsafeHandle {
-            ServerBootstrap(group: group).withBoundSocket(dup($0))
+            ServerBootstrap(group: group)
+                .childChannelInitializer { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        let acquiredLock = didAccept.lock(whenValue: 0, timeoutSeconds: 1)
+                        XCTAssertTrue(acquiredLock)
+                        didAccept.unlock(withValue: 1)
+                    }
+                }
+                .withBoundSocket(dup($0))
         }
         try serverSock.close()
         let serverChannel = try serverChannelFuture.wait()
@@ -391,9 +400,18 @@ final class SocketChannelTest: XCTestCase {
             ClientBootstrap(group: group).withConnectedSocket(dup($0))
         }
         try clientSock.close()
-        let clientChannel = try clientChannelFuture.wait()
 
+        // At this point we need to wait not just for the client connection to be created
+        // but also for the server connection to come in. Otherwise we risk a race where the
+        // client connection has come up but the server connection hasn't yet, leading to the
+        // server channel close below causing the server to never accept the inbound channel
+        // and leading to an unexpected error on close.
+        let clientChannel = try clientChannelFuture.wait()
         XCTAssertEqual(true, clientChannel.isActive)
+
+        let acquiredLock = didAccept.lock(whenValue: 1, timeoutSeconds: 1)
+        XCTAssertTrue(acquiredLock)
+        didAccept.unlock()
 
         try serverChannel.close().wait()
         try clientChannel.close().wait()

@@ -1,5 +1,8 @@
 name: Unit tests
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

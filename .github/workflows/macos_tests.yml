@@ -1,5 +1,8 @@
 name: macOS tests
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -126,7 +129,7 @@ on:
       xcode_latest_beta_enabled:
         type: boolean
         description: "Boolean to enable the Xcode beta jobs (uses latest beta if one currently exists). Defaults to true."
-        default: false
+        default: true
       xcode_latest_beta_build_arguments_override:
         type: string
         description: "The arguments passed to swift build in the Xcode beta job."

@@ -323,11 +323,6 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
         return result
     }
 
-    #if compiler(>=6.0)
-    // Note: Whitespace changes are used to workaround compiler bug
-    // Remove when compiler version 5.10 is no longer supported.
-    // https://github.com/swiftlang/swift/issues/79285
-    // swift-format-ignore
     /// Provides scoped access to the inbound and outbound side of the underlying ``Channel``.
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
@@ -335,7 +330,11 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     /// - Parameters:
     ///     - actor: actor where this function should be isolated to
     ///     - body: A closure that gets scoped access to the inbound and outbound.
-    public func executeThenClose<Result>(isolation actor: isolated (any Actor)? = #isolation, _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>, _ outbound: NIOAsyncChannelOutboundWriter<Outbound>) async throws -> sending Result) async throws -> sending Result {
+    public func executeThenClose<Result>(
+        isolation actor: isolated (any Actor)? = #isolation,
+        _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>, _ outbound: NIOAsyncChannelOutboundWriter<Outbound>)
+            async throws -> sending Result
+    ) async throws -> sending Result {
         let result: Result
         do {
             result = try await body(self._inbound, self._outbound)
@@ -370,7 +369,6 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
 
         return result
     }
-    #endif
 }
 
 // swift-format-ignore: AmbiguousTrailingClosureOverload
@@ -419,11 +417,6 @@ extension NIOAsyncChannel {
         return result
     }
 
-    #if compiler(>=6.0)
-    // Note: Whitespace changes are used to workaround compiler bug
-    // Remove when compiler version 5.10 is no longer supported.
-    // https://github.com/swiftlang/swift/issues/79285
-    // swift-format-ignore
     /// Provides scoped access to the inbound side of the underlying ``Channel``.
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
@@ -431,7 +424,10 @@ extension NIOAsyncChannel {
     /// - Parameters:
     ///     - actor: actor where this function should be isolated to
     ///     - body: A closure that gets scoped access to the inbound.
-    public func executeThenClose<Result>(isolation actor: isolated (any Actor)? = #isolation, _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>) async throws -> sending Result) async throws -> sending Result where Outbound == Never {
+    public func executeThenClose<Result>(
+        isolation actor: isolated (any Actor)? = #isolation,
+        _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>) async throws -> sending Result
+    ) async throws -> sending Result where Outbound == Never {
         let result: Result
         do {
             result = try await body(self._inbound)
@@ -466,7 +462,6 @@ extension NIOAsyncChannel {
 
         return result
     }
-    #endif
 }
 
 extension Channel {

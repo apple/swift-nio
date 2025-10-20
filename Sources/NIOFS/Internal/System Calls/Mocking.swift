@@ -346,11 +346,6 @@ extension String {
         try withCString(body)
     }
 
-    internal init?(_platformString platformString: UnsafePointer<CInterop.PlatformChar>) {
-        // Need to #if because CChar may be signed
-        self.init(validatingUTF8: platformString)
-    }
-
     internal init(
         _errorCorrectingPlatformString platformString: UnsafePointer<CInterop.PlatformChar>
     ) {
