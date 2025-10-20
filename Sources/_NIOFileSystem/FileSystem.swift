@@ -848,9 +848,9 @@ extension FileSystem {
                             // A file exists at this path.
                             return .failure(.mkdir(errno: errno, path: path, location: .here()))
                         }
-                    case let .failure(error):
+                    case .failure:
                         // Unable to determine what exists at this path.
-                        return .failure(error)
+                        return .failure(.mkdir(errno: errno, path: path, location: .here()))
                     }
                 } 
                 guard createIntermediateDirectories, errno == .noSuchFileOrDirectory else {
