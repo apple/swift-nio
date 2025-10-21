@@ -43,7 +43,7 @@ struct NIOSplitLinesMessageDecoderTests {
             """
             Produced elements: \(producedElements.map(String.init(buffer:)).debugDescription)
             Expected elements: \(argument.expectedElements.debugDescription)
-            """,
+            """
         )
     }
 
@@ -70,7 +70,7 @@ struct NIOSplitLinesMessageDecoderTests {
             """
             Produced elements: \(producedElements.map(String.init(buffer:)).debugDescription)
             Expected elements: \(argument.expectedElements.debugDescription)
-            """,
+            """
         )
     }
 
