@@ -229,8 +229,8 @@ extension SplitMessageDecoder: Sendable {}
 
 /// A decoder which splits the data into subsequences that are separated by line breaks.
 ///
-/// Use `AsyncSequence/splitLines(omittingEmptySubsequences:maximumBufferSize:)`
-/// or `AsyncSequence/splitUTF8Lines(omittingEmptySubsequences:maximumBufferSize:)` to create a
+/// You can initialize this type directly, or use
+/// `AsyncSequence/splitLines(omittingEmptySubsequences:maximumBufferSize:)` to create a
 /// `NIODecodedAsyncSequence` that uses this decoder.
 ///
 /// The following Characters are considered line breaks, similar to
@@ -268,7 +268,7 @@ public struct NIOSplitLinesMessageDecoder: NIOSingleStepByteToMessageDecoder {
     var previousSeparatorWasCR: Bool
 
     @inlinable
-    init(omittingEmptySubsequences: Bool) {
+    public init(omittingEmptySubsequences: Bool) {
         self.splitDecoder = SplitMessageDecoder(
             omittingEmptySubsequences: omittingEmptySubsequences,
             whereSeparator: Self.isLineBreak
@@ -348,8 +348,8 @@ extension NIOSplitLinesMessageDecoder: Sendable {}
 
 /// A decoder which splits the data into subsequences that are separated by line breaks.
 ///
-/// Use `AsyncSequence/splitLines(omittingEmptySubsequences:maximumBufferSize:)`
-/// or `AsyncSequence/splitUTF8Lines(omittingEmptySubsequences:maximumBufferSize:)` to create a
+/// You can initialize this type directly, or use
+/// `AsyncSequence/splitUTF8Lines(omittingEmptySubsequences:maximumBufferSize:)` to create a
 /// `NIODecodedAsyncSequence` that uses this decoder.
 ///
 /// The following Characters are considered line breaks, similar to
@@ -385,7 +385,7 @@ public struct NIOSplitUTF8LinesMessageDecoder: NIOSingleStepByteToMessageDecoder
     var splitLinesDecoder: NIOSplitLinesMessageDecoder
 
     @inlinable
-    init(omittingEmptySubsequences: Bool) {
+    public init(omittingEmptySubsequences: Bool) {
         self.splitLinesDecoder = NIOSplitLinesMessageDecoder(
             omittingEmptySubsequences: omittingEmptySubsequences
         )
