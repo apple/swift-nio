@@ -330,6 +330,43 @@ final class EventLoopTest: XCTestCase {
         assert(weakEventLoop == nil, within: .seconds(1))
     }
 
+    func testScheduleRepeatedTaskToNotRetainReferenceTypeOwner() async throws {
+        actor Owner {
+            func startLongDelayedRepeater(using eventLoopGroup: EventLoopGroup) throws {
+                // We intentionally use a delay far in the future to ensure the repeated task
+                // has not fired before cancellation.
+                let initialDelay: TimeAmount = .hours(24)
+                let delay: TimeAmount = .hours(24)
+
+                eventLoopGroup.next().scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) { _ in
+                    // Calling no-op private function to implicitly capture `self` strongly
+                    self.noOp()
+                }
+            }
+
+            private nonisolated func noOp() {}
+        }
+
+        // Event loop group is expected to outlive the expected life time of `Owner`
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+
+        weak var weakReference: Owner? = nil
+        await XCTAssertNoThrow(
+            try await {
+                let strongReference = Owner()
+                weakReference = strongReference
+                XCTAssertNotNil(weakReference)
+                try await strongReference.startLongDelayedRepeater(using: eventLoopGroup)
+
+                // Allow `Owner` to be deinitialized (by going out of scope here)
+                // before the first repeated task fires…
+            }()
+        )
+        assert(weakReference == nil, within: .seconds(1))
+
+        try await eventLoopGroup.shutdownGracefully()
+    }
+
     func testScheduledRepeatedAsyncTask() {
         let eventLoop = EmbeddedEventLoop()
         let counter = NIOLoopBoundBox(0, eventLoop: eventLoop)

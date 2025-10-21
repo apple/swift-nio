@@ -90,8 +90,8 @@ public final class RepeatedTask {
         if self.eventLoop.inEventLoop {
             self.begin0(in: delay)
         } else {
-            self.eventLoop.execute {
-                self.begin0(in: delay)
+            self.eventLoop.execute { [weak self] in
+                self?.begin0(in: delay)
             }
         }
     }
