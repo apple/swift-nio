@@ -6,7 +6,6 @@
     - use welcoming language (soundness check)
     - ensure BYTE_ORDER is defined
 */
-/*	$FreeBSD$	*/
 /*	$KAME: sha1.h,v 1.5 2000/03/27 04:36:23 sumikawa Exp $	*/
 
 /*-
@@ -50,10 +49,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct sha1_ctxt {
 	union {
 		uint8_t		b8[20];
@@ -73,12 +68,7 @@ typedef struct sha1_ctxt SHA1_CTX;
 
 #define	SHA1_RESULTLEN	(160/8)
 
-#ifdef __cplusplus
-#define __min_size(x)	(x)
-#else
 #define __min_size(x)	static (x)
-#endif
-
 extern void c_nio_sha1_init(struct sha1_ctxt *);
 extern void c_nio_sha1_pad(struct sha1_ctxt *);
 extern void c_nio_sha1_loop(struct sha1_ctxt *, const uint8_t *, size_t);
@@ -89,8 +79,5 @@ extern void c_nio_sha1_result(struct sha1_ctxt *, char[__min_size(SHA1_RESULTLEN
 #define SHA1Update(x, y, z)	c_nio_sha1_loop((x), (y), (z))
 #define SHA1Final(x, y)		c_nio_sha1_result((y), (x))
 
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
 
 #endif /*_CRYPTO_SHA1_H_*/
