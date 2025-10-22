@@ -65,16 +65,8 @@ struct NIODecodedAsyncSequenceTests {
             buffer.writeInteger(element)
         }
 
-        let baseSequence = AsyncStream<ByteBuffer>.makeStream()
-        while buffer.readableBytes > 0 {
-            let length = min(buffer.readableBytes, chunkSize)
-            let _slice = buffer.readSlice(length: length)
-            let slice = try #require(_slice)
-            baseSequence.continuation.yield(slice)
-        }
-        baseSequence.continuation.finish()
-
-        let decodedSequence = baseSequence.stream.decode(using: ByteToInt32Decoder())
+        let stream = try self.makeFinishedAsyncStream(using: buffer, chunkSize: chunkSize)
+        let decodedSequence = stream.decode(using: ByteToInt32Decoder())
 
         for try await element in decodedSequence {
             #expect(element == randomElements.removeFirst())
@@ -93,16 +85,9 @@ struct NIODecodedAsyncSequenceTests {
             buffer.writeInteger(element)
         }
 
-        let baseSequence = AsyncStream<ByteBuffer>.makeStream()
-        while buffer.readableBytes > 0 {
-            let length = min(buffer.readableBytes, chunkSize)
-            let _slice = buffer.readSlice(length: length)
-            let slice = try #require(_slice)
-            baseSequence.continuation.yield(slice)
-        }
-        baseSequence.continuation.finish()
+        let stream = try self.makeFinishedAsyncStream(using: buffer, chunkSize: chunkSize)
+        let decodedSequence = stream.decode(using: ThrowingDecoder())
 
-        let decodedSequence = baseSequence.stream.decode(using: ThrowingDecoder())
         await #expect(throws: ThrowingDecoder.DecoderError.self) {
             for try await _ in decodedSequence {
                 Issue.record("Should not have reached here")
@@ -124,5 +109,26 @@ struct NIODecodedAsyncSequenceTests {
                 Issue.record("Should not have reached here")
             }
         }
+    }
+
+    private func makeFinishedAsyncStream(
+        using buffer: ByteBuffer,
+        chunkSize: Int
+    ) throws -> AsyncStream<ByteBuffer> {
+        var buffer = buffer
+        let sequence = AsyncStream<ByteBuffer>.makeStream()
+        while buffer.readableBytes > 0 {
+            if Int.random(in: 0..<4) == 0 {
+                // Insert an empty buffer to test the behavior of the decoder.
+                sequence.continuation.yield(ByteBuffer())
+                continue
+            }
+            let length = min(buffer.readableBytes, chunkSize)
+            let _slice = buffer.readSlice(length: length)
+            let slice = try #require(_slice)
+            sequence.continuation.yield(slice)
+        }
+        sequence.continuation.finish()
+        return sequence.stream
     }
 }

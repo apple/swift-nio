@@ -95,8 +95,8 @@ extension NIODecodedAsyncSequence: AsyncSequence {
     public struct AsyncIterator: AsyncIteratorProtocol {
         @usableFromInline
         enum State: Sendable {
-            case readingFromBuffer
-            case readLastChunkFromBuffer
+            case canReadFromBaseIterator
+            case baseIteratorIsExhausted
             case finishedDecoding
         }
 
@@ -114,7 +114,7 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                 base.decoder,
                 maximumBufferSize: base.maximumBufferSize
             )
-            self.state = .readingFromBuffer
+            self.state = .canReadFromBaseIterator
         }
 
         /// Retrieve the next element from the ``NIODecodedAsyncSequence``.
@@ -127,7 +127,7 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                 switch self.state {
                 case .finishedDecoding:
                     return nil
-                case .readingFromBuffer:
+                case .canReadFromBaseIterator:
                     let (decoded, ended) = try self.processor.decodeNext(
                         decodeMode: .normal,
                         seenEOF: false
@@ -144,11 +144,11 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                     // Read more data into the buffer so we can decode more messages
                     guard let nextBuffer = try await self.baseIterator.next() else {
                         // Ran out of data to read.
-                        self.state = .readLastChunkFromBuffer
+                        self.state = .baseIteratorIsExhausted
                         continue
                     }
                     self.processor.append(nextBuffer)
-                case .readLastChunkFromBuffer:
+                case .baseIteratorIsExhausted:
                     let (decoded, ended) = try self.processor.decodeNext(
                         decodeMode: .last,
                         seenEOF: true
@@ -175,7 +175,7 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                 switch self.state {
                 case .finishedDecoding:
                     return nil
-                case .readingFromBuffer:
+                case .canReadFromBaseIterator:
                     let (decoded, ended) = try self.processor.decodeNext(
                         decodeMode: .normal,
                         seenEOF: false
@@ -192,11 +192,11 @@ extension NIODecodedAsyncSequence: AsyncSequence {
                     // Read more data into the buffer so we can decode more messages
                     guard let nextBuffer = try await self.baseIterator.next(isolation: actor) else {
                         // Ran out of data to read.
-                        self.state = .readLastChunkFromBuffer
+                        self.state = .baseIteratorIsExhausted
                         continue
                     }
                     self.processor.append(nextBuffer)
-                case .readLastChunkFromBuffer:
+                case .baseIteratorIsExhausted:
                     let (decoded, ended) = try self.processor.decodeNext(
                         decodeMode: .last,
                         seenEOF: true
