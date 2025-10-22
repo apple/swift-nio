@@ -20,7 +20,7 @@ error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
 if command -v apt-get >/dev/null; then
-  PACKAGE_MANAGER_BIN="apt"
+  PACKAGE_MANAGER_BIN="apt-get"
   apt-get update > /dev/null
 elif command -v yum >/dev/null; then
   PACKAGE_MANAGER_BIN="yum"
