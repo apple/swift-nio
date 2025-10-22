@@ -19,7 +19,7 @@ jobs:
   wasm-sdk:
     name: WebAssembly Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@wasm-sdk
     with:
       name: "WebAssembly Swift SDK"
       matrix_string: >-
@@ -31,8 +31,8 @@ jobs:
               "platform":"Linux",
               "runner":"ubuntu-latest",
               "image":"ubuntu:jammy",
-              "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_sdk.sh | INSTALL_SWIFT_BRANCH=main INSTALL_SWIFT_ARCH=x86_64 INSTALL_SWIFT_SDK=wasm-sdk bash && hash -r",
-              "command":"curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/swift-build-with-wasm-sdk.sh | bash -s --",
+              "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/wasm-sdk/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/wasm-sdk/scripts/install_swift_sdk.sh | INSTALL_SWIFT_BRANCH=main INSTALL_SWIFT_ARCH=x86_64 INSTALL_SWIFT_SDK=wasm-sdk bash && hash -r",
+              "command":"curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/wasm-sdk/scripts/swift-build-with-wasm-sdk.sh | bash -s --",
               "command_arguments":"${{ inputs.additional_command_arguments }}",
               "env":'"$env_vars_json"'
             }
