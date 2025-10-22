@@ -458,8 +458,10 @@ extension ChannelError: CustomStringConvertible {
             "Bad interface address family"
         case let .illegalMulticastAddress(address):
             "Illegal multicast address \(address)"
+        #if !os(WASI)
         case let .multicastNotSupported(interface):
             "Multicast not supported on interface \(interface)"
+        #endif
         case .inappropriateOperationForState:
             "Inappropriate operation for state"
         case .unremovableHandler:
