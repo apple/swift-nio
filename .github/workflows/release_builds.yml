@@ -105,6 +105,11 @@ on:
         description: "Environment variables for Windows jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
         default: "{}"
 
+      minimum_swift_version:
+        type: string
+        description: "Minimum Swift version to include in the matrix. Leave empty for auto-detection from Package.swift, specify a version like '6.0' to override, or set to 'none' to disable filtering."
+        default: ""
+
 jobs:
   construct-matrix:
     name: Construct release build matrix
@@ -136,6 +141,7 @@ jobs:
         env:
           MATRIX_LINUX_SETUP_COMMAND: "swift --version"
           MATRIX_LINUX_COMMAND: "swift build -c release"
+          MATRIX_MIN_SWIFT_VERSION: ${{ inputs.minimum_swift_version }}
           MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
           MATRIX_LINUX_5_10_COMMAND_ARGUMENTS: ${{ inputs.linux_5_10_arguments_override }}
           MATRIX_LINUX_6_0_ENABLED: ${{ inputs.linux_6_0_enabled }}

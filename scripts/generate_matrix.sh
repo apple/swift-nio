@@ -14,6 +14,118 @@
 ##===----------------------------------------------------------------------===##
 set -x
 
+# Extract swift-tools-version from a manifest file
+get_tools_version() {
+    local manifest="$1"
+    if [[ ! -f "$manifest" ]]; then
+        echo ""
+        return
+    fi
+
+    # Parse the first line: // swift-tools-version:X.Y or // swift-tools-version: X.Y
+    local tools_version
+    tools_version=$(head -n 1 "$manifest" | sed -n 's#^// *swift-tools-version: *\([0-9.]*\).*#\1#p')
+    echo "$tools_version"
+}
+
+# Compare versions using SemVer: returns 0 if v1 >= v2, 1 otherwise
+version_gte() {
+    local v1="$1"
+    local v2="$2"
+
+    # Parse v1 as major.minor.patch
+    IFS='.' read -r v1_major v1_minor v1_patch <<< "$v1"
+    v1_minor=${v1_minor:-0}
+    v1_patch=${v1_patch:-0}
+
+    # Parse v2 as major.minor.patch
+    IFS='.' read -r v2_major v2_minor v2_patch <<< "$v2"
+    v2_minor=${v2_minor:-0}
+    v2_patch=${v2_patch:-0}
+
+    # Compare major
+    if [[ $v1_major -gt $v2_major ]]; then return 0; fi
+    if [[ $v1_major -lt $v2_major ]]; then return 1; fi
+
+    # Major equal, compare minor
+    if [[ $v1_minor -gt $v2_minor ]]; then return 0; fi
+    if [[ $v1_minor -lt $v2_minor ]]; then return 1; fi
+
+    # Major and minor equal, compare patch
+    if [[ $v1_patch -ge $v2_patch ]]; then return 0; fi
+    return 1
+}
+
+# Find minimum Swift version across all manifests
+if [[ -z "${MATRIX_MIN_SWIFT_VERSION:-}" ]]; then
+    min_version=""
+
+    # Check default Package.swift
+    default_version=$(get_tools_version "Package.swift")
+    if [[ -n "$default_version" ]]; then
+        min_version="$default_version"
+        echo "Found Package.swift with tools-version: $default_version" >&2
+    fi
+
+    # Check all version-specific manifests
+    for manifest in Package@swift-*.swift; do
+        if [[ ! -f "$manifest" ]]; then
+            continue
+        fi
+
+        version=$(get_tools_version "$manifest")
+        if [[ -z "$version" ]]; then
+            continue
+        fi
+
+        echo "Found $manifest with tools-version: $version" >&2
+
+        # If this version is less than current minimum, update minimum
+        if [[ -z "$min_version" ]] || ! version_gte "$version" "$min_version"; then
+            min_version="$version"
+        fi
+    done
+
+    if [[ -n "$min_version" ]]; then
+        MATRIX_MIN_SWIFT_VERSION="$min_version"
+        echo "Minimum Swift tools version: $MATRIX_MIN_SWIFT_VERSION" >&2
+    else
+        echo "Warning: Could not find any Swift tools version in Package manifests" >&2
+    fi
+fi
+
+# Check if a Swift version should be included in the matrix
+# Nightlies are always included
+# If MATRIX_MIN_SWIFT_VERSION is "none", all versions are included
+# If MATRIX_MIN_SWIFT_VERSION is not set, it's auto-detected from Package manifests
+# If MATRIX_MIN_SWIFT_VERSION is set to a version, that version is used as the minimum
+should_include_version() {
+    local version="$1"
+
+    # If minimum version check is disabled, include everything
+    if [[ "${MATRIX_MIN_SWIFT_VERSION:-}" == "none" ]]; then
+        return 0
+    fi
+
+    # If no minimum version specified, include everything
+    if [[ -z "${MATRIX_MIN_SWIFT_VERSION:-}" ]]; then
+        return 0
+    fi
+
+    # Nightly builds always included
+    if [[ "$version" =~ ^nightly- ]]; then
+        return 0
+    fi
+
+    # Check if version >= minimum
+    if version_gte "$version" "$MATRIX_MIN_SWIFT_VERSION"; then
+        return 0
+    else
+        echo "Skipping Swift $version (< minimum $MATRIX_MIN_SWIFT_VERSION)" >&2
+        return 1
+    fi
+}
+
 # Parameters
 linux_command="$MATRIX_LINUX_COMMAND"  # required if any Linux pipeline is enabled
 linux_setup_command="$MATRIX_LINUX_SETUP_COMMAND"
@@ -89,7 +201,7 @@ if [[ \
 fi
 
 
-if [[ "$linux_5_9_enabled" == "true" ]]; then
+if [[ "$linux_5_9_enabled" == "true" ]] && should_include_version "5.9"; then
   matrix=$(echo "$matrix" | jq -c \
     --arg setup_command "$linux_setup_command"  \
     --arg command "$linux_command"  \
@@ -100,7 +212,7 @@ if [[ "$linux_5_9_enabled" == "true" ]]; then
     '.config[.config| length] |= . + { "name": "5.9", "image": $container_image, "swift_version": "5.9", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars}')
 fi
 
-if [[ "$linux_5_10_enabled" == "true" ]]; then
+if [[ "$linux_5_10_enabled" == "true" ]] && should_include_version "5.10"; then
   matrix=$(echo "$matrix" | jq -c \
     --arg setup_command "$linux_setup_command"  \
     --arg command "$linux_command"  \
@@ -111,7 +223,7 @@ if [[ "$linux_5_10_enabled" == "true" ]]; then
     '.config[.config| length] |= . + { "name": "5.10", "image": $container_image, "swift_version": "5.10", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars}')
 fi
 
-if [[ "$linux_6_0_enabled" == "true" ]]; then
+if [[ "$linux_6_0_enabled" == "true" ]] && should_include_version "6.0"; then
   matrix=$(echo "$matrix" | jq -c \
     --arg setup_command "$linux_setup_command"  \
     --arg command "$linux_command"  \
@@ -122,7 +234,7 @@ if [[ "$linux_6_0_enabled" == "true" ]]; then
     '.config[.config| length] |= . + { "name": "6.0", "image": $container_image, "swift_version": "6.0", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars}')
 fi
 
-if [[ "$linux_6_1_enabled" == "true" ]]; then
+if [[ "$linux_6_1_enabled" == "true" ]] && should_include_version "6.1"; then
   matrix=$(echo "$matrix" | jq -c \
     --arg setup_command "$linux_setup_command"  \
     --arg command "$linux_command"  \
@@ -133,7 +245,7 @@ if [[ "$linux_6_1_enabled" == "true" ]]; then
     '.config[.config| length] |= . + { "name": "6.1", "image": $container_image, "swift_version": "6.1", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars}')
 fi
 
-if [[ "$linux_6_2_enabled" == "true" ]]; then
+if [[ "$linux_6_2_enabled" == "true" ]] && should_include_version "6.2"; then
   matrix=$(echo "$matrix" | jq -c \
     --arg setup_command "$linux_setup_command"  \
     --arg command "$linux_command"  \
@@ -144,7 +256,7 @@ if [[ "$linux_6_2_enabled" == "true" ]]; then
     '.config[.config| length] |= . + { "name": "6.2", "image": $container_image, "swift_version": "6.2", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars}')
 fi
 
-if [[ "$linux_nightly_next_enabled" == "true" ]]; then
+if [[ "$linux_nightly_next_enabled" == "true" ]] && should_include_version "nightly-next"; then
   matrix=$(echo "$matrix" | jq -c \
     --arg setup_command "$linux_setup_command"  \
     --arg command "$linux_command"  \
@@ -155,7 +267,7 @@ if [[ "$linux_nightly_next_enabled" == "true" ]]; then
     '.config[.config| length] |= . + { "name": "nightly-next", "image": $container_image, "swift_version": "nightly-next", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars}')
 fi
 
-if [[ "$linux_nightly_main_enabled" == "true" ]]; then
+if [[ "$linux_nightly_main_enabled" == "true" ]] && should_include_version "nightly-main"; then
   matrix=$(echo "$matrix" | jq -c \
     --arg setup_command "$linux_setup_command"  \
     --arg command "$linux_command"  \
@@ -178,7 +290,7 @@ if [[ \
   fi
 fi
 
-if [[ "$windows_6_0_enabled" == "true" ]]; then
+if [[ "$windows_6_0_enabled" == "true" ]] && should_include_version "6.0"; then
   matrix=$(echo "$matrix" | jq -c \
     --arg setup_command "$windows_setup_command"  \
     --arg command "$windows_command"  \
@@ -189,7 +301,7 @@ if [[ "$windows_6_0_enabled" == "true" ]]; then
     '.config[.config| length] |= . + { "name": "6.0", "image": $container_image, "swift_version": "6.0", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars }')
 fi
 
-if [[ "$windows_6_1_enabled" == "true" ]]; then
+if [[ "$windows_6_1_enabled" == "true" ]] && should_include_version "6.1"; then
   matrix=$(echo "$matrix" | jq -c \
     --arg setup_command "$windows_setup_command"  \
     --arg command "$windows_command"  \
@@ -200,7 +312,7 @@ if [[ "$windows_6_1_enabled" == "true" ]]; then
     '.config[.config| length] |= . + { "name": "6.1", "image": $container_image, "swift_version": "6.1", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars }')
 fi
 
-if [[ "$windows_6_2_enabled" == "true" ]]; then
+if [[ "$windows_6_2_enabled" == "true" ]] && should_include_version "6.2"; then
   matrix=$(echo "$matrix" | jq -c \
     --arg setup_command "$windows_setup_command"  \
     --arg command "$windows_command"  \
@@ -211,7 +323,7 @@ if [[ "$windows_6_2_enabled" == "true" ]]; then
     '.config[.config| length] |= . + { "name": "6.2", "image": $container_image, "swift_version": "6.2", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars }')
 fi
 
-if [[ "$windows_nightly_next_enabled" == "true" ]]; then
+if [[ "$windows_nightly_next_enabled" == "true" ]] && should_include_version "nightly-next"; then
   matrix=$(echo "$matrix" | jq -c \
     --arg setup_command "$windows_setup_command"  \
     --arg command "$windows_command"  \
@@ -222,7 +334,7 @@ if [[ "$windows_nightly_next_enabled" == "true" ]]; then
     '.config[.config| length] |= . + { "name": "nightly-next", "image": $container_image, "swift_version": "nightly-next", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars }')
 fi
 
-if [[ "$windows_nightly_main_enabled" == "true" ]]; then
+if [[ "$windows_nightly_main_enabled" == "true" ]] && should_include_version "nightly-main"; then
   matrix=$(echo "$matrix" | jq -c \
     --arg setup_command "$windows_setup_command"  \
     --arg command "$windows_command"  \
