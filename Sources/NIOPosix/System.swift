@@ -34,8 +34,8 @@ internal typealias MMsgHdr = CNIOLinux_mmsghdr
 internal typealias in6_pktinfo = CNIOLinux_in6_pktinfo
 #elseif os(OpenBSD)
 @_exported @preconcurrency import Glibc
-import CNIOBSD
-internal typealias MMsgHdr = CNIOBSD_mmsghdr
+import CNIOOpenBSD
+internal typealias MMsgHdr = CNIOOpenBSD_mmsghdr
 let INADDR_ANY = UInt32(0)
 #elseif os(Windows)
 @_exported import ucrt
@@ -175,8 +175,8 @@ private let sysSendMmsg = CNIOLinux_sendmmsg
 private let sysRecvMmsg = CNIOLinux_recvmmsg
 #elseif os(OpenBSD)
 private let sysKevent = kevent
-private let sysSendMmsg = CNIOBSD_sendmmsg
-private let sysRecvMmsg = CNIOBSD_recvmmsg
+private let sysSendMmsg = CNIOOpenBSD_sendmmsg
+private let sysRecvMmsg = CNIOOpenBSD_recvmmsg
 #elseif canImport(Darwin)
 private let sysKevent = kevent
 private let sysMkpath = mkpath_np
@@ -524,11 +524,11 @@ internal enum Posix: Sendable {
     static let IPTOS_ECN_ECT1: CInt = CInt(CNIOLinux.IPTOS_ECN_ECT1)
     static let IPTOS_ECN_CE: CInt = CInt(CNIOLinux.IPTOS_ECN_CE)
     #elseif os(OpenBSD)
-    static let IPTOS_ECN_NOTECT: CInt = CInt(CNIOBSD.IPTOS_ECN_NOTECT)
-    static let IPTOS_ECN_MASK: CInt = CInt(CNIOBSD.IPTOS_ECN_MASK)
-    static let IPTOS_ECN_ECT0: CInt = CInt(CNIOBSD.IPTOS_ECN_ECT0)
-    static let IPTOS_ECN_ECT1: CInt = CInt(CNIOBSD.IPTOS_ECN_ECT1)
-    static let IPTOS_ECN_CE: CInt = CInt(CNIOBSD.IPTOS_ECN_CE)
+    static let IPTOS_ECN_NOTECT: CInt = CInt(CNIOOpenBSD.IPTOS_ECN_NOTECT)
+    static let IPTOS_ECN_MASK: CInt = CInt(CNIOOpenBSD.IPTOS_ECN_MASK)
+    static let IPTOS_ECN_ECT0: CInt = CInt(CNIOOpenBSD.IPTOS_ECN_ECT0)
+    static let IPTOS_ECN_ECT1: CInt = CInt(CNIOOpenBSD.IPTOS_ECN_ECT1)
+    static let IPTOS_ECN_CE: CInt = CInt(CNIOOpenBSD.IPTOS_ECN_CE)
     #elseif os(Windows)
     static let IPTOS_ECN_NOTECT: CInt = CInt(0x00)
     static let IPTOS_ECN_MASK: CInt = CInt(0x03)
@@ -552,8 +552,8 @@ internal enum Posix: Sendable {
     #elseif os(OpenBSD)
     static let IP_PKTINFO: CInt = CInt(-1)  // Not actually present.
 
-    static let IPV6_RECVPKTINFO: CInt = CInt(CNIOBSD.IPV6_RECVPKTINFO)
-    static let IPV6_PKTINFO: CInt = CInt(CNIOBSD.IPV6_PKTINFO)
+    static let IPV6_RECVPKTINFO: CInt = CInt(CNIOOpenBSD.IPV6_RECVPKTINFO)
+    static let IPV6_PKTINFO: CInt = CInt(CNIOOpenBSD.IPV6_PKTINFO)
     #elseif os(Windows)
     static let IP_RECVPKTINFO: CInt = CInt(WinSDK.IP_PKTINFO)
     static let IP_PKTINFO: CInt = CInt(WinSDK.IP_PKTINFO)
@@ -1086,7 +1086,7 @@ extension Posix {
 #if canImport(Darwin)
 internal typealias kevent_timespec = Darwin.timespec
 #elseif os(OpenBSD)
-internal typealias kevent_timespec = CNIOBSD.timespec
+internal typealias kevent_timespec = CNIOOpenBSD.timespec
 #else
 #error("implementation missing")
 #endif
@@ -1102,7 +1102,7 @@ internal enum KQueue: Sendable {
             #if canImport(Darwin)
             Darwin.kqueue()
             #elseif os(OpenBSD)
-            CNIOBSD.kqueue()
+            CNIOOpenBSD.kqueue()
             #else
             #error("implementation missing")
             #endif

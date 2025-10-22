@@ -24,7 +24,7 @@ import Darwin
 import CNIOLinux
 #elseif os(OpenBSD)
 @preconcurrency import Glibc
-import CNIOBSD
+import CNIOOpenBSD
 #elseif os(Windows)
 import WinSDK
 #elseif canImport(WASILibc)

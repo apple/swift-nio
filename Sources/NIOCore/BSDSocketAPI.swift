@@ -85,7 +85,7 @@ private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMut
 #endif
 #elseif os(OpenBSD)
 @preconcurrency import Glibc
-import CNIOBSD
+import CNIOOpenBSD
 
 private let sysInet_ntop:
     @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? =

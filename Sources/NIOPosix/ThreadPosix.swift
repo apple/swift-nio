@@ -25,10 +25,10 @@ private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer) ->
 private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
 #endif
 #elseif os(OpenBSD)
-import CNIOBSD
+import CNIOOpenBSD
 
-private let sys_pthread_getname_np = CNIOBSD_pthread_get_name_np
-private let sys_pthread_setname_np = CNIOBSD_pthread_set_name_np
+private let sys_pthread_getname_np = CNIOOpenBSD_pthread_get_name_np
+private let sys_pthread_setname_np = CNIOOpenBSD_pthread_set_name_np
 private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
 #elseif canImport(Darwin)
 private let sys_pthread_getname_np = pthread_getname_np

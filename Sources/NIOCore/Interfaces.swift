@@ -21,7 +21,7 @@
 #endif
 import CNIOLinux
 #elseif os(OpenBSD)
-import CNIOBSD
+import CNIOOpenBSD
 #elseif canImport(Darwin)
 import Darwin
 #elseif canImport(WASILibc)

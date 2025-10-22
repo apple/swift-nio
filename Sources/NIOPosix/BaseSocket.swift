@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import CNIOBSD
+import CNIOOpenBSD
 import CNIOLinux
 import NIOConcurrencyHelpers
 import NIOCore

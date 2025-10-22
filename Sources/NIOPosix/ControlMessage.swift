@@ -19,7 +19,7 @@ import CNIODarwin
 import CNIOLinux
 import Glibc
 #elseif os(OpenBSD)
-import CNIOBSD
+import CNIOOpenBSD
 import Glibc
 #elseif os(Windows)
 import CNIOWindows

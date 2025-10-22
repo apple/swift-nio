@@ -21,7 +21,7 @@ import CNIOLinux
 @preconcurrency import Android
 #endif
 #elseif os(OpenBSD)
-import CNIOBSD
+import CNIOOpenBSD
 @preconcurrency import Glibc
 #elseif os(Windows)
 import ucrt

@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
-import CNIOBSD
+import CNIOOpenBSD
 import CNIODarwin
 import CNIOLinux
 import CNIOWindows

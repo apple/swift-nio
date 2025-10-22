@@ -11,8 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#ifndef C_NIO_BSD_H
-#define C_NIO_BSD_H
+#ifndef C_NIO_OPENBSD_H
+#define C_NIO_OPENBSD_H
 
 #include <sys/types.h>
 #include <sys/event.h>
@@ -52,47 +52,47 @@
 typedef struct {
     struct msghdr msg_hdr;
     unsigned int msg_len;
-} CNIOBSD_mmsghdr;
+} CNIOOpenBSD_mmsghdr;
 
 typedef struct {
     struct in6_addr ipi6_addr;
     unsigned int ipi6_ifindex;
-} CNIOBSD_in6_pktinfo;
+} CNIOOpenBSD_in6_pktinfo;
 
-int CNIOBSD_sendmmsg(int sockfd, CNIOBSD_mmsghdr *msgvec, unsigned int vlen, int flags);
-int CNIOBSD_recvmmsg(int sockfd, CNIOBSD_mmsghdr *msgvec, unsigned int vlen, int flags, struct timespec *timeout);
+int CNIOOpenBSD_sendmmsg(int sockfd, CNIOOpenBSD_mmsghdr *msgvec, unsigned int vlen, int flags);
+int CNIOOpenBSD_recvmmsg(int sockfd, CNIOOpenBSD_mmsghdr *msgvec, unsigned int vlen, int flags, struct timespec *timeout);
 
-int CNIOBSD_pthread_set_name_np(pthread_t thread, const char *name);
-int CNIOBSD_pthread_get_name_np(pthread_t thread, char *name, size_t len);
+int CNIOOpenBSD_pthread_set_name_np(pthread_t thread, const char *name);
+int CNIOOpenBSD_pthread_get_name_np(pthread_t thread, char *name, size_t len);
 
 // Non-standard socket stuff.
-int CNIOBSD_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
+int CNIOOpenBSD_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
 
 // cmsghdr handling
-struct cmsghdr *CNIOBSD_CMSG_FIRSTHDR(const struct msghdr *);
-struct cmsghdr *CNIOBSD_CMSG_NXTHDR(struct msghdr *, struct cmsghdr *);
-const void *CNIOBSD_CMSG_DATA(const struct cmsghdr *);
-void *CNIOBSD_CMSG_DATA_MUTABLE(struct cmsghdr *);
-size_t CNIOBSD_CMSG_LEN(size_t);
-size_t CNIOBSD_CMSG_SPACE(size_t);
+struct cmsghdr *CNIOOpenBSD_CMSG_FIRSTHDR(const struct msghdr *);
+struct cmsghdr *CNIOOpenBSD_CMSG_NXTHDR(struct msghdr *, struct cmsghdr *);
+const void *CNIOOpenBSD_CMSG_DATA(const struct cmsghdr *);
+void *CNIOOpenBSD_CMSG_DATA_MUTABLE(struct cmsghdr *);
+size_t CNIOOpenBSD_CMSG_LEN(size_t);
+size_t CNIOOpenBSD_CMSG_SPACE(size_t);
 
 // awkward time_T pain
-extern const int CNIOBSD_SO_TIMESTAMP;
-extern const int CNIOBSD_SO_RCVTIMEO;
+extern const int CNIOOpenBSD_SO_TIMESTAMP;
+extern const int CNIOOpenBSD_SO_RCVTIMEO;
 
-int CNIOBSD_system_info(struct utsname *uname_data);
+int CNIOOpenBSD_system_info(struct utsname *uname_data);
 
-extern const unsigned long CNIOBSD_IOCTL_VM_SOCKETS_GET_LOCAL_CID;
+extern const unsigned long CNIOOpenBSD_IOCTL_VM_SOCKETS_GET_LOCAL_CID;
 
-const char* CNIOBSD_dirent_dname(struct dirent *ent);
+const char* CNIOOpenBSD_dirent_dname(struct dirent *ent);
 
-extern const unsigned long CNIOBSD_UTIME_OMIT;
-extern const unsigned long CNIOBSD_UTIME_NOW;
+extern const unsigned long CNIOOpenBSD_UTIME_OMIT;
+extern const unsigned long CNIOOpenBSD_UTIME_NOW;
 
-extern const long CNIOBSD_UDP_MAX_SEGMENTS;
+extern const long CNIOOpenBSD_UDP_MAX_SEGMENTS;
 
 // A workaround for incorrect nullability annotations in the Android SDK.
 // Probably unnecessary on BSD, but copying for consistency for now.
-FTS *CNIOBSD_fts_open(char * const *path_argv, int options, int (*compar)(const FTSENT **, const FTSENT **));
+FTS *CNIOOpenBSD_fts_open(char * const *path_argv, int options, int (*compar)(const FTSENT **, const FTSENT **));
 
 #endif

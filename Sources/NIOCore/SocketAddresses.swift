@@ -54,7 +54,7 @@ import Darwin
 import CNIOLinux
 #elseif os(OpenBSD)
 @preconcurrency import Glibc
-import CNIOBSD
+import CNIOOpenBSD
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
 #else

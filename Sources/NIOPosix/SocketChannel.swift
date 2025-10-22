@@ -29,7 +29,7 @@ import struct WinSDK.socklen_t
 #endif
 
 #if os(OpenBSD)
-import CNIOBSD
+import CNIOOpenBSD
 #endif
 
 extension ByteBuffer {
