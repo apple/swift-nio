@@ -102,6 +102,8 @@ jobs:
     name: WebAssembly Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/wasm_sdk.yml@main
+    with:
+      additional_command_arguments: "--target NIOCore"
 
   release-builds:
     name: Release builds
