@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import CNIOOpenBSD
 import CNIOLinux
+import CNIOOpenBSD
 import CNIOWindows
 import NIOConcurrencyHelpers
 import NIOCore

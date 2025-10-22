@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
-import CNIOOpenBSD
 import CNIOLinux
+import CNIOOpenBSD
 import NIOCore
 
 private struct PendingStreamWrite {

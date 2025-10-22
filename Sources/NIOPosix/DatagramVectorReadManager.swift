@@ -11,9 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import CNIOOpenBSD
 import CNIODarwin
 import CNIOLinux
+import CNIOOpenBSD
 import NIOCore
 
 #if canImport(WinSDK)

@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
-import CNIOOpenBSD
 import CNIODarwin
 import CNIOLinux
+import CNIOOpenBSD
 import CNIOWindows
 import NIOCore
 
