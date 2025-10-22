@@ -14,8 +14,11 @@
 #ifndef C_NIO_OPENBSD_H
 #define C_NIO_OPENBSD_H
 
+#if defined(__OpenBSD__)
 #include <sys/types.h>
 #include <sys/event.h>
+#include <pthread_np.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -28,7 +31,6 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <pthread.h>
-#include <pthread_np.h>
 #include <stdbool.h>
 
 
@@ -95,4 +97,5 @@ extern const long CNIOOpenBSD_UDP_MAX_SEGMENTS;
 // Probably unnecessary on BSD, but copying for consistency for now.
 FTS *CNIOOpenBSD_fts_open(char * const *path_argv, int options, int (*compar)(const FTSENT **, const FTSENT **));
 
+#endif
 #endif
