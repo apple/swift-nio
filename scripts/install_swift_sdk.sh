@@ -53,6 +53,10 @@ case "$sdk" in
     sdk_dir="wasm-sdk"
     sdk_suffix="_wasm"
     ;;
+  "android-sdk")
+    sdk_dir="android-sdk"
+    sdk_suffix="_android-0.1"
+    ;;
   *)
     fatal "Unexpected Swift SDK: $sdk"
     ;;
