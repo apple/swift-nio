@@ -108,7 +108,9 @@ jobs:
   android-sdk:
     name: Android Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/android_sdk.yml@main
+    uses: swift-android-sdk/swift-nio/.github/workflows/android_sdk.yml@main
+    # FIXME: restore this from swift-android-sdk to apple
+    #uses: apple/swift-nio/.github/workflows/android_sdk.yml@main
 
   release-builds:
     name: Release builds
