@@ -1,4 +1,4 @@
-name: WebAssembly SDK
+name: WebAssembly Swift SDK
 
 permissions:
   contents: read
@@ -12,15 +12,15 @@ on:
         default: "{}"
       additional_command_arguments:
         type: string
-        description: "Additional arguments passed to swift build (the WASM SDK will be specified). Defaults to empty."
+        description: "Additional arguments passed to swift build (the Wasm Swift SDK will be specified). Defaults to empty."
         default: ""
 
 jobs:
   construct-matrix:
-    name: Construct WebAssembly SDK matrix
+    name: Construct WebAssembly Swift SDK matrix
     runs-on: ubuntu-latest
     outputs:
-      wasm-sdk-matrix: '${{ steps.generate-matrix.outputs.wasm-sdk-matrix }}'
+      wasm-swift-sdk-matrix: '${{ steps.generate-matrix.outputs.wasm-swift-sdk-matrix }}'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
 
           # Generate matrix with parsed environment variables
           cat >> "$GITHUB_OUTPUT" << EOM
-          wasm-sdk-matrix=$(echo '{
+          wasm-swift-sdk-matrix=$(echo '{
             "config":[
               {
                 "name":"main Jammy",
@@ -56,11 +56,11 @@ jobs:
           }' | jq -c)
           EOM
 
-  wasm-sdk:
-    name: WebAssembly SDK
+  wasm-swift-sdk:
+    name: WebAssembly Swift SDK
     needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
-      name: "WebAssembly SDK"
-      matrix_string: '${{ needs.construct-matrix.outputs.wasm-sdk-matrix }}'
+      name: "WebAssembly Swift SDK"
+      matrix_string: '${{ needs.construct-matrix.outputs.wasm-swift-sdk-matrix }}'
