@@ -130,12 +130,14 @@ swift sdk install "$sdk_path"
 
 log "Swift SDK Post-install"
 if [[ "$sdk" == "android-sdk" ]]; then
-    # guess some common places where the swift-sdks file lives
+    # guess some common places where the swift-sdks folder lives
     cd ~/Library/org.swift.swiftpm || cd ~/.config/swiftpm || cd ~/.local/swiftpm || cd ~/.swiftpm || cd /root/.swiftpm || exit 1
 
     # download and link the NDK
     android_ndk_version="r27d"
-    curl -fsSL -o ndk.zip --retry 3 "https://dl.google.com/android/repository/android-ndk-${android_ndk_version}-$(uname -s).zip"
+    android_ndk_url="https://dl.google.com/android/repository/android-ndk-${android_ndk_version}-$(uname -s).zip"
+    log "Android Native Development Kit URL: ${android_ndk_url}"
+    curl -fsSL -o ndk.zip --retry 3 "${android_ndk_url}"
     unzip -q ndk.zip
     rm ndk.zip
     export ANDROID_NDK_HOME="${PWD}/android-ndk-${android_ndk_version}"
