@@ -128,8 +128,8 @@ swift --version
 log "Installing Swift SDK"
 swift sdk install "$sdk_path"
 
+log "Swift SDK Post-install"
 if [[ "$sdk" == "android-sdk" ]]; then
-    log "Swift SDK Post-install"
     # guess some common places where the swift-sdks file lives
     cd ~/Library/org.swift.swiftpm || cd ~/.config/swiftpm || cd ~/.local/swiftpm || cd ~/.swiftpm || cd /root/.swiftpm || exit 1
 
@@ -139,7 +139,7 @@ if [[ "$sdk" == "android-sdk" ]]; then
     unzip -q ndk.zip
     rm ndk.zip
     export ANDROID_NDK_HOME="${PWD}/android-ndk-${android_ndk_version}"
-    bundledir=$(ls -d swift-sdks/*android*.artifactbundle | head -n 1)
-    ${bundledir}/swift-android/scripts/setup-android-sdk.sh
+    bundledir=$(find . -type d -maxdepth 2 -name '*android*.artifactbundle' | head -n 1)
+    "${bundledir}"/swift-android/scripts/setup-android-sdk.sh
     cd - || exit
 fi
