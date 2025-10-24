@@ -543,21 +543,32 @@ extension SystemFileHandle.SendableView {
                 named: name
             ).flatMapError { errno -> Result<[UInt8], FileSystemError> in
                 switch errno {
-                #if canImport(Darwin)
+                #if canImport(Darwin) || os(FreeBSD)
                 case .attributeNotFound:
                     // Okay, return empty value.
                     return .success([])
                 #endif
+                #if !os(FreeBSD)
                 case .noData:
                     // Okay, return empty value.
                     return .success([])
+                #endif
                 default:
+                    #if os(FreeBSD)
+                    let error = FileSystemError.extattr_get_fd(
+                        attribute: name,
+                        errno: errno,
+                        path: self.path,
+                        location: .here()
+                    )
+                    #else
                     let error = FileSystemError.fgetxattr(
                         attribute: name,
                         errno: errno,
                         path: self.path,
                         location: .here()
                     )
+                    #endif
                     return .failure(error)
                 }
             }.get()
@@ -831,6 +842,15 @@ extension SystemFileHandle.SendableView {
                     from: createdPath,
                     to: desiredPath,
                     options: materialization.exclusive ? [.exclusive] : []
+                )
+                #elseif os(FreeBSD)
+                renameFunction = "renameat"
+                renameResult = Syscall.rename(
+                    from: createdPath,
+                    relativeTo: .currentWorkingDirectory,
+                    to: desiredPath,
+                    relativeTo: .currentWorkingDirectory,
+                    flags: []
                 )
                 #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
                 // The created and desired paths are absolute, so the relative descriptors are
@@ -1480,7 +1500,7 @@ extension SystemFileHandle {
         let materializationMode: Materialization.Mode
         let options: FileDescriptor.OpenOptions
 
-        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        #if !os(FreeBSD) && (canImport(Glibc) || canImport(Musl) || canImport(Bionic))
         if useTemporaryFileIfPossible {
             options = [.temporaryFile]
             materializationMode = .link

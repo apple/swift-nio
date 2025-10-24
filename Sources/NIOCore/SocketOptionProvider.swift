@@ -26,6 +26,8 @@ import CNIOLinux
 import WinSDK
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+#elseif os(FreeBSD)
+import Glibc
 #else
 #error("The Socket Option provider module was unable to identify your C library.")
 #endif
