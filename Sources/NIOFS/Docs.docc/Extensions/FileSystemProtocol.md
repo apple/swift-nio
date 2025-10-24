@@ -42,5 +42,6 @@ closing it to avoid leaking resources.
 ### System directories
 
 - ``currentWorkingDirectory``
+- ``homeDirectory``
 - ``temporaryDirectory``
 - ``withTemporaryDirectory(prefix:options:execute:)``
