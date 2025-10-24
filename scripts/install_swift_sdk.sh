@@ -25,6 +25,7 @@ version="${INSTALL_SWIFT_VERSION:=""}"
 arch="${INSTALL_SWIFT_ARCH:="aarch64"}"
 os_image="${INSTALL_SWIFT_OS_IMAGE:="ubuntu22.04"}"
 sdk="${INSTALL_SWIFT_SDK:="static-sdk"}"
+android_ndk_version="${INSTALL_ANDROID_NDK:="r27d"}"
 
 if [[ ! ( -n "$branch" && -z "$version" ) && ! ( -z "$branch" && -n "$version") ]]; then
   fatal "Exactly one of build or version must be defined."
@@ -134,10 +135,9 @@ if [[ "$sdk" == "android-sdk" ]]; then
     cd ~/Library/org.swift.swiftpm || cd ~/.config/swiftpm || cd ~/.local/swiftpm || cd ~/.swiftpm || cd /root/.swiftpm || exit 1
 
     # download and link the NDK
-    android_ndk_version="r27d"
     android_ndk_url="https://dl.google.com/android/repository/android-ndk-${android_ndk_version}-$(uname -s).zip"
     log "Android Native Development Kit URL: ${android_ndk_url}"
-    curl -fsSL -o ndk.zip --retry 3 "${android_ndk_url}"
+    "$CURL_BIN" -fsSL -o ndk.zip --retry 3 "${android_ndk_url}"
     unzip -q ndk.zip
     rm ndk.zip
     export ANDROID_NDK_HOME="${PWD}/android-ndk-${android_ndk_version}"
