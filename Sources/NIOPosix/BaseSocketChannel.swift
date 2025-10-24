@@ -223,7 +223,7 @@ private struct SocketChannelLifecycleManager {
 /// For this reason, `BaseSocketChannel` exists to provide a common core implementation of
 /// the `SelectableChannel` protocol. It uses a number of private functions to provide hooks
 /// for subclasses to implement the specific logic to handle their writes and reads.
-class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, ChannelCore, @unchecked Sendable {
+class BaseSocketChannel<SocketType: BaseSocketProtocol, WriteType>: SelectableChannel, ChannelCore, @unchecked Sendable {
     typealias SelectableType = SocketType.SelectableType
 
     struct AddressCache {
@@ -472,7 +472,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     }
 
     /// Buffer a write in preparation for a flush.
-    func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
+    func bufferPendingWrite(data: WriteType, promise: EventLoopPromise<Void>?) {
         fatalError("this must be overridden by sub class")
     }
 
@@ -732,6 +732,10 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
     }
 
+    internal func unwrapAsWriteType(_ data: NIOAny) -> WriteType {
+        return Self.unwrapData(data, as: WriteType.self)
+    }
+
     public final func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
@@ -741,7 +745,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             return
         }
 
-        bufferPendingWrite(data: data, promise: promise)
+        let data = self.unwrapAsWriteType(data)
+        self.bufferPendingWrite(data: data, promise: promise)
     }
 
     private func registerForWritable() {
@@ -1401,12 +1406,14 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 }
 
 extension BaseSocketChannel {
+    typealias BaseSocketChannelType = BaseSocketChannel
+
     public struct SynchronousOptions: NIOSynchronousChannelOptions {
         @usableFromInline  // should be private
-        internal let _channel: BaseSocketChannel<SocketType>
+        internal let _channel: BaseSocketChannelType
 
         @inlinable  // should be fileprivate
-        internal init(_channel channel: BaseSocketChannel<SocketType>) {
+        internal init(_channel channel: BaseSocketChannelType) {
             self._channel = channel
         }
 
