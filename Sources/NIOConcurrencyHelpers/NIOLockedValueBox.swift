@@ -12,30 +12,34 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Synchronization
+
 /// Provides locked access to `Value`.
 ///
 /// - Note: ``NIOLockedValueBox`` has reference semantics and holds the `Value`
 ///         alongside a lock behind a reference.
 ///
-/// This is no different than creating a ``Lock`` and protecting all
+/// This is no different than creating a ``NIOLock`` and protecting all
 /// accesses to a value using the lock. But it's easy to forget to actually
 /// acquire/release the lock in the correct place. ``NIOLockedValueBox`` makes
 /// that much easier.
 public struct NIOLockedValueBox<Value> {
-
     @usableFromInline
-    internal let _storage: LockStorage<Value>
+    let _storage: LockStorage<Value>
 
     /// Initialize the `Value`.
     @inlinable
     public init(_ value: Value) {
-        self._storage = .create(value: value)
+        self._storage = LockStorage(value: value)
     }
 
     /// Access the `Value`, allowing mutation of it.
     @inlinable
     public func withLockedValue<T>(_ mutate: (inout Value) throws -> T) rethrows -> T {
-        try self._storage.withLockedValue(mutate)
+        self._storage.mutex._unsafeLock()
+        defer { self._storage.mutex._unsafeUnlock() }
+        
+        return try mutate(&self._storage.value)
     }
 
     /// Provides an unsafe view over the lock and its value.
@@ -55,13 +59,13 @@ public struct NIOLockedValueBox<Value> {
         /// Manually acquire the lock.
         @inlinable
         public func lock() {
-            self._storage.lock()
+            self._storage.mutex._unsafeLock()
         }
 
         /// Manually release the lock.
         @inlinable
         public func unlock() {
-            self._storage.unlock()
+            self._storage.mutex._unsafeUnlock()
         }
 
         /// Mutate the value, assuming the lock has been acquired manually.
@@ -72,9 +76,7 @@ public struct NIOLockedValueBox<Value> {
         public func withValueAssumingLockIsAcquired<Result>(
             _ mutate: (_ value: inout Value) throws -> Result
         ) rethrows -> Result {
-            try self._storage.withUnsafeMutablePointerToHeader { value in
-                try mutate(&value.pointee)
-            }
+            return try mutate(&self._storage.value)
         }
     }
 }
