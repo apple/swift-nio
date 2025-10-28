@@ -12,13 +12,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(Darwin)
+import Darwin
+#else
 import Synchronization
+#endif
 
 @usableFromInline
 final class LockStorage<Value> {
     
+    #if canImport(Darwin)
+    @usableFromInline
+    @exclusivity(unchecked)
+    var mutex: os_unfair_lock_s
+    #else
     @usableFromInline
     let mutex: Mutex<Void>
+    #endif
     
     @usableFromInline
     @exclusivity(unchecked)
@@ -26,8 +36,34 @@ final class LockStorage<Value> {
     
     @inlinable
     init(value: Value) {
+        #if canImport(Darwin)
+        self.mutex = os_unfair_lock_s()
+        #else
         self.mutex = Mutex(())
+        #endif
         self.value = value
+    }
+    
+    @inlinable
+    func lock() {
+        #if canImport(Darwin)
+        let mutex_ptr = _getUnsafePointerToStoredProperties(self).assumingMemoryBound(to: os_unfair_lock_s.self)
+        os_unfair_lock_lock(mutex_ptr)
+        _fixLifetime(self)
+        #else
+        self.mutex._unsafeLock()
+        #endif
+    }
+    
+    @inlinable
+    func unlock() {
+        #if canImport(Darwin)
+        let mutex_ptr = _getUnsafePointerToStoredProperties(self).assumingMemoryBound(to: os_unfair_lock_s.self)
+        os_unfair_lock_unlock(mutex_ptr)
+        _fixLifetime(self)
+        #else
+        self.mutex._unsafeUnlock()
+        #endif
     }
 }
 
@@ -57,7 +93,7 @@ public struct NIOLock {
     /// `unlock`, to simplify lock handling.
     @inlinable
     public func lock() {
-        self._storage.mutex._unsafeLock()
+        self._storage.lock()
     }
 
     /// Release the lock.
@@ -66,7 +102,7 @@ public struct NIOLock {
     /// `lock`, to simplify lock handling.
     @inlinable
     public func unlock() {
-        self._storage.mutex._unsafeUnlock()
+        self._storage.unlock()
     }
 }
 

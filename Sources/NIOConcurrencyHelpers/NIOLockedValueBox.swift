@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Synchronization
-
 /// Provides locked access to `Value`.
 ///
 /// - Note: ``NIOLockedValueBox`` has reference semantics and holds the `Value`
@@ -36,9 +34,8 @@ public struct NIOLockedValueBox<Value> {
     /// Access the `Value`, allowing mutation of it.
     @inlinable
     public func withLockedValue<T>(_ mutate: (inout Value) throws -> T) rethrows -> T {
-        self._storage.mutex._unsafeLock()
-        defer { self._storage.mutex._unsafeUnlock() }
-        
+        self._storage.lock()
+        defer { self._storage.unlock() }
         return try mutate(&self._storage.value)
     }
 
@@ -47,6 +44,7 @@ public struct NIOLockedValueBox<Value> {
     /// This can be beneficial when you require fine grained control over the lock in some
     /// situations but don't want lose the benefits of ``withLockedValue(_:)`` in others by
     /// switching to ``NIOLock``.
+    @inlinable
     public var unsafe: Unsafe {
         Unsafe(_storage: self._storage)
     }
@@ -55,17 +53,22 @@ public struct NIOLockedValueBox<Value> {
     public struct Unsafe {
         @usableFromInline
         let _storage: LockStorage<Value>
+        
+        @inlinable
+        init(_storage: LockStorage<Value>) {
+            self._storage = _storage
+        }
 
         /// Manually acquire the lock.
         @inlinable
         public func lock() {
-            self._storage.mutex._unsafeLock()
+            self._storage.lock()
         }
 
         /// Manually release the lock.
         @inlinable
         public func unlock() {
-            self._storage.mutex._unsafeUnlock()
+            self._storage.unlock()
         }
 
         /// Mutate the value, assuming the lock has been acquired manually.
