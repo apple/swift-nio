@@ -132,7 +132,7 @@ swift sdk install "$sdk_path"
 log "Swift SDK Post-install"
 if [[ "$sdk" == "android-sdk" ]]; then
     # guess some common places where the swift-sdks folder lives
-    cd ~/Library/org.swift.swiftpm || cd ~/.config/swiftpm || cd ~/.local/swiftpm || cd ~/.swiftpm || cd /root/.swiftpm || exit 1
+    cd ~/Library/org.swift.swiftpm || cd ~/.config/swiftpm || cd ~/.local/swiftpm || cd ~/.swiftpm || cd /root/.swiftpm || fatal "Cannot locate swiftpm config directory"
 
     # download and link the NDK
     android_ndk_url="https://dl.google.com/android/repository/android-ndk-${android_ndk_version}-$(uname -s).zip"
@@ -143,5 +143,5 @@ if [[ "$sdk" == "android-sdk" ]]; then
     export ANDROID_NDK_HOME="${PWD}/android-ndk-${android_ndk_version}"
     bundledir=$(find . -type d -maxdepth 2 -name '*android*.artifactbundle' | head -n 1)
     "${bundledir}"/swift-android/scripts/setup-android-sdk.sh
-    cd - || exit
+    cd - || fatal "Cannot cd back to previous directory"
 fi
