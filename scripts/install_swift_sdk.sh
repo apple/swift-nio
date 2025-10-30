@@ -76,7 +76,9 @@ extract_checksum() {
     return
   fi
 
-  local checksum=$(echo "$release_info" | "$JQ_BIN" -r --arg platform "$sdk" '.platforms[] | select(.platform == $platform) | .checksum // empty')
+  local checksum
+  # shellcheck disable=SC2016  # Our use of JQ_BIN means that shellcheck can't tell this is a `jq` invocation
+  checksum=$(echo "$release_info" | "$JQ_BIN" -r --arg platform "$sdk" '.platforms[] | select(.platform == $platform) | .checksum // empty')
   if [[ -n "$checksum" ]]; then
     log "Found checksum for $sdk: $checksum"
     echo "$checksum"
@@ -128,6 +130,7 @@ elif [[ -n "$version" ]]; then
   else
     # For specific versions, we need to fetch the release info
     log "Getting release information for version $version"
+    # shellcheck disable=SC2016  # Our use of JQ_BIN means that shellcheck can't tell this is a `jq` invocation
     release_info=$("$CURL_BIN" -s https://www.swift.org/api/v1/install/releases.json | "$JQ_BIN" -r --arg ver "swift-$version-RELEASE" '.[] | select(.tag == $ver)')
     if [[ -z "$release_info" ]]; then
       log "Warning: Could not find release information for version $version"
