@@ -28,7 +28,7 @@ else
   fatal "Cannot find either 'apt' or 'yum'"
 fi
 
-log "Installing standard Swift pre-requisites"  # pre-reqs list taken from swift.org
+log "Installing standard Swift prerequisites"  # pre-reqs list taken from swift.org
 DEBIAN_FRONTEND=noninteractive "$PACKAGE_MANAGER_BIN" install -y\
     binutils\
     git\

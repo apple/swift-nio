@@ -15,12 +15,18 @@
 
 set -uo pipefail
 
+log() { printf -- "** %s\n" "$*" >&2; }
+error() { printf -- "** ERROR: %s\n" "$*" >&2; }
+fatal() { error "$@"; exit 1; }
+
+# Parameter environment variables
+swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"~/.swiftpm"}"
+
 # Select the Swift SDK for WebAssembly, not the Embedded one
-SWIFT_SDK="$(swift sdk list | grep _wasm | grep -v -embedded | head -n1)"
+SWIFT_SDK="$(swift sdk --swift-sdks-path "$swift_sdk_directory" list | grep _wasm | grep -v -embedded | head -n1)"
 if [[ -z "$SWIFT_SDK" ]]; then
-  echo "No WebAssembly Swift SDK found. Please ensure you have the WebAssembly Swift SDK installed following https://www.swift.org/documentation/articles/wasm-getting-started.html."
-  exit 1
+  fatal "No WebAssembly Swift SDK found. Please ensure you have the WebAssembly Swift SDK installed following https://www.swift.org/documentation/articles/wasm-getting-started.html."
 fi
 
-echo "Using Swift SDK: $SWIFT_SDK"
+log "Using Swift SDK: $SWIFT_SDK"
 swift build --swift-sdk "$SWIFT_SDK" "${@}"
