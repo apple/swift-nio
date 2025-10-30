@@ -25,7 +25,7 @@ version="${INSTALL_SWIFT_VERSION:-""}"
 arch="${INSTALL_SWIFT_ARCH:-"aarch64"}"
 os_image="${INSTALL_SWIFT_OS_IMAGE:-"ubuntu22.04"}"
 sdk="${INSTALL_SWIFT_SDK:-"static-sdk"}"
-swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"~/.swiftpm"}"
+swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"$HOME/.swiftpm"}"
 
 if [[ ! ( -n "$branch" && -z "$version" ) && ! ( -z "$branch" && -n "$version") ]]; then
   fatal "Exactly one of build or version must be defined."
