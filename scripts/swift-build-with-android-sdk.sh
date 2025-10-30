@@ -30,5 +30,5 @@ if [[ -z "$SWIFT_SDK" ]]; then
   fatal "No Android Swift SDK found. Please ensure you have the Android Swift SDK installed."
 fi
 
-log "Using Swift SDK: $SWIFT_SDK"
-swift build --swift-sdk "$SWIFT_SDK" "${@}"
+log "Building using Swift SDK: $SWIFT_SDK"
+swift build --swift-sdk "$SWIFT_SDK" --swift-sdks-path "$swift_sdk_directory" "${@}"

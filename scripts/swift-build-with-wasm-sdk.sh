@@ -30,5 +30,5 @@ if [[ -z "$SWIFT_SDK" ]]; then
   fatal "No WebAssembly Swift SDK found. Please ensure you have the WebAssembly Swift SDK installed following https://www.swift.org/documentation/articles/wasm-getting-started.html."
 fi
 
-log "Using Swift SDK: $SWIFT_SDK"
-swift build --swift-sdk "$SWIFT_SDK" "${@}"
+log "Building using Swift SDK: $SWIFT_SDK"
+swift build --swift-sdk "$SWIFT_SDK" --swift-sdks-path "$swift_sdk_directory" "${@}"
