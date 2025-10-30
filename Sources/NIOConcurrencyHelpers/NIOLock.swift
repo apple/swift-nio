@@ -49,7 +49,7 @@ final class LockStorage<Value> {
         #if canImport(Darwin)
         let mutex_ptr = _getUnsafePointerToStoredProperties(self).assumingMemoryBound(to: os_unfair_lock_s.self)
         os_unfair_lock_lock(mutex_ptr)
-        _fixLifetime(self)
+        withExtendedLifetime(self) { }
         #else
         self.mutex._unsafeLock()
         #endif
@@ -60,7 +60,7 @@ final class LockStorage<Value> {
         #if canImport(Darwin)
         let mutex_ptr = _getUnsafePointerToStoredProperties(self).assumingMemoryBound(to: os_unfair_lock_s.self)
         os_unfair_lock_unlock(mutex_ptr)
-        _fixLifetime(self)
+        withExtendedLifetime(self) { }
         #else
         self.mutex._unsafeUnlock()
         #endif
