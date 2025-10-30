@@ -31,4 +31,4 @@ if [[ -z "$SWIFT_SDK" ]]; then
 fi
 
 log "Building using Swift SDK: $SWIFT_SDK"
-swift build --swift-sdk "$SWIFT_SDK" --swift-sdks-path "$swift_sdk_directory" "${@}"
+swift build --swift-sdk "$SWIFT_SDK" --swift-sdks-path "$swift_sdk_directory" --static-swift-stdlib "${@}"
