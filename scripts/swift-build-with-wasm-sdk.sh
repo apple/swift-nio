@@ -20,7 +20,7 @@ error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
 # Parameter environment variables
-swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"$HOME/.swiftpm"}"
+swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"/tmp/swiftsdks"}"
 
 log "Using Swift SDK directory: $swift_sdk_directory"
 

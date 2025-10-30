@@ -23,7 +23,7 @@ fatal() { error "$@"; exit 1; }
 # see https://developer.android.com/ndk/downloads for releases and shasums
 android_ndk_version="${INSTALL_ANDROID_NDK:-"r27d"}"
 android_ndk_sha1="${ANDROID_NDK_SHA1:-"22105e410cf29afcf163760cc95522b9fb981121"}"
-swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"$HOME/.swiftpm"}"
+swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"/tmp/swiftsdks"}"
 
 CURL_BIN="${CURL_BIN:-$(which curl 2> /dev/null)}"; test -n "$CURL_BIN" || fatal "CURL_BIN unset and no curl on PATH"
 UNZIP_BIN="${UNZIP_BIN:-$(which unzip 2> /dev/null)}"; test -n "$UNZIP_BIN" || fatal "UNZIP_BIN unset and no unzip on PATH"
