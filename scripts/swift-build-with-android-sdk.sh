@@ -22,8 +22,10 @@ fatal() { error "$@"; exit 1; }
 # Parameter environment variables
 swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"~/.swiftpm"}"
 
+log "Using Swift SDK directory: $swift_sdk_directory"
+
 # Select the Swift SDK for Android
-SWIFT_SDK="$(swift sdk --swift-sdks-path "$swift_sdk_directory" list | grep android | head -n1)"
+SWIFT_SDK="$(swift sdk list --swift-sdks-path "$swift_sdk_directory" | grep android | head -n1)"
 if [[ -z "$SWIFT_SDK" ]]; then
   fatal "No Android Swift SDK found. Please ensure you have the Android Swift SDK installed."
 fi

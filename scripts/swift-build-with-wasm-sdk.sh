@@ -22,8 +22,10 @@ fatal() { error "$@"; exit 1; }
 # Parameter environment variables
 swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"~/.swiftpm"}"
 
+log "Using Swift SDK directory: $swift_sdk_directory"
+
 # Select the Swift SDK for WebAssembly, not the Embedded one
-SWIFT_SDK="$(swift sdk --swift-sdks-path "$swift_sdk_directory" list | grep _wasm | grep -v -embedded | head -n1)"
+SWIFT_SDK="$(swift sdk list --swift-sdks-path "$swift_sdk_directory" | grep _wasm | grep -v -embedded | head -n1)"
 if [[ -z "$SWIFT_SDK" ]]; then
   fatal "No WebAssembly Swift SDK found. Please ensure you have the WebAssembly Swift SDK installed following https://www.swift.org/documentation/articles/wasm-getting-started.html."
 fi
