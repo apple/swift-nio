@@ -196,4 +196,5 @@ swift --version
 
 log "Installing Swift SDK"
 log "Using Swift SDK directory: $swift_sdk_directory"
+mkdir -p "$swift_sdk_directory/swift-sdks"
 swift sdk install --swift-sdks-path "$swift_sdk_directory" "$sdk_path"
