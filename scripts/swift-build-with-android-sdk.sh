@@ -15,12 +15,20 @@
 
 set -uo pipefail
 
+log() { printf -- "** %s\n" "$*" >&2; }
+error() { printf -- "** ERROR: %s\n" "$*" >&2; }
+fatal() { error "$@"; exit 1; }
+
+# Parameter environment variables
+swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"/tmp/swiftsdks"}"
+
+log "Using Swift SDK directory: $swift_sdk_directory"
+
 # Select the Swift SDK for Android
-SWIFT_SDK="$(swift sdk list | grep android | head -n1)"
+SWIFT_SDK="$(swift sdk list --swift-sdks-path "$swift_sdk_directory" | grep android | head -n1)"
 if [[ -z "$SWIFT_SDK" ]]; then
-  echo "No Android Swift SDK found. Please ensure you have the Android Swift SDK installed."
-  exit 1
+  fatal "No Android Swift SDK found. Please ensure you have the Android Swift SDK installed."
 fi
 
-echo "Using Swift SDK: $SWIFT_SDK"
-swift build --swift-sdk "$SWIFT_SDK" "${@}"
+log "Building using Swift SDK: $SWIFT_SDK"
+swift build --swift-sdk "$SWIFT_SDK" --swift-sdks-path "$swift_sdk_directory" "${@}"

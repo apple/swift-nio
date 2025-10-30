@@ -74,7 +74,7 @@ jobs:
   android-sdk:
     name: Android Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/android_sdk.yml@main
+    uses: apple/swift-nio/.github/workflows/android_swift_sdk.yml@main
 
   macos-tests:
     name: macOS tests
