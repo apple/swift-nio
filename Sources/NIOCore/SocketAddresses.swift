@@ -52,6 +52,9 @@ import Darwin
 @preconcurrency import Android
 #endif
 import CNIOLinux
+#elseif os(OpenBSD)
+@preconcurrency import Glibc
+import CNIOOpenBSD
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
 #else
