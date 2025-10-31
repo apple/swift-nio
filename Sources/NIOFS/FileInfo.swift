@@ -16,6 +16,8 @@ import SystemPackage
 
 #if canImport(Darwin)
 import Darwin
+#elseif os(FreeBSD)
+import Glibc
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
 import CNIOLinux
@@ -149,7 +151,7 @@ extension FileInfo {
 
     /// A time interval consisting of whole seconds and nanoseconds.
     public struct Timespec: Hashable, Sendable {
-        #if canImport(Darwin)
+        #if canImport(Darwin) || os(FreeBSD)
         private static let utimeOmit = Int(UTIME_OMIT)
         private static let utimeNow = Int(UTIME_NOW)
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)

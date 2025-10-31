@@ -137,7 +137,7 @@ extension FileType {
     /// Initializes a file type from the `d_type` from `dirent`.
     @_spi(Testing)
     public init(direntType: UInt8) {
-        #if canImport(Darwin) || canImport(Musl) || os(Android)
+        #if canImport(Darwin) || canImport(Musl) || os(Android) || os(FreeBSD)
         let value = Int32(direntType)
         #elseif canImport(Glibc)
         let value = Int(direntType)

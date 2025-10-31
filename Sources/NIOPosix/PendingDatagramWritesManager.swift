@@ -16,6 +16,7 @@ import Atomics
 import CNIODarwin
 import CNIOLinux
 import CNIOWindows
+import CNIOFreeBSD
 import NIOCore
 
 #if canImport(WinSDK)

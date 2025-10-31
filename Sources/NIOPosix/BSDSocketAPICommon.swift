@@ -106,7 +106,7 @@ extension NIOBSDSocket.Option {
     /// IPv4 and IPv6.
     static let ip_recv_tos: NIOBSDSocket.Option =
         NIOBSDSocket.Option(rawValue: IP_RECVTOS)
-
+#if !os(FreeBSD)
     /// Request that we are passed destination address and the receiving interface index when
     /// receiving datagrams.
     ///
@@ -115,8 +115,15 @@ extension NIOBSDSocket.Option {
     /// IPv4 and IPv6.
     static let ip_recv_pktinfo: NIOBSDSocket.Option =
         NIOBSDSocket.Option(rawValue: Posix.IP_RECVPKTINFO)
+#else
+    /// Request that we are passed receiving interface index when receiving datagrams.
+    static let ip_recv_if: NIOBSDSocket.Option =
+        NIOBSDSocket.Option(rawValue: Posix.IP_RECVIF)
+    /// Request that we are passed destination address when receiving datagrams.
+    static let ip_orig_dstaddr: NIOBSDSocket.Option =
+        NIOBSDSocket.Option(rawValue: Posix.IP_ORIGDSTADDR)
+#endif
 }
-
 // IPv6 Options
 extension NIOBSDSocket.Option {
     /// Request that we are passed traffic class details when receiving

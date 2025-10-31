@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIODarwin
+import CNIOFreeBSD
 import CNIOLinux
 import NIOConcurrencyHelpers
 import NIOCore
@@ -556,6 +557,8 @@ private struct DirectoryEnumerator: Sendable {
                 // Empty is checked for above, root can't exist within a directory, and directory
                 // items must be a single path component.
                 name = FilePath.Component(platformString: CNIODarwin_dirent_dname(entry))!
+                #elseif os(FreeBSD)
+                name = FilePath.Component(platformString: CNIOFreeBSD_dirent_dname(entry))!
                 #else
                 name = FilePath.Component(platformString: CNIOLinux_dirent_dname(entry))!
                 #endif
@@ -598,7 +601,11 @@ private struct DirectoryEnumerator: Sendable {
         while entries.count < count {
             switch Libc.ftsRead(fts) {
             case .success(.some(let entry)):
+                #if os(FreeBSD)
+                let info = FTSInfo(rawValue: UInt16(entry.pointee.fts_info))
+                #else
                 let info = FTSInfo(rawValue: entry.pointee.fts_info)
+                #endif
                 switch info {
                 case .directoryPreOrder:
                     let entry = DirectoryEntry(path: NIOFilePath(entry.path), type: .directory)!
