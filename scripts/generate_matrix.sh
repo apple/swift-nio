@@ -26,6 +26,8 @@ HEAD_BIN="${HEAD_BIN:-$(which head 2> /dev/null)}"; test -n "$HEAD_BIN" || fatal
 
 
 # Parameters
+find_subdirectory_manifests_enabled="${FIND_SUBDIRECTORY_MANIFESTS_ENABLED:=false}"
+
 linux_command="${MATRIX_LINUX_COMMAND:-}"  # required if any Linux pipeline is enabled
 linux_setup_command="${MATRIX_LINUX_SETUP_COMMAND:-}"
 linux_5_9_enabled="${MATRIX_LINUX_5_9_ENABLED:=false}"
@@ -124,12 +126,12 @@ version_gte() {
 }
 
 # Find minimum Swift version across all Package manifests
-# Checks Package.swift and all Package@swift-*.swift files
+# Checks Package.swift and all Package@swift-*.swift files in current directory and subdirectories
 # Returns the minimum tools version found across all manifests
 find_minimum_swift_version() {
     local min_version=""
 
-    # Check default Package.swift
+    # Check default Package.swift in current directory
     local default_version
     default_version=$(get_tools_version "Package.swift")
     if [[ -n "$default_version" ]]; then
@@ -137,7 +139,25 @@ find_minimum_swift_version() {
         log "Found Package.swift with tools-version: $default_version"
     fi
 
-    # Check all version-specific manifests
+    # Check all Package.swift files in subdirectories (multi-package repository support)
+    if [[ "$find_subdirectory_manifests_enabled" == "true" ]]; then
+        while read -r manifest; do
+            if [[ -f "$manifest" ]]; then
+                local version
+                version=$(get_tools_version "$manifest")
+                if [[ -n "$version" ]]; then
+                    log "Found $manifest with tools-version: $version"
+
+                    # If this version is less than current minimum, update minimum
+                    if [[ -z "$min_version" ]] || version_gte "$min_version" "$version"; then
+                        min_version="$version"
+                    fi
+                fi
+            fi
+        done < <(ls -1 ./*/Package.swift 2>/dev/null || true)
+    fi
+
+    # Check all version-specific manifests in current directory
     for manifest in Package@swift-*.swift; do
         if [[ ! -f "$manifest" ]]; then
             continue
@@ -156,6 +176,24 @@ find_minimum_swift_version() {
             min_version="$version"
         fi
     done
+
+    # Check all version-specific manifests in subdirectories
+    if [[ "$find_subdirectory_manifests_enabled" == "true" ]]; then
+        while read -r manifest; do
+            if [[ -f "$manifest" ]]; then
+                local version
+                version=$(get_tools_version "$manifest")
+                if [[ -n "$version" ]]; then
+                    log "Found $manifest with tools-version: $version"
+
+                    # If this version is less than current minimum, update minimum
+                    if [[ -z "$min_version" ]] || version_gte "$min_version" "$version"; then
+                        min_version="$version"
+                    fi
+                fi
+            fi
+        done < <(ls -1 ./*/Package@swift-*.swift 2>/dev/null || true)
+    fi
 
     if [[ -n "$min_version" ]]; then
         echo "$min_version"
