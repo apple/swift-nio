@@ -17,25 +17,26 @@
 /// - Note: ``NIOLockedValueBox`` has reference semantics and holds the `Value`
 ///         alongside a lock behind a reference.
 ///
-/// This is no different than creating a ``Lock`` and protecting all
+/// This is no different than creating a ``NIOLock`` and protecting all
 /// accesses to a value using the lock. But it's easy to forget to actually
 /// acquire/release the lock in the correct place. ``NIOLockedValueBox`` makes
 /// that much easier.
 public struct NIOLockedValueBox<Value> {
-
     @usableFromInline
-    internal let _storage: LockStorage<Value>
+    let _storage: LockStorage<Value>
 
     /// Initialize the `Value`.
     @inlinable
     public init(_ value: Value) {
-        self._storage = .create(value: value)
+        self._storage = LockStorage(value: value)
     }
 
     /// Access the `Value`, allowing mutation of it.
     @inlinable
     public func withLockedValue<T>(_ mutate: (inout Value) throws -> T) rethrows -> T {
-        try self._storage.withLockedValue(mutate)
+        self._storage.lock()
+        defer { self._storage.unlock() }
+        return try mutate(&self._storage.value)
     }
 
     /// Provides an unsafe view over the lock and its value.
@@ -43,6 +44,7 @@ public struct NIOLockedValueBox<Value> {
     /// This can be beneficial when you require fine grained control over the lock in some
     /// situations but don't want lose the benefits of ``withLockedValue(_:)`` in others by
     /// switching to ``NIOLock``.
+    @inlinable
     public var unsafe: Unsafe {
         Unsafe(_storage: self._storage)
     }
@@ -51,6 +53,11 @@ public struct NIOLockedValueBox<Value> {
     public struct Unsafe {
         @usableFromInline
         let _storage: LockStorage<Value>
+        
+        @inlinable
+        init(_storage: LockStorage<Value>) {
+            self._storage = _storage
+        }
 
         /// Manually acquire the lock.
         @inlinable
@@ -72,9 +79,7 @@ public struct NIOLockedValueBox<Value> {
         public func withValueAssumingLockIsAcquired<Result>(
             _ mutate: (_ value: inout Value) throws -> Result
         ) rethrows -> Result {
-            try self._storage.withUnsafeMutablePointerToHeader { value in
-                try mutate(&value.pointee)
-            }
+            return try mutate(&self._storage.value)
         }
     }
 }
