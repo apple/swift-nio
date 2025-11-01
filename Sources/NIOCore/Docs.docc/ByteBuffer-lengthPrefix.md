@@ -56,10 +56,10 @@ We decided to add the following API to ByteBuffer:
 ///   - strategy: The strategy to use for encoding the length.
 ///   - writeData: A closure that takes a buffer, writes some data to it, and returns the number of bytes written.
 /// - Returns: Number of total bytes written. This is the length of the written data + the number of bytes used to write the length before it.
-public mutating func writeLengthPrefixed<Strategy: NIOBinaryIntegerEncodingStrategy>(
+public mutating func writeLengthPrefixed<Strategy: NIOBinaryIntegerEncodingStrategy, ErrorType: Error>(
     strategy: Strategy,
-    writeData: (_ buffer: inout ByteBuffer) throws -> Int
-) rethrows -> Int
+    writeData: (_ buffer: inout ByteBuffer) throws(ErrorType) -> Int
+) throws(ErrorType) -> Int
 ```
 
 Users could use the function as follows:
