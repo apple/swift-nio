@@ -104,7 +104,7 @@ extension Selector: _SelectorBackendProtocol {
             }
         } else {
             let result = self.pollFDs.withUnsafeMutableBufferPointer { ptr in
-                WSAPoll(ptr.baseAddress!, UInt32(ptr.count), time)
+                WSAPoll(ptr.baseAddress!, UInt32(ptr.count), 1)
             }
 
             if result > 0 {
