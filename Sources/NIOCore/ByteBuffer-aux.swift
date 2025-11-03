@@ -147,9 +147,23 @@ extension ByteBuffer {
     ///   - plainHexEncodedBytes: The hex encoded string to write. Plain hex dump format is hex bytes optionally separated by spaces, i.e. `48 65 6c 6c 6f` or `48656c6c6f` for `Hello`.
     ///     This format is compatible with `xxd` CLI utility.
     /// - Returns: The number of bytes written.
+    @_disfavoredOverload
     @discardableResult
     @inlinable
     public mutating func writePlainHexEncodedBytes(_ plainHexEncodedBytes: String) throws -> Int {
+        try self.writePlainHexEncodedBytes(plainHexEncodedBytes)
+    }
+
+    // MARK: Hex encoded string APIs
+    /// Write ASCII hexadecimal `string` into this `ByteBuffer` as raw bytes, decoding the hexadecimal & moving the writer index forward appropriately.
+    /// This method will throw if the string input is not of the "plain" hex encoded format.
+    /// - Parameters:
+    ///   - plainHexEncodedBytes: The hex encoded string to write. Plain hex dump format is hex bytes optionally separated by spaces, i.e. `48 65 6c 6c 6f` or `48656c6c6f` for `Hello`.
+    ///     This format is compatible with `xxd` CLI utility.
+    /// - Returns: The number of bytes written.
+    @discardableResult
+    @inlinable
+    public mutating func writePlainHexEncodedBytes(_ plainHexEncodedBytes: some StringProtocol) throws -> Int {
         var slice = plainHexEncodedBytes.utf8[...]
         let initialWriterIndex = self.writerIndex
 
@@ -895,8 +909,20 @@ extension ByteBufferAllocator {
     /// This will allocate a new `ByteBuffer` with enough space to fit `bytes` and potentially some extra space.
     ///
     /// - Returns: The `ByteBuffer` containing the written bytes.
+    @_disfavoredOverload
     @inlinable
     public func buffer(plainHexEncodedBytes string: String) throws -> ByteBuffer {
+        try buffer(plainHexEncodedBytes: string)
+    }
+
+
+    /// Create a fresh `ByteBuffer` containing the `bytes` decoded from the ASCII `plainHexEncodedBytes` string .
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `bytes` and potentially some extra space.
+    ///
+    /// - Returns: The `ByteBuffer` containing the written bytes.
+    @inlinable
+    public func buffer(plainHexEncodedBytes string: some StringProtocol) throws -> ByteBuffer {
         var buffer = self.buffer(capacity: string.utf8.count / 2)
         try buffer.writePlainHexEncodedBytes(string)
         return buffer
