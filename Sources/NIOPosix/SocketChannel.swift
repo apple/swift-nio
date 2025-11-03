@@ -383,12 +383,12 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
         }
         guard let err = err as? IOError else { return true }
 
-        switch err.errnoCode {
-        case ECONNABORTED,
-            EMFILE,
-            ENFILE,
-            ENOBUFS,
-            ENOMEM:
+        switch err.error {
+        case .errno(ECONNABORTED),
+            .errno(EMFILE),
+            .errno(ENFILE),
+            .errno(ENOBUFS),
+            .errno(ENOMEM):
             // These are errors we may be able to recover from. The user may just want to stop accepting connections for example
             // or provide some other means of back-pressure. This could be achieved by a custom ChannelDuplexHandler.
             return false

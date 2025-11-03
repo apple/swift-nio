@@ -67,6 +67,8 @@ extension Selector: _SelectorBackendProtocol {
 
     func initialiseState0() throws {
         self.pollFDs.reserveCapacity(16)
+        self.deregisteredFDs.reserveCapacity(16)
+        self.lifecycleState = .open
     }
 
     func deinitAssertions0() {
@@ -131,6 +133,19 @@ extension Selector: _SelectorBackendProtocol {
 
                     try body((SelectorEvent(io: selectorEvent, registration: registration)))
                 }
+
+                // now clean up any deregistered fds
+                // In reverse order so we don't have to copy elements out of the array
+                // If we do in in normal order, we'll have to shift all elements after the removed one
+                for i in self.deregisteredFDs.indices.reversed() {
+                    if self.deregisteredFDs[i] {
+                        // remove this one
+                        let fd = self.pollFDs[i].fd
+                        self.pollFDs.remove(at: i)
+                        self.deregisteredFDs.remove(at: i)
+                        self.registrations.removeValue(forKey: Int(fd))
+                    }
+                }
             } else if result == 0 {
                 // nothing has happened
             } else if result == WinSDK.SOCKET_ERROR {
@@ -149,6 +164,7 @@ extension Selector: _SelectorBackendProtocol {
         //                 that will allow O(1) access here.
         let poll = pollfd(fd: UInt64(fileDescriptor), events: interested.wsaPollEvent, revents: 0)
         self.pollFDs.append(poll)
+        self.deregisteredFDs.append(false)
     }
 
     func reregister0(
@@ -158,7 +174,10 @@ extension Selector: _SelectorBackendProtocol {
         newInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws {
-        fatalError("TODO: Unimplemented")
+        if let index = self.pollFDs.firstIndex(where: { $0.fd == UInt64(fileDescriptor) }) {
+            let poll = pollfd(fd: UInt64(fileDescriptor), events: newInterested.wsaPollEvent, revents: 0)
+            self.pollFDs[index] = poll
+        }
     }
 
     func deregister0(
@@ -167,13 +186,15 @@ extension Selector: _SelectorBackendProtocol {
         oldInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws {
-        fatalError("TODO: Unimplemented")
+        if let index = self.pollFDs.firstIndex(where: { $0.fd == UInt64(fileDescriptor) }) {
+            self.deregisteredFDs[index] = true
+        }
     }
 
     func wakeup0() throws {
         // will be called from a different thread
-        let result = try self.myThread.withHandleUnderLock { handle in
-            QueueUserAPC(wakeupTarget, handle, 0)
+        let result = try self.myThread.withHandleUnderLock { threadHandle in
+            return QueueUserAPC(wakeupTarget, threadHandle.handle, 0)
         }
         if result == 0 {
             let errorCode = GetLastError()
@@ -185,6 +206,7 @@ extension Selector: _SelectorBackendProtocol {
 
     func close0() throws {
         self.pollFDs.removeAll()
+        self.deregisteredFDs.removeAll()
     }
 }
 
