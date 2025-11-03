@@ -175,8 +175,7 @@ extension Selector: _SelectorBackendProtocol {
         registrationID: SelectorRegistrationID
     ) throws {
         if let index = self.pollFDs.firstIndex(where: { $0.fd == UInt64(fileDescriptor) }) {
-            let poll = pollfd(fd: UInt64(fileDescriptor), events: newInterested.wsaPollEvent, revents: 0)
-            self.pollFDs[index] = poll
+            self.pollFDs[index].events = newInterested.wsaPollEvent
         }
     }
 

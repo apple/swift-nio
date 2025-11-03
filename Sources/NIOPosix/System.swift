@@ -313,6 +313,10 @@ internal func syscall<T: FixedWidthInteger>(
                 continue
             case (EWOULDBLOCK, true):
                 return .wouldBlock(0)
+            #if os(Windows)
+            case (WSAEWOULDBLOCK, true):
+                return .wouldBlock(0)
+            #endif
             default:
                 preconditionIsNotUnacceptableErrno(err: err, where: function)
                 throw IOError(errnoCode: err, reason: function)
@@ -430,6 +434,10 @@ internal func syscallForbiddingEINVAL<T: FixedWidthInteger>(
                 continue
             case EWOULDBLOCK:
                 return .wouldBlock(0)
+            #if os(Windows)
+            case WSAEWOULDBLOCK:
+                return .wouldBlock(0)
+            #endif
             default:
                 preconditionIsNotUnacceptableErrnoForbiddingEINVAL(err: err, where: function)
                 throw IOError(errnoCode: err, reason: function)

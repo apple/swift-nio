@@ -22,6 +22,7 @@ import let WinSDK.ENFILE
 import let WinSDK.ENOBUFS
 import let WinSDK.ENOMEM
 import let WinSDK.INADDR_ANY
+import let WinSDK.WSAEWOULDBLOCK
 
 import struct WinSDK.ip_mreq
 import struct WinSDK.ipv6_mreq
@@ -392,6 +393,10 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
             // These are errors we may be able to recover from. The user may just want to stop accepting connections for example
             // or provide some other means of back-pressure. This could be achieved by a custom ChannelDuplexHandler.
             return false
+        #if os(Windows)
+        case .winsock(WSAEWOULDBLOCK):
+            return false
+        #endif
         default:
             return true
         }
@@ -854,14 +859,9 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
         #endif
     }
 
-    private func shouldCloseOnErrnoCode(_ errnoCode: CInt) -> Bool {
-        switch errnoCode {
-        // ECONNREFUSED can happen on linux if the previous sendto(...) failed.
-        // See also:
-        // -    https://bugzilla.redhat.com/show_bug.cgi?id=1375
-        // -    https://lists.gt.net/linux/kernel/39575
-        case ECONNREFUSED,
-            ENOMEM:
+    private func shouldCloseOnErrnoCode(_ errno: CInt) -> Bool {
+        switch errno {
+        case ECONNREFUSED, ENOMEM:
             // These are errors we may be able to recover from.
             return false
         default:
@@ -869,9 +869,26 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
         }
     }
 
+    private func shouldCloseOnError(_ error: IOError.Error) -> Bool {
+        switch error {
+        // ECONNREFUSED can happen on linux if the previous sendto(...) failed.
+        // See also:
+        // -    https://bugzilla.redhat.com/show_bug.cgi?id=1375
+        // -    https://lists.gt.net/linux/kernel/39575
+        case .errno(let code):
+            return self.shouldCloseOnErrnoCode(code)
+        #if os(Windows)
+        case .winsock(EWOULDBLOCK):
+            return false
+        #endif
+        default:
+            return true
+        }
+    }
+
     override func shouldCloseOnReadError(_ err: Error) -> Bool {
         guard let err = err as? IOError else { return true }
-        return self.shouldCloseOnErrnoCode(err.errnoCode)
+        return self.shouldCloseOnError(err.error)
     }
 
     override func error() -> ErrorResult {
