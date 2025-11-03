@@ -915,7 +915,6 @@ extension ByteBufferAllocator {
         try buffer(plainHexEncodedBytes: string)
     }
 
-
     /// Create a fresh `ByteBuffer` containing the `bytes` decoded from the ASCII `plainHexEncodedBytes` string .
     ///
     /// This will allocate a new `ByteBuffer` with enough space to fit `bytes` and potentially some extra space.
