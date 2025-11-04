@@ -854,8 +854,8 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
         #endif
     }
 
-    private func shouldCloseOnErrnoCode(_ errno: CInt) -> Bool {
-        switch errno {
+    private func shouldCloseOnErrnoCode(_ errnoCode: CInt) -> Bool {
+        switch errnoCode {
         case ECONNREFUSED, ENOMEM:
             // These are errors we may be able to recover from.
             return false
