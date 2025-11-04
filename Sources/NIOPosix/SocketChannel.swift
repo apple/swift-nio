@@ -22,7 +22,6 @@ import let WinSDK.ENFILE
 import let WinSDK.ENOBUFS
 import let WinSDK.ENOMEM
 import let WinSDK.INADDR_ANY
-import let WinSDK.WSAEWOULDBLOCK
 
 import struct WinSDK.ip_mreq
 import struct WinSDK.ipv6_mreq
@@ -393,10 +392,6 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
             // These are errors we may be able to recover from. The user may just want to stop accepting connections for example
             // or provide some other means of back-pressure. This could be achieved by a custom ChannelDuplexHandler.
             return false
-        #if os(Windows)
-        case .winsock(WSAEWOULDBLOCK):
-            return false
-        #endif
         default:
             return true
         }
@@ -877,10 +872,6 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
         // -    https://lists.gt.net/linux/kernel/39575
         case .errno(let code):
             return self.shouldCloseOnErrnoCode(code)
-        #if os(Windows)
-        case .winsock(EWOULDBLOCK):
-            return false
-        #endif
         default:
             return true
         }

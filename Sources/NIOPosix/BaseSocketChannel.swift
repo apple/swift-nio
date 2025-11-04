@@ -1218,14 +1218,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     ///   - err: The `Error` which was thrown by `readFromSocket`.
     /// - Returns: `true` if the `Channel` should be closed, `false` otherwise.
     func shouldCloseOnReadError(_ err: Error) -> Bool {
-        #if os(Windows)
-        if
-            let err = err as? IOError,
-            case .winsock(WSAEWOULDBLOCK) = err.error
-        {
-            return false
-        }
-        #endif
         return true
     }
 
