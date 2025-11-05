@@ -12,197 +12,243 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Testing
 
 import NIOCore
 
 #if compiler(>=6.2)
-@available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
-final class ByteBufferSpanTests: XCTestCase {
+@Suite
+struct ByteBufferSpanTests {
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testReadableBytesSpanOfEmptyByteBuffer() {
         let bb = ByteBuffer()
-        XCTAssertEqual(bb.readableBytesSpan.byteCount, 0)
+        #expect(bb.readableBytesSpan.byteCount == 0)
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testReadableBytesSpanOfSimpleBuffer() {
         let bb = ByteBuffer(string: "Hello, world!")
-        XCTAssertEqual(bb.readableBytesSpan.byteCount, 13)
-        XCTAssertTrue(bb.readableBytesSpan.elementsEqual("Hello, world!".utf8))
+        #expect(bb.readableBytesSpan.byteCount == 13)
+        let bytesEqual = bb.readableBytesSpan.elementsEqual("Hello, world!".utf8)
+        #expect(bytesEqual)
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testReadableBytesSpanNotAtTheStart() {
         var bb = ByteBuffer(string: "Hello, world!")
         bb.moveReaderIndex(forwardBy: 5)
-        XCTAssertEqual(bb.readableBytesSpan.byteCount, 8)
-        XCTAssertTrue(bb.readableBytesSpan.elementsEqual(", world!".utf8))
+        #expect(bb.readableBytesSpan.byteCount == 8)
+        let bytesEqual = bb.readableBytesSpan.elementsEqual(", world!".utf8)
+        #expect(bytesEqual)
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testReadableBytesSpanOfSlice() {
         let first = ByteBuffer(string: "Hello, world!")
         let bb = first.getSlice(at: 5, length: 5)!
-        XCTAssertEqual(bb.readableBytesSpan.byteCount, 5)
-        XCTAssertTrue(bb.readableBytesSpan.elementsEqual(", wor".utf8))
+        #expect(bb.readableBytesSpan.byteCount == 5)
+        let bytesEqual = bb.readableBytesSpan.elementsEqual(", wor".utf8)
+        #expect(bytesEqual)
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testMutableReadableBytesSpanOfEmptyByteBuffer() {
         var bb = ByteBuffer()
-        XCTAssertEqual(bb.mutableReadableBytesSpan.byteCount, 0)
+        #expect(bb.mutableReadableBytesSpan.byteCount == 0)
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testMutableReadableBytesSpanOfSimpleBuffer() {
         var bb = ByteBuffer(string: "Hello, world!")
-        XCTAssertEqual(bb.mutableReadableBytesSpan.byteCount, 13)
-        XCTAssertTrue(bb.mutableReadableBytesSpan.elementsEqual("Hello, world!".utf8))
+        #expect(bb.mutableReadableBytesSpan.byteCount == 13)
+        let bytesEqual = bb.mutableReadableBytesSpan.elementsEqual("Hello, world!".utf8)
+        #expect(bytesEqual)
 
         var readableBytes = bb.mutableReadableBytesSpan
         readableBytes.storeBytes(of: UInt8(ascii: "o"), toByteOffset: 5, as: UInt8.self)
 
-        XCTAssertEqual(String(buffer: bb), "Helloo world!")
+        #expect(String(buffer: bb) == "Helloo world!")
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testMutableReadableBytesSpanNotAtTheStart() {
         var bb = ByteBuffer(string: "Hello, world!")
         bb.moveReaderIndex(forwardBy: 5)
-        XCTAssertEqual(bb.mutableReadableBytesSpan.byteCount, 8)
-        XCTAssertTrue(bb.mutableReadableBytesSpan.elementsEqual(", world!".utf8))
+        #expect(bb.mutableReadableBytesSpan.byteCount == 8)
+        let bytesEqual = bb.mutableReadableBytesSpan.elementsEqual(", world!".utf8)
+        #expect(bytesEqual)
 
         var readableBytes = bb.mutableReadableBytesSpan
         readableBytes.storeBytes(of: UInt8(ascii: "o"), toByteOffset: 5, as: UInt8.self)
 
-        XCTAssertEqual(String(buffer: bb), ", worod!")
+        #expect(String(buffer: bb) == ", worod!")
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testMutableReadableBytesSpanOfSlice() {
         let first = ByteBuffer(string: "Hello, world!")
         var bb = first.getSlice(at: 5, length: 5)!
-        XCTAssertEqual(bb.mutableReadableBytesSpan.byteCount, 5)
-        XCTAssertTrue(bb.mutableReadableBytesSpan.elementsEqual(", wor".utf8))
+        #expect(bb.mutableReadableBytesSpan.byteCount == 5)
+        let bytesEqual = bb.mutableReadableBytesSpan.elementsEqual(", wor".utf8)
+        #expect(bytesEqual)
 
         var readableBytes = bb.mutableReadableBytesSpan
         readableBytes.storeBytes(of: UInt8(ascii: "o"), toByteOffset: 4, as: UInt8.self)
 
-        XCTAssertEqual(String(buffer: bb), ", woo")
-        XCTAssertEqual(String(buffer: first), "Hello, world!")
+        #expect(String(buffer: bb) == ", woo")
+        #expect(String(buffer: first) == "Hello, world!")
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testEvenCreatingMutableSpanTriggersCoW() {
         let first = ByteBuffer(string: "Hello, world!")
         var second = first
 
         let firstBackingPtr = first.withVeryUnsafeBytes { $0 }.baseAddress
         let secondBackingPtr = second.withVeryUnsafeBytes { $0 }.baseAddress
-        XCTAssertEqual(firstBackingPtr, secondBackingPtr)
+        #expect(firstBackingPtr == secondBackingPtr)
 
         let readableBytes = second.mutableReadableBytesSpan
         _ = consume readableBytes
         let firstNewBackingPtr = first.withVeryUnsafeBytes { $0 }.baseAddress
         let secondNewBackingPtr = second.withVeryUnsafeBytes { $0 }.baseAddress
-        XCTAssertNotEqual(firstNewBackingPtr, secondNewBackingPtr)
-        XCTAssertEqual(firstBackingPtr, firstNewBackingPtr)
+        #expect(firstNewBackingPtr != secondNewBackingPtr)
+        #expect(firstBackingPtr == firstNewBackingPtr)
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testAppendingToEmptyBufferViaOutputSpan() {
         var bb = ByteBuffer()
         bb.writeWithOutputRawSpan(minimumWritableBytes: 15) { span in
-            XCTAssertEqual(span.byteCount, 0)
-            XCTAssertGreaterThanOrEqual(span.capacity, 15)
-            XCTAssertGreaterThanOrEqual(span.freeCapacity, 15)
-            XCTAssertTrue(span.initializedElementsEqual([]))
+            #expect(span.byteCount == 0)
+            #expect(span.capacity >= 15)
+            #expect(span.freeCapacity >= 15)
+            var bytesEqual = span.initializedElementsEqual([])
+            #expect(bytesEqual)
 
             span.append(contentsOf: "Hello, world!".utf8)
 
-            XCTAssertEqual(span.byteCount, 13)
-            XCTAssertGreaterThanOrEqual(span.capacity, 2)
-            XCTAssertGreaterThanOrEqual(span.freeCapacity, 2)
-            XCTAssertTrue(span.initializedElementsEqual("Hello, world!".utf8))
+            #expect(span.byteCount == 13)
+            #expect(span.capacity >= 2)
+            #expect(span.freeCapacity >= 2)
+
+            bytesEqual = span.initializedElementsEqual("Hello, world!".utf8)
+            #expect(bytesEqual)
         }
-        XCTAssertEqual(bb.readableBytes, 13)
-        XCTAssertEqual(String(buffer: bb), "Hello, world!")
+        #expect(bb.readableBytes == 13)
+        #expect(String(buffer: bb) == "Hello, world!")
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testAppendingToNonEmptyBufferViaOutputSpanDoesNotExposeInitialBytes() {
         var bb = ByteBuffer()
         bb.writeString("Hello")
         bb.writeWithOutputRawSpan(minimumWritableBytes: 8) { span in
-            XCTAssertEqual(span.byteCount, 0)
-            XCTAssertGreaterThanOrEqual(span.capacity, 8)
-            XCTAssertGreaterThanOrEqual(span.freeCapacity, 8)
-            XCTAssertTrue(span.initializedElementsEqual([]))
+            #expect(span.byteCount == 0)
+            #expect(span.capacity >= 8)
+            #expect(span.freeCapacity >= 8)
+            var bytesEqual = span.initializedElementsEqual([])
+            #expect(bytesEqual)
 
             span.append(contentsOf: ", world!".utf8)
 
-            XCTAssertEqual(span.byteCount, 8)
-            XCTAssertGreaterThanOrEqual(span.capacity, 0)
-            XCTAssertGreaterThanOrEqual(span.freeCapacity, 0)
-            XCTAssertTrue(span.initializedElementsEqual(", world!".utf8))
+            #expect(span.byteCount == 8)
+            #expect(span.capacity >= 0)
+            #expect(span.freeCapacity >= 0)
+            bytesEqual = span.initializedElementsEqual(", world!".utf8)
+            #expect(bytesEqual)
         }
-        XCTAssertEqual(bb.readableBytes, 13)
-        XCTAssertEqual(String(buffer: bb), "Hello, world!")
+        #expect(bb.readableBytes == 13)
+        #expect(String(buffer: bb) == "Hello, world!")
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testAppendingToASliceViaOutputSpan() {
         let first = ByteBuffer(string: "Hello, world!")
         var bb = first.getSlice(at: 5, length: 5)!
-        XCTAssertEqual(bb.mutableReadableBytesSpan.byteCount, 5)
-        XCTAssertTrue(bb.mutableReadableBytesSpan.elementsEqual(", wor".utf8))
+        #expect(bb.mutableReadableBytesSpan.byteCount == 5)
+        let bytesEqual = bb.mutableReadableBytesSpan.elementsEqual(", wor".utf8)
+        #expect(bytesEqual)
 
         bb.writeWithOutputRawSpan(minimumWritableBytes: 5) { span in
             span.append(contentsOf: "olleh".utf8)
         }
 
-        XCTAssertEqual(String(buffer: bb), ", worolleh")
-        XCTAssertEqual(String(buffer: first), "Hello, world!")
+        #expect(String(buffer: bb) == ", worolleh")
+        #expect(String(buffer: first) == "Hello, world!")
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testEvenCreatingAnOutputSpanTriggersCoW() {
         let first = ByteBuffer(string: "Hello, world!")
         var second = first
 
         let firstBackingPtr = first.withVeryUnsafeBytes { $0 }.baseAddress
         let secondBackingPtr = second.withVeryUnsafeBytes { $0 }.baseAddress
-        XCTAssertEqual(firstBackingPtr, secondBackingPtr)
+        #expect(firstBackingPtr == secondBackingPtr)
 
         second.writeWithOutputRawSpan(minimumWritableBytes: 5) { _ in}
         let firstNewBackingPtr = first.withVeryUnsafeBytes { $0 }.baseAddress
         let secondNewBackingPtr = second.withVeryUnsafeBytes { $0 }.baseAddress
-        XCTAssertNotEqual(firstNewBackingPtr, secondNewBackingPtr)
-        XCTAssertEqual(firstBackingPtr, firstNewBackingPtr)
+        #expect(firstNewBackingPtr != secondNewBackingPtr)
+        #expect(firstBackingPtr == firstNewBackingPtr)
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testCanCreateEmptyBufferDirectly() {
         let bb = ByteBuffer(initialCapacity: 15) { span in
-            XCTAssertEqual(span.byteCount, 0)
-            XCTAssertGreaterThanOrEqual(span.capacity, 15)
-            XCTAssertGreaterThanOrEqual(span.freeCapacity, 15)
-            XCTAssertTrue(span.initializedElementsEqual([]))
+            #expect(span.byteCount == 0)
+            #expect(span.capacity >= 15)
+            #expect(span.freeCapacity >= 15)
+            var bytesEqual = span.initializedElementsEqual([])
+            #expect(bytesEqual)
 
             span.append(contentsOf: "Hello, world!".utf8)
 
-            XCTAssertEqual(span.byteCount, 13)
-            XCTAssertGreaterThanOrEqual(span.capacity, 2)
-            XCTAssertGreaterThanOrEqual(span.freeCapacity, 2)
-            XCTAssertTrue(span.initializedElementsEqual("Hello, world!".utf8))
+            #expect(span.byteCount == 13)
+            #expect(span.capacity >= 2)
+            #expect(span.freeCapacity >= 2)
+            bytesEqual = span.initializedElementsEqual("Hello, world!".utf8)
+            #expect(bytesEqual)
         }
-        XCTAssertEqual(bb.readableBytes, 13)
-        XCTAssertEqual(String(buffer: bb), "Hello, world!")
+        #expect(bb.readableBytes == 13)
+        #expect(String(buffer: bb) == "Hello, world!")
     }
 
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testCanCreateEmptyBufferDirectlyFromAllocator() {
         let bb = ByteBufferAllocator().buffer(capacity: 15) { span in
-            XCTAssertEqual(span.byteCount, 0)
-            XCTAssertGreaterThanOrEqual(span.capacity, 15)
-            XCTAssertGreaterThanOrEqual(span.freeCapacity, 15)
-            XCTAssertTrue(span.initializedElementsEqual([]))
+            #expect(span.byteCount == 0)
+            #expect(span.capacity >= 15)
+            #expect(span.freeCapacity >= 15)
+            var bytesEqual = span.initializedElementsEqual([])
+            #expect(bytesEqual)
 
             span.append(contentsOf: "Hello, world!".utf8)
 
-            XCTAssertEqual(span.byteCount, 13)
-            XCTAssertGreaterThanOrEqual(span.capacity, 2)
-            XCTAssertGreaterThanOrEqual(span.freeCapacity, 2)
-            XCTAssertTrue(span.initializedElementsEqual("Hello, world!".utf8))
+            #expect(span.byteCount == 13)
+            #expect(span.capacity >= 2)
+            #expect(span.freeCapacity >= 2)
+            bytesEqual = span.initializedElementsEqual("Hello, world!".utf8)
+            #expect(bytesEqual)
         }
-        XCTAssertEqual(bb.readableBytes, 13)
-        XCTAssertEqual(String(buffer: bb), "Hello, world!")
+        #expect(bb.readableBytes == 13)
+        #expect(String(buffer: bb) == "Hello, world!")
     }
 }
 
