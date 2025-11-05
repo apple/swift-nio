@@ -76,6 +76,11 @@ on:
         description: "Environment variables for Linux jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
         default: "{}"
 
+      minimum_swift_version:
+        type: string
+        description: "Minimum Swift version to include in the matrix. Leave empty for auto-detection from Package.swift, specify a version like '6.0' to override, or set to 'none' to disable filtering."
+        default: ""
+
 jobs:
   construct-matrix:
     name: Construct Benchmarks matrix
@@ -101,6 +106,7 @@ jobs:
         env:
           MATRIX_LINUX_COMMAND: "curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} bash"
           MATRIX_LINUX_SETUP_COMMAND: "swift --version && apt-get update -y -q && apt-get install -y -q curl libjemalloc-dev && git config --global --add safe.directory /$(basename ${{ github.workspace }})"
+          MATRIX_MIN_SWIFT_VERSION: ${{ inputs.minimum_swift_version }}
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
           MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
           MATRIX_LINUX_6_0_ENABLED: ${{ inputs.linux_6_0_enabled }}

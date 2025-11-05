@@ -246,6 +246,39 @@ extension ByteBufferView: RangeReplaceableCollection {
             self._range = self._range.startIndex..<self._range.endIndex.advanced(by: additionalByteCount)
         }
     }
+
+    /// Returns the first index in which a byte satisfies the given predicate.
+    ///
+    /// - Parameter predicate: A closure that takes a byte as its argument
+    ///   and returns a Boolean value that indicates whether the passed byte
+    ///   represents a match.
+    /// - Returns: The index of the first byte for which `predicate` returns
+    ///   `true`. If no bytes in the collection satisfy the given predicate,
+    ///   returns `nil`.
+    ///
+    /// - Complexity: O(*n*), where *n* is the length of the collection.
+    @inlinable
+    public func firstIndex(where predicate: (UInt8) throws -> Bool) rethrows -> Index? {
+        try self.withUnsafeBytes { ptr in
+            try ptr.firstIndex(where: predicate).map { $0 + self._range.lowerBound }
+        }
+    }
+
+    /// Returns the index of the last byte that matches the given predicate.
+    ///
+    /// - Parameter predicate: A closure that takes a byte as its argument
+    ///   and returns a Boolean value that indicates whether the passed byte
+    ///   represents a match.
+    /// - Returns: The index of the last byte in the collection that matches
+    ///   `predicate`, or `nil` if no bytes match.
+    ///
+    /// - Complexity: O(*n*), where *n* is the length of the collection.
+    @inlinable
+    public func lastIndex(where predicate: (UInt8) throws -> Bool) rethrows -> Index? {
+        try self.withUnsafeBytes { ptr in
+            try ptr.lastIndex(where: predicate).map { $0 + self._range.lowerBound }
+        }
+    }
 }
 
 extension ByteBuffer {

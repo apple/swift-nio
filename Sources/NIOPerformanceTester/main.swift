@@ -28,7 +28,12 @@ import NIOCore
 import NIOEmbedded
 import NIOFoundationCompat
 import NIOHTTP1
+#if os(Android)
+// workaround for error: reference to var 'stdout' is not concurrency-safe because it involves shared mutable state
+@preconcurrency import NIOPosix
+#else
 import NIOPosix
+#endif
 import NIOWebSocket
 
 // Use unbuffered stdout to help detect exactly which test was running in the event of a crash.
