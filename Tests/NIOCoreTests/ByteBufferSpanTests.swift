@@ -12,9 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Testing
-
 import NIOCore
+import Testing
 
 #if compiler(>=6.2)
 @Suite
@@ -200,7 +199,7 @@ struct ByteBufferSpanTests {
         let secondBackingPtr = second.withVeryUnsafeBytes { $0 }.baseAddress
         #expect(firstBackingPtr == secondBackingPtr)
 
-        second.writeWithOutputRawSpan(minimumWritableBytes: 5) { _ in}
+        second.writeWithOutputRawSpan(minimumWritableBytes: 5) { _ in }
         let firstNewBackingPtr = first.withVeryUnsafeBytes { $0 }.baseAddress
         let secondNewBackingPtr = second.withVeryUnsafeBytes { $0 }.baseAddress
         #expect(firstNewBackingPtr != secondNewBackingPtr)
