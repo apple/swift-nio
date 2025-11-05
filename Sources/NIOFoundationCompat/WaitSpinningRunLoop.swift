@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import Foundation
 import NIOConcurrencyHelpers
@@ -70,3 +72,5 @@ extension EventLoopFuture {
         }
     }
 }
+
+#endif  // !os(WASI)
