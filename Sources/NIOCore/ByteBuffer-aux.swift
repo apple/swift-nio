@@ -855,10 +855,10 @@ extension ByteBuffer {
     ///     - initializer: The initializer that will be invoked to initialize the allocated memory.
     @inlinable
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
-    public init(
+    public init<ErrorType: Error>(
         initialCapacity capacity: Int,
-        initializingWith initializer: (_ span: inout OutputRawSpan) throws -> Void
-    ) rethrows {
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws(ErrorType) -> Void
+    ) throws(ErrorType) {
         self = try ByteBufferAllocator().buffer(capacity: capacity, initializingWith: initializer)
     }
     #endif
@@ -1018,10 +1018,10 @@ extension ByteBufferAllocator {
     ///     - initializer: The initializer that will be invoked to initialize the allocated memory.
     @inlinable
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
-    public func buffer(
+    public func buffer<ErrorType: Error>(
         capacity: Int,
-        initializingWith initializer: (_ span: inout OutputRawSpan) throws -> Void
-    ) rethrows -> ByteBuffer {
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws(ErrorType) -> Void
+    ) throws(ErrorType) -> ByteBuffer {
         var buffer = self.buffer(capacity: capacity)
         try buffer.writeWithOutputRawSpan(minimumWritableBytes: capacity, initializingWith: initializer)
         return buffer

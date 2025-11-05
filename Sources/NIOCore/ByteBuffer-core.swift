@@ -725,11 +725,11 @@ public struct ByteBuffer {
     ///     - initializer: The initializer that will be invoked to initialize the allocated memory.
     @inlinable
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
-    public mutating func writeWithOutputRawSpan(
+    public mutating func writeWithOutputRawSpan<ErrorType: Error>(
         minimumWritableBytes: Int,
-        initializingWith initializer: (_ span: inout OutputRawSpan) throws -> Void
-    ) rethrows {
-        try self.writeWithUnsafeMutableBytes(minimumWritableBytes: minimumWritableBytes) { ptr in
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws(ErrorType) -> Void
+    ) throws(ErrorType) {
+        try self.writeWithUnsafeMutableBytes(minimumWritableBytes: minimumWritableBytes) { ptr throws(ErrorType) in
             var span = OutputRawSpan(buffer: ptr, initializedCount: 0)
             try initializer(&span)
             return span.byteCount
