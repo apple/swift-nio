@@ -233,11 +233,26 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         withIntermediateDirectories createIntermediateDirectories: Bool,
         permissions: FilePermissions?
     ) async throws {
+        try await self.createDirectory(
+            at: path,
+            withIntermediateDirectories: createIntermediateDirectories,
+            permissions: permissions,
+            idempotent: true
+        )
+    }
+
+    private func createDirectory(
+        at path: FilePath,
+        withIntermediateDirectories createIntermediateDirectories: Bool,
+        permissions: FilePermissions?,
+        idempotent: Bool
+    ) async throws {
         try await self.threadPool.runIfActive {
             try self._createDirectory(
                 at: path,
                 withIntermediateDirectories: createIntermediateDirectories,
-                permissions: permissions ?? .defaultsForDirectory
+                permissions: permissions ?? .defaultsForDirectory,
+                idempotent: idempotent
             ).get()
         }
     }
@@ -809,7 +824,8 @@ extension FileSystem {
     private func _createDirectory(
         at fullPath: FilePath,
         withIntermediateDirectories createIntermediateDirectories: Bool,
-        permissions: FilePermissions
+        permissions: FilePermissions,
+        idempotent: Bool = true
     ) -> Result<Void, FileSystemError> {
         // We assume that we will be creating intermediate directories:
         // - Try creating the directory. If it fails with ENOENT (no such file or directory), then
@@ -840,16 +856,20 @@ extension FileSystem {
 
             case let .failure(errno):
                 if errno == .fileExists {
-                    switch self._info(forFileAt: path, infoAboutSymbolicLink: false) {
-                    case let .success(maybeInfo):
-                        if let info = maybeInfo, info.type == .directory {
-                            break loop
-                        } else {
-                            // A file exists at this path.
+                    if idempotent {
+                        switch self._info(forFileAt: path, infoAboutSymbolicLink: false) {
+                        case let .success(maybeInfo):
+                            if let info = maybeInfo, info.type == .directory {
+                                break loop
+                            } else {
+                                // A file exists at this path.
+                                return .failure(.mkdir(errno: errno, path: path, location: .here()))
+                            }
+                        case .failure:
+                            // Unable to determine what exists at this path.
                             return .failure(.mkdir(errno: errno, path: path, location: .here()))
                         }
-                    case .failure:
-                        // Unable to determine what exists at this path.
+                    } else {
                         return .failure(.mkdir(errno: errno, path: path, location: .here()))
                     }
                 }
@@ -944,7 +964,8 @@ extension FileSystem {
             try await self.createDirectory(
                 at: destinationPath,
                 withIntermediateDirectories: false,
-                permissions: info.permissions
+                permissions: info.permissions,
+                idempotent: false  // Fail if the destination dir already exists.
             )
 
             #if !os(Android)
@@ -1179,13 +1200,19 @@ extension FileSystem {
             }
 
         case .directory:
-            let addToQueue = try await self.prepareDirectoryForRecusiveCopy(
-                from: from.path,
-                to: to,
-                shouldProceedAfterError: shouldProceedAfterError,
-                shouldCopyItem: shouldCopyItem
-            )
-            yield(addToQueue)
+            do {
+                let addToQueue = try await self.prepareDirectoryForRecusiveCopy(
+                    from: from.path,
+                    to: to,
+                    shouldProceedAfterError: shouldProceedAfterError,
+                    shouldCopyItem: shouldCopyItem
+                )
+                yield(addToQueue)
+            } catch {
+                // The caller expects an end-of-dir regardless of whether there was an error or not.
+                yield([.endOfDir])
+                try await shouldProceedAfterError(from, error)
+            }
 
         default:
             let error = FileSystemError(
