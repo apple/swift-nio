@@ -42,7 +42,12 @@ public struct AddressedEnvelope<DataType> {
         /// The UDP segment size for Generic Segmentation Offload (GSO).
         ///
         /// When set, this enables per-message GSO, allowing the kernel to split this datagram
-        /// into multiple segments of the specified size. Only supported on Linux.
+        /// into multiple segments of the specified size. The maximum segment size is platform-dependent
+        /// and can be queried via `System.udpMaxSegments`.
+        ///
+        /// On non-Linux platforms, writes with a non-nil `segmentSize` will fail with
+        /// `ChannelError.operationUnsupported`. The error will be propagated to the write promise
+        /// (if attached).
         public var segmentSize: Int?
 
         public init(ecnState: NIOExplicitCongestionNotificationState) {
