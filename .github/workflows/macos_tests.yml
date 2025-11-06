@@ -444,13 +444,13 @@ jobs:
         run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=ios" build
       - name: iOS test
         if: '!cancelled() && inputs.ios_xcode_test_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=iPhone 16 Pro" test
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=iPhone Air" test
       - name: watchOS build
         if: '!cancelled() && inputs.watchos_xcode_build_enabled'
         run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=watchos" build
       - name: watchOS test
         if: '!cancelled() && inputs.watchos_xcode_test_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple Watch Series 10 (46mm)" test
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple Watch Ultra 3 (49mm)" test
       - name: tvOS build
         if: '!cancelled() && inputs.tvos_xcode_build_enabled'
         run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=tvos" build
