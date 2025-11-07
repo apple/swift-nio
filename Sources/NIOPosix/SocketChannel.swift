@@ -837,7 +837,8 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                 try vectorReadManager.readFromSocket(
                     socket: self.socket,
                     buffer: &buffer,
-                    parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo || self.receiveSegmentSize
+                    parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo
+                        || self.receiveSegmentSize
                 )
             }
 

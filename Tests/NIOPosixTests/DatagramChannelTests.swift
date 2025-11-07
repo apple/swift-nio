@@ -2044,7 +2044,12 @@ class DatagramChannelTests: XCTestCase {
 
     // MARK: - Per-Message GRO Tests
 
-    func testReceiveLargeBufferWithPerMessageGRO(segments: Int, segmentSize: Int, writes: Int, vectorReads: Int? = nil) throws {
+    func testReceiveLargeBufferWithPerMessageGRO(
+        segments: Int,
+        segmentSize: Int,
+        writes: Int,
+        vectorReads: Int? = nil
+    ) throws {
         try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
         try XCTSkipUnless(System.supportsUDPReceiveOffload, "UDP_GRO is not supported on this platform")
         try XCTSkipUnless(try self.hasGoodGROSupport())
@@ -2089,7 +2094,11 @@ class DatagramChannelTests: XCTestCase {
                 XCTAssertEqual(datagram.data.readableBytes, segments * segmentSize)
                 // Verify that the metadata contains the segment size
                 XCTAssertNotNil(datagram.metadata, "Expected metadata to be present")
-                XCTAssertEqual(datagram.metadata?.segmentSize, segmentSize, "Expected segment size to be \(segmentSize)")
+                XCTAssertEqual(
+                    datagram.metadata?.segmentSize,
+                    segmentSize,
+                    "Expected segment size to be \(segmentSize)"
+                )
             }
         }
 
@@ -2144,7 +2153,8 @@ class DatagramChannelTests: XCTestCase {
     func testPerMessageGROThrowsOnNonLinux() throws {
         #if !os(Linux)
         // On non-Linux platforms, setting datagramReceiveSegmentSize should throw an error
-        XCTAssertThrowsError(try self.firstChannel.setOption(.datagramReceiveSegmentSize, value: true).wait()) { error in
+        XCTAssertThrowsError(try self.firstChannel.setOption(.datagramReceiveSegmentSize, value: true).wait()) {
+            error in
             XCTAssertEqual(error as? ChannelError, .operationUnsupported)
         }
         #endif
