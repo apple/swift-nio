@@ -467,6 +467,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
 final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
     private var reportExplicitCongestionNotifications = false
     private var receivePacketInfo = false
+    private var receiveSegmentSize = false
 
     // Guard against re-entrance of flushNow() method.
     private let pendingWrites: PendingDatagramWritesManager
@@ -625,6 +626,12 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             }
             let enable = value as! ChannelOptions.Types.DatagramReceiveOffload.Value
             try self.socket.setUDPReceiveOffload(enable)
+        case _ as ChannelOptions.Types.DatagramReceiveSegmentSize:
+            guard System.supportsUDPReceiveOffload else {
+                throw ChannelError._operationUnsupported
+            }
+            let enable = value as! ChannelOptions.Types.DatagramReceiveSegmentSize.Value
+            self.receiveSegmentSize = enable
         default:
             try super.setOption0(option, value: value)
         }
@@ -690,6 +697,11 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                 throw ChannelError._operationUnsupported
             }
             return try self.socket.getUDPReceiveOffload() as! Option.Value
+        case _ as ChannelOptions.Types.DatagramReceiveSegmentSize:
+            guard System.supportsUDPReceiveOffload else {
+                throw ChannelError._operationUnsupported
+            }
+            return self.receiveSegmentSize as! Option.Value
         case _ as ChannelOptions.Types.BufferedWritableBytesOption:
             return Int(self.pendingWrites.bufferedBytes) as! Option.Value
         default:
@@ -736,7 +748,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
     override func readFromSocket() throws -> ReadResult {
         if self.vectorReadManager != nil {
             return try self.vectorReadFromSocket()
-        } else if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
+        } else if self.reportExplicitCongestionNotifications || self.receivePacketInfo || self.receiveSegmentSize {
             let pooledMsgBuffer = self.selectableEventLoop.msgBufferPool.get()
             defer { self.selectableEventLoop.msgBufferPool.put(pooledMsgBuffer) }
             return try pooledMsgBuffer.withUnsafePointers { _, _, controlMessageStorage in
@@ -781,7 +793,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                 readPending = false
 
                 let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
-                if self.reportExplicitCongestionNotifications || self.receivePacketInfo,
+                if self.reportExplicitCongestionNotifications || self.receivePacketInfo || self.receiveSegmentSize,
                     let controlMessagesReceived = controlBytes.receivedControlMessages
                 {
                     metadata = .init(from: controlMessagesReceived)
@@ -826,6 +838,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                     socket: self.socket,
                     buffer: &buffer,
                     parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo
+                        || self.receiveSegmentSize
                 )
             }
 
