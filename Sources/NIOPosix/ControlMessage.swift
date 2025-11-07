@@ -388,6 +388,25 @@ extension UnsafeOutboundControlBytes {
             break
         }
     }
+
+    /// Appends a UDP segment size control message for Generic Segmentation Offload (GSO).
+    ///
+    /// - Parameter metadata: Metadata from the addressed envelope which may contain a segment size.
+    /// - Warning: This will `fatalError` if called with a segmentSize on non-Linux platforms.
+    ///   Callers should validate platform support before enqueueing writes with segmentSize.
+    internal mutating func appendUDPSegmentSize(metadata: AddressedEnvelope<ByteBuffer>.Metadata?) {
+        guard let metadata = metadata, let segmentSize = metadata.segmentSize else { return }
+
+        #if os(Linux)
+        self.appendGenericControlMessage(
+            level: Posix.SOL_UDP,
+            type: .init(NIOBSDSocket.Option.udp_segment.rawValue),
+            payload: UInt16(segmentSize)
+        )
+        #else
+        fatalError("UDP segment size is only supported on Linux")
+        #endif
+    }
 }
 
 extension AddressedEnvelope.Metadata {

@@ -929,6 +929,14 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
     /// Buffer a write in preparation for a flush.
     private func bufferPendingAddressedWrite(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?)
     {
+        // Check if segment size is set on a non-Linux platform
+        #if !os(Linux)
+        if envelope.metadata?.segmentSize != nil {
+            promise?.fail(ChannelError.operationUnsupported)
+            return
+        }
+        #endif
+
         // If the socket is connected, check the remote provided matches the connected address.
         if let connectedRemoteAddress = self.remoteAddress {
             guard envelope.remoteAddress == connectedRemoteAddress else {
@@ -977,6 +985,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                         metadata: metadata,
                         protocolFamily: self.localAddress?.protocol
                     )
+                    controlBytes.appendUDPSegmentSize(metadata: metadata)
                     return try self.socket.sendmsg(
                         pointer: ptr,
                         destinationPtr: destinationPtr,

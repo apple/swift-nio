@@ -1860,6 +1860,187 @@ class DatagramChannelTests: XCTestCase {
 
         return hasGoodGROSupport
     }
+
+    // MARK: - Per-Message GSO Tests
+
+    func testLargeScalarWriteWithPerMessageGSO() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+
+        // We're going to send one large buffer with per-message GSO metadata.
+        // The kernel should split it into multiple segments.
+        let segmentSize = 1000
+        let segments = 10
+
+        // Form a handful of segments
+        let buffers = (0..<segments).map { i in
+            ByteBuffer(repeating: UInt8(i), count: segmentSize)
+        }
+
+        // Coalesce the segments into a single buffer.
+        var buffer = self.firstChannel.allocator.buffer(capacity: segments * segmentSize)
+        for segment in buffers {
+            buffer.writeImmutableBuffer(segment)
+        }
+
+        // Write the single large buffer with per-message GSO metadata.
+        let writeData = AddressedEnvelope(
+            remoteAddress: self.secondChannel.localAddress!,
+            data: buffer,
+            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize)
+        )
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(writeData).wait())
+
+        // The receiver will receive separate segments.
+        let receivedBuffers = try self.secondChannel.waitForDatagrams(count: segments)
+        let receivedBytes = receivedBuffers.map { $0.data.readableBytes }.reduce(0, +)
+        XCTAssertEqual(segmentSize * segments, receivedBytes)
+
+        var unusedIndexes = Set(buffers.indices)
+        for envelope in receivedBuffers {
+            if let index = buffers.firstIndex(of: envelope.data) {
+                XCTAssertNotNil(unusedIndexes.remove(index))
+            } else {
+                XCTFail("No matching buffer")
+            }
+        }
+    }
+
+    func testLargeVectorWriteWithPerMessageGSO() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+
+        // Similar to the test above, but with multiple writes using different segment sizes.
+        let segmentSize1 = 1000
+        let segments1 = 10
+        let segmentSize2 = 500
+        let segments2 = 5
+
+        // Form segments for first write
+        let buffers1 = (0..<segments1).map { i in
+            ByteBuffer(repeating: UInt8(i), count: segmentSize1)
+        }
+        var buffer1 = self.firstChannel.allocator.buffer(capacity: segments1 * segmentSize1)
+        for segment in buffers1 {
+            buffer1.writeImmutableBuffer(segment)
+        }
+
+        // Form segments for second write
+        let buffers2 = (0..<segments2).map { i in
+            ByteBuffer(repeating: UInt8(100 + i), count: segmentSize2)
+        }
+        var buffer2 = self.firstChannel.allocator.buffer(capacity: segments2 * segmentSize2)
+        for segment in buffers2 {
+            buffer2.writeImmutableBuffer(segment)
+        }
+
+        // Write both buffers with different segment sizes.
+        let writeData1 = AddressedEnvelope(
+            remoteAddress: self.secondChannel.localAddress!,
+            data: buffer1,
+            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize1)
+        )
+        let writeData2 = AddressedEnvelope(
+            remoteAddress: self.secondChannel.localAddress!,
+            data: buffer2,
+            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize2)
+        )
+        let write1 = self.firstChannel.write(writeData1)
+        let write2 = self.firstChannel.write(writeData2)
+        self.firstChannel.flush()
+        XCTAssertNoThrow(try write1.wait())
+        XCTAssertNoThrow(try write2.wait())
+
+        // The receiver will receive separate segments from both writes.
+        let receivedBuffers = try self.secondChannel.waitForDatagrams(count: segments1 + segments2)
+        XCTAssertEqual(receivedBuffers.count, segments1 + segments2)
+    }
+
+    func testMixedGSOAndNonGSO() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+
+        // Send some messages with GSO and some without.
+        let segmentSize = 1000
+        let segments = 5
+
+        // GSO message
+        var gsoBuffer = self.firstChannel.allocator.buffer(capacity: segments * segmentSize)
+        for _ in 0..<segments {
+            gsoBuffer.writeRepeatingByte(1, count: segmentSize)
+        }
+        let gsoEnvelope = AddressedEnvelope(
+            remoteAddress: self.secondChannel.localAddress!,
+            data: gsoBuffer,
+            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize)
+        )
+
+        // Non-GSO message
+        var normalBuffer = self.firstChannel.allocator.buffer(capacity: 100)
+        normalBuffer.writeRepeatingByte(2, count: 100)
+        let normalEnvelope = AddressedEnvelope(
+            remoteAddress: self.secondChannel.localAddress!,
+            data: normalBuffer
+        )
+
+        // Send both
+        let write1 = self.firstChannel.write(gsoEnvelope)
+        let write2 = self.firstChannel.write(normalEnvelope)
+        self.firstChannel.flush()
+        XCTAssertNoThrow(try write1.wait())
+        XCTAssertNoThrow(try write2.wait())
+
+        // Should receive 5 segments + 1 normal message
+        let received = try self.secondChannel.waitForDatagrams(count: segments + 1)
+        XCTAssertEqual(received.count, segments + 1)
+    }
+
+    func testPerMessageGSOOverridesChannelLevel() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+
+        // Set channel-level GSO to one value
+        XCTAssertNoThrow(try self.firstChannel.setOption(.datagramSegmentSize, value: CInt(500)).wait())
+
+        // But use per-message GSO with a different value
+        let segmentSize = 1000
+        let segments = 5
+
+        var buffer = self.firstChannel.allocator.buffer(capacity: segments * segmentSize)
+        for i in 0..<segments {
+            buffer.writeRepeatingByte(UInt8(i), count: segmentSize)
+        }
+
+        let envelope = AddressedEnvelope(
+            remoteAddress: self.secondChannel.localAddress!,
+            data: buffer,
+            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize)
+        )
+
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(envelope).wait())
+
+        // Should receive segments of size 1000, not 500
+        let received = try self.secondChannel.waitForDatagrams(count: segments)
+        for datagram in received {
+            XCTAssertEqual(datagram.data.readableBytes, segmentSize)
+        }
+    }
+
+    func testPerMessageGSOThrowsOnNonLinux() throws {
+        #if os(Linux)
+        try XCTSkipIf(true, "This test only runs on non-Linux platforms")
+        #else
+        // On non-Linux platforms, setting segmentSize in metadata should throw an error
+        var buffer = self.firstChannel.allocator.buffer(capacity: 1000)
+        buffer.writeRepeatingByte(1, count: 1000)
+
+        let envelope = AddressedEnvelope(
+            remoteAddress: self.secondChannel.localAddress!,
+            data: buffer,
+            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: 500)
+        )
+
+        XCTAssertThrowsError(try self.firstChannel.writeAndFlush(envelope).wait()) { error in
+            XCTAssertEqual(error as? ChannelError, .operationUnsupported)
+        }
+        #endif
+    }
 }
 
 extension System {

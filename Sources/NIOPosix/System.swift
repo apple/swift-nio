@@ -542,6 +542,14 @@ internal enum Posix: Sendable {
     static let IPV6_PKTINFO: CInt = CInt(WinSDK.IPV6_PKTINFO)
     #endif
 
+    #if canImport(Darwin)
+    static let SOL_UDP: CInt = CInt(IPPROTO_UDP)
+    #elseif os(Linux) || os(FreeBSD) || os(Android)
+    static let SOL_UDP: CInt = CInt(IPPROTO_UDP)
+    #elseif os(Windows)
+    static let SOL_UDP: CInt = CInt(IPPROTO_UDP)
+    #endif
+
     #if !os(Windows)
     @inline(never)
     public static func shutdown(descriptor: CInt, how: Shutdown) throws {
