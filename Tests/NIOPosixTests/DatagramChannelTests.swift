@@ -2041,6 +2041,114 @@ class DatagramChannelTests: XCTestCase {
         }
         #endif
     }
+
+    // MARK: - Per-Message GRO Tests
+
+    func testReceiveLargeBufferWithPerMessageGRO(segments: Int, segmentSize: Int, writes: Int, vectorReads: Int? = nil) throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+        try XCTSkipUnless(System.supportsUDPReceiveOffload, "UDP_GRO is not supported on this platform")
+        try XCTSkipUnless(try self.hasGoodGROSupport())
+
+        /// Set GSO on the first channel.
+        XCTAssertNoThrow(
+            try self.firstChannel.setOption(.datagramSegmentSize, value: CInt(segmentSize)).wait()
+        )
+        /// Set GRO on the second channel.
+        XCTAssertNoThrow(try self.secondChannel.setOption(.datagramReceiveOffload, value: true).wait())
+        /// Enable per-message GRO segment size reporting on the second channel.
+        XCTAssertNoThrow(try self.secondChannel.setOption(.datagramReceiveSegmentSize, value: true).wait())
+        /// The third channel has neither set.
+
+        // Enable on second channel
+        if let vectorReads = vectorReads {
+            XCTAssertNoThrow(
+                try self.secondChannel.setOption(.datagramVectorReadMessageCount, value: vectorReads)
+                    .wait()
+            )
+        }
+
+        /// Increase the size of the read buffer for the second and third channels.
+        let fixed = FixedSizeRecvByteBufferAllocator(capacity: 1 << 16)
+        XCTAssertNoThrow(try self.secondChannel.setOption(.recvAllocator, value: fixed).wait())
+        XCTAssertNoThrow(try self.thirdChannel.setOption(.recvAllocator, value: fixed).wait())
+
+        // Write a large datagrams on the first channel. They should be split and then accumulated on the receive side.
+        // Form a large buffer to write from the first channel.
+        let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * segments)
+
+        // Write to the channel with per-message GRO enabled.
+        do {
+            let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+            let promises = (0..<writes).map { _ in self.firstChannel.write(writeData) }
+            self.firstChannel.flush()
+            XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
+
+            // GRO is well supported; we expect `writes` datagrams.
+            let datagrams = try self.secondChannel.waitForDatagrams(count: writes)
+            for datagram in datagrams {
+                XCTAssertEqual(datagram.data.readableBytes, segments * segmentSize)
+                // Verify that the metadata contains the segment size
+                XCTAssertNotNil(datagram.metadata, "Expected metadata to be present")
+                XCTAssertEqual(datagram.metadata?.segmentSize, segmentSize, "Expected segment size to be \(segmentSize)")
+            }
+        }
+
+        // Write to the channel without GRO.
+        do {
+            let writeData = AddressedEnvelope(remoteAddress: self.thirdChannel.localAddress!, data: buffer)
+            let promises = (0..<writes).map { _ in self.firstChannel.write(writeData) }
+            self.firstChannel.flush()
+            XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
+
+            // GRO is not enabled so we expect a `writes * segments` datagrams without segment size metadata.
+            let datagrams = try self.thirdChannel.waitForDatagrams(count: writes * segments)
+            for datagram in datagrams {
+                XCTAssertEqual(datagram.data.readableBytes, segmentSize)
+                // Without per-message GRO enabled, there should be no segment size in metadata
+                XCTAssertNil(datagram.metadata?.segmentSize)
+            }
+        }
+    }
+
+    func testChannelCanReceiveLargeBufferWithPerMessageGROUsingScalarReads() throws {
+        try self.testReceiveLargeBufferWithPerMessageGRO(segments: 10, segmentSize: 1000, writes: 1)
+    }
+
+    func testChannelCanReceiveLargeBufferWithPerMessageGROUsingVectorReads() throws {
+        try self.testReceiveLargeBufferWithPerMessageGRO(segments: 10, segmentSize: 1000, writes: 1, vectorReads: 4)
+    }
+
+    func testChannelCanReceiveMultipleLargeBuffersWithPerMessageGROUsingScalarReads() throws {
+        try self.testReceiveLargeBufferWithPerMessageGRO(segments: 10, segmentSize: 1000, writes: 4)
+    }
+
+    func testChannelCanReceiveMultipleLargeBuffersWithPerMessageGROUsingVectorReads() throws {
+        try self.testReceiveLargeBufferWithPerMessageGRO(segments: 10, segmentSize: 1000, writes: 4, vectorReads: 4)
+    }
+
+    func testGetPerMessageGROOption() throws {
+        let getOption = self.firstChannel.getOption(.datagramReceiveSegmentSize)
+        if System.supportsUDPReceiveOffload {
+            XCTAssertEqual(try getOption.wait(), false)  // not-set
+
+            // Now set and check.
+            XCTAssertNoThrow(try self.firstChannel.setOption(.datagramReceiveSegmentSize, value: true).wait())
+            XCTAssertTrue(try self.firstChannel.getOption(.datagramReceiveSegmentSize).wait())
+        } else {
+            XCTAssertThrowsError(try getOption.wait()) { error in
+                XCTAssertEqual(error as? ChannelError, .operationUnsupported)
+            }
+        }
+    }
+
+    func testPerMessageGROThrowsOnNonLinux() throws {
+        #if !os(Linux)
+        // On non-Linux platforms, setting datagramReceiveSegmentSize should throw an error
+        XCTAssertThrowsError(try self.firstChannel.setOption(.datagramReceiveSegmentSize, value: true).wait()) { error in
+            XCTAssertEqual(error as? ChannelError, .operationUnsupported)
+        }
+        #endif
+    }
 }
 
 extension System {
