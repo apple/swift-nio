@@ -505,6 +505,37 @@ final class FileSystemTests: XCTestCase {
         }
     }
 
+    func testCreateDirectoryIsIdempotentWhenAlreadyExists() async throws {
+        let path = try await self.fs.temporaryFilePath()
+
+        try await self.fs.createDirectory(at: path, withIntermediateDirectories: false)
+
+        try await self.fs.createDirectory(at: path, withIntermediateDirectories: false)
+        try await self.fs.createDirectory(at: path, withIntermediateDirectories: true)
+
+        try await self.fs.withDirectoryHandle(atPath: path) { dir in
+            let info = try await dir.info()
+            XCTAssertEqual(info.type, .directory)
+            XCTAssertGreaterThan(info.size, 0)
+        }
+    }
+
+    func testCreateDirectoryThroughSymlinkToExistingDirectoryIsIdempotent() async throws {
+        let realDir = try await self.fs.temporaryFilePath()
+        try await self.fs.createDirectory(at: realDir, withIntermediateDirectories: false)
+
+        let linkPath = try await self.fs.temporaryFilePath()
+        try await self.fs.createSymbolicLink(at: linkPath, withDestination: realDir)
+
+        try await self.fs.createDirectory(at: linkPath, withIntermediateDirectories: false)
+
+        try await self.fs.withDirectoryHandle(atPath: linkPath) { dir in
+            let info = try await dir.info()
+            XCTAssertEqual(info.type, .directory)
+            XCTAssertGreaterThan(info.size, 0)
+        }
+    }
+
     func testCurrentWorkingDirectory() async throws {
         let directory = try await self.fs.currentWorkingDirectory
         XCTAssert(!directory.underlying.isEmpty)
@@ -684,6 +715,31 @@ final class FileSystemTests: XCTestCase {
         try await self.fs.copyItem(at: path, to: copy, strategy: copyStrategy)
 
         try await self.checkDirectoriesMatch(path, copy)
+    }
+
+    func testCopyDirectoryToExistingDestinationSequential() async throws {
+        try await self.testCopyDirectoryToExistingDestination(.sequential)
+    }
+
+    func testCopyDirectoryToExistingDestinationParallelMinimal() async throws {
+        try await self.testCopyDirectoryToExistingDestination(Self.minimalParallel)
+    }
+
+    func testCopyDirectoryToExistingDestinationParallelDefault() async throws {
+        try await self.testCopyDirectoryToExistingDestination(.platformDefault)
+    }
+
+    private func testCopyDirectoryToExistingDestination(
+        _ strategy: CopyStrategy
+    ) async throws {
+        let path1 = try await self.fs.temporaryFilePath()
+        let path2 = try await self.fs.temporaryFilePath()
+        try await self.fs.createDirectory(at: path1, withIntermediateDirectories: false)
+        try await self.fs.createDirectory(at: path2, withIntermediateDirectories: false)
+
+        await XCTAssertThrowsErrorAsync {
+            try await self.fs.copyItem(at: path1, to: path2, strategy: strategy)
+        }
     }
 
     func testCopyOnGeneratedTreeStructureSequential() async throws {

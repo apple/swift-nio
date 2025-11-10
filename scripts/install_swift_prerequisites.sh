@@ -20,7 +20,7 @@ error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
 if command -v apt-get >/dev/null; then
-  PACKAGE_MANAGER_BIN="apt"
+  PACKAGE_MANAGER_BIN="apt-get"
   apt-get update > /dev/null
 elif command -v yum >/dev/null; then
   PACKAGE_MANAGER_BIN="yum"
@@ -28,7 +28,7 @@ else
   fatal "Cannot find either 'apt' or 'yum'"
 fi
 
-log "Installing standard Swift pre-requisites"  # pre-reqs list taken from swift.org
+log "Installing standard Swift prerequisites"  # pre-reqs list taken from swift.org
 DEBIAN_FRONTEND=noninteractive "$PACKAGE_MANAGER_BIN" install -y\
     binutils\
     git\

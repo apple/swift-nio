@@ -217,6 +217,19 @@ extension ChannelOptions {
             public init() {}
         }
 
+        /// ``DatagramReceiveSegmentSize`` enables per-message GRO (Generic Receive Offload) segment size reporting.
+        /// When enabled, the kernel will provide the original segment size via control messages for aggregated datagrams,
+        /// which will be reported in `AddressedEnvelope.Metadata.segmentSize`.
+        ///
+        /// This option requires ``DatagramReceiveOffload`` to be enabled first and is only supported on Linux.
+        /// Support can be checked using ``System/supportsUDPReceiveOffload``.
+        ///
+        /// - Note: This provides the receive-side complement to per-message GSO (``AddressedEnvelope/Metadata/segmentSize``).
+        public struct DatagramReceiveSegmentSize: ChannelOption, Sendable {
+            public typealias Value = Bool
+            public init() {}
+        }
+
         /// When set to true IP level ECN information will be reported through `AddressedEnvelope.Metadata`
         public struct ExplicitCongestionNotificationsOption: ChannelOption, Sendable {
             public typealias Value = Bool
@@ -360,6 +373,9 @@ public struct ChannelOptions: Sendable {
     /// - seealso: `DatagramReceiveOffload`
     public static let datagramReceiveOffload = Types.DatagramReceiveOffload()
 
+    /// - seealso: `DatagramReceiveSegmentSize`
+    public static let datagramReceiveSegmentSize = Types.DatagramReceiveSegmentSize()
+
     /// - seealso: `ExplicitCongestionNotificationsOption`
     public static let explicitCongestionNotification = Types.ExplicitCongestionNotificationsOption()
 
@@ -449,6 +465,11 @@ extension ChannelOption where Self == ChannelOptions.Types.DatagramSegmentSize {
 /// - seealso: `DatagramReceiveOffload`.
 extension ChannelOption where Self == ChannelOptions.Types.DatagramReceiveOffload {
     public static var datagramReceiveOffload: Self { .init() }
+}
+
+/// - seealso: `DatagramReceiveSegmentSize`.
+extension ChannelOption where Self == ChannelOptions.Types.DatagramReceiveSegmentSize {
+    public static var datagramReceiveSegmentSize: Self { .init() }
 }
 
 /// - seealso: `ExplicitCongestionNotificationsOption`.

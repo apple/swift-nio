@@ -1316,7 +1316,6 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testReadUTF8ValidatedString() throws {
-        #if compiler(>=6)
         guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
             throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
         }
@@ -1327,13 +1326,9 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, actual)
         XCTAssertEqual("", try buf.readUTF8ValidatedString(length: 0))
         XCTAssertNil(try buf.readUTF8ValidatedString(length: 1))
-        #else
-        throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
-        #endif  // compiler(>=6)
     }
 
     func testGetUTF8ValidatedString() throws {
-        #if compiler(>=6)
         guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
             throw XCTSkip("'getUTF8ValidatedString' is only available in Swift 6 and later")
         }
@@ -1342,13 +1337,9 @@ class ByteBufferTest: XCTestCase {
         buf.writeString(expected)
         let actual = try buf.getUTF8ValidatedString(at: 7, length: 7)
         XCTAssertEqual("goodbye", actual)
-        #else
-        throw XCTSkip("'getUTF8ValidatedString' is only available in Swift 6 and later")
-        #endif  // compiler(>=6)
     }
 
     func testReadUTF8InvalidString() throws {
-        #if compiler(>=6)
         guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
             throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
         }
@@ -1363,9 +1354,6 @@ class ByteBufferTest: XCTestCase {
             }
         }
         XCTAssertEqual(buf.readableBytes, 16)
-        #else
-        throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
-        #endif  // compiler(>=6)
     }
 
     func testSetIntegerBeyondCapacity() throws {
@@ -2418,7 +2406,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(view?.firstIndex(of: UInt8(0x3F)))
     }
 
-    func testBufferViewLastIndex() {
+    func testBufferViewFirstIndexWithWhereClosure() {
         self.buf.clear()
         self.buf.writeBytes(Array(repeating: UInt8(0x4E), count: 1024))
         self.buf.setBytes([UInt8(0x59)], at: 1000)
@@ -2428,8 +2416,42 @@ class ByteBufferTest: XCTestCase {
         self.buf.setBytes([UInt8(0x3F)], at: 1023)
         self.buf.setBytes([UInt8(0x3F)], at: 2)
         let view = self.buf.viewBytes(at: 5, length: 1010)
-        XCTAssertEqual(1001, view?.lastIndex(of: UInt8(0x59)))
+        XCTAssertEqual(1000, view?.firstIndex(where: { $0 == UInt8(0x59) }))
+        XCTAssertNil(view?.firstIndex(where: { $0 == UInt8(0x3F) }))
+    }
+
+    func testBufferViewLastIndex() {
+        self.buf.clear()
+        self.buf.writeBytes(Array(repeating: UInt8(0x4E), count: 1024))
+        self.buf.setBytes([UInt8(0x3F)], at: 2)
+        self.buf.setBytes([UInt8(0x59)], at: 3)
+        self.buf.setBytes([UInt8(0x61)], at: 1000)
+        self.buf.setBytes([UInt8(0x59)], at: 1001)
+        self.buf.setBytes([UInt8(0x61)], at: 1002)
+        self.buf.setBytes([UInt8(0x59)], at: 1003)
+        self.buf.setBytes([UInt8(0x61)], at: 1004)
+        self.buf.setBytes([UInt8(0x59)], at: 1023)
+        self.buf.setBytes([UInt8(0x3F)], at: 1024)
+        let view = self.buf.viewBytes(at: 5, length: 1010)
+        XCTAssertEqual(1003, view?.lastIndex(of: UInt8(0x59)))
         XCTAssertNil(view?.lastIndex(of: UInt8(0x3F)))
+    }
+
+    func testBufferViewLastIndexWithWhereClosure() {
+        self.buf.clear()
+        self.buf.writeBytes(Array(repeating: UInt8(0x4E), count: 1024))
+        self.buf.setBytes([UInt8(0x3F)], at: 2)
+        self.buf.setBytes([UInt8(0x59)], at: 3)
+        self.buf.setBytes([UInt8(0x61)], at: 1000)
+        self.buf.setBytes([UInt8(0x59)], at: 1001)
+        self.buf.setBytes([UInt8(0x61)], at: 1002)
+        self.buf.setBytes([UInt8(0x59)], at: 1003)
+        self.buf.setBytes([UInt8(0x61)], at: 1004)
+        self.buf.setBytes([UInt8(0x59)], at: 1023)
+        self.buf.setBytes([UInt8(0x3F)], at: 1024)
+        let view = self.buf.viewBytes(at: 5, length: 1010)
+        XCTAssertEqual(1003, view?.lastIndex(where: { $0 == UInt8(0x59) }))
+        XCTAssertNil(view?.lastIndex(where: { $0 == UInt8(0x3F) }))
     }
 
     func testBufferViewContains() {
@@ -4227,7 +4249,6 @@ extension ByteBufferTest {
 
     // MARK: - peekUTF8ValidatedString Tests (available in Swift 6+)
 
-    #if compiler(>=6)
     func testPeekUTF8ValidatedString_Normal() throws {
         guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
             throw XCTSkip("'peekUTF8ValidatedString' is only available in Swift 6 and later")
@@ -4267,7 +4288,6 @@ extension ByteBufferTest {
         )
         XCTAssertEqual(buffer.readerIndex, 0, "peekUTF8ValidatedString() should not advance the reader index.")
     }
-    #endif
 
     // MARK: - peekDispatchData Tests (available when Dispatch is imported)
 
@@ -4423,8 +4443,10 @@ extension ByteBufferTest {
 
 #if compiler(>=6.2)
 extension ByteBufferTest {
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
-    func testWriteBytesRawSpan() {
+    func testWriteBytesRawSpan() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
         // Write 16 bytes into buffer using a RawSpan
         let byteArray: [UInt8] = Array(0..<16)
         let rawSpan = byteArray.span.bytes
@@ -4444,8 +4466,10 @@ extension ByteBufferTest {
         XCTAssertEqual(buf.readerIndex, 16)
     }
 
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
-    func testSetBytesRawSpan() {
+    func testSetBytesRawSpan() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
         // Write 4 bytes using setBytes
         let byteArray: [UInt8] = Array(0..<4)
         let rawSpan = byteArray.span.bytes
@@ -4462,8 +4486,10 @@ extension ByteBufferTest {
         XCTAssertEqual(Array(0..<4), result!)
     }
 
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
     func testReadInlineArrayOfUInt8() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
         let bytes = (0..<10).map { _ in UInt8.random(in: .min ... .max) }
 
         let startWriterIndex = self.buf.writerIndex
@@ -4482,8 +4508,10 @@ extension ByteBufferTest {
         XCTAssertEqual(10, self.buf.readerIndex)
     }
 
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
     func testReadInlineArrayOfUInt64() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
         let bytes = (0..<15).map { _ in UInt64.random(in: .min ... .max) }
 
         let startWriterIndex = self.buf.writerIndex
@@ -4505,8 +4533,10 @@ extension ByteBufferTest {
         XCTAssertEqual(120, self.buf.readerIndex)
     }
 
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
     func testNotEnoughBytesToReadInlineArrayOfInt32() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
         let startWriterIndex = self.buf.writerIndex
         var written = 0
         /// Write 15 bytes. This won't be enough to read an `InlineArray<5, Int32>`.

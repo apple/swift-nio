@@ -428,7 +428,8 @@ class ThreadTest: XCTestCase {
     }
 
     // MARK: - Helpers
-    static func joinThread(_ thread: NIOLockedValueBox<NIOThread?>, file: StaticString = #file, line: UInt = #line) {
+    static func joinThread(_ thread: NIOLockedValueBox<NIOThread?>, file: StaticString = #filePath, line: UInt = #line)
+    {
         if let thread = thread.withLockedValue({ $0 }) {
             thread.join()
         } else {

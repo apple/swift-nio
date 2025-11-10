@@ -178,13 +178,8 @@ internal enum Epoll {
 
 internal enum Linux {
     #if os(Android)
-    #if compiler(>=6.0)
     static let SOCK_CLOEXEC = Android.SOCK_CLOEXEC
     static let SOCK_NONBLOCK = Android.SOCK_NONBLOCK
-    #else
-    static let SOCK_CLOEXEC = Glibc.SOCK_CLOEXEC
-    static let SOCK_NONBLOCK = Glibc.SOCK_NONBLOCK
-    #endif
     #elseif canImport(Musl)
     static let SOCK_CLOEXEC = Musl.SOCK_CLOEXEC
     static let SOCK_NONBLOCK = Musl.SOCK_NONBLOCK
