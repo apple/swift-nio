@@ -511,10 +511,10 @@ class EmbeddedChannelCore: ChannelCore {
     @usableFromInline
     var localAddress: SocketAddress? {
         get {
-            self._localAddress.withLockedValue{ $0 }
+            self._localAddress.withLockedValue { $0 }
         }
         set {
-            self._localAddress.withLockedValue{ $0 = newValue }
+            self._localAddress.withLockedValue { $0 = newValue }
         }
     }
 
@@ -524,10 +524,10 @@ class EmbeddedChannelCore: ChannelCore {
     @usableFromInline
     var remoteAddress: SocketAddress? {
         get {
-            self._remoteAddress.withLockedValue{ $0 }
+            self._remoteAddress.withLockedValue { $0 }
         }
         set {
-            self._remoteAddress.withLockedValue{ $0 = newValue }
+            self._remoteAddress.withLockedValue { $0 = newValue }
         }
     }
 
