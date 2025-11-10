@@ -506,10 +506,30 @@ class EmbeddedChannelCore: ChannelCore {
     var inboundBufferConsumer: Deque<(NIOAny) -> Void> = []
 
     @usableFromInline
-    var localAddress: SocketAddress?
+    internal let _localAddress: NIOLockedValueBox<SocketAddress?> = NIOLockedValueBox(nil)
 
     @usableFromInline
-    var remoteAddress: SocketAddress?
+    var localAddress: SocketAddress? {
+        get {
+            self._localAddress.withLockedValue{ $0 }
+        }
+        set {
+            self._localAddress.withLockedValue{ $0 = newValue }
+        }
+    }
+
+    @usableFromInline
+    internal let _remoteAddress: NIOLockedValueBox<SocketAddress?> = NIOLockedValueBox(nil)
+
+    @usableFromInline
+    var remoteAddress: SocketAddress? {
+        get {
+            self._remoteAddress.withLockedValue{ $0 }
+        }
+        set {
+            self._remoteAddress.withLockedValue{ $0 = newValue }
+        }
+    }
 
     @usableFromInline
     func localAddress0() throws -> SocketAddress {
