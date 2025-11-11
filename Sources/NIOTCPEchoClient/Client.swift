@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
+@_spi(StructuredConcurrencyNIOAsyncChannel) import NIOCore
 @_spi(StructuredConcurrencyNIOAsyncChannel) import NIOPosix
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
@@ -68,9 +68,9 @@ struct Client {
             } handleChannel: { channel in
                 print("Connection(\(number)): Writing request")
                 do {
-                    try await channel.outbound.write("Hello on connection \(number)")
+                    try await channel.out.write("Hello on connection \(number)")
 
-                    for try await inboundData in channel.inbound {
+                    for try await inboundData in channel.in {
                         print("Connection(\(number)): Received response (\(inboundData))")
 
                         // We only expect a single response so we can exit here.

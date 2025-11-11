@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
+@_spi(StructuredConcurrencyNIOAsyncChannel) import NIOCore
 @_spi(StructuredConcurrencyNIOAsyncChannel) import NIOPosix
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
@@ -69,9 +69,9 @@ struct Server {
         // We do this since we don't want to tear down the whole server when a single connection
         // encounters an error.
         do {
-            for try await inboundData in channel.inbound {
+            for try await inboundData in channel.in {
                 print("Received request (\(inboundData))")
-                try await channel.outbound.write(inboundData)
+                try await channel.out.write(inboundData)
             }
         } catch {
             print("Hit error: \(error)")
