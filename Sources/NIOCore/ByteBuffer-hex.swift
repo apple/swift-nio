@@ -400,7 +400,7 @@ extension UInt8 {
     }
 }
 
-extension Substring.UTF8View {
+extension Collection<UInt8> where Self == Self.SubSequence {
     @usableFromInline
     mutating func popNextHexByte() throws -> UInt8? {
         while let nextByte = self.first, nextByte.isASCIIWhitespace {
