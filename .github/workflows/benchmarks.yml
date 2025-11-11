@@ -97,6 +97,11 @@ on:
         description: "The runner pool which will be requested for macOS jobs."
         default: "nightly"
 
+      command_arguments:
+          type: string
+          description: ""
+          default: ""
+
       macos_env_vars:
         type: string
         description: "Environment variables for macOS jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
@@ -214,13 +219,14 @@ jobs:
           echo "macos-matrix=$matrix" >> "$GITHUB_OUTPUT"
         env:
           MACOS_RUNNER_POOL: ${{ inputs.macos_runner_pool }}
+          MACOS_SWIFT_ARGUMENTS: ${{ inputs.macos_command_arguments }}
           MACOS_XCODE_16_3_ENABLED: ${{ inputs.macos_xcode_16_3_enabled }}
           MACOS_XCODE_16_4_ENABLED: ${{ inputs.macos_xcode_16_4_enabled }}
           MACOS_XCODE_26_0_ENABLED: ${{ inputs.macos_xcode_26_0_enabled }}
           MACOS_XCODE_26_1_ENABLED: ${{ inputs.macos_xcode_26_1_enabled }}
           MACOS_XCODE_LATEST_BETA_ENABLED: ${{ inputs.macos_xcode_latest_beta_enabled }}
 
-  benchmarks:
+  benchmarks-linux:
     name: Linux Benchmarks
     needs: construct-matrix-linux
     # Workaround https://github.com/nektos/act/issues/1875
@@ -229,7 +235,7 @@ jobs:
       name: "Benchmarks"
       matrix_string: '${{ needs.construct-matrix-linux.outputs.benchmarks-matrix }}'
 
-  macos-benchmarks:
+  benchmarks-macos:
     name: ${{ matrix.config.name }}
     needs: construct-matrix-macos
     runs-on: [self-hosted, macos, "${{ matrix.config.os }}", "${{ matrix.config.arch }}", "${{ matrix.config.pool }}"]
@@ -252,6 +258,6 @@ jobs:
       - name: Run benchmarks
         run: |
           swift --version
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} SWIFT_VERSION=xcode_${{ matrix.config.xcode_version }} bash
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh ${{ inputs.command_arguments }} | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} SWIFT_VERSION=xcode_${{ matrix.config.xcode_version }} bash
         env:
           DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
