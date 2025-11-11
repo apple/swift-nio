@@ -21,7 +21,7 @@ let swiftSystem: PackageDescription.Target.Dependency = .product(name: "SystemPa
 
 // These platforms require a dependency on `NIOPosix` from `NIOHTTP1` to maintain backward
 // compatibility with previous NIO versions.
-let historicalNIOPosixDependencyRequired: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android]
+let historicalNIOPosixDependencyRequired: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android, .custom("freebsd"), .custom("FreeBSD")]
 
 let swiftSettings: [SwiftSetting] = [
     // The Language Steering Group has promised that they won't break the APIs that currently exist under
@@ -66,6 +66,7 @@ let package = Package(
                 "NIOConcurrencyHelpers",
                 "_NIOBase64",
                 "CNIODarwin",
+                "CNIOFreeBSD",
                 "CNIOLinux",
                 "CNIOWindows",
                 "CNIOWASI",
@@ -99,6 +100,7 @@ let package = Package(
             dependencies: [
                 "CNIOLinux",
                 "CNIODarwin",
+                "CNIOFreeBSD",
                 "CNIOWindows",
                 "NIOConcurrencyHelpers",
                 "NIOCore",
@@ -166,6 +168,10 @@ let package = Package(
             cSettings: [
                 .define("__APPLE_USE_RFC_3542")
             ]
+        ),
+        .target(
+            name: "CNIOFreeBSD",
+            dependencies: []
         ),
         .target(
             name: "CNIOWindows",
@@ -266,6 +272,7 @@ let package = Package(
                 "NIOPosix",
                 "CNIOLinux",
                 "CNIODarwin",
+                "CNIOFreeBSD",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
@@ -490,6 +497,7 @@ let package = Package(
                 "NIOEmbedded",
                 "CNIOLinux",
                 "CNIODarwin",
+                "CNIOFreeBSD",
                 "NIOTLS",
             ],
             swiftSettings: swiftSettings

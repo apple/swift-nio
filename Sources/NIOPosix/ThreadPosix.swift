@@ -34,7 +34,10 @@ private func sys_pthread_setname_np(_ p: pthread_t, _ pointer: UnsafePointer<Int
     return 0
 }
 private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer) -> UnsafeMutableRawPointer?
-
+#elseif os(FreeBSD)
+private let sys_pthread_getname_np = pthread_getname_np
+private let sys_pthread_setname_np = pthread_setname_np
+private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
 #endif
 
 private func sysPthread_create(
@@ -49,6 +52,8 @@ private func sysPthread_create(
     let thread = pthread_create(handle, &attr, destructor, args)
     pthread_attr_destroy(&attr)
     return thread
+    #elseif os(FreeBSD)
+    return pthread_create(handle, nil, destructor, args)
     #else
     #if canImport(Musl)
     var handleLinux: OpaquePointer? = nil
