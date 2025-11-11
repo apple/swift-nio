@@ -98,9 +98,9 @@ on:
         default: "nightly"
 
       command_arguments:
-          type: string
-          description: ""
-          default: ""
+        type: string
+        description: ""
+        default: ""
 
       macos_env_vars:
         type: string
@@ -258,6 +258,6 @@ jobs:
       - name: Run benchmarks
         run: |
           swift --version
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh ${{ inputs.command_arguments }} | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} SWIFT_VERSION=xcode_${{ matrix.config.xcode_version }} bash
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} SWIFT_VERSION=xcode_${{ matrix.config.xcode_version }} bash - ${{ inputs.command_arguments }}
         env:
           DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
