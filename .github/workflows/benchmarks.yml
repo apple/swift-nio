@@ -100,7 +100,7 @@ on:
       macos_command_arguments:
         type: string
         description: "Additional arguments passed to swift package benchmark. Default to empty."
-        default: " "
+        default: ""
 
       macos_env_vars:
         type: string
@@ -185,36 +185,41 @@ jobs:
           if [[ "$xcode_16_3_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
               --arg runner_pool "$runner_pool" \
+              --arg command_arguments "$command_arguments" \
               --argjson env_vars "$macos_env_vars_json" \
-              '.config[.config| length] |= . + { "name": "macOS Xcode 16.3", "xcode_version": "16.3", "xcode_app": "Xcode_16.3.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "command_arguments": "$command_arguments" }')
+              '.config[.config| length] |= . + { "name": "macOS Xcode 16.3", "xcode_version": "16.3", "xcode_app": "Xcode_16.3.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "command_arguments": $command_arguments }')
           fi
 
           if [[ "$xcode_16_4_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
               --arg runner_pool "$runner_pool" \
+              --arg command_arguments "$command_arguments" \
               --argjson env_vars "$macos_env_vars_json" \
-              '.config[.config| length] |= . + { "name": "macOS Xcode 16.4", "xcode_version": "16.4", "xcode_app": "Xcode_16.4.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "command_arguments": "$command_arguments" }')
+              '.config[.config| length] |= . + { "name": "macOS Xcode 16.4", "xcode_version": "16.4", "xcode_app": "Xcode_16.4.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "command_arguments": $command_arguments }')
           fi
 
           if [[ "$xcode_26_0_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
               --arg runner_pool "$runner_pool" \
+              --arg command_arguments "$command_arguments" \
               --argjson env_vars "$macos_env_vars_json" \
-              '.config[.config| length] |= . + { "name": "macOS Xcode 26.0", "xcode_version": "26.0", "xcode_app": "Xcode_26.0.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "command_arguments": "$command_arguments" }')
+              '.config[.config| length] |= . + { "name": "macOS Xcode 26.0", "xcode_version": "26.0", "xcode_app": "Xcode_26.0.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "command_arguments": $command_arguments }')
           fi
 
           if [[ "$xcode_26_1_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
               --arg runner_pool "$runner_pool" \
+              --arg command_arguments "$command_arguments" \
               --argjson env_vars "$macos_env_vars_json" \
-              '.config[.config| length] |= . + { "name": "macOS Xcode 26.1", "xcode_version": "26.1", "xcode_app": "Xcode_26.1.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "command_arguments": "$command_arguments" }')
+              '.config[.config| length] |= . + { "name": "macOS Xcode 26.1", "xcode_version": "26.1", "xcode_app": "Xcode_26.1.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "command_arguments": $command_arguments }')
           fi
 
           if [[ "$xcode_latest_beta_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
               --arg runner_pool "$runner_pool" \
+              --arg command_arguments "$command_arguments" \
               --argjson env_vars "$macos_env_vars_json" \
-              '.config[.config| length] |= . + { "name": "macOS Xcode latest beta", "xcode_version": "latest beta", "xcode_app": "Xcode-latest.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "command_arguments": "$command_arguments" }')
+              '.config[.config| length] |= . + { "name": "macOS Xcode latest beta", "xcode_version": "latest beta", "xcode_app": "Xcode-latest.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "command_arguments": $command_arguments }')
           fi
 
           echo "macos-matrix=$matrix" >> "$GITHUB_OUTPUT"
@@ -259,6 +264,6 @@ jobs:
       - name: Run benchmarks
         run: |
           swift --version
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} SWIFT_VERSION=xcode_${{ matrix.config.xcode_version }} bash - " " ${{ inputs.command_arguments }}
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} SWIFT_VERSION=xcode_${{ matrix.config.xcode_version }} bash -s ${{ inputs.command_arguments }}
         env:
           DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
