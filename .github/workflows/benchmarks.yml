@@ -100,7 +100,7 @@ on:
       command_arguments:
         type: string
         description: ""
-        default: ""
+        default: " "
 
       macos_env_vars:
         type: string
