@@ -512,7 +512,9 @@ class EmbeddedChannelCore: ChannelCore {
     }
 
     @usableFromInline
-    internal let _addresses: NIOLockedValueBox<Addresses> = NIOLockedValueBox(.init(localAddress: nil, remoteAddress: nil))
+    internal let _addresses: NIOLockedValueBox<Addresses> = NIOLockedValueBox(
+        .init(localAddress: nil, remoteAddress: nil)
+    )
 
     @usableFromInline
     var localAddress: SocketAddress? {
