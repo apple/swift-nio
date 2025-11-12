@@ -264,6 +264,6 @@ jobs:
       - name: Run benchmarks
         run: |
           swift --version
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} SWIFT_VERSION=xcode_${{ matrix.config.xcode_version }} bash -s -v ${{ matrix.config.command_arguments }}
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} SWIFT_VERSION=xcode_${{ matrix.config.xcode_version }} bash -s -v "\"-Xswiftc -warnings-as-errors\""
         env:
           DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
