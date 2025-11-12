@@ -15,6 +15,9 @@
 import Atomics
 import NIOConcurrencyHelpers
 import NIOCore
+#if os(Windows)
+import WinSDK
+#endif
 
 private struct SocketChannelLifecycleManager {
     // MARK: Types
@@ -1215,7 +1218,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     ///   - err: The `Error` which was thrown by `readFromSocket`.
     /// - Returns: `true` if the `Channel` should be closed, `false` otherwise.
     func shouldCloseOnReadError(_ err: Error) -> Bool {
-        true
+        return true
     }
 
     /// Handles an error reported by the selector.

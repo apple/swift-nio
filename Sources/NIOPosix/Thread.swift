@@ -92,18 +92,14 @@ final class NIOThread: Sendable {
 
     static var currentThreadName: String? {
         #if os(Windows)
-        ThreadOpsSystem.threadName(.init(GetCurrentThread()))
+        ThreadOpsSystem.threadName(.init(handle: GetCurrentThread()))
         #else
         ThreadOpsSystem.threadName(.init(handle: pthread_self()))
         #endif
     }
 
     static var currentThreadID: UInt {
-        #if os(Windows)
-        UInt(bitPattern: .init(bitPattern: ThreadOpsSystem.currentThread))
-        #else
         UInt(bitPattern: .init(bitPattern: ThreadOpsSystem.currentThread.handle))
-        #endif
     }
 
     @discardableResult

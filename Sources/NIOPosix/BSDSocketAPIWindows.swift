@@ -195,7 +195,11 @@ extension NIOBSDSocket {
     ) throws -> NIOBSDSocket.Handle? {
         let socket: NIOBSDSocket.Handle = WinSDK.accept(s, addr, addrlen)
         if socket == WinSDK.INVALID_SOCKET {
-            throw IOError(winsock: WSAGetLastError(), reason: "accept")
+            let lastError = WSAGetLastError()
+            if lastError == WSAEWOULDBLOCK {
+                return nil
+            }
+            throw IOError(winsock: lastError, reason: "accept")
         }
         return socket
     }
