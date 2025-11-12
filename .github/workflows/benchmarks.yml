@@ -100,7 +100,7 @@ on:
       macos_command_arguments:
         type: string
         description: "Additional arguments passed to swift package benchmark. Default to empty."
-        default: " "
+        default: "\"\""
 
       macos_env_vars:
         type: string
