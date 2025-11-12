@@ -100,7 +100,7 @@ on:
       macos_command_arguments:
         type: string
         description: "Additional arguments passed to swift package benchmark. Default to empty."
-        default: "\"\""
+        default: "\"-Xswiftc -warnings-as-errors\""
 
       macos_env_vars:
         type: string
