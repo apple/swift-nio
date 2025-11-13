@@ -41,6 +41,6 @@ fi
 
 log "Recalculating thresholds..."
 
-swift package --package-path "$benchmark_package_path" "${swift_package_arguments[@]}" benchmark thresholds update --format metricP90AbsoluteThresholds --path "${benchmark_package_path}/Thresholds/${swift_version}/"
+swift package --package-path "$benchmark_package_path" "${swift_package_arguments[@]}" --allow-writing-to-package-directory benchmark thresholds update --format metricP90AbsoluteThresholds --path "${benchmark_package_path}/Thresholds/${swift_version}/"
 echo "=== BEGIN DIFF ==="  # use echo, not log for clean output to be scraped
 git diff --exit-code HEAD
