@@ -34,6 +34,7 @@ jobs:
     uses: ./.github/workflows/benchmarks.yml
     with:
       benchmark_package_path: "Benchmarks"
+      runner_pool: general
 
   cxx-interop:
     name: Cxx interop
