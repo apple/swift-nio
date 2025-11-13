@@ -267,13 +267,13 @@ jobs:
       - name: Run benchmarks
         run: |
           swift --version
-          swift package --package-path "${{ inputs.benchmark_package_path }}" benchmark thresholds check --format metricP90AbsoluteThresholds --path "${{ inputs.benchmark_package_path }}/Thresholds/Xcode ${{ matrix.config.xcode_version }}/"
+          swift package --package-path "${{ inputs.benchmark_package_path }}" --disable-sandbox benchmark thresholds check --format metricP90AbsoluteThresholds --path "${{ inputs.benchmark_package_path }}/Thresholds/Xcode ${{ matrix.config.xcode_version }}/"
         env:
           DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
       - name: Recalculate thresholds
         if: failure()
         run: |
-          swift package --package-path "${{ inputs.benchmark_package_path }}" --allow-writing-to-package-directory benchmark thresholds update --format metricP90AbsoluteThresholds --path "${{ inputs.benchmark_package_path }}/Thresholds/Xcode ${{ matrix.config.xcode_version }}/"
+          swift package --package-path "${{ inputs.benchmark_package_path }}" --disable-sandbox --allow-writing-to-package-directory benchmark thresholds update --format metricP90AbsoluteThresholds --path "${{ inputs.benchmark_package_path }}/Thresholds/Xcode ${{ matrix.config.xcode_version }}/"
           echo "=== BEGIN DIFF ==="  # use echo, not log for clean output to be scraped
           git diff --exit-code HEAD
         env:
