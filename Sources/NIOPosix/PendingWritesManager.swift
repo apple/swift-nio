@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
+import CNIOBSD
 import CNIOLinux
 import NIOCore
 
