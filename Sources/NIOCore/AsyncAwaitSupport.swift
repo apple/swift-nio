@@ -425,7 +425,15 @@ extension AsyncSequence where Element == ByteBuffer {
         // this has also the benefit of not copying at all,
         // if the async sequence contains only one element.
         var iterator = self.makeAsyncIterator()
-        guard var head = try await iterator.next() else {
+        let head: ByteBuffer?
+        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *) {
+            head = try await iterator.next(isolation: #isolation)
+        } else {
+            var box = UnsafeTransfer(iterator)
+            head = try await box.wrappedValue.next()
+        }
+
+        guard var head = head else {
             return ByteBuffer()
         }
         guard head.readableBytes <= maxBytes else {

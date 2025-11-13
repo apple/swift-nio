@@ -28,7 +28,8 @@ let swiftSettings: [SwiftSetting] = [
     // this "experimental" feature flag without two subsequent releases. We assume they will respect that
     // promise, so we enable this here. For more, see:
     // https://forums.swift.org/t/experimental-support-for-lifetime-dependencies-in-swift-6-2-and-beyond/78638
-    .enableExperimentalFeature("Lifetimes")
+    .enableExperimentalFeature("Lifetimes"),
+    .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
 ]
 
 // This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and

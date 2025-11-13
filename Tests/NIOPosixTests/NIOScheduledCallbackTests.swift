@@ -459,7 +459,7 @@ func XCTWithTimeout<Result>(
     _ timeout: TimeAmount,
     file: StaticString = #filePath,
     line: UInt = #line,
-    operation: @escaping @Sendable () async throws -> Result
+    operation: @isolated(any) @escaping @Sendable () async throws -> Result
 ) async throws -> Result where Result: Sendable {
     do {
         return try await withTimeout(timeout, operation: operation)
@@ -471,7 +471,7 @@ func XCTWithTimeout<Result>(
 
 func withTimeout<Result>(
     _ timeout: TimeAmount,
-    operation: @escaping @Sendable () async throws -> Result
+    operation: @isolated(any) @escaping @Sendable () async throws -> Result
 ) async throws -> Result where Result: Sendable {
     try await withThrowingTaskGroup(of: Result.self) { group in
         group.addTask {
