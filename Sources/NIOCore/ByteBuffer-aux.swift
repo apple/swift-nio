@@ -568,7 +568,7 @@ extension ByteBuffer {
     /// - Returns: The number of bytes written or `bytes.byteCount`.
     @discardableResult
     @inlinable
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public mutating func writeBytes(_ bytes: RawSpan) -> Int {
         let written = self.setBytes(bytes, at: self.writerIndex)
         self._moveWriterIndex(forwardBy: written)
