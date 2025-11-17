@@ -73,23 +73,23 @@ on:
 
       macos_xcode_16_3_enabled:
         type: boolean
-        description: "Boolean to enable the macOS Xcode 16.3 benchmark job. Defaults to true."
+        description: "Boolean to enable the macOS Xcode 16.3 benchmark job. Defaults to false."
         default: false
       macos_xcode_16_4_enabled:
         type: boolean
-        description: "Boolean to enable the macOS Xcode 16.4 benchmark job. Defaults to true."
+        description: "Boolean to enable the macOS Xcode 16.4 benchmark job. Defaults to false."
         default: false
       macos_xcode_26_0_enabled:
         type: boolean
-        description: "Boolean to enable the macOS Xcode 26.0 benchmark job. Defaults to true."
+        description: "Boolean to enable the macOS Xcode 26.0 benchmark job. Defaults to false."
         default: false
       macos_xcode_26_1_enabled:
         type: boolean
-        description: "Boolean to enable the macOS Xcode 26.1 benchmark job. Defaults to true."
+        description: "Boolean to enable the macOS Xcode 26.1 benchmark job. Defaults to false."
         default: false
       macos_xcode_latest_beta_enabled:
         type: boolean
-        description: "Boolean to enable the macOS Xcode latest beta benchmark job. Defaults to true."
+        description: "Boolean to enable the macOS Xcode latest beta benchmark job. Defaults to false."
         default: false
 
       macos_runner_pool:
@@ -264,17 +264,24 @@ jobs:
           echo "Exporting environment variables from matrix configuration..."
           echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "\(.key)=\(.value)"' >> $GITHUB_ENV
           echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "exporting \(.key)=\(.value)"'
-      - name: Run benchmarks
+      - name: Run benchmarks script
         run: |
-          swift --version
-          swift package --package-path "${{ inputs.benchmark_package_path }}" --disable-sandbox benchmark thresholds check --format metricP90AbsoluteThresholds --path "${{ inputs.benchmark_package_path }}/Thresholds/Xcode ${{ matrix.config.xcode_version }}/"
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} bash -s -- --disable-sandbox --allow-writing-to-package-directory
         env:
           DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
-      - name: Recalculate thresholds
-        if: failure()
-        run: |
-          swift package --package-path "${{ inputs.benchmark_package_path }}" --disable-sandbox --allow-writing-to-package-directory benchmark thresholds update --format metricP90AbsoluteThresholds --path "${{ inputs.benchmark_package_path }}/Thresholds/Xcode ${{ matrix.config.xcode_version }}/"
-          echo "=== BEGIN DIFF ==="  # use echo, not log for clean output to be scraped
-          git diff --exit-code HEAD
-        env:
-          DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
+          SWIFT_VERSION: "Xcode ${{ matrix.config.xcode_version }}"
+
+      # - name: Run benchmarks
+      #   run: |
+      #     swift --version
+      #     swift package --package-path "${{ inputs.benchmark_package_path }}" --disable-sandbox benchmark thresholds check --format metricP90AbsoluteThresholds --path "${{ inputs.benchmark_package_path }}/Thresholds/Xcode ${{ matrix.config.xcode_version }}/"
+      #   env:
+      #     DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
+      # - name: Recalculate thresholds
+      #   if: failure()
+      #   run: |
+      #     swift package --package-path "${{ inputs.benchmark_package_path }}" --disable-sandbox --allow-writing-to-package-directory benchmark thresholds update --format metricP90AbsoluteThresholds --path "${{ inputs.benchmark_package_path }}/Thresholds/Xcode ${{ matrix.config.xcode_version }}/"
+      #     echo "=== BEGIN DIFF ==="  # use echo, not log for clean output to be scraped
+      #     git diff --exit-code HEAD
+      #   env:
+      #     DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"

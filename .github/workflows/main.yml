@@ -33,6 +33,7 @@ jobs:
     uses: ./.github/workflows/benchmarks.yml
     with:
       benchmark_package_path: "Benchmarks"
+      macos_runner_pool: nightly
 
   construct-integration-test-matrix:
     name: Construct integration test matrix
