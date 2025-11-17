@@ -510,7 +510,7 @@ public struct ByteBuffer {
 
     #if compiler(>=6.2)
     @inlinable
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     mutating func _setBytes(_ bytes: RawSpan, at index: _Index) -> _Capacity {
         let bytesCount = bytes.byteCount
         let newEndIndex: _Index = index + _toIndex(bytesCount)
@@ -524,7 +524,7 @@ public struct ByteBuffer {
     }
 
     @inlinable
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     mutating func _setBytesAssumingUniqueBufferAccess(_ bytes: RawSpan, at index: _Index) {
         let targetPtr = UnsafeMutableRawBufferPointer(
             rebasing: self._slicedStorageBuffer.dropFirst(Int(index))
@@ -1122,7 +1122,7 @@ extension ByteBuffer {
     /// Copy `bytes` from a `RawSpan` into the `ByteBuffer` at `index`. Does not move the writer index.
     @discardableResult
     @inlinable
-    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public mutating func setBytes(_ bytes: RawSpan, at index: Int) -> Int {
         Int(self._setBytes(bytes, at: _toIndex(index)))
     }
