@@ -221,7 +221,7 @@ jobs:
           MACOS_XCODE_LATEST_BETA_ENABLED: ${{ inputs.macos_xcode_latest_beta_enabled }}
 
   benchmarks-linux:
-    name: Linux Benchmarks
+    name: Benchmarks
     needs: construct-matrix-linux
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
