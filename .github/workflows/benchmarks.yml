@@ -149,6 +149,12 @@ jobs:
   construct-matrix-macos:
     name: Construct macOS Benchmarks matrix
     runs-on: ubuntu-latest
+    if: |
+      inputs.macos_xcode_16_3_enabled ||
+      inputs.macos_xcode_16_4_enabled ||
+      inputs.macos_xcode_26_0_enabled ||
+      inputs.macos_xcode_26_1_enabled ||
+      inputs.macos_xcode_latest_beta_enabled
     outputs:
       macos-matrix: '${{ steps.generate-matrix.outputs.macos-matrix }}'
     steps:
