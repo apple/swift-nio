@@ -19,7 +19,11 @@ import Darwin
 import CNIODarwin
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
+#if os(FreeBSD)
+import CNIOFreeBSD
+#else
 import CNIOLinux
+#endif
 #elseif canImport(Musl)
 @preconcurrency import Musl
 import CNIOLinux
@@ -73,6 +77,9 @@ extension CInterop {
     #if canImport(Darwin)
     typealias FTS = CNIODarwin.FTS
     typealias FTSEnt = CNIODarwin.FTSENT
+    #elseif os(FreeBSD)
+    typealias FTS = CNIOFreeBSD.FTS
+    typealias FTSEnt = CNIOFreeBSD.FTSENT
     #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     typealias FTS = CNIOLinux.FTS
     typealias FTSEnt = CNIOLinux.FTSENT

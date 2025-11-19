@@ -1272,8 +1272,7 @@ extension FileSystem {
                 location: .here()
             )
         }
-
-        #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        #elseif os(FreeBSD) || canImport(Glibc) || canImport(Musl) || canImport(Bionic)
 
         let openSourceResult = self._openFile(
             forReadingAt: sourcePath,
@@ -1339,6 +1338,25 @@ extension FileSystem {
                 while offset < sourceInfo.size {
                     // sendfile(2) limits writes to 0x7ffff000 in size
                     let size = min(Int(sourceInfo.size) - offset, 0x7fff_f000)
+                    #if os(FreeBSD)
+                    var _offset: Int? = offset
+                    var _dOffset: Int? = nil
+                    let result = Syscall.copy_file_range(
+                        from: sourceFD,
+                        offset: &_offset,
+                        to: destinationFD,
+                        destOffset: &_dOffset,
+                        size: size,
+                        flags: 0
+                    ).mapError { errno in
+                        FileSystemError.copy_file_range(
+                            errno: errno,
+                            from: sourcePath,
+                            to: destinationPath,
+                            location: .here()
+                        )
+                    }
+                    #else
                     let result = Syscall.sendfile(
                         to: destinationFD,
                         from: sourceFD,
@@ -1352,7 +1370,7 @@ extension FileSystem {
                             location: .here()
                         )
                     }
-
+                    #endif
                     switch result {
                     case let .success(bytesCopied):
                         offset += bytesCopied
