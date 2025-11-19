@@ -35,7 +35,6 @@ jobs:
     with:
       benchmark_package_path: "Benchmarks"
 
-
   cxx-interop:
     name: Cxx interop
     # Workaround https://github.com/nektos/act/issues/1875
