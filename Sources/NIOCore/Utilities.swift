@@ -20,6 +20,9 @@ import CNIOLinux
 #elseif canImport(Android)
 @preconcurrency import Android
 #endif
+#elseif os(OpenBSD)
+import CNIOBSD
+@preconcurrency import Glibc
 #elseif os(Windows)
 import ucrt
 import let WinSDK.RelationProcessorCore

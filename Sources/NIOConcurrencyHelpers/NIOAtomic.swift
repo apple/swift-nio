@@ -213,6 +213,7 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
 
     /// Create an atomic object with `value`
     @inlinable
+    @available(OpenBSD, unavailable, message: "malloc_size is unavailable.")
     public static func makeAtomic(value: T) -> NIOAtomic {
         let manager = Manager(bufferClass: self, minimumCapacity: 1) { _, _ in }
         manager.withUnsafeMutablePointerToElements {
