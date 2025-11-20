@@ -31,7 +31,8 @@ let benchmarks = {
             metrics: defaultMetrics,
             scalingFactor: .mega,
             maxDuration: .seconds(10_000_000),
-            maxIterations: 5
+            maxIterations: 5,
+            thresholds: [.mallocCountTotal: .init(absolute: [.p90: 50])]
         )
     ) { benchmark in
         try runTCPEcho(
