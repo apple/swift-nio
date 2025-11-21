@@ -561,15 +561,50 @@ extension NIOAsyncWriter {
                     throw error
 
                 case .suspendTask:
+                    unsafe.unlock()
+                    // Holding the lock here *should* be safe but because of a bug in the runtime
+                    // it isn't, so drop the lock, create the continuation and then try again.
+                    //
+                    // Dropping and reacquiring the lock may result in yields being reordered but
+                    // only from the perspective of when this function was entered. For example:
+                    //
+                    // - T1 calls _yield
+                    // - T2 calls _yield
+                    // - T2 returns from _yield
+                    // - T1 returns from _yield
+                    //
+                    // This is fine: the async writer doesn't offer any ordering guarantees for
+                    // calls made from different threads.
+                    //
+                    // Within a thread there is no possibility of re-ordering as the call only
+                    // returns once the write has been yielded.
                     return try await withCheckedThrowingContinuation {
                         (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
-                        let didSuspend = unsafe.withValueAssumingLockIsAcquired {
-                            $0.stateMachine.yield(continuation: continuation, yieldID: yieldID)
-                            return $0.didSuspend
+                        let unsafe = self._state.unsafe
+                        unsafe.lock()
+
+                        let action = unsafe.withValueAssumingLockIsAcquired {
+                            $0.stateMachine.yield(yieldID: yieldID)
                         }
 
-                        unsafe.unlock()
-                        didSuspend?()
+                        switch action {
+                        case .callDidYield(let delegate):
+                            unsafe.unlock()
+                            delegate.didYield(contentsOf: Deque(sequence))
+                            continuation.resume(returning: .yielded)
+
+                        case .throwError(let error):
+                            unsafe.unlock()
+                            continuation.resume(throwing: error)
+
+                        case .suspendTask:
+                            let didSuspend = unsafe.withValueAssumingLockIsAcquired {
+                                $0.stateMachine.yield(continuation: continuation, yieldID: yieldID)
+                                return $0.didSuspend
+                            }
+                            unsafe.unlock()
+                            didSuspend?()
+                        }
                     }
                 }
             } onCancel: {
@@ -632,14 +667,50 @@ extension NIOAsyncWriter {
                     throw error
 
                 case .suspendTask:
+                    unsafe.unlock()
+                    // Holding the lock here *should* be safe but because of a bug in the runtime
+                    // it isn't, so drop the lock, create the continuation and then try again.
+                    //
+                    // Dropping and reacquiring the lock may result in yields being reordered but
+                    // only from the perspective of when this function was entered. For example:
+                    //
+                    // - T1 calls _yield
+                    // - T2 calls _yield
+                    // - T2 returns from _yield
+                    // - T1 returns from _yield
+                    //
+                    // This is fine: the async writer doesn't offer any ordering guarantees for
+                    // calls made from different threads.
+                    //
+                    // Within a thread there is no possibility of re-ordering as the call only
+                    // returns once the write has been yielded.
                     return try await withCheckedThrowingContinuation {
                         (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
-                        let didSuspend = unsafe.withValueAssumingLockIsAcquired {
-                            $0.stateMachine.yield(continuation: continuation, yieldID: yieldID)
-                            return $0.didSuspend
+                        let unsafe = self._state.unsafe
+                        unsafe.lock()
+
+                        let action = unsafe.withValueAssumingLockIsAcquired {
+                            $0.stateMachine.yield(yieldID: yieldID)
                         }
-                        unsafe.unlock()
-                        didSuspend?()
+
+                        switch action {
+                        case .callDidYield(let delegate):
+                            unsafe.unlock()
+                            delegate.didYield(element)
+                            continuation.resume(returning: .yielded)
+
+                        case .throwError(let error):
+                            unsafe.unlock()
+                            continuation.resume(throwing: error)
+
+                        case .suspendTask:
+                            let didSuspend = unsafe.withValueAssumingLockIsAcquired {
+                                $0.stateMachine.yield(continuation: continuation, yieldID: yieldID)
+                                return $0.didSuspend
+                            }
+                            unsafe.unlock()
+                            didSuspend?()
+                        }
                     }
                 }
             } onCancel: {
