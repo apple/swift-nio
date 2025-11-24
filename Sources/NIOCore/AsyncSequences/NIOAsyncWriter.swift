@@ -558,6 +558,8 @@ extension NIOAsyncWriter {
                     // Holding the lock here *should* be safe but because of a bug in the runtime
                     // it isn't, so drop the lock, create the continuation and then try again.
                     //
+                    // See https://github.com/swiftlang/swift/issues/85668
+                    //
                     // Dropping and reacquiring the lock may result in yields being reordered but
                     // only from the perspective of when this function was entered. For example:
                     //
@@ -655,6 +657,8 @@ extension NIOAsyncWriter {
                 case .suspendTask:
                     // Holding the lock here *should* be safe but because of a bug in the runtime
                     // it isn't, so drop the lock, create the continuation and then try again.
+                    //
+                    // See https://github.com/swiftlang/swift/issues/85668
                     //
                     // Dropping and reacquiring the lock may result in yields being reordered but
                     // only from the perspective of when this function was entered. For example:
