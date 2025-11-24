@@ -573,7 +573,8 @@ extension NIOAsyncWriter {
                     // returns once the write has been yielded.
                     return try await withCheckedThrowingContinuation {
                         (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
-                        let (action, didSuspend) = self._state.withLockedValue { state -> (NIOAsyncWriter.StateMachine.YieldAction, (@Sendable () -> Void)?) in
+                        let (action, didSuspend) = self._state.withLockedValue {
+                            state -> (NIOAsyncWriter.StateMachine.YieldAction, (@Sendable () -> Void)?) in
                             let yieldAction = state.stateMachine.yield(yieldID: yieldID)
                             switch yieldAction {
                             case .callDidYield, .throwError:
@@ -670,7 +671,8 @@ extension NIOAsyncWriter {
                     // returns once the write has been yielded.
                     return try await withCheckedThrowingContinuation {
                         (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
-                        let (action, didSuspend) = self._state.withLockedValue { state -> (NIOAsyncWriter.StateMachine.YieldAction, (@Sendable () -> Void)?) in
+                        let (action, didSuspend) = self._state.withLockedValue {
+                            state -> (NIOAsyncWriter.StateMachine.YieldAction, (@Sendable () -> Void)?) in
                             let yieldAction = state.stateMachine.yield(yieldID: yieldID)
                             switch yieldAction {
                             case .callDidYield, .throwError:
