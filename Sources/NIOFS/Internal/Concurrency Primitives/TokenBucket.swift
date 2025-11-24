@@ -34,15 +34,46 @@ import NIOConcurrencyHelpers
 /// ``NIOLock``.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class TokenBucket: @unchecked Sendable {
-    private var tokens: Int
-    private var waiters: Deque<CheckedContinuation<Void, Never>>
-    private let lock: NIOLock
+    private struct State {
+        var tokens: Int
+        var waiters: Deque<CheckedContinuation<Void, Never>>
+
+        enum TakeTokenResult {
+            /// A token is available to use.
+            case tookToken
+            /// No token is available, call back with a continuation.
+            case suspend
+            /// No token is available, the continuation will be resumed with one later.
+            case suspended
+        }
+
+        mutating func takeToken(continuation: CheckedContinuation<Void, Never>?) -> TakeTokenResult {
+            if self.tokens > 0 {
+                self.tokens &-= 1
+                return .tookToken
+            } else if let continuation = continuation {
+                self.waiters.append(continuation)
+                return .suspended
+            } else {
+                return .suspend
+            }
+        }
+
+        mutating func returnToken() -> CheckedContinuation<Void, Never>? {
+            if let next = self.waiters.popFirst() {
+                return next
+            } else {
+                self.tokens &+= 1
+                return nil
+            }
+        }
+    }
+
+    private let lock: NIOLockedValueBox<State>
 
     init(tokens: Int) {
         precondition(tokens >= 1, "Need at least one token!")
-        self.tokens = tokens
-        self.waiters = Deque()
-        self.lock = NIOLock()
+        self.lock = NIOLockedValueBox(State(tokens: tokens, waiters: []))
     }
 
     /// Executes an `async` closure immediately when a token is available.
@@ -60,29 +91,35 @@ final class TokenBucket: @unchecked Sendable {
     }
 
     private func getToken() async {
-        self.lock.lock()
-        if self.tokens > 0 {
-            self.tokens -= 1
-            self.lock.unlock()
-            return
-        }
+        switch self.lock.withLockedValue({ $0.takeToken(continuation: nil) }) {
+        case .tookToken:
+            ()
 
-        await withCheckedContinuation {
-            self.waiters.append($0)
-            self.lock.unlock()
+        case .suspend:
+            // Holding the lock here *should* be safe but because of a bug in the runtime
+            // it isn't, so drop the lock, create the continuation and try again.
+            //
+            // See also: https://github.com/swiftlang/swift/issues/85668
+            await withCheckedContinuation { continuation in
+                switch self.lock.withLockedValue({ $0.takeToken(continuation: continuation) }) {
+                case .tookToken:
+                    continuation.resume()
+                case .suspended:
+                    ()
+                case .suspend:
+                    // Only possible when 'takeToken(continuation:)' is called with no continuation.
+                    fatalError()
+                }
+            }
+
+        case .suspended:
+            // Only possible when 'takeToken(continuation:)' is called with a continuation.
+            fatalError()
         }
     }
 
     private func returnToken() {
-        if let waiter = self.lock.withLock({ () -> CheckedContinuation<Void, Never>? in
-            if let nextWaiter = self.waiters.popFirst() {
-                return nextWaiter
-            }
-
-            self.tokens += 1
-            return nil
-        }) {
-            waiter.resume()
-        }
+        let continuation = self.lock.withLockedValue { $0.returnToken() }
+        continuation?.resume()
     }
 }
