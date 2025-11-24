@@ -584,6 +584,7 @@ extension NIOAsyncWriter {
                         case .callDidYield(let delegate):
                             unsafe.unlock()
                             delegate.didYield(contentsOf: Deque(sequence))
+                            self.unbufferQueuedEvents()
                             continuation.resume(returning: .yielded)
 
                         case .throwError(let error):
@@ -682,6 +683,7 @@ extension NIOAsyncWriter {
                         case .callDidYield(let delegate):
                             unsafe.unlock()
                             delegate.didYield(element)
+                            self.unbufferQueuedEvents()
                             continuation.resume(returning: .yielded)
 
                         case .throwError(let error):
