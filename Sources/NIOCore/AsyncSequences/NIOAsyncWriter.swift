@@ -573,30 +573,28 @@ extension NIOAsyncWriter {
                     // returns once the write has been yielded.
                     return try await withCheckedThrowingContinuation {
                         (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
-                        let unsafe = self._state.unsafe
-                        unsafe.lock()
-
-                        let action = unsafe.withValueAssumingLockIsAcquired {
-                            $0.stateMachine.yield(yieldID: yieldID)
+                        let (action, didSuspend) = self._state.withLockedValue { state -> (NIOAsyncWriter.StateMachine.YieldAction, (@Sendable () -> Void)?) in
+                            let yieldAction = state.stateMachine.yield(yieldID: yieldID)
+                            switch yieldAction {
+                            case .callDidYield, .throwError:
+                                return (yieldAction, nil)
+                            case .suspendTask:
+                                state.stateMachine.yield(continuation: continuation, yieldID: yieldID)
+                                let didSuspend = state.didSuspend
+                                return (yieldAction, didSuspend)
+                            }
                         }
 
                         switch action {
                         case .callDidYield(let delegate):
-                            unsafe.unlock()
                             delegate.didYield(contentsOf: Deque(sequence))
                             self.unbufferQueuedEvents()
                             continuation.resume(returning: .yielded)
 
                         case .throwError(let error):
-                            unsafe.unlock()
                             continuation.resume(throwing: error)
 
                         case .suspendTask:
-                            let didSuspend = unsafe.withValueAssumingLockIsAcquired {
-                                $0.stateMachine.yield(continuation: continuation, yieldID: yieldID)
-                                return $0.didSuspend
-                            }
-                            unsafe.unlock()
                             didSuspend?()
                         }
                     }
@@ -672,30 +670,28 @@ extension NIOAsyncWriter {
                     // returns once the write has been yielded.
                     return try await withCheckedThrowingContinuation {
                         (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
-                        let unsafe = self._state.unsafe
-                        unsafe.lock()
-
-                        let action = unsafe.withValueAssumingLockIsAcquired {
-                            $0.stateMachine.yield(yieldID: yieldID)
+                        let (action, didSuspend) = self._state.withLockedValue { state -> (NIOAsyncWriter.StateMachine.YieldAction, (@Sendable () -> Void)?) in
+                            let yieldAction = state.stateMachine.yield(yieldID: yieldID)
+                            switch yieldAction {
+                            case .callDidYield, .throwError:
+                                return (yieldAction, nil)
+                            case .suspendTask:
+                                state.stateMachine.yield(continuation: continuation, yieldID: yieldID)
+                                let didSuspend = state.didSuspend
+                                return (yieldAction, didSuspend)
+                            }
                         }
 
                         switch action {
                         case .callDidYield(let delegate):
-                            unsafe.unlock()
                             delegate.didYield(element)
                             self.unbufferQueuedEvents()
                             continuation.resume(returning: .yielded)
 
                         case .throwError(let error):
-                            unsafe.unlock()
                             continuation.resume(throwing: error)
 
                         case .suspendTask:
-                            let didSuspend = unsafe.withValueAssumingLockIsAcquired {
-                                $0.stateMachine.yield(continuation: continuation, yieldID: yieldID)
-                                return $0.didSuspend
-                            }
-                            unsafe.unlock()
                             didSuspend?()
                         }
                     }
