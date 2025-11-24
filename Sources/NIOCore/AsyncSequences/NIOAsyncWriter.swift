@@ -540,28 +540,21 @@ extension NIOAsyncWriter {
             let yieldID = yieldID ?? self._yieldIDGenerator.generateUniqueYieldID()
 
             return try await withTaskCancellationHandler {
-                // We are manually locking here to hold the lock across the withCheckedContinuation call
-                let unsafe = self._state.unsafe
-                unsafe.lock()
-
-                let action = unsafe.withValueAssumingLockIsAcquired {
+                let action = self._state.withLockedValue {
                     $0.stateMachine.yield(yieldID: yieldID)
                 }
 
                 switch action {
                 case .callDidYield(let delegate):
                     // We are allocating a new Deque for every write here
-                    unsafe.unlock()
                     delegate.didYield(contentsOf: Deque(sequence))
                     self.unbufferQueuedEvents()
                     return .yielded
 
                 case .throwError(let error):
-                    unsafe.unlock()
                     throw error
 
                 case .suspendTask:
-                    unsafe.unlock()
                     // Holding the lock here *should* be safe but because of a bug in the runtime
                     // it isn't, so drop the lock, create the continuation and then try again.
                     //
@@ -646,28 +639,20 @@ extension NIOAsyncWriter {
             let yieldID = yieldID ?? self._yieldIDGenerator.generateUniqueYieldID()
 
             return try await withTaskCancellationHandler {
-                // We are manually locking here to hold the lock across the withCheckedContinuation call
-                let unsafe = self._state.unsafe
-                unsafe.lock()
-
-                let action = unsafe.withValueAssumingLockIsAcquired {
+                let action = self._state.withLockedValue {
                     $0.stateMachine.yield(yieldID: yieldID)
                 }
 
                 switch action {
                 case .callDidYield(let delegate):
-                    // We are allocating a new Deque for every write here
-                    unsafe.unlock()
                     delegate.didYield(element)
                     self.unbufferQueuedEvents()
                     return .yielded
 
                 case .throwError(let error):
-                    unsafe.unlock()
                     throw error
 
                 case .suspendTask:
-                    unsafe.unlock()
                     // Holding the lock here *should* be safe but because of a bug in the runtime
                     // it isn't, so drop the lock, create the continuation and then try again.
                     //
