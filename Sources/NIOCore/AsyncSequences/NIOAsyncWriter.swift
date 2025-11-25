@@ -582,9 +582,15 @@ extension NIOAsyncWriter {
                             case .callDidYield, .throwError:
                                 return (yieldAction, nil)
                             case .suspendTask:
-                                state.stateMachine.yield(continuation: continuation, yieldID: yieldID)
-                                let didSuspend = state.didSuspend
-                                return (yieldAction, didSuspend)
+                                switch state.stateMachine.yield(
+                                    continuation: continuation,
+                                    yieldID: yieldID
+                                ) {
+                                case .cancelled:
+                                    return (.throwError(CancellationError()), nil)
+                                case .suspended:
+                                    return (yieldAction, state.didSuspend)
+                                }
                             }
                         }
 
@@ -682,9 +688,15 @@ extension NIOAsyncWriter {
                             case .callDidYield, .throwError:
                                 return (yieldAction, nil)
                             case .suspendTask:
-                                state.stateMachine.yield(continuation: continuation, yieldID: yieldID)
-                                let didSuspend = state.didSuspend
-                                return (yieldAction, didSuspend)
+                                switch state.stateMachine.yield(
+                                    continuation: continuation,
+                                    yieldID: yieldID
+                                ) {
+                                case .cancelled:
+                                    return (.throwError(CancellationError()), nil)
+                                case .suspended:
+                                    return (yieldAction, state.didSuspend)
+                                }
                             }
                         }
 
@@ -1114,8 +1126,8 @@ extension NIOAsyncWriter {
                             suspendedYields: suspendedYields,
                             delegate: delegate
                         )
-
                         return .callDidYield(delegate)
+
                     case (true, true), (false, _):
                         self._state = .streaming(
                             isWritable: isWritable,
@@ -1200,69 +1212,106 @@ extension NIOAsyncWriter {
             }
         }
 
+        @usableFromInline
+        enum YieldWithContinuationAction {
+            // The yield was cancelled; fail the continuation.
+            case cancelled
+            // The yield was suspended.
+            case suspended
+        }
+
         /// This method is called as a result of the above `yield` method if it decided that the task needs to get suspended.
         @inlinable
         internal mutating func yield(
             continuation: CheckedContinuation<YieldResult, Error>,
             yieldID: YieldID
-        ) {
+        ) -> YieldWithContinuationAction {
             switch self._state {
             case .streaming(
                 let isWritable,
                 let inDelegateOutcall,
-                let cancelledYields,
+                var cancelledYields,
                 var suspendedYields,
                 let delegate
             ):
-                // We have a suspended yield at this point that hasn't been cancelled yet.
-                // We need to store the yield now.
-
                 self._state = .modifying
 
-                let suspendedYield = SuspendedYield(
-                    yieldID: yieldID,
-                    continuation: continuation
-                )
-                suspendedYields.append(suspendedYield)
+                if let index = cancelledYields.firstIndex(of: yieldID) {
+                    cancelledYields.remove(at: index)
+                    self._state = .streaming(
+                        isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
+                        cancelledYields: cancelledYields,
+                        suspendedYields: suspendedYields,
+                        delegate: delegate
+                    )
+                    return .cancelled
+                } else {
+                    // We have a suspended yield at this point that hasn't been cancelled yet.
+                    // We need to store the yield now.
 
-                self._state = .streaming(
-                    isWritable: isWritable,
-                    inDelegateOutcall: inDelegateOutcall,
-                    cancelledYields: cancelledYields,
-                    suspendedYields: suspendedYields,
-                    delegate: delegate
-                )
+                    let suspendedYield = SuspendedYield(
+                        yieldID: yieldID,
+                        continuation: continuation
+                    )
+                    suspendedYields.append(suspendedYield)
+
+                    self._state = .streaming(
+                        isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
+                        cancelledYields: cancelledYields,
+                        suspendedYields: suspendedYields,
+                        delegate: delegate
+                    )
+
+                    return .suspended
+                }
 
             case .writerFinished(
                 let isWritable,
                 let inDelegateOutcall,
                 var suspendedYields,
-                let cancelledYields,
+                var cancelledYields,
                 let bufferedYieldIDs,
                 let delegate,
                 let error
             ):
-                // We have a suspended yield at this point that hasn't been cancelled yet.
-                // It was buffered before we became finished, so we still have to deliver it.
-                // We need to store the yield now.
-
                 self._state = .modifying
 
-                let suspendedYield = SuspendedYield(
-                    yieldID: yieldID,
-                    continuation: continuation
-                )
-                suspendedYields.append(suspendedYield)
+                if let index = cancelledYields.firstIndex(of: yieldID) {
+                    cancelledYields.remove(at: index)
+                    self._state = .writerFinished(
+                        isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
+                        suspendedYields: suspendedYields,
+                        cancelledYields: cancelledYields,
+                        bufferedYieldIDs: bufferedYieldIDs,
+                        delegate: delegate,
+                        error: error
+                    )
+                    return .cancelled
+                } else {
+                    // We have a suspended yield at this point that hasn't been cancelled yet.
+                    // It was buffered before we became finished, so we still have to deliver it.
+                    // We need to store the yield now.
+                    let suspendedYield = SuspendedYield(
+                        yieldID: yieldID,
+                        continuation: continuation
+                    )
+                    suspendedYields.append(suspendedYield)
 
-                self._state = .writerFinished(
-                    isWritable: isWritable,
-                    inDelegateOutcall: inDelegateOutcall,
-                    suspendedYields: suspendedYields,
-                    cancelledYields: cancelledYields,
-                    bufferedYieldIDs: bufferedYieldIDs,
-                    delegate: delegate,
-                    error: error
-                )
+                    self._state = .writerFinished(
+                        isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
+                        suspendedYields: suspendedYields,
+                        cancelledYields: cancelledYields,
+                        bufferedYieldIDs: bufferedYieldIDs,
+                        delegate: delegate,
+                        error: error
+                    )
+
+                    return .suspended
+                }
 
             case .initial, .finished:
                 preconditionFailure("This should have already been handled by `yield()`")
