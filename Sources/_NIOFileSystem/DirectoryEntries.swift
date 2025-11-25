@@ -14,6 +14,7 @@
 
 import CNIODarwin
 import CNIOLinux
+import CNIOFreeBSD
 import NIOConcurrencyHelpers
 import NIOCore
 import NIOPosix
@@ -382,7 +383,13 @@ private struct DirectoryEnumerator: Sendable {
         case symbolicLink
         case symbolicLinkToNonExistentTarget
 
-        init?(rawValue: UInt16) {
+        #if os(FreeBSD)
+        typealias RawValue = Int32
+        #else
+        typealias RawValue = UInt16
+        #endif
+
+        init?(rawValue: RawValue) {
             switch Int32(rawValue) {
             case FTS_D:
                 self = .directoryPreOrder
@@ -556,6 +563,8 @@ private struct DirectoryEnumerator: Sendable {
                 // Empty is checked for above, root can't exist within a directory, and directory
                 // items must be a single path component.
                 name = FilePath.Component(platformString: CNIODarwin_dirent_dname(entry))!
+                #elseif os(FreeBSD)
+                name = FilePath.Component(platformString: CNIOFreeBSD_dirent_dname(entry))!
                 #else
                 name = FilePath.Component(platformString: CNIOLinux_dirent_dname(entry))!
                 #endif

@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import CNIODarwin
+import CNIOFreeBSD
 import CNIOLinux
 import NIOCore
 

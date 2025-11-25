@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIODarwin
+import CNIOFreeBSD
 import CNIOLinux
 import NIOEmbedded
 import XCTest

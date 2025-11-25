@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import CNIOFreeBSD
 @_spi(Testing) import NIOFS
 import SystemPackage
 import XCTest
@@ -306,7 +307,7 @@ final class SyscallTests: XCTestCase {
     }
 
     func test_renameat2() throws {
-        #if canImport(Glibc) || canImport(Bionic)
+        #if !os(FreeBSD) && (canImport(Glibc) || canImport(Bionic))
         let fd1 = FileDescriptor(rawValue: 13)
         let fd2 = FileDescriptor(rawValue: 42)
 
@@ -355,7 +356,7 @@ final class SyscallTests: XCTestCase {
     }
 
     func test_sendfile() throws {
-        #if canImport(Glibc) || canImport(Bionic)
+        #if !os(FreeBSD) && (canImport(Glibc) || canImport(Bionic))
         let input = FileDescriptor(rawValue: 42)
         let output = FileDescriptor(rawValue: 1)
 

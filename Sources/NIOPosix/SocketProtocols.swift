@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
+import CNIOFreeBSD
 
 #if canImport(WinSDK)
 import struct WinSDK.socklen_t
@@ -107,7 +108,13 @@ extension BaseSocketProtocol {
         #else
         assert(fd >= 0, "illegal file descriptor \(fd)")
         do {
+#if os(FreeBSD)
+            var yes: CInt = 1
+            let size = socklen_t(MemoryLayout<CInt>.size)
+            setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &yes, size)
+#else
             try Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
+#endif
         } catch let error as IOError {
             try? Posix.close(descriptor: fd)  // don't care about failure here
             if error.errnoCode == EINVAL {

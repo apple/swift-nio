@@ -15,7 +15,7 @@
 import NIOConcurrencyHelpers
 import NIOCore
 
-#if canImport(Darwin)
+#if canImport(Darwin) || os(FreeBSD)
 
 /// Represents the `kqueue` filters we might use:
 ///
@@ -82,9 +82,17 @@ extension KQueueEventFilterSet {
             return UInt16(self.contains(event) ? EV_ADD : EV_DELETE)
         }
 
-        for (event, filter) in [
+        #if os(FreeBSD)
+        let eventFilterPairs = [
+            (KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE)
+        ]
+        #else
+        let eventFilterPairs = [
             (KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT),
-        ] {
+        ]
+        #endif
+
+        for (event, filter) in eventFilterPairs {
             if let flags = calculateKQueueChange(event: event) {
                 kevents.appendEvent(
                     fileDescriptor: fileDescriptor,
@@ -278,6 +286,9 @@ extension Selector: _SelectorBackendProtocol {
         }
 
         loopStart()
+        #if os(FreeBSD)
+        let EVFILT_EXCEPT = EVFILT_READ
+        #endif
 
         for i in 0..<ready {
             let ev = self.events[i]
@@ -381,7 +392,10 @@ extension kevent {
         self.filter = Int16(filter)
         self.flags = flags
         self.udata = UnsafeMutableRawPointer(bitPattern: UInt(registrationID.rawValue))
-
+        #if os(FreeBSD)
+        self.fflags = 0
+        self.data = 0
+        #else
         // On macOS, EVFILT_EXCEPT will fire whenever there is unread data in the socket receive
         // buffer. This is not a behaviour we want from EVFILT_EXCEPT: we only want it to tell us
         // about actually exceptional conditions. For this reason, when we set EVFILT_EXCEPT
@@ -395,6 +409,7 @@ extension kevent {
             self.fflags = 0
             self.data = 0
         }
+        #endif
     }
 }
 

@@ -15,6 +15,7 @@
 import Atomics
 import CNIOLinux
 import NIOConcurrencyHelpers
+import CNIOFreeBSD
 import NIOCore
 import XCTest
 
