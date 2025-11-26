@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Linux) || os(Android) || os(FreeBSD) || canImport(Darwin)
+#if os(Linux) || os(Android) || os(FreeBSD) || canImport(Darwin) || os(OpenBSD)
 
 #if os(Linux) || os(Android)
 import CNIOLinux
@@ -24,6 +24,12 @@ private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer) ->
 #else
 private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
 #endif
+#elseif os(OpenBSD)
+import CNIOOpenBSD
+
+private let sys_pthread_getname_np = CNIOOpenBSD_pthread_get_name_np
+private let sys_pthread_setname_np = CNIOOpenBSD_pthread_set_name_np
+private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
 #elseif canImport(Darwin)
 private let sys_pthread_getname_np = pthread_getname_np
 // Emulate the same method signature as pthread_setname_np on Linux.
@@ -46,6 +52,12 @@ private func sysPthread_create(
     var attr: pthread_attr_t = .init()
     pthread_attr_init(&attr)
     pthread_attr_set_qos_class_np(&attr, qos_class_main(), 0)
+    let thread = pthread_create(handle, &attr, destructor, args)
+    pthread_attr_destroy(&attr)
+    return thread
+    #elseif os(OpenBSD)
+    var attr: pthread_attr_t? = .init(bitPattern: 0)
+    pthread_attr_init(&attr)
     let thread = pthread_create(handle, &attr, destructor, args)
     pthread_attr_destroy(&attr)
     return thread

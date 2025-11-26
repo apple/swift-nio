@@ -463,6 +463,7 @@ extension UInt: AtomicPrimitive {
     deprecated,
     message: "AtomicBox is deprecated without replacement because the original implementation doesn't work."
 )
+@available(OpenBSD, unavailable, message: "malloc_size is unavailable.")
 public final class AtomicBox<T: AnyObject> {
     private let storage: NIOAtomic<UInt>
 
@@ -608,4 +609,5 @@ public final class AtomicBox<T: AnyObject> {
 }
 
 @available(*, deprecated)
+@available(OpenBSD, unavailable, message: "malloc_size is unavailable.")
 extension AtomicBox: @unchecked Sendable where T: Sendable {}

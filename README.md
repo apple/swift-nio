@@ -103,6 +103,8 @@ SwiftNIO aims to support all of the platforms where Swift is supported. Currentl
 * Ubuntu 18.04+
 * macOS 10.9+, iOS 7+; (macOS 10.14+, iOS 12+, tvOS 12+ or watchOS 6+ with [swift-nio-transport-services][repo-nio-transport-services])
 
+SwiftNIO has experimental support on OpenBSD for all SwiftNIO libraries _except_ for NIOFileSystem, which is not yet supported. You can use all other SwiftNIO libraries on OpenBSD by adding them as dependencies in `Package.swift`.
+
 ### Compatibility
 
 SwiftNIO follows [SemVer 2.0.0](https://semver.org/#semantic-versioning-200) with a separate document declaring [SwiftNIO's Public API](docs/public-api.md).

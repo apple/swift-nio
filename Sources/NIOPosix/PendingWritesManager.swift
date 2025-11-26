@@ -14,6 +14,7 @@
 
 import Atomics
 import CNIOLinux
+import CNIOOpenBSD
 import NIOCore
 
 private struct PendingStreamWrite {
