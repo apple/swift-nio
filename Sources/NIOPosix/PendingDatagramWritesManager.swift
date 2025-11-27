@@ -15,6 +15,7 @@
 import Atomics
 import CNIODarwin
 import CNIOLinux
+import CNIOOpenBSD
 import CNIOWindows
 import NIOCore
 

@@ -28,6 +28,10 @@ import struct WinSDK.ipv6_mreq
 import struct WinSDK.socklen_t
 #endif
 
+#if os(OpenBSD)
+import CNIOOpenBSD
+#endif
+
 extension ByteBuffer {
     mutating func withMutableWritePointer(
         body: (UnsafeMutableRawBufferPointer) throws -> IOResult<Int>
@@ -121,7 +125,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket>, @unchecked Sendable 
         case _ as ChannelOptions.Types.ConnectTimeoutOption:
             return connectTimeout as! Option.Value
         case _ as ChannelOptions.Types.LocalVsockContextID:
-            #if os(Windows)
+            #if os(Windows) || os(OpenBSD)
             fallthrough
             #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
@@ -280,7 +284,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
         case _ as ChannelOptions.Types.BacklogOption:
             return backlog as! Option.Value
         case _ as ChannelOptions.Types.LocalVsockContextID:
-            #if os(Windows)
+            #if os(Windows) || os(OpenBSD)
             fallthrough
             #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
@@ -319,7 +323,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
             switch target {
             case .socketAddress(let address):
                 try socket.bind(to: address)
-            #if os(Windows)
+            #if os(Windows) || os(OpenBSD)
             case .vsockAddress:
                 fatalError(vsockUnimplemented)
             #else
@@ -576,12 +580,16 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             let valueAsInt: CInt = value as! Bool ? 1 : 0
             switch self.localAddress?.protocol {
             case .some(.inet):
+                #if os(OpenBSD)
+                throw ChannelError._operationUnsupported
+                #else
                 self.reportExplicitCongestionNotifications = true
                 try self.socket.setOption(
                     level: .ip,
                     name: .ip_recv_tos,
                     value: valueAsInt
                 )
+                #endif
             case .some(.inet6):
                 self.reportExplicitCongestionNotifications = true
                 try self.socket.setOption(
@@ -595,6 +603,9 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             }
         case _ as ChannelOptions.Types.ReceivePacketInfo:
             let valueAsInt: CInt = value as! Bool ? 1 : 0
+            #if os(OpenBSD)
+            throw ChannelError._operationUnsupported
+            #else
             switch self.localAddress?.protocol {
             case .some(.inet):
                 self.receivePacketInfo = true
@@ -614,6 +625,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                 // Receiving packet info is only supported for IP
                 throw ChannelError._operationUnsupported
             }
+            #endif
         case _ as ChannelOptions.Types.DatagramSegmentSize:
             guard System.supportsUDPSegmentationOffload else {
                 throw ChannelError._operationUnsupported
@@ -654,11 +666,15 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
             switch self.localAddress?.protocol {
             case .some(.inet):
+                #if os(OpenBSD)
+                throw ChannelError._operationUnsupported
+                #else
                 return try
                     (self.socket.getOption(
                         level: .ip,
                         name: .ip_recv_tos
                     ) != 0) as! Option.Value
+                #endif
             case .some(.inet6):
                 return try
                     (self.socket.getOption(
@@ -670,6 +686,9 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                 throw ChannelError._operationUnsupported
             }
         case _ as ChannelOptions.Types.ReceivePacketInfo:
+            #if os(OpenBSD)
+            throw ChannelError._operationUnsupported
+            #else
             switch self.localAddress?.protocol {
             case .some(.inet):
                 return try
@@ -687,6 +706,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                 // Receiving packet info is only supported for IP
                 throw ChannelError._operationUnsupported
             }
+            #endif
         case _ as ChannelOptions.Types.DatagramSegmentSize:
             guard System.supportsUDPSegmentationOffload else {
                 throw ChannelError._operationUnsupported

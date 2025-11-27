@@ -20,6 +20,8 @@
 @preconcurrency import Bionic
 #endif
 import CNIOLinux
+#elseif os(OpenBSD)
+import CNIOOpenBSD
 #elseif canImport(Darwin)
 import Darwin
 #elseif canImport(WASILibc)
@@ -51,7 +53,7 @@ extension ifaddrs {
     fileprivate var dstaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux) || os(Android)
         return self.ifa_ifu.ifu_dstaddr
-        #elseif canImport(Darwin)
+        #elseif canImport(Darwin) || os(OpenBSD)
         return self.ifa_dstaddr
         #endif
     }
@@ -59,7 +61,7 @@ extension ifaddrs {
     fileprivate var broadaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux) || os(Android)
         return self.ifa_ifu.ifu_broadaddr
-        #elseif canImport(Darwin)
+        #elseif canImport(Darwin) || os(OpenBSD)
         return self.ifa_dstaddr
         #endif
     }

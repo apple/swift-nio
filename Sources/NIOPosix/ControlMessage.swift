@@ -17,6 +17,9 @@ import NIOCore
 import CNIODarwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#elseif os(OpenBSD)
+import CNIOOpenBSD
+import Glibc
 #elseif os(Windows)
 import CNIOWindows
 #endif
@@ -237,6 +240,7 @@ struct ControlMessageParser {
                 self.ecnValue = .init(receivedValue: readValue)
             }
         } else if controlMessage.type == Posix.IP_PKTINFO {
+            #if !os(OpenBSD)
             if let data = controlMessage.data {
                 let info = data.load(as: in_pktinfo.self)
                 var addr = sockaddr_in()
@@ -248,7 +252,7 @@ struct ControlMessageParser {
                     interfaceIndex: Int(info.ipi_ifindex)
                 )
             }
-
+            #endif
         }
     }
 

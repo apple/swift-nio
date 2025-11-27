@@ -97,6 +97,7 @@ extension NIOBSDSocket.SocketType {
 }
 
 // IPv4 Options
+#if !os(OpenBSD)
 extension NIOBSDSocket.Option {
     /// Request that we are passed type of service details when receiving
     /// datagrams.
@@ -116,6 +117,7 @@ extension NIOBSDSocket.Option {
     static let ip_recv_pktinfo: NIOBSDSocket.Option =
         NIOBSDSocket.Option(rawValue: Posix.IP_RECVPKTINFO)
 }
+#endif
 
 // IPv6 Options
 extension NIOBSDSocket.Option {
@@ -128,6 +130,7 @@ extension NIOBSDSocket.Option {
     static let ipv6_recv_tclass: NIOBSDSocket.Option =
         NIOBSDSocket.Option(rawValue: IPV6_RECVTCLASS)
 
+    #if !os(OpenBSD)
     /// Request that we are passed destination address and the receiving interface index when
     /// receiving datagrams.
     ///
@@ -136,6 +139,7 @@ extension NIOBSDSocket.Option {
     /// IPv4 and IPv6.
     static let ipv6_recv_pktinfo: NIOBSDSocket.Option =
         NIOBSDSocket.Option(rawValue: Posix.IPV6_RECVPKTINFO)
+    #endif
 }
 
 extension NIOBSDSocket {
