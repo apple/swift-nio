@@ -125,7 +125,7 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker, _NIOPreconcurrencySe
     ///
     /// If we end up accepting an already-closed connection, the kernel can end up in a place
     /// where it has no remote address to give us. In this situation, `remoteAddress` will be
-    /// `nil`. 
+    /// `nil`.
     var remoteAddress: SocketAddress? { get }
 
     /// `Channel`s are hierarchical and might have a parent `Channel`. `Channel` hierarchies are in use for certain

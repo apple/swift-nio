@@ -94,7 +94,7 @@ final class ChatHandler: ChannelInboundHandler {
 
         // 64 should be good enough for the ipaddress
         var buffer = context.channel.allocator.buffer(capacity: read.readableBytes + 64)
-        
+
         // In production code, you should check if `context.remoteAddress` is actually
         // present, as in rare situations it can be `nil`.
         buffer.writeString("(\(context.remoteAddress!)) - ")
