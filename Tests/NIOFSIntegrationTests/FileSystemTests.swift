@@ -1230,22 +1230,22 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testReplaceFile(_ existingType: FileType?, with replacementType: FileType) async throws {
-        func makeRegularFile(at path: NIOFilePath) async throws {
+        nonisolated(nonsending) func makeRegularFile(at path: NIOFilePath) async throws {
             try await self.fs.withFileHandle(
                 forWritingAt: path,
                 options: .newFile(replaceExisting: false)
             ) { _ in }
         }
 
-        func makeSymbolicLink(at path: NIOFilePath) async throws {
+        nonisolated(nonsending) func makeSymbolicLink(at path: NIOFilePath) async throws {
             try await self.fs.createSymbolicLink(at: path, withDestination: "/whatever")
         }
 
-        func makeDirectory(at path: NIOFilePath) async throws {
+        nonisolated(nonsending) func makeDirectory(at path: NIOFilePath) async throws {
             try await self.fs.createDirectory(at: path, withIntermediateDirectories: true)
         }
 
-        func makeFile(ofType type: FileType, at path: NIOFilePath) async throws {
+        nonisolated(nonsending) func makeFile(ofType type: FileType, at path: NIOFilePath) async throws {
             switch type {
             case .regular:
                 try await makeRegularFile(at: path)
@@ -1424,7 +1424,7 @@ final class FileSystemTests: XCTestCase {
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension FileSystemTests {
     private func checkDirectoriesMatch(_ root1: NIOFilePath, _ root2: NIOFilePath) async throws {
-        func namesAndTypes(_ root: NIOFilePath) async throws -> [(String, FileType)] {
+        nonisolated(nonsending) func namesAndTypes(_ root: NIOFilePath) async throws -> [(String, FileType)] {
             try await self.fs.withDirectoryHandle(atPath: root) { dir in
                 try await dir.listContents()
                     .reduce(into: []) { $0.append($1) }
