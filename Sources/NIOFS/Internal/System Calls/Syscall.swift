@@ -362,6 +362,67 @@ public enum Libc: Sendable {
         }
     }
 
+    static func homeDirectoryForCurrentUser() -> Result<FilePath, Errno> {
+        if let home = getenv("HOME"), home.pointee != 0 {
+            return .success(FilePath(String(cString: home)))
+        }
+
+        #if os(Windows)
+        if let profile = getenv("USERPROFILE"), profile.pointee != 0 {
+            return .success(FilePath(String(cString: profile)))
+        }
+        return .failure(.noSuchFileOrDirectory)
+        #else
+        return self._homeDirectoryFromPasswordDatabase()
+        #endif
+    }
+
+    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android)
+    private static func _homeDirectoryFromPasswordDatabase() -> Result<FilePath, Errno> {
+        var pwd = passwd()
+        var result: UnsafeMutablePointer<passwd>? = nil
+        var buffer = [CChar](repeating: 0, count: 256)
+
+        let uid: uid_t = {
+            #if canImport(Darwin)
+            return Darwin.getuid()
+            #elseif canImport(Glibc)
+            return Glibc.getuid()
+            #elseif canImport(Musl)
+            return Musl.getuid()
+            #else
+            return 0
+            #endif
+        }()
+
+        while true {
+            let error: CInt = buffer.withUnsafeMutableBufferPointer { pointer in
+                guard let baseAddress = pointer.baseAddress else {
+                    return CInt(ERANGE)
+                }
+
+                return withUnsafeMutablePointer(to: &result) { resultPointer in
+                    libc_getpwuid_r(uid, &pwd, baseAddress, pointer.count, resultPointer)
+                }
+            }
+
+            if error == 0 {
+                guard result != nil, let directoryPointer = pwd.pw_dir else {
+                    return .failure(.noSuchFileOrDirectory)
+                }
+                return .success(FilePath(String(cString: directoryPointer)))
+            }
+
+            if error == ERANGE {
+                buffer.append(contentsOf: repeatElement(0, count: buffer.count))
+                continue
+            }
+
+            return .failure(Errno(rawValue: error))
+        }
+    }
+    #endif
+
     #if !os(Android)
     static func constr(_ name: CInt) -> Result<String, Errno> {
         var buffer = [UInt8](repeating: 0, count: 128)
