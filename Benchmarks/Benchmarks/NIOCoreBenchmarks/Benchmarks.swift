@@ -46,7 +46,7 @@ let benchmarks = {
     ]
     #else
     let defaultMetrics: [BenchmarkMetric] = [
-        .mallocCountTotal,
+        .mallocCountTotal
     ]
     #endif
 
