@@ -68,6 +68,36 @@ let benchmarks = {
     }
 
     Benchmark(
+        "UDPEcho",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
+        )
+    ) { benchmark in
+        try runUDPEcho(
+            numberOfWrites: benchmark.scaledIterations.upperBound,
+            eventLoop: eventLoop
+        )
+    }
+
+    Benchmark(
+        "UDPEchoPacketInfo",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
+        )
+    ) { benchmark in
+        try runUDPEchoPacketInfo(
+            numberOfWrites: benchmark.scaledIterations.upperBound,
+            eventLoop: eventLoop
+        )
+    }
+
+    Benchmark(
         "MTELG.scheduleTask(in:_:)",
         configuration: Benchmark.Configuration(
             metrics: defaultMetrics,
