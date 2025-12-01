@@ -42,9 +42,9 @@ final class TokenBucket: @unchecked Sendable {
             /// A token is available to use.
             case tookToken
             /// No token is available, call back with a continuation.
-            case suspend
+            case tryAgainWithContinuation
             /// No token is available, the continuation will be resumed with one later.
-            case suspended
+            case storedContinuation
         }
 
         mutating func takeToken(continuation: CheckedContinuation<Void, Never>?) -> TakeTokenResult {
@@ -53,9 +53,9 @@ final class TokenBucket: @unchecked Sendable {
                 return .tookToken
             } else if let continuation = continuation {
                 self.waiters.append(continuation)
-                return .suspended
+                return .storedContinuation
             } else {
-                return .suspend
+                return .tryAgainWithContinuation
             }
         }
 
@@ -95,7 +95,7 @@ final class TokenBucket: @unchecked Sendable {
         case .tookToken:
             ()
 
-        case .suspend:
+        case .tryAgainWithContinuation:
             // Holding the lock here *should* be safe but because of a bug in the runtime
             // it isn't, so drop the lock, create the continuation and try again.
             //
@@ -104,15 +104,15 @@ final class TokenBucket: @unchecked Sendable {
                 switch self.lock.withLockedValue({ $0.takeToken(continuation: continuation) }) {
                 case .tookToken:
                     continuation.resume()
-                case .suspended:
+                case .storedContinuation:
                     ()
-                case .suspend:
+                case .tryAgainWithContinuation:
                     // Only possible when 'takeToken(continuation:)' is called with no continuation.
                     fatalError()
                 }
             }
 
-        case .suspended:
+        case .storedContinuation:
             // Only possible when 'takeToken(continuation:)' is called with a continuation.
             fatalError()
         }
