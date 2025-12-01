@@ -18,3 +18,4 @@ or cases where the Swift compiler was unable to sufficiently optimize the code:
 - https://github.com/apple/swift-nio/pull/3303
 - https://github.com/apple/swift-nio/pull/3452
 - https://github.com/apple/swift-nio/pull/3454
+- https://github.com/apple/swift-nio/pull/3455
