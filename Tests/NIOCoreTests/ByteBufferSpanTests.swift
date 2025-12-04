@@ -258,7 +258,7 @@ struct ByteBufferSpanTests {
     }
 
     @Test
-    @available(macOS 26.0, iOS 26.0, watchOS 26.0, tvOS 26.0, *)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testReadableBytesUInt8SpanOfSimpleBuffer() {
         let bb = ByteBuffer(string: "Hello, world!")
         #expect(bb.readableBytesUInt8Span.count == 13)
@@ -267,7 +267,7 @@ struct ByteBufferSpanTests {
     }
 
     @Test
-    @available(macOS 26.0, iOS 26.0, watchOS 26.0, tvOS 26.0, *)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testReadableBytesUInt8SpanNotAtTheStart() {
         var bb = ByteBuffer(string: "Hello, world!")
         bb.moveReaderIndex(forwardBy: 5)
@@ -277,7 +277,7 @@ struct ByteBufferSpanTests {
     }
 
     @Test
-    @available(macOS 26.0, iOS 26.0, watchOS 26.0, tvOS 26.0, *)
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     func testReadableBytesUInt8SpanOfSlice() {
         let first = ByteBuffer(string: "Hello, world!")
         let bb = first.getSlice(at: 5, length: 5)!
@@ -306,10 +306,22 @@ extension RawSpan {
     }
 }
 
-@available(macOS 26.0, iOS 26.0, watchOS 26.0, tvOS 26.0, *)
+@available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
 extension Span<UInt8> {
     func elementsEqual<Other: Collection>(_ other: Other) -> Bool where Other.Element == UInt8 {
-        self.bytes.elementsEqual(other)
+        guard other.count == self.count else { return false }
+        guard var offset = self.indices.first else { return true }
+
+        var index = other.startIndex
+        while index < other.endIndex {
+            guard other[index] == self[offset] else {
+                return false
+            }
+            other.formIndex(after: &index)
+            offset &+= 1
+        }
+
+        return true
     }
 }
 
