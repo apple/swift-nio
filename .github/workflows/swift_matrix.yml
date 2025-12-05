@@ -148,7 +148,7 @@ jobs:
     steps:
       - name: Checkout repository
         if: ${{ matrix.swift.enabled }}
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
           persist-credentials: false
           submodules: true
@@ -187,7 +187,7 @@ jobs:
         run: docker pull ${{ matrix.swift.image }}
       - name: Checkout repository
         if: ${{ matrix.swift.enabled }}
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
           persist-credentials: false
       - name: Donwload matrix script
@@ -218,7 +218,7 @@ jobs:
         run: docker pull ${{ matrix.swift.image }}
       - name: Checkout repository
         if: ${{ matrix.swift.enabled }}
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
           persist-credentials: false
           submodules: true
