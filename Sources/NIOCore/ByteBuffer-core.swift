@@ -715,6 +715,33 @@ public struct ByteBuffer {
         }
     }
 
+    /// Provides safe high-performance read-only access to the readable bytes of this buffer.
+    @inlinable
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    public var readableBytesUInt8Span: Span<UInt8> {
+        @_lifetime(borrow self)
+        borrowing get {
+            let span = self.readableBytesSpan._unsafeView(as: UInt8.self)
+            return _overrideLifetime(span, borrowing: self)
+        }
+    }
+
+    /// Provides mutable access to the readable bytes of this buffer.
+    /// Currently this doesn't compile due to a Faulty exclusivity check
+    /// see https://github.com/swiftlang/swift/issues/81218
+    #if false
+    @inlinable
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    public var mutableReadableBytesUInt8Span: MutableSpan<UInt8> {
+        @_lifetime(&self)
+        mutating get {
+            var bytes = self.mutableReadableBytesSpan
+            let span = bytes._unsafeMutableView(as: UInt8.self)
+            return _overrideLifetime(span, mutating: &self)
+        }
+    }
+    #endif
+
     /// Enables high-performance low-level appending into the writable section of this buffer.
     ///
     /// The writer index will be advanced by the number of bytes written into the
