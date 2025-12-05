@@ -114,6 +114,10 @@ internal func syscall<T: FixedWidthInteger>(
             case (EWOULDBLOCK, true):
                 return .wouldBlock(0)
             #endif
+            #if os(Windows)
+            case (WSAEWOULDBLOCK, true):
+                return .wouldBlock(0)
+            #endif
             default:
                 preconditionIsNotUnacceptableErrno(err: err, where: function)
                 throw IOError(errnoCode: err, reason: function)
