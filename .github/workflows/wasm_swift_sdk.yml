@@ -29,7 +29,7 @@ jobs:
       - id: generate-matrix
         run: |
           # Validate and use JSON environment variables directly
-          env_vars_json='${{ inputs.env_vars }}'
+          env_vars_json='${INPUTS_ENV_VARS}'
 
           # Validate JSON format
           if ! echo "$env_vars_json" | jq empty 2>/dev/null; then
@@ -49,12 +49,15 @@ jobs:
                 "image":"ubuntu:jammy",
                 "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_sdk.sh | INSTALL_SWIFT_BRANCH=main INSTALL_SWIFT_ARCH=x86_64 INSTALL_SWIFT_SDK=wasm-sdk bash && hash -r",
                 "command":"curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/swift-build-with-wasm-sdk.sh | bash -s --",
-                "command_arguments":"${{ inputs.additional_command_arguments }}",
+                "command_arguments":"${INPUTS_ADDITIONAL_COMMAND_ARGUMENTS}",
                 "env":'"$env_vars_json"'
               }
             ]
           }' | jq -c)
           EOM
+        env:
+          INPUTS_ENV_VARS: ${{ inputs.env_vars }}
+          INPUTS_ADDITIONAL_COMMAND_ARGUMENTS: ${{ inputs.additional_command_arguments }}
 
   wasm-swift-sdk:
     name: WebAssembly Swift SDK
