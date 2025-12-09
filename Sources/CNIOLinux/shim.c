@@ -215,6 +215,8 @@ const int CNIOLinux_AT_EMPTY_PATH = AT_EMPTY_PATH;
 const unsigned long CNIOLinux_UTIME_OMIT = UTIME_OMIT;
 const unsigned long CNIOLinux_UTIME_NOW = UTIME_NOW;
 
+const unsigned long CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
+const unsigned long CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
 
 #ifdef UDP_MAX_SEGMENTS
 const long CNIOLinux_UDP_MAX_SEGMENTS = UDP_MAX_SEGMENTS;

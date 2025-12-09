@@ -25,6 +25,8 @@
 #include <sys/xattr.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/vfs.h>
+#include <linux/magic.h>
 #include <sched.h>
 #include <stdbool.h>
 #include <errno.h>
@@ -148,6 +150,10 @@ extern const unsigned long CNIOLinux_UTIME_OMIT;
 extern const unsigned long CNIOLinux_UTIME_NOW;
 
 extern const long CNIOLinux_UDP_MAX_SEGMENTS;
+
+// Filesystem magic constants for cgroup detection
+extern const unsigned long CNIOLinux_TMPFS_MAGIC;
+extern const unsigned long CNIOLinux_CGROUP2_SUPER_MAGIC;
 
 // A workaround for incorrect nullability annotations in the Android SDK.
 FTS *CNIOLinux_fts_open(char * const *path_argv, int options, int (*compar)(const FTSENT **, const FTSENT **));
