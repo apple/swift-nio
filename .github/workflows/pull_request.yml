@@ -31,20 +31,9 @@ jobs:
   benchmarks:
     name: Benchmarks
     # Workaround https://github.com/nektos/act/issues/1875
-    # uses: apple/swift-nio/.github/workflows/benchmarks.yml@main
-    uses: ./.github/workflows/benchmarks.yml
+    uses: apple/swift-nio/.github/workflows/benchmarks.yml@main
     with:
       benchmark_package_path: "Benchmarks"
-
-  macos-benchmarks:
-    name: macOS benchmarks
-    # Workaround https://github.com/nektos/act/issues/1875
-    # uses: apple/swift-nio/.github/workflows/benchmarks.yml@main
-    uses: ./.github/workflows/macos_benchmarks.yml
-    with:
-      benchmark_package_path: "Benchmarks"
-      macos_runner_pool: general
-      macos_xcode_26_1_enabled: true
 
   cxx-interop:
     name: Cxx interop
