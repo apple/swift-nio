@@ -482,7 +482,8 @@ internal enum Posix: Sendable {
     #else
     @usableFromInline
     static var UIO_MAXIOV: Int {
-        fatalError("unsupported OS")
+        // TODO: This is a placeholder value. Find the correct one for Windows.
+        return 64
     }
     @usableFromInline
     static var SHUT_RD: Int {
