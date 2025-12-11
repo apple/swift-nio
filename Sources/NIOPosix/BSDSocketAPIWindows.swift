@@ -230,7 +230,7 @@ extension NIOBSDSocket {
     ) throws -> Bool {
         if WinSDK.connect(s, name, namelen) == SOCKET_ERROR {
             let iResult = WSAGetLastError()
-            if iResult == WSAEWOULDBLOCK { return true }
+            if iResult == WSAEWOULDBLOCK { return false }
             throw IOError(winsock: WSAGetLastError(), reason: "connect")
         }
         return true
