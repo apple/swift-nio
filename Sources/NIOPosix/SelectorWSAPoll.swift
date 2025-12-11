@@ -14,6 +14,7 @@
 
 #if os(Windows)
 import CNIOWindows
+import NIOConcurrencyHelpers
 import NIOCore
 import WinSDK
 
@@ -68,11 +69,73 @@ extension Selector: _SelectorBackendProtocol {
     func initialiseState0() throws {
         self.pollFDs.reserveCapacity(16)
         self.deregisteredFDs.reserveCapacity(16)
+        
+        // Create a loopback socket pair for wakeup signaling.
+        // Since Windows doesn't support socketpair(), we create a pair of connected
+        // loopback UDP sockets to wake up the event loop.
+        let (readSocket, writeSocket) = try Self.createWakeupSocketPair()
+        self.wakeupReadSocket = readSocket
+        self.wakeupWriteSocket = writeSocket
+        
+        // Add the read end to pollFDs so WSAPoll will wake up when data is written to the write end
+        let wakeupPollFD = pollfd(fd: UInt64(readSocket), events: Int16(WinSDK.POLLRDNORM), revents: 0)
+        self.pollFDs.append(wakeupPollFD)
+        self.deregisteredFDs.append(false)
+        
         self.lifecycleState = .open
+    }
+    
+    /// Creates a pair of connected loopback UDP sockets for wakeup signaling.
+    /// Returns (readSocket, writeSocket) tuple.
+    private static func createWakeupSocketPair() throws -> (NIOBSDSocket.Handle, NIOBSDSocket.Handle) {
+        // Create a UDP socket to receive wakeup signals
+        let readSocket = try NIOBSDSocket.socket(domain: .inet, type: .datagram, protocolSubtype: .default)
+        
+        do {
+            // Bind to loopback on an ephemeral port
+            var addr = sockaddr_in()
+            addr.sin_family = ADDRESS_FAMILY(AF_INET)
+            addr.sin_addr.S_un.S_addr = WinSDK.htonl(UInt32(bitPattern: INADDR_LOOPBACK))
+            addr.sin_port = 0  // Let the system assign a port
+            
+            try withUnsafeBytes(of: &addr) { addrPtr in
+                let socketPointer = addrPtr.baseAddress!.assumingMemoryBound(to: sockaddr.self)
+                try NIOBSDSocket.bind(socket: readSocket, address: socketPointer, address_len: socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+            
+            // Get the assigned port
+            var boundAddr = sockaddr()
+            var size = Int32(MemoryLayout<sockaddr>.size)
+            try NIOBSDSocket.getsockname(socket: readSocket, address: &boundAddr, address_len: &size)
+            
+            // Create the write socket
+            let writeSocket = try NIOBSDSocket.socket(domain: .inet, type: .datagram, protocolSubtype: .default)
+            
+            do {
+                // Connect the write socket to the read socket's address
+                guard try NIOBSDSocket.connect(socket: writeSocket, address: &boundAddr, address_len: size) else {
+                    throw IOError(winsock: WSAGetLastError(), reason: "connect")
+                }
+                return (readSocket, writeSocket)
+            } catch {
+                _ = try? NIOBSDSocket.close(socket: writeSocket)
+                throw error
+            }
+        } catch {
+            _ = try? NIOBSDSocket.close(socket: readSocket)
+            throw error
+        }
     }
 
     func deinitAssertions0() {
-        // no global state. nothing to check
+        assert(
+            self.wakeupReadSocket == NIOBSDSocket.invalidHandle,
+            "wakeupReadSocket == \(self.wakeupReadSocket) in deinitAssertions0, forgot close?"
+        )
+        assert(
+            self.wakeupWriteSocket == NIOBSDSocket.invalidHandle,
+            "wakeupWriteSocket == \(self.wakeupWriteSocket) in deinitAssertions0, forgot close?"
+        )
     }
 
     @inlinable
@@ -93,64 +156,65 @@ extension Selector: _SelectorBackendProtocol {
                 Int32(clamping: timeAmount.nanoseconds / 1_000_000)
             }
 
-        // WSAPoll requires at least one pollFD structure. If we don't have any pending IO
-        // we should just sleep. By passing true as the second argument our el can be
-        // woken up by an APC (Asynchronous Procedure Call).
-        if self.pollFDs.isEmpty {
-            if time > 0 {
-                SleepEx(UInt32(time), true)
-            } else if time == -1 {
-                SleepEx(INFINITE, true)
-            }
-        } else {
-            let result = self.pollFDs.withUnsafeMutableBufferPointer { ptr in
-                WSAPoll(ptr.baseAddress!, UInt32(ptr.count), 1)
-            }
+        precondition(!self.pollFDs.isEmpty, "pollFDs should never be empty here, since we need an eventFD for waking up on demand")
+        // We always have at least the wakeup socket in pollFDs
+        let result = self.pollFDs.withUnsafeMutableBufferPointer { ptr in
+            WSAPoll(ptr.baseAddress!, UInt32(ptr.count), time)
+        }
 
-            if result > 0 {
-                // something has happened
-                for i in self.pollFDs.indices {
-                    let pollFD = self.pollFDs[i]
-                    guard pollFD.revents != 0 else {
-                        continue
+        if result > 0 {
+            // something has happened
+            for i in self.pollFDs.indices {
+                let pollFD = self.pollFDs[i]
+                guard pollFD.revents != 0 else {
+                    continue
+                }
+                // reset the revents
+                self.pollFDs[i].revents = 0
+                let fd = pollFD.fd
+
+                // Check if this is the wakeup socket
+                if NIOBSDSocket.Handle(fd) == self.wakeupReadSocket {
+                    // Drain the wakeup socket by reading the data that was sent
+                    var buffer: UInt8 = 0
+                    _ = withUnsafeMutablePointer(to: &buffer) { ptr in
+                        WinSDK.recv(self.wakeupReadSocket, ptr, 1, 0)
                     }
-                    // reset the revents
-                    self.pollFDs[i].revents = 0
-                    let fd = pollFD.fd
-
-                    // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
-                    guard let registration = registrations[Int(fd)] else {
-                        continue
-                    }
-
-                    var selectorEvent = SelectorEventSet(revents: pollFD.revents)
-                    // in any case we only want what the user is currently registered for & what we got
-                    selectorEvent = selectorEvent.intersection(registration.interested)
-
-                    guard selectorEvent != ._none else {
-                        continue
-                    }
-
-                    try body((SelectorEvent(io: selectorEvent, registration: registration)))
+                    continue
                 }
 
-                // now clean up any deregistered fds
-                // In reverse order so we don't have to copy elements out of the array
-                // If we do in in normal order, we'll have to shift all elements after the removed one
-                for i in self.deregisteredFDs.indices.reversed() {
-                    if self.deregisteredFDs[i] {
-                        // remove this one
-                        let fd = self.pollFDs[i].fd
-                        self.pollFDs.remove(at: i)
-                        self.deregisteredFDs.remove(at: i)
-                        self.registrations.removeValue(forKey: Int(fd))
-                    }
+                // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
+                guard let registration = registrations[Int(fd)] else {
+                    continue
                 }
-            } else if result == 0 {
-                // nothing has happened
-            } else if result == WinSDK.SOCKET_ERROR {
-                throw IOError(winsock: WSAGetLastError(), reason: "WSAPoll")
+
+                var selectorEvent = SelectorEventSet(revents: pollFD.revents)
+                // in any case we only want what the user is currently registered for & what we got
+                selectorEvent = selectorEvent.intersection(registration.interested)
+
+                guard selectorEvent != ._none else {
+                    continue
+                }
+
+                try body((SelectorEvent(io: selectorEvent, registration: registration)))
             }
+
+            // now clean up any deregistered fds
+            // In reverse order so we don't have to copy elements out of the array
+            // If we do in in normal order, we'll have to shift all elements after the removed one
+            for i in self.deregisteredFDs.indices.reversed() {
+                if self.deregisteredFDs[i] {
+                    // remove this one
+                    let fd = self.pollFDs[i].fd
+                    self.pollFDs.remove(at: i)
+                    self.deregisteredFDs.remove(at: i)
+                    self.registrations.removeValue(forKey: Int(fd))
+                }
+            }
+        } else if result == 0 {
+            // nothing has happened
+        } else if result == WinSDK.SOCKET_ERROR {
+            throw IOError(winsock: WSAGetLastError(), reason: "WSAPoll")
         }
     }
 
@@ -191,26 +255,34 @@ extension Selector: _SelectorBackendProtocol {
     }
 
     func wakeup0() throws {
-        // will be called from a different thread
-        let result = try self.myThread.withHandleUnderLock { threadHandle in
-            return QueueUserAPC(wakeupTarget, threadHandle.handle, 0)
-        }
-        if result == 0 {
-            let errorCode = GetLastError()
-            if let errorMsg = Windows.makeErrorMessageFromCode(errorCode) {
-                throw IOError(errnoCode: Int32(errorCode), reason: errorMsg)
+        // Will be called from a different thread.
+        // Write a single byte to the wakeup socket to wake up the event loop.
+        try self.externalSelectorFDLock.withLock {
+            guard self.wakeupWriteSocket != NIOBSDSocket.invalidHandle else {
+                throw EventLoopError.shutdown
+            }
+            var byte: UInt8 = 0
+            let result = withUnsafePointer(to: &byte) { ptr in
+                WinSDK.send(self.wakeupWriteSocket, ptr, 1, 0)
+            }
+            if result == SOCKET_ERROR {
+                throw IOError(winsock: WSAGetLastError(), reason: "send (wakeup)")
             }
         }
     }
 
     func close0() throws {
+        // Close the wakeup sockets
+        if self.wakeupReadSocket != NIOBSDSocket.invalidHandle {
+            try? NIOBSDSocket.close(socket: self.wakeupReadSocket)
+            self.wakeupReadSocket = NIOBSDSocket.invalidHandle
+        }
+        if self.wakeupWriteSocket != NIOBSDSocket.invalidHandle {
+            try? NIOBSDSocket.close(socket: self.wakeupWriteSocket)
+            self.wakeupWriteSocket = NIOBSDSocket.invalidHandle
+        }
         self.pollFDs.removeAll()
         self.deregisteredFDs.removeAll()
     }
-}
-
-private func wakeupTarget(_ ptr: UInt64) {
-    // This is the target of our wakeup call.
-    // We don't really need to do anything here. We just need any target
 }
 #endif
