@@ -221,7 +221,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
             }
 
             writeHead(
-                wrapOutboundOut: Self.wrapOutboundOut,
+                wrapOutboundOut: HTTPRequestEncoder.wrapOutboundOut,
                 writeStartLine: { buffer in
                     buffer.write(request: request)
                 },
@@ -231,7 +231,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
             )
         case .body(let bodyPart):
             writeChunk(
-                wrapOutboundOut: Self.wrapOutboundOut,
+                wrapOutboundOut: HTTPRequestEncoder.wrapOutboundOut,
                 context: context,
                 isChunked: self.isChunked,
                 chunk: bodyPart,
@@ -239,7 +239,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
             )
         case .end(let trailers):
             writeTrailers(
-                wrapOutboundOut: Self.wrapOutboundOut,
+                wrapOutboundOut: HTTPRequestEncoder.wrapOutboundOut,
                 context: context,
                 isChunked: self.isChunked,
                 trailers: trailers,
@@ -312,7 +312,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
             }
 
             writeHead(
-                wrapOutboundOut: Self.wrapOutboundOut,
+                wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
                 writeStartLine: { buffer in
                     buffer.write(response: response)
                 },
@@ -322,7 +322,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
             )
         case .body(let bodyPart):
             writeChunk(
-                wrapOutboundOut: Self.wrapOutboundOut,
+                wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
                 context: context,
                 isChunked: self.isChunked,
                 chunk: bodyPart,
@@ -330,7 +330,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
             )
         case .end(let trailers):
             writeTrailers(
-                wrapOutboundOut: Self.wrapOutboundOut,
+                wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
                 context: context,
                 isChunked: self.isChunked,
                 trailers: trailers,

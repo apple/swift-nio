@@ -485,7 +485,7 @@ public final class ServerBootstrap {
                     guard context.channel.isActive else {
                         return ctxEventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
                     }
-                    context.fireChannelRead(Self.wrapInboundOut(accepted))
+                    context.fireChannelRead(AcceptHandler.wrapInboundOut(accepted))
                     return context.eventLoop.makeSucceededFuture(())
                 }.whenFailure { error in
                     self.closeAndFire(context: context, accepted: accepted, err: error)

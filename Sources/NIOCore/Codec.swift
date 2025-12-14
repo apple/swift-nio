@@ -844,7 +844,7 @@ extension MessageToByteHandler {
         do {
             self.buffer!.clear()
             try self.encoder.encode(data: data, out: &self.buffer!)
-            context.write(Self.wrapOutboundOut(self.buffer!), promise: promise)
+            context.write(MessageToByteHandler.wrapOutboundOut(self.buffer!), promise: promise)
         } catch {
             self.state = .error(error)
             promise?.fail(error)

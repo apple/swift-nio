@@ -224,8 +224,8 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
 
         // Generated a server response to send back
         if let response = serverResponse {
-            context.write(Self.wrapOutboundOut(.head(response)), promise: nil)
-            context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
+            context.write(NIOHTTPServerRequestAggregator.wrapOutboundOut(.head(response)), promise: nil)
+            context.writeAndFlush(NIOHTTPServerRequestAggregator.wrapOutboundOut(.end(nil)), promise: nil)
             if response.status == .payloadTooLarge {
                 // If indicated content length is too large
                 self.state.handlingOversizeMessage()

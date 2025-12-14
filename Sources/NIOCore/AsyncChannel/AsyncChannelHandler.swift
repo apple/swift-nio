@@ -477,7 +477,7 @@ extension NIOAsyncChannelHandler {
     @inlinable
     func _doOutboundWrites(context: ChannelHandlerContext, writes: Deque<OutboundOut>) {
         for write in writes {
-            context.write(Self.wrapOutboundOut(write), promise: nil)
+            context.write(NIOAsyncChannelHandler.wrapOutboundOut(write), promise: nil)
         }
 
         context.flush()
@@ -485,7 +485,7 @@ extension NIOAsyncChannelHandler {
 
     @inlinable
     func _doOutboundWrite(context: ChannelHandlerContext, write: OutboundOut) {
-        context.write(Self.wrapOutboundOut(write), promise: nil)
+        context.write(NIOAsyncChannelHandler.wrapOutboundOut(write), promise: nil)
         context.flush()
     }
 }

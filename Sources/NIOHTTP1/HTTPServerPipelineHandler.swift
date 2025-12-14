@@ -430,7 +430,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             if head.isKeepAlive {
                 head.headers.replaceOrAdd(name: "connection", value: "close")
             }
-            context.write(Self.wrapOutboundOut(.head(head)), promise: promise)
+            context.write(HTTPServerPipelineHandler.wrapOutboundOut(.head(head)), promise: promise)
         case .end:
             startReadingAgain = true
 
