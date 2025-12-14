@@ -175,7 +175,7 @@ extension NIOAsyncChannelHandler: ChannelInboundHandler {
 
     @inlinable
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let unwrapped = Self.unwrapInboundIn(data)
+        let unwrapped = NIOAsyncChannelHandler.unwrapInboundIn(data)
 
         switch self.transformation {
         case .syncWrapping(let transformation):

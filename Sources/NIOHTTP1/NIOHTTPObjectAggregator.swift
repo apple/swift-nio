@@ -198,7 +198,7 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let msg = Self.unwrapInboundIn(data)
+        let msg = NIOHTTPServerRequestAggregator.unwrapInboundIn(data)
         var serverResponse: HTTPResponseHead? = nil
 
         do {
@@ -345,7 +345,7 @@ public final class NIOHTTPClientResponseAggregator: ChannelInboundHandler, Remov
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let msg = Self.unwrapInboundIn(data)
+        let msg = NIOHTTPClientResponseAggregator.unwrapInboundIn(data)
 
         do {
             switch msg {

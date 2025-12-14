@@ -113,7 +113,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
             return
         }
 
-        let requestPart = Self.unwrapInboundIn(data)
+        let requestPart = HTTPServerUpgradeHandler.unwrapInboundIn(data)
 
         switch self.upgradeState {
         case .idle:

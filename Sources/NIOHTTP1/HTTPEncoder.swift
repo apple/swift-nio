@@ -202,7 +202,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch Self.unwrapOutboundIn(data) {
+        switch HTTPRequestEncoder.unwrapOutboundIn(data) {
         case .head(var request):
             assert(
                 !(request.headers.contains(name: "content-length")
@@ -292,7 +292,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch Self.unwrapOutboundIn(data) {
+        switch HTTPResponseEncoder.unwrapOutboundIn(data) {
         case .head(var response):
             assert(
                 !(response.headers.contains(name: "content-length")

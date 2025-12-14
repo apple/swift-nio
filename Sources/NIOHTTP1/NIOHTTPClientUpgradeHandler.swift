@@ -175,7 +175,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
 
     private func addHeadersToOutboundOut(data: NIOAny) -> NIOAny {
 
-        let interceptedOutgoingRequest = Self.unwrapOutboundIn(data)
+        let interceptedOutgoingRequest = NIOHTTPClientUpgradeHandler.unwrapOutboundIn(data)
 
         if case .head(var requestHead) = interceptedOutgoingRequest {
 
@@ -214,7 +214,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
             return
         }
 
-        let responsePart = Self.unwrapInboundIn(data)
+        let responsePart = NIOHTTPClientUpgradeHandler.unwrapInboundIn(data)
 
         switch self.upgradeState {
         case .awaitingConfirmationResponse:

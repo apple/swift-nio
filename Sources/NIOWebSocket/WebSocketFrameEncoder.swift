@@ -59,7 +59,7 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let data = Self.unwrapOutboundIn(data)
+        let data = WebSocketFrameEncoder.unwrapOutboundIn(data)
 
         // First, we explode the frame structure and apply the mask.
         let frameHeader = FrameHeader(frame: data)
