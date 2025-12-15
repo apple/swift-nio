@@ -175,7 +175,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
 
     private func addHeadersToOutboundOut(data: NIOAny) -> NIOAny {
 
-        let interceptedOutgoingRequest = Self.unwrapOutboundIn(data)
+        let interceptedOutgoingRequest = NIOHTTPClientUpgradeHandler.unwrapOutboundIn(data)
 
         if case .head(var requestHead) = interceptedOutgoingRequest {
 
@@ -183,7 +183,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
 
             self.addConnectionHeaders(to: &requestHead)
             self.addUpgradeHeaders(to: &requestHead)
-            return Self.wrapOutboundOut(.head(requestHead))
+            return NIOHTTPClientUpgradeHandler.wrapOutboundOut(.head(requestHead))
         }
 
         return data
@@ -214,7 +214,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
             return
         }
 
-        let responsePart = Self.unwrapInboundIn(data)
+        let responsePart = NIOHTTPClientUpgradeHandler.unwrapInboundIn(data)
 
         switch self.upgradeState {
         case .awaitingConfirmationResponse:
@@ -395,7 +395,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
         }
 
         assert(self.receivedMessages.isEmpty)
-        context.fireChannelRead(Self.wrapInboundOut(data))
+        context.fireChannelRead(NIOHTTPClientUpgradeHandler.wrapInboundOut(data))
 
         // We've delivered the data. We can now remove ourselves, which should happen synchronously.
         context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
