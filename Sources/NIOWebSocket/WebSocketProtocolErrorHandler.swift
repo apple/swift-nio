@@ -48,7 +48,9 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
                 maskKey: self.makeMaskingKey(),
                 data: data
             )
-            context.writeAndFlush(Self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
+            context.writeAndFlush(
+                WebSocketProtocolErrorHandler.wrapOutboundOut(frame)
+            ).whenComplete { (_: Result<Void, Error>) in
                 let context = loopBoundContext.value
                 context.close(promise: nil)
             }
