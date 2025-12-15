@@ -25,15 +25,15 @@ enum Linux {
     static let cpuSetPathV1 = "/sys/fs/cgroup/cpuset/cpuset.cpus"
     static let cpuSetPathV2: String? = {
         if let cgroupV2MountPoint = Self.cgroupV2MountPoint {
-            return NIOFilePath(cgroupV2MountPoint).appending(["cpuset.cpus"]).description
+            return "\(cgroupV2MountPoint)/cpuset.cpus"
         }
         return nil
     }()
 
     static let cgroupV2MountPoint: String? = {
-        guard let fh = try? NIOFileHandle(_deprecatedPath: "/proc/self/cgroup") else { return nil }
-        defer { try! fh.close() }
-        guard let lines = try? Self.readLines(fh: fh) else { return nil }
+        guard let fd = try? SystemCalls.open(file: "/proc/self/cgroup", oFlag: O_RDONLY, mode: NIOPOSIXFileMode(S_IRUSR)) else { return nil }
+        defer { try! SystemCalls.close(descriptor: fd) }
+        guard let lines = try? Self.readLines(descriptor: fd) else { return nil }
 
         // Parse each line looking for cgroup v2 format: "0::/path"
         for line in lines {
@@ -92,13 +92,12 @@ enum Linux {
         return String(parts[2])
     }
 
-    private static func readLines(fh: NIOFileHandle) throws -> [Substring] {
+    private static func readLines(descriptor: CInt) throws -> [Substring] {
         // linux doesn't properly report /sys/fs/cgroup/* files lengths so we use a reasonable limit
         var buf = ByteBufferAllocator().buffer(capacity: 1024)
         try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: buf.capacity) { ptr in
-            let res = try fh.withUnsafeFileDescriptor { fd -> CoreIOResult<ssize_t> in
-                try SystemCalls.read(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
-            }
+            let res = try SystemCalls.read(descriptor: descriptor, pointer: ptr.baseAddress!, size: ptr.count)
+
             switch res {
             case .processed(let n):
                 return n
@@ -110,9 +109,9 @@ enum Linux {
     }
 
     private static func firstLineOfFile(path: String) throws -> Substring? {
-        let fh = try NIOFileHandle(_deprecatedPath: path)
-        defer { try! fh.close() }
-        return try? Self.readLines(fh: fh).first
+        guard let fd = try? SystemCalls.open(file: path, oFlag: O_RDONLY, mode: NIOPOSIXFileMode(S_IRUSR)) else { return nil }
+        defer { try! SystemCalls.close(descriptor: fd) }
+        return try? Self.readLines(descriptor: fd).first
     }
 
     private static func countCoreIds(cores: Substring) -> Int {
