@@ -23,14 +23,14 @@ enum Linux {
     static let cfsCpuMaxPath = "/sys/fs/cgroup/cpu.max"
 
     static let cpuSetPathV1 = "/sys/fs/cgroup/cpuset/cpuset.cpus"
-    static var cpuSetPathV2: String? {
+    static let cpuSetPathV2: String? {
         if let cgroupV2MountPoint = Self.cgroupV2MountPoint {
             return NIOFilePath(cgroupV2MountPoint).appending(["cpuset.cpus"]).description
         }
         return nil
     }
 
-    static var cgroupV2MountPoint: String? {
+    static let cgroupV2MountPoint: String? {
         guard let fh = try? NIOFileHandle(_deprecatedPath: "/proc/self/cgroup") else { return nil }
         defer { try! fh.close() }
         guard let lines = try? Self.readLines(fh: fh) else { return nil }
@@ -46,7 +46,7 @@ enum Linux {
     }
 
     /// Returns the appropriate cpuset path based on the detected cgroup version
-    static var cpuSetPath: String? {
+    static let cpuSetPath: String? {
         guard let version = Self.cgroupVersion() else { return nil }
 
         switch version {
