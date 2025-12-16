@@ -31,7 +31,9 @@ enum Linux {
     }()
 
     static let cgroupV2MountPoint: String? = {
-        guard let fd = try? SystemCalls.open(file: "/proc/self/cgroup", oFlag: O_RDONLY, mode: NIOPOSIXFileMode(S_IRUSR)) else { return nil }
+        guard
+            let fd = try? SystemCalls.open(file: "/proc/self/cgroup", oFlag: O_RDONLY, mode: NIOPOSIXFileMode(S_IRUSR))
+        else { return nil }
         defer { try! SystemCalls.close(descriptor: fd) }
         guard let lines = try? Self.readLines(descriptor: fd) else { return nil }
 
@@ -83,8 +85,9 @@ enum Linux {
         let parts = line.split(separator: ":", maxSplits: 2)
 
         guard parts.count == 3,
-              parts[0] == "0",
-              parts[1] == "" else {
+            parts[0] == "0",
+            parts[1] == ""
+        else {
             return nil
         }
 
@@ -109,7 +112,9 @@ enum Linux {
     }
 
     private static func firstLineOfFile(path: String) throws -> Substring? {
-        guard let fd = try? SystemCalls.open(file: path, oFlag: O_RDONLY, mode: NIOPOSIXFileMode(S_IRUSR)) else { return nil }
+        guard let fd = try? SystemCalls.open(file: path, oFlag: O_RDONLY, mode: NIOPOSIXFileMode(S_IRUSR)) else {
+            return nil
+        }
         defer { try! SystemCalls.close(descriptor: fd) }
         return try? Self.readLines(descriptor: fd).first
     }

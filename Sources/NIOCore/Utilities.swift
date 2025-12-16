@@ -139,7 +139,8 @@ public enum System: Sendable {
         }
 
         if let cpuSetPath,
-           let cpusetCount = Linux.coreCount(cpuset: cpuSetPath) {
+            let cpusetCount = Linux.coreCount(cpuset: cpuSetPath)
+        {
             return cpusetCount
         } else {
             return sysconf(CInt(_SC_NPROCESSORS_ONLN))

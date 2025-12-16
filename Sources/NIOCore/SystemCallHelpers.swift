@@ -245,7 +245,7 @@ enum SystemCalls {
         _ path: UnsafePointer<CChar>,
         _ buf: inout statfs
     ) throws -> CInt {
-        return try syscall(blocking: false) {
+        try syscall(blocking: false) {
             sysStatfs(path, &buf)
         }.result
     }

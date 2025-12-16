@@ -21,8 +21,8 @@ class LinuxTest: XCTestCase {
         #if os(Linux) || os(Android)
         // Test various integer formats in cgroup files
         let testCases = [
-            ("42", "100000", 1),      // Simple integer
-            ("0", "100000", nil),     // Zero should be rejected
+            ("42", "100000", 1),  // Simple integer
+            ("0", "100000", nil),  // Zero should be rejected
         ]
 
         for (quotaContent, periodContent, expectedResult) in testCases {
@@ -92,9 +92,9 @@ class LinuxTest: XCTestCase {
         #if os(Linux) || os(Android)
         // Test coreCount function with simple cpuset formats
         let testCases = [
-            ("0", 1),      // Single core
-            ("0-3", 4),    // Range 0,1,2,3
-            ("5-7", 3),    // Range 5,6,7
+            ("0", 1),  // Single core
+            ("0-3", 4),  // Range 0,1,2,3
+            ("5-7", 3),  // Range 5,6,7
             ("10-10", 1),  // Single core as range
         ]
 
