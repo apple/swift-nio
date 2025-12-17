@@ -34,9 +34,6 @@
 #if __has_include(<linux/magic.h>)
 #include <linux/magic.h>
 #endif
-#if __has_include(<linux/stat.h>)
-#include <linux/stat.h>
-#endif
 #if __has_include(<linux/udp.h>)
 #include <linux/udp.h>
 #else
@@ -158,11 +155,21 @@ extern const long CNIOLinux_UDP_MAX_SEGMENTS;
 
 // Filesystem magic constants for cgroup detection
 #ifdef __ANDROID__
+#if defined(__LP64__)
 extern const uint64_t CNIOLinux_TMPFS_MAGIC;
 extern const uint64_t CNIOLinux_CGROUP2_SUPER_MAGIC;
 #else
+extern const uint32_t CNIOLinux_TMPFS_MAGIC;
+extern const uint32_t CNIOLinux_CGROUP2_SUPER_MAGIC;
+#endif
+#else
+#ifdef __FSWORD_T_TYPE
 extern const __fsword_t CNIOLinux_TMPFS_MAGIC;
 extern const __fsword_t CNIOLinux_CGROUP2_SUPER_MAGIC;
+#else
+extern const unsigned long CNIOLinux_TMPFS_MAGIC;
+extern const unsigned long CNIOLinux_CGROUP2_SUPER_MAGIC;
+#endif
 #endif
 
 // A workaround for incorrect nullability annotations in the Android SDK.

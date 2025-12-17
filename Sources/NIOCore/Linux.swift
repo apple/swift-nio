@@ -17,6 +17,11 @@
 
 #if os(Linux) || os(Android)
 import CNIOLinux
+
+#if canImport(Android)
+@preconcurrency import Android
+#endif
+
 enum Linux {
     static let cfsQuotaPath = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
     static let cfsPeriodPath = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
