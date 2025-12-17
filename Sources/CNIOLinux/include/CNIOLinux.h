@@ -161,8 +161,8 @@ extern const long CNIOLinux_UDP_MAX_SEGMENTS;
 extern const uint64_t CNIOLinux_TMPFS_MAGIC;
 extern const uint64_t CNIOLinux_CGROUP2_SUPER_MAGIC;
 #else
-extern const unsigned long CNIOLinux_TMPFS_MAGIC;
-extern const unsigned long CNIOLinux_CGROUP2_SUPER_MAGIC;
+extern const __fsword_t CNIOLinux_TMPFS_MAGIC;
+extern const __fsword_t CNIOLinux_CGROUP2_SUPER_MAGIC;
 #endif
 
 // A workaround for incorrect nullability annotations in the Android SDK.
