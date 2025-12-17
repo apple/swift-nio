@@ -123,7 +123,7 @@ public enum System: Sendable {
         #elseif os(Linux) || os(Android)
         var cpuSetPath: String?
 
-        switch Linux.cgroupVersion() {
+        switch Linux.cgroupVersion {
         case .v1:
             if let quota = Linux.coreCountCgroup1Restriction() {
                 return quota

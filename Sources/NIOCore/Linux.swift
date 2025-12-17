@@ -49,7 +49,7 @@ enum Linux {
 
     /// Returns the appropriate cpuset path based on the detected cgroup version
     static let cpuSetPath: String? = {
-        guard let version = Self.cgroupVersion() else { return nil }
+        guard let version = Self.cgroupVersion else { return nil }
 
         switch version {
         case .v1:
@@ -60,7 +60,7 @@ enum Linux {
     }()
 
     /// Detects whether we're using cgroup v1 or v2
-    static func cgroupVersion() -> CgroupVersion? {
+    static let cgroupVersion: CgroupVersion? = {
         var fs = statfs()
         guard let result = try? SystemCalls.statfs("/sys/fs/cgroup", &fs), result == 0 else { return nil }
 
@@ -72,7 +72,7 @@ enum Linux {
         default:
             return nil
         }
-    }
+    }()
 
     enum CgroupVersion {
         case v1
