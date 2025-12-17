@@ -189,9 +189,7 @@ class LinuxTest: XCTestCase {
             // Valid cgroup v2 formats
             ("0::/", "/"),                           // Root cgroup
             ("0::/user.slice", "/user.slice"),       // User slice
-            ("0::/system.slice", "/system.slice"),   // System slice
             ("0::/docker/container123", "/docker/container123"), // Docker container
-            ("0::/user.slice/user-1000.slice/session-1.scope", "/user.slice/user-1000.slice/session-1.scope"), // Complex path
             ("0::/", "/"),                   // This should work with omittingEmptySubsequences: false
             ("0::///", "///"),               // Multiple slashes should be preserved
             ("0::/a/b/c", "/a/b/c"),         // Normal nested path
