@@ -215,8 +215,20 @@ const int CNIOLinux_AT_EMPTY_PATH = AT_EMPTY_PATH;
 const unsigned long CNIOLinux_UTIME_OMIT = UTIME_OMIT;
 const unsigned long CNIOLinux_UTIME_NOW = UTIME_NOW;
 
-const unsigned long CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
-const unsigned long CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
+#ifndef TMPFS_MAGIC
+#define TMPFS_MAGIC 0x01021994
+#endif
+#ifndef CGROUP2_SUPER_MAGIC
+#define CGROUP2_SUPER_MAGIC 0x63677270
+#endif
+
+#ifdef __ANDROID__
+const uint32_t CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
+const uint32_t CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
+#else
+const long CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
+const long CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
+#endif
 
 #ifdef UDP_MAX_SEGMENTS
 const long CNIOLinux_UDP_MAX_SEGMENTS = UDP_MAX_SEGMENTS;

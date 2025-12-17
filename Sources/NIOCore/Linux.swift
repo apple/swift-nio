@@ -65,9 +65,9 @@ enum Linux {
         guard let result = try? SystemCalls.statfs("/sys/fs/cgroup", &fs), result == 0 else { return nil }
 
         switch fs.f_type {
-        case Int(CNIOLinux.TMPFS_MAGIC):
+        case CNIOLinux_TMPFS_MAGIC:
             return .v1
-        case Int(CNIOLinux.CGROUP2_SUPER_MAGIC):
+        case CNIOLinux_CGROUP2_SUPER_MAGIC:
             return .v2
         default:
             return nil

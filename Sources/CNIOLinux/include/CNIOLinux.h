@@ -26,12 +26,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/vfs.h>
-#include <linux/magic.h>
 #include <sched.h>
 #include <stdbool.h>
 #include <errno.h>
 #include <pthread.h>
 #include <netinet/ip.h>
+#if __has_include(<linux/magic.h>)
+#include <linux/magic.h>
+#endif
 #if __has_include(<linux/udp.h>)
 #include <linux/udp.h>
 #else
@@ -152,8 +154,13 @@ extern const unsigned long CNIOLinux_UTIME_NOW;
 extern const long CNIOLinux_UDP_MAX_SEGMENTS;
 
 // Filesystem magic constants for cgroup detection
-extern const unsigned long CNIOLinux_TMPFS_MAGIC;
-extern const unsigned long CNIOLinux_CGROUP2_SUPER_MAGIC;
+#ifdef __ANDROID__
+const uint32_t CNIOLinux_TMPFS_MAGIC;
+const uint32_t CNIOLinux_CGROUP2_SUPER_MAGIC;
+#else
+const long CNIOLinux_TMPFS_MAGIC;
+const long CNIOLinux_CGROUP2_SUPER_MAGIC;
+#endif
 
 // A workaround for incorrect nullability annotations in the Android SDK.
 FTS *CNIOLinux_fts_open(char * const *path_argv, int options, int (*compar)(const FTSENT **, const FTSENT **));
