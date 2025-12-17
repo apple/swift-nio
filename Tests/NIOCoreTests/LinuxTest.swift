@@ -182,4 +182,36 @@ class LinuxTest: XCTestCase {
         }
         #endif
     }
+
+    func testParseV2CgroupLine() throws {
+        #if os(Linux) || os(Android)
+        let testCases: [(String, String?)] = [
+            // Valid cgroup v2 formats
+            ("0::/", "/"),                           // Root cgroup
+            ("0::/user.slice", "/user.slice"),       // User slice
+            ("0::/system.slice", "/system.slice"),   // System slice
+            ("0::/docker/container123", "/docker/container123"), // Docker container
+            ("0::/user.slice/user-1000.slice/session-1.scope", "/user.slice/user-1000.slice/session-1.scope"), // Complex path
+            ("0::/", "/"),                   // This should work with omittingEmptySubsequences: false
+            ("0::///", "///"),               // Multiple slashes should be preserved
+            ("0::/a/b/c", "/a/b/c"),         // Normal nested path
+            ("0::/.hidden", "/.hidden"),     // Hidden directory
+            ("0::/path:extra", "/path:extra"),        // Test we're limiting to 2 splits maximum
+
+            // Invalid formats that should return nil
+            ("1::/", nil),                           // Not hierarchy 0
+            ("0:name:/", nil),                       // Has cgroup name (v1 format)
+            ("0", nil),                              // Missing colons
+            ("0:", nil),                             // Missing second colon
+            (":", nil),                              // Only one colon
+            ("::/", nil),                            // Missing hierarchy number
+            ("", nil),                               // Empty string
+        ]
+
+        for (input, expected) in testCases {
+            let result = Linux.parseV2CgroupLine(Substring(input))
+            XCTAssertEqual(result, expected, "Failed parsing '\(input)' - expected '\(expected ?? "nil")' but got '\(result ?? "nil")'")
+        }
+        #endif
+    }
 }

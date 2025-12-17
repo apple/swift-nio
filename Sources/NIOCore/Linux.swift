@@ -40,7 +40,7 @@ enum Linux {
         // Parse each line looking for cgroup v2 format: "0::/path"
         for line in lines {
             if let cgroupPath = Self.parseV2CgroupLine(line) {
-                return cgroupPath
+                return "/sys/fs/cgroup\(cgroupPath)"
             }
         }
 
@@ -80,9 +80,9 @@ enum Linux {
     }
 
     /// Parses a single line from /proc/self/cgroup to extract cgroup v2 path
-    private static func parseV2CgroupLine(_ line: Substring) -> String? {
+    internal static func parseV2CgroupLine(_ line: Substring) -> String? {
         // Expected format is "0::/path"
-        let parts = line.split(separator: ":", maxSplits: 2)
+        let parts = line.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
 
         guard parts.count == 3,
             parts[0] == "0",
