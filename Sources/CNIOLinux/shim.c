@@ -223,11 +223,11 @@ const unsigned long CNIOLinux_UTIME_NOW = UTIME_NOW;
 #endif
 
 #ifdef __ANDROID__
-const uint32_t CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
-const uint32_t CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
+const uint64_t CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
+const uint64_t CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
 #else
-const long CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
-const long CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
+const unsigned long CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
+const unsigned long CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
 #endif
 
 #ifdef UDP_MAX_SEGMENTS
