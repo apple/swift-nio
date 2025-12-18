@@ -463,14 +463,14 @@ jobs:
           MATRIX_CONFIG_BUILD_ARGUMENTS_OVERRIDE: ${{ matrix.config.build_arguments_override }}
       - name: Swift test
         if: 'inputs.swift_test_enabled'
+        env:
+          MATRIX_CONFIG_TEST_ARGUMENTS_OVERRIDE: ${{ matrix.config.test_arguments_override }}
         run: |
           if [ -n "${MATRIX_CONFIG_TEST_ARGUMENTS_OVERRIDE}" ]; then
             swift test ${MATRIX_CONFIG_TEST_ARGUMENTS_OVERRIDE}
           else
             swift test
           fi
-        env:
-          MATRIX_CONFIG_TEST_ARGUMENTS_OVERRIDE: ${{ matrix.config.test_arguments_override }}
         # see `xcodebuild -list` for schemes, `simctl list` for destinations
       - name: macOS build
         if: '!cancelled() && inputs.macos_xcode_build_enabled'
