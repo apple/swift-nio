@@ -37,7 +37,6 @@ import CNIOWindows
 
 #if os(Linux) || os(Android)
 import CNIOLinux
-private let sysStatfs: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<statfs>) -> CInt = statfs
 #endif
 
 #if os(Windows)
@@ -241,12 +240,11 @@ enum SystemCalls {
     #if os(Linux) || os(Android)
     @inline(never)
     @usableFromInline
-    internal static func statfs(
-        _ path: UnsafePointer<CChar>,
-        _ buf: inout statfs
-    ) throws -> CInt {
+    internal static func statfs_ftype(
+        _ path: UnsafePointer<CChar>
+    ) throws -> f_type_t {
         try syscall(blocking: false) {
-            sysStatfs(path, &buf)
+            CNIOLinux_statfs_ftype(path)
         }.result
     }
     #endif

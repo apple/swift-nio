@@ -222,23 +222,17 @@ const unsigned long CNIOLinux_UTIME_NOW = UTIME_NOW;
 #define CGROUP2_SUPER_MAGIC 0x63677270
 #endif
 
-#ifdef __ANDROID__
-#if defined(__LP64__)
-const uint64_t CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
-const uint64_t CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
-#else
-const uint32_t CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
-const uint32_t CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
-#endif
-#else
-#ifdef __FSWORD_T_TYPE
-const __fsword_t CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
-const __fsword_t CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
-#else
-const unsigned long CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
-const unsigned long CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
-#endif
-#endif
+const f_type_t CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
+const f_type_t CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
+
+f_type_t CNIOLinux_statfs_ftype(const char *path) {
+    struct statfs fs;
+    f_type_t f_type = 0;
+    if (statfs(path, &fs) == 0) {
+        f_type = fs.f_type;
+    }
+    return f_type;
+}
 
 #ifdef UDP_MAX_SEGMENTS
 const long CNIOLinux_UDP_MAX_SEGMENTS = UDP_MAX_SEGMENTS;

@@ -66,10 +66,9 @@ enum Linux {
 
     /// Detects whether we're using cgroup v1 or v2
     static let cgroupVersion: CgroupVersion? = {
-        var fs = statfs()
-        guard let result = try? SystemCalls.statfs("/sys/fs/cgroup", &fs), result == 0 else { return nil }
+        guard let type = try? SystemCalls.statfs_ftype("/sys/fs/cgroup") else { return nil }
 
-        switch fs.f_type {
+        switch type {
         case CNIOLinux_TMPFS_MAGIC:
             return .v1
         case CNIOLinux_CGROUP2_SUPER_MAGIC:

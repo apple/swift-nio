@@ -156,21 +156,23 @@ extern const long CNIOLinux_UDP_MAX_SEGMENTS;
 // Filesystem magic constants for cgroup detection
 #ifdef __ANDROID__
 #if defined(__LP64__)
-extern const uint64_t CNIOLinux_TMPFS_MAGIC;
-extern const uint64_t CNIOLinux_CGROUP2_SUPER_MAGIC;
+typedef uint64_t f_type_t;
 #else
-extern const uint32_t CNIOLinux_TMPFS_MAGIC;
-extern const uint32_t CNIOLinux_CGROUP2_SUPER_MAGIC;
+typedef uint32_t f_type_t;
 #endif
 #else
 #ifdef __FSWORD_T_TYPE
-extern const __fsword_t CNIOLinux_TMPFS_MAGIC;
-extern const __fsword_t CNIOLinux_CGROUP2_SUPER_MAGIC;
+typedef __fsword_t f_type_t;
 #else
-extern const unsigned long CNIOLinux_TMPFS_MAGIC;
-extern const unsigned long CNIOLinux_CGROUP2_SUPER_MAGIC;
+typedef unsigned long f_type_t;
 #endif
 #endif
+
+const f_type_t CNIOLinux_TMPFS_MAGIC;
+const f_type_t CNIOLinux_CGROUP2_SUPER_MAGIC;
+
+// Workaround for https://github.com/swiftlang/swift/issues/86149
+f_type_t CNIOLinux_statfs_ftype(const char *path);
 
 // A workaround for incorrect nullability annotations in the Android SDK.
 FTS *CNIOLinux_fts_open(char * const *path_argv, int options, int (*compar)(const FTSENT **, const FTSENT **));
