@@ -141,9 +141,12 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
     public func channelActive(context: ChannelHandlerContext) {
         switch self.stateMachine.channelActive() {
         case .writeUpgradeRequest:
-            context.write(Self.wrapOutboundOut(.head(self.upgradeRequestHead)), promise: nil)
-            context.write(Self.wrapOutboundOut(.body(.byteBuffer(.init()))), promise: nil)
-            context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
+            context.write(
+                NIOTypedHTTPClientUpgradeHandler.wrapOutboundOut(.head(self.upgradeRequestHead)),
+                promise: nil
+            )
+            context.write(NIOTypedHTTPClientUpgradeHandler.wrapOutboundOut(.body(.byteBuffer(.init()))), promise: nil)
+            context.writeAndFlush(NIOTypedHTTPClientUpgradeHandler.wrapOutboundOut(.end(nil)), promise: nil)
 
         case .none:
             break
@@ -179,7 +182,7 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         switch self.stateMachine.channelReadData(data) {
         case .unwrapData:
-            let responsePart = Self.unwrapInboundIn(data)
+            let responsePart = NIOTypedHTTPClientUpgradeHandler.unwrapInboundIn(data)
             self.channelRead(context: context, responsePart: responsePart)
 
         case .fireChannelRead:

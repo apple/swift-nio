@@ -1091,7 +1091,27 @@ extension EventLoopFuture {
     @preconcurrency
     @inlinable
     public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value where Value: Sendable {
+        #if os(WASI)
+        // NOTE: As of July 22, 2025 `wait()` calling wait() is not supported on WASI platforms.
+        //
+        // This may change down the road if and when true multi-threading evolves. But right now
+        // calling wait here results in the following runtime crash:
+        //
+        // ```
+        // SomeExecutable.wasm:0x123456 Uncaught (in promise) RuntimeError: Atomics.wait cannot be called in this context
+        // ```
+        //
+        // Using the following fatal error here gives wasm runtime users a much more clear error message
+        // to identify the issue.
+        //
+        // If you're running into this error on WASI, refactoring to `get()` instead of `wait()` will
+        // likely solve the issue.
+        fatalError(
+            "NIO's wait() function should not be called on WASI platforms. It will freeze or crash. Use get() instead."
+        )
+        #else
         try self._blockingWaitForFutureCompletion(file: file, line: line)
+        #endif
     }
 
     @inlinable

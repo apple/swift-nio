@@ -521,7 +521,7 @@ extension ByteToMessageHandler: CanDequeueWrites where Decoder: WriteObservingBy
     fileprivate func dequeueWrites() {
         while self.queuedWrites.count > 0 {
             // self.decoder can't be `nil`, this is only allowed to be called when we're not already on the stack
-            self.decoder!.write(data: Self.unwrapOutboundIn(self.queuedWrites.removeFirst()))
+            self.decoder!.write(data: ByteToMessageHandler.unwrapOutboundIn(self.queuedWrites.removeFirst()))
         }
     }
 }
@@ -663,7 +663,7 @@ extension ByteToMessageHandler: ChannelInboundHandler {
 
     /// Calls `decode` until there is nothing left to decode.
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let buffer = Self.unwrapInboundIn(data)
+        let buffer = ByteToMessageHandler.unwrapInboundIn(data)
         if case .error(let error) = self.state {
             context.fireErrorCaught(ByteToMessageDecoderError.dataReceivedInErrorState(error, buffer))
             return
@@ -721,7 +721,7 @@ where Decoder: WriteObservingByteToMessageDecoder {
     public typealias OutboundIn = Decoder.OutboundIn
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         if self.decoder != nil {
-            let data = Self.unwrapOutboundIn(data)
+            let data = ByteToMessageHandler.unwrapOutboundIn(data)
             assert(self.queuedWrites.isEmpty)
             self.decoder!.write(data: data)
         } else {
@@ -839,12 +839,12 @@ extension MessageToByteHandler {
             // there's actually some work to do here
             break
         }
-        let data = Self.unwrapOutboundIn(data)
+        let data = MessageToByteHandler.unwrapOutboundIn(data)
 
         do {
             self.buffer!.clear()
             try self.encoder.encode(data: data, out: &self.buffer!)
-            context.write(Self.wrapOutboundOut(self.buffer!), promise: promise)
+            context.write(MessageToByteHandler.wrapOutboundOut(self.buffer!), promise: promise)
         } catch {
             self.state = .error(error)
             promise?.fail(error)

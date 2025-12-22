@@ -17,6 +17,9 @@ import NIOCore
 import CNIODarwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#elseif os(OpenBSD)
+import CNIOOpenBSD
+import Glibc
 #elseif os(Windows)
 import CNIOWindows
 #endif
@@ -194,6 +197,7 @@ struct UnsafeReceivedControlBytes {
 struct ControlMessageParser {
     var ecnValue: NIOExplicitCongestionNotificationState = .transportNotCapable  // Default
     var packetInfo: NIOPacketInfo? = nil
+    var segmentSize: Int? = nil
 
     init(parsing controlMessagesReceived: UnsafeControlMessageCollection) {
         for controlMessage in controlMessagesReceived {
@@ -222,6 +226,8 @@ struct ControlMessageParser {
             self.receiveIPv4Message(controlMessage)
         } else if controlMessage.level == _IPPROTO_IPV6 {
             self.receiveIPv6Message(controlMessage)
+        } else if controlMessage.level == Posix.SOL_UDP {
+            self.receiveUDPMessage(controlMessage)
         }
     }
 
@@ -234,6 +240,7 @@ struct ControlMessageParser {
                 self.ecnValue = .init(receivedValue: readValue)
             }
         } else if controlMessage.type == Posix.IP_PKTINFO {
+            #if !os(OpenBSD)
             if let data = controlMessage.data {
                 let info = data.load(as: in_pktinfo.self)
                 var addr = sockaddr_in()
@@ -245,7 +252,7 @@ struct ControlMessageParser {
                     interfaceIndex: Int(info.ipi_ifindex)
                 )
             }
-
+            #endif
         }
     }
 
@@ -270,6 +277,17 @@ struct ControlMessageParser {
                 )
             }
         }
+    }
+
+    private mutating func receiveUDPMessage(_ controlMessage: UnsafeControlMessage) {
+        #if os(Linux)
+        if controlMessage.type == .init(NIOBSDSocket.Option.udp_gro.rawValue) {
+            if let data = controlMessage.data {
+                let readValue = ControlMessageParser._readCInt(data: data)
+                self.segmentSize = Int(readValue)
+            }
+        }
+        #endif
     }
 }
 
@@ -388,12 +406,35 @@ extension UnsafeOutboundControlBytes {
             break
         }
     }
+
+    /// Appends a UDP segment size control message for Generic Segmentation Offload (GSO).
+    ///
+    /// - Parameter metadata: Metadata from the addressed envelope which may contain a segment size.
+    /// - Warning: This will `fatalError` if called with a segmentSize on non-Linux platforms.
+    ///   Callers should validate platform support before enqueueing writes with segmentSize.
+    internal mutating func appendUDPSegmentSize(metadata: AddressedEnvelope<ByteBuffer>.Metadata?) {
+        guard let metadata = metadata, let segmentSize = metadata.segmentSize else { return }
+
+        #if os(Linux)
+        self.appendGenericControlMessage(
+            level: Posix.SOL_UDP,
+            type: .init(NIOBSDSocket.Option.udp_segment.rawValue),
+            payload: UInt16(segmentSize)
+        )
+        #else
+        fatalError("UDP segment size is only supported on Linux")
+        #endif
+    }
 }
 
 extension AddressedEnvelope.Metadata {
     /// It's assumed the caller has checked that congestion information is required before calling.
     internal init(from controlMessagesReceived: UnsafeControlMessageCollection) {
         let controlMessageReceiver = ControlMessageParser(parsing: controlMessagesReceived)
-        self.init(ecnState: controlMessageReceiver.ecnValue, packetInfo: controlMessageReceiver.packetInfo)
+        self.init(
+            ecnState: controlMessageReceiver.ecnValue,
+            packetInfo: controlMessageReceiver.packetInfo,
+            segmentSize: controlMessageReceiver.segmentSize
+        )
     }
 }

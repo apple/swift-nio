@@ -143,7 +143,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         switch self.stateMachine.channelReadData(data) {
         case .unwrapData:
-            let requestPart = Self.unwrapInboundIn(data)
+            let requestPart = NIOTypedHTTPServerUpgradeHandler.unwrapInboundIn(data)
             self.channelRead(context: context, requestPart: requestPart)
 
         case .fireChannelRead:

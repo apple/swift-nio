@@ -202,7 +202,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch Self.unwrapOutboundIn(data) {
+        switch HTTPRequestEncoder.unwrapOutboundIn(data) {
         case .head(var request):
             assert(
                 !(request.headers.contains(name: "content-length")
@@ -221,7 +221,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
             }
 
             writeHead(
-                wrapOutboundOut: Self.wrapOutboundOut,
+                wrapOutboundOut: HTTPRequestEncoder.wrapOutboundOut,
                 writeStartLine: { buffer in
                     buffer.write(request: request)
                 },
@@ -231,7 +231,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
             )
         case .body(let bodyPart):
             writeChunk(
-                wrapOutboundOut: Self.wrapOutboundOut,
+                wrapOutboundOut: HTTPRequestEncoder.wrapOutboundOut,
                 context: context,
                 isChunked: self.isChunked,
                 chunk: bodyPart,
@@ -239,7 +239,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
             )
         case .end(let trailers):
             writeTrailers(
-                wrapOutboundOut: Self.wrapOutboundOut,
+                wrapOutboundOut: HTTPRequestEncoder.wrapOutboundOut,
                 context: context,
                 isChunked: self.isChunked,
                 trailers: trailers,
@@ -292,7 +292,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch Self.unwrapOutboundIn(data) {
+        switch HTTPResponseEncoder.unwrapOutboundIn(data) {
         case .head(var response):
             assert(
                 !(response.headers.contains(name: "content-length")
@@ -312,7 +312,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
             }
 
             writeHead(
-                wrapOutboundOut: Self.wrapOutboundOut,
+                wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
                 writeStartLine: { buffer in
                     buffer.write(response: response)
                 },
@@ -322,7 +322,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
             )
         case .body(let bodyPart):
             writeChunk(
-                wrapOutboundOut: Self.wrapOutboundOut,
+                wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
                 context: context,
                 isChunked: self.isChunked,
                 chunk: bodyPart,
@@ -330,7 +330,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
             )
         case .end(let trailers):
             writeTrailers(
-                wrapOutboundOut: Self.wrapOutboundOut,
+                wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
                 context: context,
                 isChunked: self.isChunked,
                 trailers: trailers,

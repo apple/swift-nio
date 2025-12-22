@@ -31,7 +31,8 @@ let benchmarks = {
             metrics: defaultMetrics,
             scalingFactor: .mega,
             maxDuration: .seconds(10_000_000),
-            maxIterations: 5
+            maxIterations: 5,
+            thresholds: [.mallocCountTotal: .init(absolute: [.p90: 50])]
         )
     ) { benchmark in
         try runTCPEcho(
@@ -61,6 +62,36 @@ let benchmarks = {
         )
     ) { benchmark in
         try await runTCPEchoAsyncChannel(
+            numberOfWrites: benchmark.scaledIterations.upperBound,
+            eventLoop: eventLoop
+        )
+    }
+
+    Benchmark(
+        "UDPEcho",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
+        )
+    ) { benchmark in
+        try runUDPEcho(
+            numberOfWrites: benchmark.scaledIterations.upperBound,
+            eventLoop: eventLoop
+        )
+    }
+
+    Benchmark(
+        "UDPEchoPacketInfo",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
+        )
+    ) { benchmark in
+        try runUDPEchoPacketInfo(
             numberOfWrites: benchmark.scaledIterations.upperBound,
             eventLoop: eventLoop
         )

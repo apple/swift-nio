@@ -126,6 +126,10 @@ extension FileSystem {
                     // the latter case we choose to propagate the cancellation clearly. This makes
                     // testing for it more reliable.
                     try Task.checkCancellation()
+
+                    // If any child tasks failed throw up an error.
+                    try await taskGroup.waitForAll()
+
                     return
                 }
             }

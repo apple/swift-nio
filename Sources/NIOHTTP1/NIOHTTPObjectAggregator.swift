@@ -198,7 +198,7 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let msg = Self.unwrapInboundIn(data)
+        let msg = NIOHTTPServerRequestAggregator.unwrapInboundIn(data)
         var serverResponse: HTTPResponseHead? = nil
 
         do {
@@ -224,8 +224,8 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
 
         // Generated a server response to send back
         if let response = serverResponse {
-            context.write(Self.wrapOutboundOut(.head(response)), promise: nil)
-            context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
+            context.write(NIOHTTPServerRequestAggregator.wrapOutboundOut(.head(response)), promise: nil)
+            context.writeAndFlush(NIOHTTPServerRequestAggregator.wrapOutboundOut(.end(nil)), promise: nil)
             if response.status == .payloadTooLarge {
                 // If indicated content length is too large
                 self.state.handlingOversizeMessage()
@@ -345,7 +345,7 @@ public final class NIOHTTPClientResponseAggregator: ChannelInboundHandler, Remov
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let msg = Self.unwrapInboundIn(data)
+        let msg = NIOHTTPClientResponseAggregator.unwrapInboundIn(data)
 
         do {
             switch msg {
