@@ -216,7 +216,15 @@ internal class Selector<R: Registration> {
     @usableFromInline
     typealias EventType = WinSDK.pollfd
     @usableFromInline
-    var pollFDs = [WinSDK.pollfd]()
+    var pollFDs = [pollfd]()
+    @usableFromInline
+    var deregisteredFDs = [Bool]()
+    /// The read end of the wakeup socket pair. This is monitored in WSAPoll to allow waking up the event loop.
+    @usableFromInline
+    var wakeupReadSocket: NIOBSDSocket.Handle = NIOBSDSocket.invalidHandle
+    /// The write end of the wakeup socket pair. Writing to this socket wakes up the event loop.
+    @usableFromInline
+    var wakeupWriteSocket: NIOBSDSocket.Handle = NIOBSDSocket.invalidHandle
     #else
     #error("Unsupported platform, no suitable selector backend (we need kqueue or epoll support)")
     #endif
