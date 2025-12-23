@@ -426,6 +426,22 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
     }
 
+    func testYield_cancelWhenStreamingAndNotWritable() async throws {
+        try await self.writer.yield("message1")
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
+        // Ensure the yield suspends
+        self.sink.setWritability(to: false)
+
+        let task = Task { [writer] in
+            try await writer!.yield("message2")
+        }
+        task.cancel()
+
+        await XCTAssertThrowsError(try await task.value) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+    }
+
     func testYield_whenWriterFinished() async throws {
         self.sink.setWritability(to: false)
 

@@ -122,6 +122,11 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker, _NIOPreconcurrencySe
     var localAddress: SocketAddress? { get }
 
     /// The remote peer's `SocketAddress`.
+    ///
+    /// If we end up accepting an already-closed connection, the kernel can end up in a place
+    /// where it has no remote address to give us. In this situation, `remoteAddress` will be
+    /// `nil`. It can also be `nil` in cases where it isn't representable in SocketAddress, e.g. if
+    /// we're talking over a vsock.
     var remoteAddress: SocketAddress? { get }
 
     /// `Channel`s are hierarchical and might have a parent `Channel`. `Channel` hierarchies are in use for certain

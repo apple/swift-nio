@@ -225,7 +225,7 @@ jobs:
       darwin-matrix: '${{ steps.generate-matrix.outputs.darwin-matrix }}'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
           persist-credentials: false
       - id: generate-matrix
@@ -425,6 +425,7 @@ jobs:
   darwin-job:
     name: ${{ matrix.config.name }}
     needs: construct-matrix
+    if: github.repository_owner == 'apple'
     runs-on: [self-hosted, macos, "${{ matrix.config.os }}", "${{ matrix.config.arch }}", "${{ matrix.config.pool }}"]
     timeout-minutes: 30
     strategy:
@@ -432,7 +433,7 @@ jobs:
       matrix: ${{ fromJson(needs.construct-matrix.outputs.darwin-matrix) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
           persist-credentials: false
           submodules: true

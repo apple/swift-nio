@@ -1,0 +1,162 @@
+name: macOS benchmarks
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      benchmark_package_path:
+        type: string
+        description: "Path to the directory containing the benchmarking package. Defaults to ."
+        default: "."
+      swift_package_arguments:
+        type: string
+        description: "Arguments to the switch package command invocation e.g. `--disable-sandbox`"
+
+      macos_xcode_16_3_enabled:
+        type: boolean
+        description: "Boolean to enable the macOS Xcode 16.3 benchmark job. Defaults to false."
+        default: false
+      macos_xcode_16_4_enabled:
+        type: boolean
+        description: "Boolean to enable the macOS Xcode 16.4 benchmark job. Defaults to false."
+        default: false
+      macos_xcode_26_0_enabled:
+        type: boolean
+        description: "Boolean to enable the macOS Xcode 26.0 benchmark job. Defaults to false."
+        default: false
+      macos_xcode_26_1_enabled:
+        type: boolean
+        description: "Boolean to enable the macOS Xcode 26.1 benchmark job. Defaults to false."
+        default: false
+      macos_xcode_latest_beta_enabled:
+        type: boolean
+        description: "Boolean to enable the macOS Xcode latest beta benchmark job. Defaults to false."
+        default: false
+
+      macos_runner_pool:
+        type: string
+        description: "The runner pool which will be requested for macOS jobs."
+        default: "nightly"
+
+      macos_env_vars:
+        type: string
+        description: "Environment variables for macOS jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
+        default: "{}"
+
+      minimum_swift_version:
+        type: string
+        description: "Minimum Swift version to include in the matrix. Leave empty for auto-detection from Package.swift, specify a version like '6.0' to override, or set to 'none' to disable filtering."
+        default: ""
+
+jobs:
+  construct-matrix-macos:
+    name: Construct macOS Benchmarks matrix
+    runs-on: ubuntu-latest
+    if: |
+      inputs.macos_xcode_16_3_enabled ||
+      inputs.macos_xcode_16_4_enabled ||
+      inputs.macos_xcode_26_0_enabled ||
+      inputs.macos_xcode_26_1_enabled ||
+      inputs.macos_xcode_latest_beta_enabled
+    outputs:
+      macos-matrix: '${{ steps.generate-matrix.outputs.macos-matrix }}'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          persist-credentials: false
+      - id: generate-matrix
+        run: |
+          # Validate JSON environment variables
+          macos_env_vars_json='${{ inputs.macos_env_vars }}'
+
+          if ! echo "$macos_env_vars_json" | jq empty 2>/dev/null; then
+            echo "Error: macos_env_vars is not valid JSON"
+            exit 1
+          fi
+
+          runner_pool="${MACOS_RUNNER_POOL}"
+          xcode_16_3_enabled="${MACOS_XCODE_16_3_ENABLED}"
+          xcode_16_4_enabled="${MACOS_XCODE_16_4_ENABLED}"
+          xcode_26_0_enabled="${MACOS_XCODE_26_0_ENABLED}"
+          xcode_26_1_enabled="${MACOS_XCODE_26_1_ENABLED}"
+          xcode_latest_beta_enabled="${MACOS_XCODE_LATEST_BETA_ENABLED}"
+
+          # Create matrix from inputs
+          matrix='{"config": []}'
+
+          if [[ "$xcode_16_3_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+              --arg runner_pool "$runner_pool" \
+              --argjson env_vars "$macos_env_vars_json" \
+              '.config[.config| length] |= . + { "name": "macOS (Xcode 16.3)", "xcode_version": "16.3", "xcode_app": "Xcode_16.3.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+          fi
+
+          if [[ "$xcode_16_4_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+              --arg runner_pool "$runner_pool" \
+              --argjson env_vars "$macos_env_vars_json" \
+              '.config[.config| length] |= . + { "name": "macOS (Xcode 16.4)", "xcode_version": "16.4", "xcode_app": "Xcode_16.4.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+          fi
+
+          if [[ "$xcode_26_0_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+              --arg runner_pool "$runner_pool" \
+              --argjson env_vars "$macos_env_vars_json" \
+              '.config[.config| length] |= . + { "name": "macOS (Xcode 26.0)", "xcode_version": "26.0", "xcode_app": "Xcode_26.0.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+          fi
+
+          if [[ "$xcode_26_1_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+              --arg runner_pool "$runner_pool" \
+              --argjson env_vars "$macos_env_vars_json" \
+              '.config[.config| length] |= . + { "name": "macOS (Xcode 26.1)", "xcode_version": "26.1", "xcode_app": "Xcode_26.1.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+          fi
+
+          if [[ "$xcode_latest_beta_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+              --arg runner_pool "$runner_pool" \
+              --argjson env_vars "$macos_env_vars_json" \
+              '.config[.config| length] |= . + { "name": "macOS (Xcode latest beta)", "xcode_version": "latest beta", "xcode_app": "Xcode-latest.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+          fi
+
+          echo "macos-matrix=$matrix" >> "$GITHUB_OUTPUT"
+        env:
+          MACOS_RUNNER_POOL: ${{ inputs.macos_runner_pool }}
+          MACOS_XCODE_16_3_ENABLED: ${{ inputs.macos_xcode_16_3_enabled }}
+          MACOS_XCODE_16_4_ENABLED: ${{ inputs.macos_xcode_16_4_enabled }}
+          MACOS_XCODE_26_0_ENABLED: ${{ inputs.macos_xcode_26_0_enabled }}
+          MACOS_XCODE_26_1_ENABLED: ${{ inputs.macos_xcode_26_1_enabled }}
+          MACOS_XCODE_LATEST_BETA_ENABLED: ${{ inputs.macos_xcode_latest_beta_enabled }}
+
+  benchmarks-macos:
+    name: ${{ matrix.config.name }}
+    needs: construct-matrix-macos
+    runs-on: [self-hosted, macos, "${{ matrix.config.os }}", "${{ matrix.config.arch }}", "${{ matrix.config.pool }}"]
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.construct-matrix-macos.outputs.macos-matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Install jemalloc
+        run: |
+          brew install jemalloc
+      - name: Export environment variables
+        if: ${{ matrix.config.env != '' && matrix.config.env != '{}'}}
+        run: |
+          echo "Exporting environment variables from matrix configuration..."
+          echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "\(.key)=\(.value)"' >> $GITHUB_ENV
+          echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "exporting \(.key)=\(.value)"'
+      - name: Run benchmarks script
+        run: |
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} bash -s -- --disable-sandbox --allow-writing-to-package-directory
+        env:
+          DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
+          SWIFT_VERSION: "Xcode ${{ matrix.config.xcode_version }}"

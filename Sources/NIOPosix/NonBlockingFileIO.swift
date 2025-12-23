@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import CNIOOpenBSD
 import CNIOWindows
 import NIOConcurrencyHelpers
 import NIOCore
@@ -829,8 +830,13 @@ public struct NonBlockingFileIO: Sendable {
                         let ptr = pointer.baseAddress!.assumingMemoryBound(to: CChar.self)
                         return String(cString: ptr)
                     }
+                    #if os(OpenBSD)
+                    let ino = entry.pointee.d_fileno
+                    #else
+                    let ino = entry.pointee.d_ino
+                    #endif
                     entries.append(
-                        NIODirectoryEntry(ino: UInt64(entry.pointee.d_ino), type: entry.pointee.d_type, name: name)
+                        NIODirectoryEntry(ino: UInt64(ino), type: entry.pointee.d_type, name: name)
                     )
                 }
                 try? Posix.closedir(dir: dir)
@@ -1278,8 +1284,13 @@ extension NonBlockingFileIO {
                         let ptr = pointer.baseAddress!.assumingMemoryBound(to: CChar.self)
                         return String(cString: ptr)
                     }
+                    #if os(OpenBSD)
+                    let ino = entry.pointee.d_fileno
+                    #else
+                    let ino = entry.pointee.d_ino
+                    #endif
                     entries.append(
-                        NIODirectoryEntry(ino: UInt64(entry.pointee.d_ino), type: entry.pointee.d_type, name: name)
+                        NIODirectoryEntry(ino: UInt64(ino), type: entry.pointee.d_type, name: name)
                     )
                 }
                 try? Posix.closedir(dir: dir)

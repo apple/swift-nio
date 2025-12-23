@@ -249,6 +249,42 @@ struct ByteBufferSpanTests {
         #expect(bb.readableBytes == 13)
         #expect(String(buffer: bb) == "Hello, world!")
     }
+
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    func testReadableBytesUInt8SpanOfEmptyByteBuffer() {
+        let bb = ByteBuffer()
+        #expect(bb.readableBytesUInt8Span.count == 0)
+    }
+
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    func testReadableBytesUInt8SpanOfSimpleBuffer() {
+        let bb = ByteBuffer(string: "Hello, world!")
+        #expect(bb.readableBytesUInt8Span.count == 13)
+        let bytesEqual = bb.readableBytesUInt8Span.elementsEqual("Hello, world!".utf8)
+        #expect(bytesEqual)
+    }
+
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    func testReadableBytesUInt8SpanNotAtTheStart() {
+        var bb = ByteBuffer(string: "Hello, world!")
+        bb.moveReaderIndex(forwardBy: 5)
+        #expect(bb.readableBytesUInt8Span.count == 8)
+        let bytesEqual = bb.readableBytesUInt8Span.elementsEqual(", world!".utf8)
+        #expect(bytesEqual)
+    }
+
+    @Test
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    func testReadableBytesUInt8SpanOfSlice() {
+        let first = ByteBuffer(string: "Hello, world!")
+        let bb = first.getSlice(at: 5, length: 5)!
+        #expect(bb.readableBytesUInt8Span.count == 5)
+        let bytesEqual = bb.readableBytesUInt8Span.elementsEqual(", wor".utf8)
+        #expect(bytesEqual)
+    }
 }
 
 @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
@@ -260,6 +296,25 @@ extension RawSpan {
         var offset = 0
         while index < other.endIndex {
             guard other[index] == self.unsafeLoadUnaligned(fromByteOffset: offset, as: UInt8.self) else {
+                return false
+            }
+            other.formIndex(after: &index)
+            offset &+= 1
+        }
+
+        return true
+    }
+}
+
+@available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+extension Span<UInt8> {
+    func elementsEqual<Other: Collection>(_ other: Other) -> Bool where Other.Element == UInt8 {
+        guard other.count == self.count else { return false }
+        guard var offset = self.indices.first else { return true }
+
+        var index = other.startIndex
+        while index < other.endIndex {
+            guard other[index] == self[offset] else {
                 return false
             }
             other.formIndex(after: &index)
