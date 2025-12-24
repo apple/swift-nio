@@ -231,7 +231,7 @@ jobs:
       - id: generate-matrix
         run: |
           # Validate and use JSON environment variables directly
-          env_vars_json='${{ inputs.env_vars }}'
+          env_vars_json='${MATRIX_ENV_VARS}'
 
           # Validate JSON format
           if ! echo "$env_vars_json" | jq empty 2>/dev/null; then
@@ -421,6 +421,7 @@ jobs:
           MATRIX_MACOS_LATEST_BETA_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_latest_beta_build_arguments_override }}
           MATRIX_MACOS_LATEST_BETA_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_latest_beta_test_arguments_override }}
           MATRIX_MACOS_LATEST_BETA_SETUP_COMMAND: ${{ inputs.xcode_latest_beta_setup_command }}
+          MATRIX_ENV_VARS: ${{ inputs.env_vars }}
 
   darwin-job:
     name: ${{ matrix.config.name }}
@@ -449,19 +450,25 @@ jobs:
           /usr/bin/xcodebuild -version
       - name: Setup command
         if: ${{ matrix.config.setup_command != '' }}
-        run: bash -c "${{ matrix.config.setup_command }}"
+        run: bash -c "${MATRIX_CONFIG_SETUP_COMMAND}"
+        env:
+          MATRIX_CONFIG_SETUP_COMMAND: ${{ matrix.config.setup_command }}
       - name: Swift build
         run: |
-          if [ -n "${{ matrix.config.build_arguments_override }}" ]; then
-            swift build ${{ matrix.config.build_arguments_override }}
+          if [ -n "${MATRIX_CONFIG_BUILD_ARGUMENTS_OVERRIDE}" ]; then
+            swift build ${MATRIX_CONFIG_BUILD_ARGUMENTS_OVERRIDE}
           else
             swift build --build-tests
           fi
+        env:
+          MATRIX_CONFIG_BUILD_ARGUMENTS_OVERRIDE: ${{ matrix.config.build_arguments_override }}
       - name: Swift test
         if: 'inputs.swift_test_enabled'
+        env:
+          MATRIX_CONFIG_TEST_ARGUMENTS_OVERRIDE: ${{ matrix.config.test_arguments_override }}
         run: |
-          if [ -n "${{ matrix.config.test_arguments_override }}" ]; then
-            swift test ${{ matrix.config.test_arguments_override }}
+          if [ -n "${MATRIX_CONFIG_TEST_ARGUMENTS_OVERRIDE}" ]; then
+            swift test ${MATRIX_CONFIG_TEST_ARGUMENTS_OVERRIDE}
           else
             swift test
           fi

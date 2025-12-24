@@ -92,8 +92,8 @@ jobs:
       - id: generate-matrix
         run: |
           # Validate JSON environment variables
-          linux_env_vars_json='${{ inputs.linux_env_vars }}'
-          windows_env_vars_json='${{ inputs.windows_env_vars }}'
+          linux_env_vars_json='${MATRIX_LINUX_ENV_VARS}'
+          windows_env_vars_json='${MATRIX_WINDOWS_ENV_VARS}'
 
           if ! echo "$linux_env_vars_json" | jq empty 2>/dev/null; then
             echo "Error: linux_env_vars is not valid JSON"
@@ -117,6 +117,8 @@ jobs:
           MATRIX_LINUX_6_2_ENABLED: ${{ inputs.linux_6_2_enabled }}
           MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_6_1_enabled && inputs.linux_nightly_next_enabled }}
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
+          MATRIX_LINUX_ENV_VARS: ${{ inputs.linux_env_vars }}
+          MATRIX_WINDOWS_ENV_VARS: ${{ inputs.windows_env_vars }}
 
   cxx-interop:
     name: Cxx interop
