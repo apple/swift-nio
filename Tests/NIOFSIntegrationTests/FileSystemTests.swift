@@ -983,6 +983,95 @@ final class FileSystemTests: XCTestCase {
         }
     }
 
+    func testCopyFileWithOverwrite() async throws {
+        let sourceContent: [UInt8] = [1, 2, 3]
+        let oldDestinationContent: [UInt8] = [4, 5, 6]
+
+        let source = try await self.fs.temporaryFilePath()
+        let destination = try await self.fs.temporaryFilePath()
+
+        // Create source
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
+        }
+
+        // Create destination
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: destination,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: oldDestinationContent, toAbsoluteOffset: 0)
+        }
+
+        // Copy with overwrite: true should succeed
+        try await self.fs.copyItem(
+            at: source,
+            to: destination,
+            strategy: .platformDefault,
+            overwrite: true,
+            shouldProceedAfterError: { _, error in
+                throw error
+            },
+            shouldCopyItem: { _, _ in
+                true
+            }
+        )
+
+        // Verify destination now has source content
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), sourceContent)
+        }
+
+        // Verify source still exists with original content
+        try await self.fs.withFileHandle(forReadingAt: source) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), sourceContent)
+        }
+    }
+
+    func testCopyFileOverwriteNonExistent() async throws {
+        let sourceContent: [UInt8] = [7, 8, 9]
+
+        let source = try await self.fs.temporaryFilePath()
+        let destination = try await self.fs.temporaryFilePath()
+
+        // Create only source file
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
+        }
+
+        // Verify destination doesn't exist
+        let destInfoBefore = try await self.fs.info(forFileAt: destination)
+        XCTAssertNil(destInfoBefore)
+
+        // Copy with overwrite: true should succeed even when destination doesn't exist
+        try await self.fs.copyItem(
+            at: source,
+            to: destination,
+            strategy: .platformDefault,
+            overwrite: true,
+            shouldProceedAfterError: { _, error in
+                throw error
+            },
+            shouldCopyItem: { _, _ in
+                true
+            }
+        )
+
+        // Verify destination now exists with correct content
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), sourceContent)
+        }
+    }
+
     func testRemoveSingleFile() async throws {
         let path = try await self.fs.temporaryFilePath()
         try await self.fs.withFileHandle(

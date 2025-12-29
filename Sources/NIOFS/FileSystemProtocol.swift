@@ -233,6 +233,7 @@ public protocol FileSystemProtocol: Sendable {
         at sourcePath: NIOFilePath,
         to destinationPath: NIOFilePath,
         strategy copyStrategy: CopyStrategy,
+        overwrite: Bool,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -482,7 +483,12 @@ extension FileSystemProtocol {
         to destinationPath: NIOFilePath,
         strategy copyStrategy: CopyStrategy = .platformDefault
     ) async throws {
-        try await self.copyItem(at: sourcePath, to: destinationPath, strategy: copyStrategy) { path, error in
+        try await self.copyItem(
+            at: sourcePath,
+            to: destinationPath,
+            strategy: copyStrategy,
+            overwrite: false
+        ) { path, error in
             throw error
         } shouldCopyItem: { source, destination in
             true
@@ -533,6 +539,7 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: .platformDefault,
+            overwrite: false,
             shouldProceedAfterError: shouldProceedAfterError,
             shouldCopyItem: shouldCopyItem
         )

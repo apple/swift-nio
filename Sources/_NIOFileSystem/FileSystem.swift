@@ -291,25 +291,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     // MARK: - File copying, removal, and moving
 
-    // TODO: add docstring
-    // public func copyItem(
-    //     at sourcePath: FilePath,
-    //     overwriting destinationPath: FilePath,
-    //     strategy copyStrategy: CopyStrategy,
-    //     shouldProceedAfterError:
-    //         @escaping @Sendable (
-    //             _ source: DirectoryEntry,
-    //             _ error: Error
-    //         ) async throws -> Void,
-    //     shouldCopyItem:
-    //         @escaping @Sendable (
-    //             _ source: DirectoryEntry,
-    //             _ destination: FilePath
-    //         ) async -> Bool
-    // ) async throws {
-        
-    // }
-
+    // TODO: add the overwrite docstring
     /// See ``FileSystemProtocol/copyItem(at:to:shouldProceedAfterError:shouldCopyFile:)``
     ///
     /// The item to be copied must be a:
@@ -333,7 +315,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at sourcePath: FilePath,
         to destinationPath: FilePath,
         strategy copyStrategy: CopyStrategy,
-        overwrite: Bool,
+        overwrite: Bool = false,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
