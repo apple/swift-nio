@@ -291,6 +291,25 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     // MARK: - File copying, removal, and moving
 
+    // TODO: add docstring
+    // public func copyItem(
+    //     at sourcePath: FilePath,
+    //     overwriting destinationPath: FilePath,
+    //     strategy copyStrategy: CopyStrategy,
+    //     shouldProceedAfterError:
+    //         @escaping @Sendable (
+    //             _ source: DirectoryEntry,
+    //             _ error: Error
+    //         ) async throws -> Void,
+    //     shouldCopyItem:
+    //         @escaping @Sendable (
+    //             _ source: DirectoryEntry,
+    //             _ destination: FilePath
+    //         ) async -> Bool
+    // ) async throws {
+        
+    // }
+
     /// See ``FileSystemProtocol/copyItem(at:to:shouldProceedAfterError:shouldCopyFile:)``
     ///
     /// The item to be copied must be a:
@@ -314,6 +333,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at sourcePath: FilePath,
         to destinationPath: FilePath,
         strategy copyStrategy: CopyStrategy,
+        overwrite: Bool,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -340,7 +360,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         if await shouldCopyItem(.init(path: sourcePath, type: info.type)!, destinationPath) {
             switch info.type {
             case .regular:
-                try await self.copyRegularFile(from: sourcePath, to: destinationPath)
+                try await self.copyRegularFile(from: sourcePath, to: destinationPath, overwrite: overwrite)
 
             case .symlink:
                 try await self.copySymbolicLink(from: sourcePath, to: destinationPath)
@@ -1190,16 +1210,22 @@ extension FileSystem {
 
     private func copyRegularFile(
         from sourcePath: FilePath,
-        to destinationPath: FilePath
+        to destinationPath: FilePath,
+        overwrite: Bool = false
     ) async throws {
         try await self.threadPool.runIfActive {
-            try self._copyRegularFile(from: sourcePath, to: destinationPath).get()
+            try self._copyRegularFile(
+                from: sourcePath, 
+                to: destinationPath, 
+                overwrite: overwrite,
+            ).get()
         }
     }
 
     private func _copyRegularFile(
         from sourcePath: FilePath,
-        to destinationPath: FilePath
+        to destinationPath: FilePath,
+        overwrite: Bool,
     ) -> Result<Void, FileSystemError> {
         func makeOnUnavailableError(
             path: FilePath,
@@ -1217,7 +1243,12 @@ extension FileSystem {
         // COPYFILE_CLONE clones the file if possible and will fallback to doing a copy.
         // COPYFILE_ALL is shorthand for:
         //    COPYFILE_STAT | COPYFILE_ACL | COPYFILE_XATTR | COPYFILE_DATA
-        let flags = copyfile_flags_t(COPYFILE_CLONE) | copyfile_flags_t(COPYFILE_ALL)
+        var flags = copyfile_flags_t(COPYFILE_CLONE) | copyfile_flags_t(COPYFILE_ALL)
+        if overwrite {
+            // COPYFILE_UNLINK removes the destination if it exists before copying
+            flags |= copyfile_flags_t(COPYFILE_UNLINK)
+        }
+
         return Libc.copyfile(
             from: sourcePath,
             to: destinationPath,

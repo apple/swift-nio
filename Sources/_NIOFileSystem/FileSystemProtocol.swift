@@ -167,6 +167,7 @@ public protocol FileSystemProtocol: Sendable {
 
     // MARK: - File copying, removal, and moving
 
+    // TODO: add the options description
     /// Copies the item at the specified path to a new location.
     ///
     /// The following error codes may be thrown:
@@ -204,9 +205,9 @@ public protocol FileSystemProtocol: Sendable {
     ///
     /// The specific error thrown from copyItem is undefined, it does not have to be the same error thrown from
     /// `shouldProceedAfterError`.
-    /// In the event of any errors (ignored or otherwise) implementations are under no obbligation to
+    /// In the event of any errors (ignored or otherwise) implementations are under no obligation to
     /// attempt to 'tidy up' after themselves. The state of the file system within `destinationPath`
-    /// after an aborted copy should is undefined.
+    /// after an aborted copy is undefined.
     ///
     /// When calling `shouldProceedAfterError` implementations of this method
     /// MUST:
@@ -233,6 +234,7 @@ public protocol FileSystemProtocol: Sendable {
         at sourcePath: FilePath,
         to destinationPath: FilePath,
         strategy copyStrategy: CopyStrategy,
+        overwrite: Bool,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -482,7 +484,12 @@ extension FileSystemProtocol {
         to destinationPath: FilePath,
         strategy copyStrategy: CopyStrategy = .platformDefault
     ) async throws {
-        try await self.copyItem(at: sourcePath, to: destinationPath, strategy: copyStrategy) { path, error in
+        try await self.copyItem(
+            at: sourcePath,
+            to: destinationPath,
+            strategy: copyStrategy,
+            overwrite: false
+        ) { path, error in
             throw error
         } shouldCopyItem: { source, destination in
             true
@@ -537,6 +544,7 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: .sequential,
+            overwrite: false,
             shouldProceedAfterError: shouldProceedAfterError,
             shouldCopyItem: { (source, destination) in
                 await shouldCopyFile(source.path, destination)
@@ -588,6 +596,7 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: .platformDefault,
+            overwrite: false,
             shouldProceedAfterError: shouldProceedAfterError,
             shouldCopyItem: shouldCopyItem
         )
