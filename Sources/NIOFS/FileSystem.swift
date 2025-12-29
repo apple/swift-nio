@@ -1232,23 +1232,24 @@ extension FileSystem {
         }
 
         // Overwrite strategy: copy to temp file, then atomically rename
-        let tempName = ".tmp-" + String(randomAlphaNumericOfLength: 6)
-        let tempTarget = destinationPath.removingLastComponent().appending(tempName)
-
-        let copyResult = self._copyRegularFileOnLinux(from: sourcePath, to: tempTarget)
+        let temporaryFileName = ".tmp-" + String(randomAlphaNumericOfLength: 6)
+        let temporaryDestinationPath = destinationPath.removingLastComponent().appending(temporaryFileName)
+        let copyResult = self._copyRegularFileOnLinux(from: sourcePath, to: temporaryDestinationPath)
 
         guard case .success = copyResult else {
-            _ = Libc.remove(tempTarget)
+            // cleanup the created temp file if copy has failed
+            _ = Libc.remove(temporaryDestinationPath)
             return copyResult
         }
 
-        switch Syscall.rename(from: tempTarget, to: destinationPath) {        
+        switch Syscall.rename(from: temporaryDestinationPath, to: destinationPath) {        
         case .failure(let errno):
-            _ = Libc.remove(tempTarget)
+            // cleanup the created temp file if rename has failed
+            _ = Libc.remove(temporaryDestinationPath)
             let error = FileSystemError.rename(
                 "rename",
                 errno: errno,
-                oldName: tempTarget,
+                oldName: temporaryDestinationPath,
                 newName: destinationPath,
                 location: .here()
             )
