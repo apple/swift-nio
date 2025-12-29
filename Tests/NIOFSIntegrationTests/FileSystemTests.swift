@@ -983,14 +983,13 @@ final class FileSystemTests: XCTestCase {
         }
     }
 
-    func testCopyFileWithOverwrite() async throws {
+    func testCopyFileOverwritingExistentDestination() async throws {
         let sourceContent: [UInt8] = [1, 2, 3]
-        let oldDestinationContent: [UInt8] = [4, 5, 6]
+        let existingDestinationContent: [UInt8] = [4, 5, 6]
 
         let source = try await self.fs.temporaryFilePath()
         let destination = try await self.fs.temporaryFilePath()
 
-        // Create source
         _ = try await self.fs.withFileHandle(
             forWritingAt: source,
             options: .newFile(replaceExisting: false)
@@ -998,20 +997,18 @@ final class FileSystemTests: XCTestCase {
             try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
         }
 
-        // Create destination
         _ = try await self.fs.withFileHandle(
             forWritingAt: destination,
             options: .newFile(replaceExisting: false)
         ) { handle in
-            try await handle.write(contentsOf: oldDestinationContent, toAbsoluteOffset: 0)
+            try await handle.write(contentsOf: existingDestinationContent, toAbsoluteOffset: 0)
         }
 
-        // Copy with overwrite: true should succeed
         try await self.fs.copyItem(
             at: source,
             to: destination,
             strategy: .platformDefault,
-            overwrite: true,
+            overwriting: true,
             shouldProceedAfterError: { _, error in
                 throw error
             },
@@ -1033,13 +1030,12 @@ final class FileSystemTests: XCTestCase {
         }
     }
 
-    func testCopyFileOverwriteNonExistent() async throws {
+    func testCopyFileOverwritingNonExistentDestination() async throws {
         let sourceContent: [UInt8] = [7, 8, 9]
 
         let source = try await self.fs.temporaryFilePath()
         let destination = try await self.fs.temporaryFilePath()
 
-        // Create only source file
         _ = try await self.fs.withFileHandle(
             forWritingAt: source,
             options: .newFile(replaceExisting: false)
@@ -1047,16 +1043,14 @@ final class FileSystemTests: XCTestCase {
             try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
         }
 
-        // Verify destination doesn't exist
-        let destInfoBefore = try await self.fs.info(forFileAt: destination)
-        XCTAssertNil(destInfoBefore)
+        let destinationInfoBeforeCopy = try await self.fs.info(forFileAt: destination)
+        XCTAssertNil(destinationInfoBeforeCopy)
 
-        // Copy with overwrite: true should succeed even when destination doesn't exist
         try await self.fs.copyItem(
             at: source,
             to: destination,
             strategy: .platformDefault,
-            overwrite: true,
+            overwriting: true,
             shouldProceedAfterError: { _, error in
                 throw error
             },
@@ -1070,6 +1064,118 @@ final class FileSystemTests: XCTestCase {
             let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
             XCTAssertEqual(Array(buffer: contents), sourceContent)
         }
+    }
+
+    func testCopyFileOverwritingCleansUpTempFileOnLinux() async throws {
+        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        let sourceContent: [UInt8] = [1, 2, 3]
+        let destContent: [UInt8] = [4, 5, 6]
+
+        let source = try await self.fs.temporaryFilePath()
+        let destination = try await self.fs.temporaryFilePath()
+
+        try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
+        }
+
+        try await self.fs.withFileHandle(
+            forWritingAt: destination,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: destContent, toAbsoluteOffset: 0)
+        }
+
+        let destinationDirectory = destination.removingLastComponent()
+
+        try await self.fs.copyItem(
+            at: source,
+            to: destination,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        // Verify no .tmp- files are left after copying the file
+        let temporaryFiles = try await self.fs.withDirectoryHandle(atPath: destinationDirectory) { dir in
+            var temporaryFiles: [String] = []
+            for try await batch in dir.listContents().batched() {
+                for entry in batch where entry.name.hasPrefix(".tmp-") {
+                    temporaryFiles.append(entry.name)
+                }
+            }
+            return temporaryFiles
+        }
+
+        XCTAssertTrue(temporaryFiles.isEmpty, "Found leftover temp files: \(temporaryFiles)")
+
+        // Verify destination has correct content
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), sourceContent)
+        }
+        #else
+        throw XCTSkip("This test requires Linux temp file mechanism")
+        #endif
+    }
+
+    func testCopyFileOverwritingLargeFileOnLinux() async throws {
+        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        let source = try await self.fs.temporaryFilePath()
+        let destination = try await self.fs.temporaryFilePath()
+
+        // Create a large file (10MB to test sendfile chunking path)
+        let largeSize = 10 * 1024 * 1024 // 10MB
+        let chunk = Array(repeating: UInt8(42), count: 1024 * 1024) // 1MB chunks
+
+        try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            for i in 0..<10 {
+                try await handle.write(
+                    contentsOf: chunk,
+                    toAbsoluteOffset: Int64(i * chunk.count)
+                )
+            }
+        }
+
+        // Create existing destination with different content
+        try await self.fs.withFileHandle(
+            forWritingAt: destination,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: [0xFF, 0xFF, 0xFF], toAbsoluteOffset: 0)
+        }
+
+        // Overwrite with large file
+        try await self.fs.copyItem(
+            at: source,
+            to: destination,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        // Verify size is correct
+        let info = try await self.fs.info(forFileAt: destination)
+        XCTAssertEqual(info?.size, Int64(largeSize))
+
+        // Verify content is correct (sample check)
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let firstChunk = try await handle.read(
+                fromAbsoluteOffset: 0,
+                maximumSizeAllowed: .bytes(1024)
+            )
+            XCTAssertEqual(Array(buffer: firstChunk), Array(repeating: UInt8(42), count: 1024))
+        }
+        #else
+        throw XCTSkip("This test requires Linux sendfile mechanism")
+        #endif
     }
 
     func testRemoveSingleFile() async throws {

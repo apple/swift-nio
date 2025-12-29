@@ -233,7 +233,7 @@ public protocol FileSystemProtocol: Sendable {
         at sourcePath: NIOFilePath,
         to destinationPath: NIOFilePath,
         strategy copyStrategy: CopyStrategy,
-        overwrite: Bool,
+        overwriting: Bool,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -487,7 +487,7 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: copyStrategy,
-            overwrite: false
+            overwriting: false
         ) { path, error in
             throw error
         } shouldCopyItem: { source, destination in
@@ -539,7 +539,7 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: .platformDefault,
-            overwrite: false,
+            overwriting: false,
             shouldProceedAfterError: shouldProceedAfterError,
             shouldCopyItem: shouldCopyItem
         )

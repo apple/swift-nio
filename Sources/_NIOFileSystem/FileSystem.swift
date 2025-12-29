@@ -315,7 +315,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at sourcePath: FilePath,
         to destinationPath: FilePath,
         strategy copyStrategy: CopyStrategy,
-        overwrite: Bool = false,
+        overwriting: Bool = false,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -342,7 +342,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         if await shouldCopyItem(.init(path: sourcePath, type: info.type)!, destinationPath) {
             switch info.type {
             case .regular:
-                try await self.copyRegularFile(from: sourcePath, to: destinationPath, overwrite: overwrite)
+                try await self.copyRegularFile(from: sourcePath, to: destinationPath, overwriting: overwriting)
 
             case .symlink:
                 try await self.copySymbolicLink(from: sourcePath, to: destinationPath)
@@ -1193,13 +1193,13 @@ extension FileSystem {
     private func copyRegularFile(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
-        overwrite: Bool = false
+        overwriting: Bool = false
     ) async throws {
         try await self.threadPool.runIfActive {
             try self._copyRegularFile(
-                from: sourcePath, 
-                to: destinationPath, 
-                overwrite: overwrite,
+                from: sourcePath,
+                to: destinationPath,
+                overwriting: overwriting,
             ).get()
         }
     }
@@ -1207,7 +1207,7 @@ extension FileSystem {
     private func _copyRegularFile(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
-        overwrite: Bool,
+        overwriting: Bool,
     ) -> Result<Void, FileSystemError> {
         func makeOnUnavailableError(
             path: FilePath,
@@ -1226,7 +1226,7 @@ extension FileSystem {
         // COPYFILE_ALL is shorthand for:
         //    COPYFILE_STAT | COPYFILE_ACL | COPYFILE_XATTR | COPYFILE_DATA
         var flags = copyfile_flags_t(COPYFILE_CLONE) | copyfile_flags_t(COPYFILE_ALL)
-        if overwrite {
+        if overwriting {
             // COPYFILE_UNLINK removes the destination if it exists before copying
             flags |= copyfile_flags_t(COPYFILE_UNLINK)
         }

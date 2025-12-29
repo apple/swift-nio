@@ -234,7 +234,7 @@ public protocol FileSystemProtocol: Sendable {
         at sourcePath: FilePath,
         to destinationPath: FilePath,
         strategy copyStrategy: CopyStrategy,
-        overwrite: Bool,
+        overwriting: Bool,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -488,7 +488,7 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: copyStrategy,
-            overwrite: false
+            overwriting: false
         ) { path, error in
             throw error
         } shouldCopyItem: { source, destination in
@@ -544,7 +544,7 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: .sequential,
-            overwrite: false,
+            overwriting: false,
             shouldProceedAfterError: shouldProceedAfterError,
             shouldCopyItem: { (source, destination) in
                 await shouldCopyFile(source.path, destination)
@@ -596,7 +596,7 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: .platformDefault,
-            overwrite: false,
+            overwriting: false,
             shouldProceedAfterError: shouldProceedAfterError,
             shouldCopyItem: shouldCopyItem
         )
