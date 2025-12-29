@@ -1246,6 +1246,54 @@ extension FileSystem {
         }
 
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        if !overwriting {
+            return self._copyRegularFileOnLinux(from: sourcePath, to: destinationPath)
+        }
+
+        // Overwrite strategy: copy to temp file, then atomically rename
+        let tempName = ".tmp-" + String(randomAlphaNumericOfLength: 6)
+        let tempTarget = destinationPath.removingLastComponent().appending(tempName)
+
+        let copyResult = self._copyRegularFileOnLinux(from: sourcePath, to: tempTarget)
+
+        guard case .success = copyResult else {
+            _ = Libc.remove(tempTarget)
+            return copyResult
+        }
+
+        switch Syscall.rename(from: tempTarget, to: destinationPath) {
+        case .failure(let errno):
+            _ = Libc.remove(tempTarget)
+            let error = FileSystemError.rename(
+                "rename",
+                errno: errno,
+                oldName: tempTarget,
+                newName: destinationPath,
+                location: .here()
+            )
+            return .failure(error)
+        case .success:
+            return .success(())
+        }
+        #endif
+    }
+
+    #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    private func _copyRegularFileOnLinux(
+        from sourcePath: FilePath,
+        to destinationPath: FilePath
+    ) -> Result<Void, FileSystemError> {
+        func makeOnUnavailableError(
+            path: FilePath,
+            location: FileSystemError.SourceLocation
+        ) -> FileSystemError {
+            FileSystemError(
+                code: .closed,
+                message: "Can't copy '\(sourcePath)' to '\(destinationPath)', '\(path)' is closed.",
+                cause: nil,
+                location: location
+            )
+        }
 
         let openSourceResult = self._openFile(
             forReadingAt: sourcePath,
@@ -1290,7 +1338,7 @@ extension FileSystem {
             options: options
         ).mapError {
             FileSystemError(
-                message: "Can't copy '\(sourcePath)' as '\(destinationPath)' couldn't be opened.",
+                message: "Can't copy '\(sourcePath)' to '\(destinationPath)'.",
                 wrapping: $0
             )
         }
@@ -1342,8 +1390,8 @@ extension FileSystem {
 
         let closeResult = destination.fileHandle.systemFileHandle.sendableView._close(materialize: true)
         return copyResult.flatMap { closeResult }
-        #endif
     }
+    #endif
 
     private func copySymbolicLink(
         from sourcePath: FilePath,
