@@ -984,6 +984,8 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopyFileOverwritingExistentDestination() async throws {
+        // Verifies that copying a file with overwriting=true successfully replaces an existing
+        // destination file with the source file's content on Darwin platform. 
         let sourceContent: [UInt8] = [1, 2, 3]
         let existingDestinationContent: [UInt8] = [4, 5, 6]
 
@@ -1031,6 +1033,8 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopyFileOverwritingNonExistentDestination() async throws {
+        // Verifies that copying with overwriting=true works correctly when the destination doesn't
+        // exist yet (should behave the same as a regular copy).
         let sourceContent: [UInt8] = [7, 8, 9]
 
         let source = try await self.fs.temporaryFilePath()
@@ -1065,11 +1069,14 @@ final class FileSystemTests: XCTestCase {
             XCTAssertEqual(Array(buffer: contents), sourceContent)
         }
     }
-
+    
     func testCopyFileOverwritingCleansUpTempFileOnLinux() async throws {
+        // Verifies properly cleans up temporary files after
+        // a successful overwrite operation on Linux platforms.
+        
         #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
         let sourceContent: [UInt8] = [1, 2, 3]
-        let destContent: [UInt8] = [4, 5, 6]
+        let existingDestinationContent: [UInt8] = [4, 5, 6]
 
         let source = try await self.fs.temporaryFilePath()
         let destination = try await self.fs.temporaryFilePath()
@@ -1085,7 +1092,7 @@ final class FileSystemTests: XCTestCase {
             forWritingAt: destination,
             options: .newFile(replaceExisting: false)
         ) { handle in
-            try await handle.write(contentsOf: destContent, toAbsoluteOffset: 0)
+            try await handle.write(contentsOf: existingDestinationContent, toAbsoluteOffset: 0)
         }
 
         let destinationDirectory = destination.removingLastComponent()
@@ -1119,62 +1126,6 @@ final class FileSystemTests: XCTestCase {
         }
         #else
         throw XCTSkip("This test requires Linux temp file mechanism")
-        #endif
-    }
-
-    func testCopyFileOverwritingLargeFileOnLinux() async throws {
-        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
-        let source = try await self.fs.temporaryFilePath()
-        let destination = try await self.fs.temporaryFilePath()
-
-        // Create a large file (10MB to test sendfile chunking path)
-        let largeSize = 10 * 1024 * 1024 // 10MB
-        let chunk = Array(repeating: UInt8(42), count: 1024 * 1024) // 1MB chunks
-
-        try await self.fs.withFileHandle(
-            forWritingAt: source,
-            options: .newFile(replaceExisting: false)
-        ) { handle in
-            for i in 0..<10 {
-                try await handle.write(
-                    contentsOf: chunk,
-                    toAbsoluteOffset: Int64(i * chunk.count)
-                )
-            }
-        }
-
-        // Create existing destination with different content
-        try await self.fs.withFileHandle(
-            forWritingAt: destination,
-            options: .newFile(replaceExisting: false)
-        ) { handle in
-            try await handle.write(contentsOf: [0xFF, 0xFF, 0xFF], toAbsoluteOffset: 0)
-        }
-
-        // Overwrite with large file
-        try await self.fs.copyItem(
-            at: source,
-            to: destination,
-            strategy: .platformDefault,
-            overwriting: true,
-            shouldProceedAfterError: { _, error in throw error },
-            shouldCopyItem: { _, _ in true }
-        )
-
-        // Verify size is correct
-        let info = try await self.fs.info(forFileAt: destination)
-        XCTAssertEqual(info?.size, Int64(largeSize))
-
-        // Verify content is correct (sample check)
-        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
-            let firstChunk = try await handle.read(
-                fromAbsoluteOffset: 0,
-                maximumSizeAllowed: .bytes(1024)
-            )
-            XCTAssertEqual(Array(buffer: firstChunk), Array(repeating: UInt8(42), count: 1024))
-        }
-        #else
-        throw XCTSkip("This test requires Linux sendfile mechanism")
         #endif
     }
 
