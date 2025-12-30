@@ -1040,8 +1040,6 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopyFileOverwritingExistingDestination() async throws {
-        // Verifies that copying a file with overwriting=true successfully replaces an existing
-        // destination file with the source file's content.
         let sourceContent: [UInt8] = [1, 2, 3]
         let existingDestinationContent: [UInt8] = [4, 5, 6]
 
@@ -1089,8 +1087,6 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopyFileOverwritingNonExistingDestination() async throws {
-        // Verifies that copying with overwriting=true works correctly when the destination doesn't
-        // exist yet (should behave the same as a regular copy).
         let sourceContent: [UInt8] = [7, 8, 9]
 
         let source = try await self.fs.temporaryFilePath()
@@ -1127,9 +1123,6 @@ final class FileSystemTests: XCTestCase {
     }
     
     func testCopyFileOverwritingCleansUpTempFileOnLinux() async throws {
-        // Verifies properly cleans up temporary files after
-        // a successful overwrite operation on Linux platforms.
-        
         #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
         let sourceContent: [UInt8] = [1, 2, 3]
         let existingDestinationContent: [UInt8] = [4, 5, 6]
@@ -1185,9 +1178,7 @@ final class FileSystemTests: XCTestCase {
         #endif
     }
 
-    func testCopySymlinkOverwritingExistentDestination() async throws {
-        // Verifies that copying a symlink with overwriting=true successfully replaces
-        // an existing destination symlink with the source symlink's target.
+    func testCopySymlinkOverwritingExistingDestination() async throws {
         let sourceTarget = try await self.fs.temporaryFilePath()
         let oldDestinationTarget = try await self.fs.temporaryFilePath()
 
@@ -1211,7 +1202,6 @@ final class FileSystemTests: XCTestCase {
         // Create destination symlink pointing to oldDestinationTarget
         try await self.fs.createSymbolicLink(at: destinationSymlink, withDestination: oldDestinationTarget)
 
-        // Verify initial state
         let initialDestinationTarget = try await self.fs.destinationOfSymbolicLink(at: destinationSymlink)
         XCTAssertEqual(initialDestinationTarget, oldDestinationTarget)
 
@@ -1238,9 +1228,7 @@ final class FileSystemTests: XCTestCase {
         XCTAssertEqual(sourceTargetAfter, sourceTarget)
     }
 
-    func testCopySymlinkOverwritingNonExistentDestination() async throws {
-        // Verifies that copying with overwriting=true works correctly when the destination
-        // doesn't exist yet (should behave the same as a regular copy).
+    func testCopySymlinkOverwritingNonExistingDestination() async throws {
         let sourceTarget = try await self.fs.temporaryFilePath()
         let sourceSymlink = try await self.fs.temporaryFilePath()
         let destinationSymlink = try await self.fs.temporaryFilePath()
@@ -1278,8 +1266,6 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopySymlinkWithoutOverwritingFailsIfExists() async throws {
-        // Verifies that copying without overwriting (default behavior) fails when
-        // the destination symlink already exists.
         let sourceTarget = try await self.fs.temporaryFilePath()
         let destinationTarget = try await self.fs.temporaryFilePath()
 
