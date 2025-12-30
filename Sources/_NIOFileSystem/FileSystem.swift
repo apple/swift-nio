@@ -1247,7 +1247,7 @@ extension FileSystem {
     private func _copyRegularFile(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
-        overwriting: Bool,
+        overwriting: Bool
     ) -> Result<Void, FileSystemError> {
         func makeOnUnavailableError(
             path: FilePath,
