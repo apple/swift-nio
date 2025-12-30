@@ -1130,14 +1130,14 @@ final class FileSystemTests: XCTestCase {
         let source = try await self.fs.temporaryFilePath()
         let destination = try await self.fs.temporaryFilePath()
 
-        try await self.fs.withFileHandle(
+        _ = try await self.fs.withFileHandle(
             forWritingAt: source,
             options: .newFile(replaceExisting: false)
         ) { handle in
             try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
         }
 
-        try await self.fs.withFileHandle(
+        _ = try await self.fs.withFileHandle(
             forWritingAt: destination,
             options: .newFile(replaceExisting: false)
         ) { handle in
