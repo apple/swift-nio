@@ -1144,7 +1144,7 @@ final class FileSystemTests: XCTestCase {
             try await handle.write(contentsOf: existingDestinationContent, toAbsoluteOffset: 0)
         }
 
-        let destinationDirectory = destination.removingLastComponent()
+        let destinationDirectory = NIOFilePath(destination.underlying.removingLastComponent())
 
         try await self.fs.copyItem(
             at: source,
