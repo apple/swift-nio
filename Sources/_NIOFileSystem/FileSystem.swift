@@ -1239,7 +1239,7 @@ extension FileSystem {
             try self._copyRegularFile(
                 from: sourcePath,
                 to: destinationPath,
-                overwriting: overwriting,
+                overwriting: overwriting
             ).get()
         }
     }
