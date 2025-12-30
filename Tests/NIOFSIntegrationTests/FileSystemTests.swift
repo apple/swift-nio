@@ -1064,13 +1064,13 @@ final class FileSystemTests: XCTestCase {
             at: source,
             to: destination,
             strategy: .platformDefault,
-            overwriting: true,
             shouldProceedAfterError: { _, error in
                 throw error
             },
             shouldCopyItem: { _, _ in
                 true
-            }
+            },
+            overwriting: true
         )
 
         // Verify destination now has source content
@@ -1106,13 +1106,13 @@ final class FileSystemTests: XCTestCase {
             at: source,
             to: destination,
             strategy: .platformDefault,
-            overwriting: true,
             shouldProceedAfterError: { _, error in
                 throw error
             },
             shouldCopyItem: { _, _ in
                 true
-            }
+            },
+            overwriting: true
         )
 
         // Verify destination now exists with correct content
@@ -1210,13 +1210,13 @@ final class FileSystemTests: XCTestCase {
             at: sourceSymlink,
             to: destinationSymlink,
             strategy: .platformDefault,
-            overwriting: true,
             shouldProceedAfterError: { _, error in
                 throw error
             },
             shouldCopyItem: { _, _ in
                 true
-            }
+            },
+            overwriting: true
         )
 
         // Verify destination symlink now points to sourceTarget
@@ -1251,13 +1251,13 @@ final class FileSystemTests: XCTestCase {
             at: sourceSymlink,
             to: destinationSymlink,
             strategy: .platformDefault,
-            overwriting: true,
             shouldProceedAfterError: { _, error in
                 throw error
             },
             shouldCopyItem: { _, _ in
                 true
-            }
+            },
+            overwriting: true
         )
 
         // Verify destination symlink now exists and points to sourceTarget
@@ -1297,13 +1297,13 @@ final class FileSystemTests: XCTestCase {
                 at: sourceSymlink,
                 to: destinationSymlink,
                 strategy: .platformDefault,
-                overwriting: false,
                 shouldProceedAfterError: { _, error in
                     throw error
                 },
                 shouldCopyItem: { _, _ in
                     true
-                }
+                },
+                overwriting: false
             )
         } onError: { error in
             XCTAssertEqual(error.code, .fileAlreadyExists)
