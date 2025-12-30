@@ -341,10 +341,18 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         if await shouldCopyItem(.init(path: sourcePath, type: info.type)!, destinationPath) {
             switch info.type {
             case .regular:
-                try await self.copyRegularFile(from: sourcePath.underlying, to: destinationPath.underlying, overwriting: overwriting)
+                try await self.copyRegularFile(
+                    from: sourcePath.underlying, 
+                    to: destinationPath.underlying, 
+                    overwriting: overwriting
+                )
 
             case .symlink:
-                try await self.copySymbolicLink(from: sourcePath.underlying, to: destinationPath.underlying)
+                try await self.copySymbolicLink(
+                    from: sourcePath.underlying, 
+                    to: destinationPath.underlying, 
+                    overwriting: overwriting
+                )
 
             case .directory:
                 try await self.copyDirectory(
@@ -1181,7 +1189,11 @@ extension FileSystem {
         overwriting: Bool = false
     ) async throws {
         try await self.threadPool.runIfActive {
-            try self._copyRegularFile(from: sourcePath, to: destinationPath, overwriting: overwriting).get()
+            try self._copyRegularFile(
+                from: sourcePath, 
+                to: destinationPath, 
+                overwriting: overwriting
+            ).get()
         }
     }
 
@@ -1208,7 +1220,7 @@ extension FileSystem {
         //    COPYFILE_STAT | COPYFILE_ACL | COPYFILE_XATTR | COPYFILE_DATA
         var flags = copyfile_flags_t(COPYFILE_CLONE) | copyfile_flags_t(COPYFILE_ALL)
         if overwriting {
-            // COPYFILE_UNLINK removes the destination if it exists before copying
+            // COPYFILE_UNLINK atomically removes the destination if it exists before copying
             flags |= copyfile_flags_t(COPYFILE_UNLINK)
         }
         return Libc.copyfile(
@@ -1230,20 +1242,19 @@ extension FileSystem {
             return self._copyRegularFileOnLinux(from: sourcePath, to: destinationPath)
         }
 
-        // Overwrite strategy: copy to temp file, then atomically rename
+        // On Linux platforms there is no COPYFILE_UNLINK analog, so we use the next
+        // best thing - write to a temporary file and then atomically rename it with rename(2)
         let temporaryFileName = ".tmp-" + String(randomAlphaNumericOfLength: 6)
         let temporaryDestinationPath = destinationPath.removingLastComponent().appending(temporaryFileName)
         let copyResult = self._copyRegularFileOnLinux(from: sourcePath, to: temporaryDestinationPath)
 
         guard case .success = copyResult else {
-            // cleanup the created temp file if copy has failed
             _ = Libc.remove(temporaryDestinationPath)
             return copyResult
         }
 
         switch Syscall.rename(from: temporaryDestinationPath, to: destinationPath) {        
         case .failure(let errno):
-            // cleanup the created temp file if rename has failed
             _ = Libc.remove(temporaryDestinationPath)
             let error = FileSystemError.rename(
                 "rename",
@@ -1376,19 +1387,61 @@ extension FileSystem {
 
     private func copySymbolicLink(
         from sourcePath: FilePath,
-        to destinationPath: FilePath
+        to destinationPath: FilePath,
+        overwriting: Bool = false
     ) async throws {
         try await self.threadPool.runIfActive {
-            try self._copySymbolicLink(from: sourcePath, to: destinationPath).get()
+            try self._copySymbolicLink(
+                from: sourcePath, 
+                to: destinationPath, 
+                overwriting: overwriting
+            ).get()
         }
     }
 
     private func _copySymbolicLink(
         from sourcePath: FilePath,
-        to destinationPath: FilePath
+        to destinationPath: FilePath,
+        overwriting: Bool
     ) -> Result<Void, FileSystemError> {
-        self._destinationOfSymbolicLink(at: sourcePath).flatMap { linkDestination in
-            self._createSymbolicLink(at: destinationPath, withDestination: linkDestination)
+        if !overwriting {
+            return self._destinationOfSymbolicLink(at: sourcePath).flatMap { linkDestination in
+                self._createSymbolicLink(at: destinationPath, withDestination: linkDestination)
+            }
+        }
+
+        // to keep the copy atomic we first create a temporary symlink
+        // and then atomically rename it with rename(2)
+        let temporarySymlinkName = ".tmp-link-" + String(randomAlphaNumericOfLength: 6)
+        let temporarySymlinkPath = destinationPath.removingLastComponent().appending(temporarySymlinkName)
+
+        let linkTarget: FilePath
+        switch self._destinationOfSymbolicLink(at: sourcePath) {
+        case let .success(target):
+            linkTarget = target
+        case let .failure(error):
+            return .failure(error)
+        }
+
+        let createResult = self._createSymbolicLink(at: temporarySymlinkPath, withDestination: linkTarget)
+        guard case .success = createResult else {
+            _ = Libc.remove(temporarySymlinkPath)
+            return createResult
+        }
+
+        switch Syscall.rename(from: temporarySymlinkPath, to: destinationPath) {
+        case .success:
+            return .success(())
+        case .failure(let errno):
+            _ = Libc.remove(temporarySymlinkPath)
+            let error = FileSystemError.rename(
+                "rename",
+                errno: errno,
+                oldName: temporarySymlinkPath,
+                newName: destinationPath,
+                location: .here()
+            )
+            return .failure(error)
         }
     }
 
