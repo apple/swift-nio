@@ -1121,7 +1121,7 @@ final class FileSystemTests: XCTestCase {
             XCTAssertEqual(Array(buffer: contents), sourceContent)
         }
     }
-    
+
     func testCopyFileOverwritingCleansUpTempFileOnLinux() async throws {
         #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
         let sourceContent: [UInt8] = [1, 2, 3]

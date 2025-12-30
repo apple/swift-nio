@@ -357,15 +357,15 @@ public struct FileSystem: Sendable, FileSystemProtocol {
             switch info.type {
             case .regular:
                 try await self.copyRegularFile(
-                    from: sourcePath.underlying, 
-                    to: destinationPath.underlying, 
+                    from: sourcePath.underlying,
+                    to: destinationPath.underlying,
                     overwriting: overwriting
                 )
 
             case .symlink:
                 try await self.copySymbolicLink(
-                    from: sourcePath.underlying, 
-                    to: destinationPath.underlying, 
+                    from: sourcePath.underlying,
+                    to: destinationPath.underlying,
                     overwriting: overwriting
                 )
 
@@ -1231,8 +1231,8 @@ extension FileSystem {
     ) async throws {
         try await self.threadPool.runIfActive {
             try self._copyRegularFile(
-                from: sourcePath, 
-                to: destinationPath, 
+                from: sourcePath,
+                to: destinationPath,
                 overwriting: overwriting
             ).get()
         }
@@ -1294,7 +1294,7 @@ extension FileSystem {
             return copyResult
         }
 
-        switch Syscall.rename(from: temporaryDestinationPath, to: destinationPath) {        
+        switch Syscall.rename(from: temporaryDestinationPath, to: destinationPath) {
         case .failure(let errno):
             _ = Libc.remove(temporaryDestinationPath)
             let error = FileSystemError.rename(
@@ -1433,8 +1433,8 @@ extension FileSystem {
     ) async throws {
         try await self.threadPool.runIfActive {
             try self._copySymbolicLink(
-                from: sourcePath, 
-                to: destinationPath, 
+                from: sourcePath,
+                to: destinationPath,
                 overwriting: overwriting
             ).get()
         }
