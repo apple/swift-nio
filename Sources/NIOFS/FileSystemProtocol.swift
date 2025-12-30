@@ -183,10 +183,8 @@ public protocol FileSystemProtocol: Sendable {
     ///   - sourcePath: The path to the item to copy.
     ///   - destinationPath: The path at which to place the copy.
     ///   - copyStrategy: How to deal with concurrent aspects of the copy, only relevant to directories.
-    ///   - overwriting: Whether to overwrite an existing file at `destinationPath`. When `true`,
+    ///   - overwriting: Whether to overwrite an existing file or symlink at `destinationPath`. When `true`,
     ///       any existing regular file or symbolic link at the destination will be replaced atomically.
-    ///       This parameter only affects regular files and symbolic links; directories are not overwritten.
-    ///       Defaults to `false`.
     ///   - shouldProceedAfterError: A closure which is executed to determine whether to continue
     ///       copying files if an error is encountered during the operation. See Errors section for full details.
     ///   - shouldCopyItem: A closure which is executed before each copy to determine whether each
