@@ -698,6 +698,25 @@ class AsyncTestingChannelTests: XCTestCase {
         let optionValue2 = try await channel.getOption(option).get()
         XCTAssertEqual(2, optionValue2)
     }
+
+    func testSocketAddressesOnContext() async throws {
+        final class Handler: ChannelInboundHandler, Sendable {
+            typealias InboundIn = Never
+
+            func handlerAdded(context: ChannelHandlerContext) {
+                XCTAssertNotNil(context.localAddress)
+                XCTAssertNotNil(context.remoteAddress)
+            }
+        }
+
+        let channel = NIOAsyncTestingChannel()
+        channel.localAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 8080)
+        channel.remoteAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 9090)
+
+        try await channel.pipeline.addHandler(Handler())
+
+        XCTAssertNoThrow(try channel.pipeline.handler(type: Handler.self).wait())
+    }
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)

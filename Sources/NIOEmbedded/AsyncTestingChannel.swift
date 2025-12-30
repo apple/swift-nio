@@ -201,6 +201,7 @@ public final class NIOAsyncTestingChannel: Channel {
 
     // These two variables are only written once, from a single thread, and never written again, so they're _technically_ thread-safe. Most methods cannot safely
     // be used from multiple threads, but `isActive`, `isOpen`, `eventLoop`, and `closeFuture` can all safely be used from any thread. Just.
+    // `EmbeddedChannelCore`'s localAddress and remoteAddress fields are protected by a lock so they are safe to access.
     @usableFromInline
     nonisolated(unsafe) var channelcore: EmbeddedChannelCore!
     nonisolated(unsafe) private var _pipeline: ChannelPipeline!
@@ -208,8 +209,6 @@ public final class NIOAsyncTestingChannel: Channel {
     @usableFromInline
     internal struct State: Sendable {
         var isWritable: Bool
-        var localAddress: SocketAddress?
-        var remoteAddress: SocketAddress?
 
         @usableFromInline
         var options: [(option: any ChannelOption, value: any Sendable)]
@@ -218,7 +217,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /// Guards any of the getters/setters that can be accessed from any thread.
     @usableFromInline
     internal let _stateLock = NIOLockedValueBox(
-        State(isWritable: true, localAddress: nil, remoteAddress: nil, options: [])
+        State(isWritable: true, options: [])
     )
 
     /// - see: `Channel._channelCore`
@@ -246,24 +245,20 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.localAddress`
     public var localAddress: SocketAddress? {
         get {
-            self._stateLock.withLockedValue { $0.localAddress }
+            self.channelcore.localAddress
         }
         set {
-            self._stateLock.withLockedValue {
-                $0.localAddress = newValue
-            }
+            self.channelcore.localAddress = newValue
         }
     }
 
     /// - see: `Channel.remoteAddress`
     public var remoteAddress: SocketAddress? {
         get {
-            self._stateLock.withLockedValue { $0.remoteAddress }
+            self.channelcore.remoteAddress
         }
         set {
-            self._stateLock.withLockedValue {
-                $0.remoteAddress = newValue
-            }
+            self.channelcore.remoteAddress = newValue
         }
     }
 

@@ -1,0 +1,66 @@
+name: WebAssembly Swift SDK
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      env_vars:
+        type: string
+        description: "Environment variables for jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
+        default: "{}"
+      additional_command_arguments:
+        type: string
+        description: "Additional arguments passed to swift build (the Wasm Swift SDK will be specified). Defaults to empty."
+        default: ""
+
+jobs:
+  construct-matrix:
+    name: Construct WebAssembly Swift SDK matrix
+    runs-on: ubuntu-latest
+    outputs:
+      wasm-swift-sdk-matrix: '${{ steps.generate-matrix.outputs.wasm-swift-sdk-matrix }}'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          persist-credentials: false
+      - id: generate-matrix
+        run: |
+          # Validate and use JSON environment variables directly
+          env_vars_json='${{ inputs.env_vars }}'
+
+          # Validate JSON format
+          if ! echo "$env_vars_json" | jq empty 2>/dev/null; then
+            echo "Error: env_vars is not valid JSON"
+            exit 1
+          fi
+
+          # Generate matrix with parsed environment variables
+          cat >> "$GITHUB_OUTPUT" << EOM
+          wasm-swift-sdk-matrix=$(echo '{
+            "config":[
+              {
+                "name":"main Jammy",
+                "swift_version":"main",
+                "platform":"Linux",
+                "runner":"ubuntu-latest",
+                "image":"ubuntu:jammy",
+                "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_sdk.sh | INSTALL_SWIFT_BRANCH=main INSTALL_SWIFT_ARCH=x86_64 INSTALL_SWIFT_SDK=wasm-sdk bash && hash -r",
+                "command":"curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/swift-build-with-wasm-sdk.sh | bash -s --",
+                "command_arguments":"${{ inputs.additional_command_arguments }}",
+                "env":'"$env_vars_json"'
+              }
+            ]
+          }' | jq -c)
+          EOM
+
+  wasm-swift-sdk:
+    name: WebAssembly Swift SDK
+    needs: construct-matrix
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    with:
+      name: "WebAssembly Swift SDK"
+      matrix_string: '${{ needs.construct-matrix.outputs.wasm-swift-sdk-matrix }}'

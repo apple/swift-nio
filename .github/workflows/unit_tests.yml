@@ -145,6 +145,11 @@ on:
         description: "Environment variables for Windows jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
         default: "{}"
 
+      minimum_swift_version:
+        type: string
+        description: "Minimum Swift version to include in the matrix. Leave empty for auto-detection from Package.swift, specify a version like '6.0' to override, or set to 'none' to disable filtering."
+        default: ""
+
 jobs:
   construct-matrix:
     name: Construct unit test matrix
@@ -153,7 +158,7 @@ jobs:
       unit-test-matrix: '${{ steps.generate-matrix.outputs.unit-test-matrix }}'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
           persist-credentials: false
       - id: generate-matrix
@@ -178,6 +183,7 @@ jobs:
         env:
           MATRIX_LINUX_SETUP_COMMAND: "swift --version"
           MATRIX_LINUX_COMMAND: "swift test"
+          MATRIX_MIN_SWIFT_VERSION: ${{ inputs.minimum_swift_version }}
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
           MATRIX_LINUX_5_9_COMMAND_ARGUMENTS: ${{ inputs.linux_5_9_arguments_override }}
           MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}

@@ -41,7 +41,7 @@ jobs:
       integration-test-matrix: '${{ steps.generate-matrix.outputs.integration-test-matrix }}'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
           persist-credentials: false
       - id: generate-matrix
@@ -67,7 +67,14 @@ jobs:
   wasm-sdk:
     name: WebAssembly Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/wasm_sdk.yml@main
+    uses: apple/swift-nio/.github/workflows/wasm_swift_sdk.yml@main
+    with:
+      additional_command_arguments: "--target NIOCore"
+
+  android-sdk:
+    name: Android Swift SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/android_swift_sdk.yml@main
 
   macos-tests:
     name: macOS tests
