@@ -291,7 +291,6 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     // MARK: - File copying, removal, and moving
 
-    // TODO: add the overwrite docstring
     /// See ``FileSystemProtocol/copyItem(at:to:shouldProceedAfterError:shouldCopyFile:)``
     ///
     /// The item to be copied must be a:
@@ -1250,7 +1249,8 @@ extension FileSystem {
             return self._copyRegularFileOnLinux(from: sourcePath, to: destinationPath)
         }
 
-        // Overwrite strategy: copy to temp file, then atomically rename
+        // On Linux platforms there is no COPYFILE_UNLINK analog, so we use the next
+        // best thing - write to a temporary file and then atomically rename it
         let temporaryFileName = ".tmp-" + String(randomAlphaNumericOfLength: 6)
         let temporaryDestinationPath = destinationPath.removingLastComponent().appending(temporaryFileName)
         let copyResult = self._copyRegularFileOnLinux(from: sourcePath, to: temporaryDestinationPath)

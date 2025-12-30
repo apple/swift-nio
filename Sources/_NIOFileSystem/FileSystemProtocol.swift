@@ -167,13 +167,12 @@ public protocol FileSystemProtocol: Sendable {
 
     // MARK: - File copying, removal, and moving
 
-    // TODO: add the options description
     /// Copies the item at the specified path to a new location.
     ///
     /// The following error codes may be thrown:
     /// - ``FileSystemError/Code-swift.struct/notFound`` if the item at `sourcePath` does not exist,
     /// - ``FileSystemError/Code-swift.struct/invalidArgument`` if an item at `destinationPath`
-    ///   exists prior to the copy or its parent directory does not exist.
+    ///   exists prior to the copy (when `overwriting` is `false`) or its parent directory does not exist.
     ///
     /// Note that other errors may also be thrown.
     ///
@@ -184,6 +183,10 @@ public protocol FileSystemProtocol: Sendable {
     ///   - sourcePath: The path to the item to copy.
     ///   - destinationPath: The path at which to place the copy.
     ///   - copyStrategy: How to deal with concurrent aspects of the copy, only relevant to directories.
+    ///   - overwriting: Whether to overwrite an existing file at `destinationPath`. When `true`,
+    ///       any existing regular file at the destination will be replaced atomically. This parameter
+    ///       only affects regular files; symbolic links and directories are not overwritten.
+    ///       Defaults to `false`.
     ///   - shouldProceedAfterError: A closure which is executed to determine whether to continue
     ///       copying files if an error is encountered during the operation. See Errors section for full details.
     ///   - shouldCopyItem: A closure which is executed before each copy to determine whether each

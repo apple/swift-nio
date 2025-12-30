@@ -291,7 +291,6 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     // MARK: - File copying, removal, and moving
 
-    // TODO: add the overwrite docstring
     /// Copies the item at the specified path to a new location.
     ///
     /// The item to be copied must be a:
