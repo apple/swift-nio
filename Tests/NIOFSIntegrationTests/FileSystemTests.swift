@@ -1088,7 +1088,7 @@ final class FileSystemTests: XCTestCase {
         }
     }
 
-    func testCopyFileOverwritingNonExistentDestination() async throws {
+    func testCopyFileOverwritingNonExistingDestination() async throws {
         // Verifies that copying with overwriting=true works correctly when the destination doesn't
         // exist yet (should behave the same as a regular copy).
         let sourceContent: [UInt8] = [7, 8, 9]
