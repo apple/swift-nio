@@ -1150,9 +1150,9 @@ final class FileSystemTests: XCTestCase {
             at: source,
             to: destination,
             strategy: .platformDefault,
-            overwriting: true,
             shouldProceedAfterError: { _, error in throw error },
-            shouldCopyItem: { _, _ in true }
+            shouldCopyItem: { _, _ in true },
+            overwriting: true
         )
 
         // Verify no .tmp- files are left after copying the file
