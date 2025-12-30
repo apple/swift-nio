@@ -1378,7 +1378,7 @@ extension FileSystem {
             options: options
         ).mapError {
             FileSystemError(
-                message: "Can't copy '\(sourcePath)' to '\(destinationPath)'.",
+                message: "Can't copy '\(sourcePath)' as '\(destinationPath)' couldn't be opened.",
                 wrapping: $0
             )
         }
