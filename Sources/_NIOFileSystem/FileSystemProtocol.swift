@@ -497,7 +497,7 @@ extension FileSystemProtocol {
             shouldCopyItem: { source, destination in
                 true
             },
-            overwriting: false,
+            overwriting: false
         )
     }
 
