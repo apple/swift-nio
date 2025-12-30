@@ -1039,7 +1039,7 @@ final class FileSystemTests: XCTestCase {
         }
     }
 
-    func testCopyFileOverwritingExistentDestination() async throws {
+    func testCopyFileOverwritingExistingDestination() async throws {
         // Verifies that copying a file with overwriting=true successfully replaces an existing
         // destination file with the source file's content.
         let sourceContent: [UInt8] = [1, 2, 3]
