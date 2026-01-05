@@ -168,8 +168,8 @@ typedef unsigned long f_type_t;
 #endif
 #endif
 
-const f_type_t CNIOLinux_TMPFS_MAGIC;
-const f_type_t CNIOLinux_CGROUP2_SUPER_MAGIC;
+extern const f_type_t CNIOLinux_TMPFS_MAGIC;
+extern const f_type_t CNIOLinux_CGROUP2_SUPER_MAGIC;
 
 // Workaround for https://github.com/swiftlang/swift/issues/86149
 f_type_t CNIOLinux_statfs_ftype(const char *path);
