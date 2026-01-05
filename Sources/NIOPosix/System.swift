@@ -42,6 +42,7 @@ let INADDR_ANY = UInt32(0)
 
 import CNIOWindows
 
+let IPPROTO_UDP = Int32(17)
 internal typealias MMsgHdr = CNIOWindows_mmsghdr
 #else
 #error("The POSIX system module was unable to identify your C library.")
