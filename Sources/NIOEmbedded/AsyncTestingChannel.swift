@@ -404,8 +404,10 @@ public final class NIOAsyncTestingChannel: Channel {
 
     /// This method is similar to ``NIOAsyncTestingChannel/readOutbound(as:)`` but will wait if the outbound buffer is empty.
     /// If available, this method reads one element of type `T` out of the ``NIOAsyncTestingChannel``'s outbound buffer. If the
-    /// first element was of a different type than requested, ``WrongTypeError`` will be thrown, if there
-    /// are no elements in the outbound buffer, `nil` will be returned.
+    /// first element was of a different type than requested, ``WrongTypeError`` will be thrown. If the channel has
+    /// already closed or closes before the next pending outbound write, `ChannelError.ioOnClosedChannel` will be
+    /// thrown. If there are no elements in the outbound buffer, this method will wait until there is one, and return
+    /// that element.
     ///
     /// Data hits the ``NIOAsyncTestingChannel``'s outbound buffer when data was written using `write`, then `flush`ed, and
     /// then travelled the `ChannelPipeline` all the way to the front. For data to hit the outbound buffer, the very
@@ -423,12 +425,13 @@ public final class NIOAsyncTestingChannel: Channel {
                         continuation.resume(returning: element)
                         return
                     }
-                    self.channelcore.outboundBufferConsumer.append { element in
-                        continuation.resume(
-                            with: Result {
-                                try self._cast(element)
-                            }
-                        )
+                    self.channelcore._enqueueOutboundBufferConsumer { element in
+                        switch element {
+                        case .success(let data):
+                            continuation.resume(with: Result { try self._cast(data) })
+                        case .failure(let failure):
+                            continuation.resume(throwing: failure)
+                        }
                     }
                 } catch {
                     continuation.resume(throwing: error)
@@ -456,8 +459,10 @@ public final class NIOAsyncTestingChannel: Channel {
 
     /// This method is similar to ``NIOAsyncTestingChannel/readInbound(as:)`` but will wait if the inbound buffer is empty.
     /// If available, this method reads one element of type `T` out of the ``NIOAsyncTestingChannel``'s inbound buffer. If the
-    /// first element was of a different type than requested, ``WrongTypeError`` will be thrown, if there
-    /// are no elements in the outbound buffer, this method will wait until an element is in the inbound buffer.
+    /// first element was of a different type than requested, ``WrongTypeError`` will be thrown. If the channel has
+    /// already closed or closes before the next pending inbound write, `ChannelError.ioOnClosedChannel` will be thrown.
+    /// If there are no elements in the inbound buffer, this method will wait until there is one, and return that
+    /// element.
     ///
     /// Data hits the ``NIOAsyncTestingChannel``'s inbound buffer when data was send through the pipeline using `fireChannelRead`
     /// and then travelled the `ChannelPipeline` all the way to the back. For data to hit the inbound buffer, the
@@ -473,12 +478,13 @@ public final class NIOAsyncTestingChannel: Channel {
                         continuation.resume(returning: element)
                         return
                     }
-                    self.channelcore.inboundBufferConsumer.append { element in
-                        continuation.resume(
-                            with: Result {
-                                try self._cast(element)
-                            }
-                        )
+                    self.channelcore._enqueueInboundBufferConsumer { element in
+                        switch element {
+                        case .success(let data):
+                            continuation.resume(with: Result { try self._cast(data) })
+                        case .failure(let failure):
+                            continuation.resume(throwing: failure)
+                        }
                     }
                 } catch {
                     continuation.resume(throwing: error)
