@@ -701,7 +701,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         let invocationPromise = channel.eventLoop.makePromise(of: Void.self)
 
-        channel.channelcore.enqueueInboundBufferConsumer { element in
+        channel.channelcore._enqueueInboundBufferConsumer { element in
             invocationPromise.succeed()
             switch element {
             case .success(let result):
@@ -725,7 +725,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         let invocationPromise = channel.eventLoop.makePromise(of: Void.self)
 
-        channel.channelcore.enqueueOutboundBufferConsumer { element in
+        channel.channelcore._enqueueOutboundBufferConsumer { element in
             invocationPromise.succeed()
             switch element {
             case .success(let result):
@@ -760,7 +760,7 @@ class EmbeddedChannelTest: XCTestCase {
         // Enqueue 3 inbound and outbound consumers
         for i in 0..<3 {
             // Since the channel closes, all queued consumers should get a `ChannelError.ioOnClosedChannel`
-            channel.channelcore.enqueueInboundBufferConsumer { element in
+            channel.channelcore._enqueueInboundBufferConsumer { element in
                 inboundInvocationPromises[i].succeed()
                 switch element {
                 case .failure(let failure):
@@ -770,7 +770,7 @@ class EmbeddedChannelTest: XCTestCase {
                 }
             }
 
-            channel.channelcore.enqueueOutboundBufferConsumer { element in
+            channel.channelcore._enqueueOutboundBufferConsumer { element in
                 outboundInvocationPromises[i].succeed()
                 switch element {
                 case .failure(let failure):
@@ -800,7 +800,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertEqual(channel.channelcore.isOpen, false)
 
         // Since the consumers are enqueued after the channel closed, they should get a `ChannelError.ioOnClosedChannel`
-        channel.channelcore.enqueueInboundBufferConsumer { element in
+        channel.channelcore._enqueueInboundBufferConsumer { element in
             inboundInvocationPromise.succeed()
             switch element {
             case .failure(let failure):
@@ -810,7 +810,7 @@ class EmbeddedChannelTest: XCTestCase {
             }
         }
 
-        channel.channelcore.enqueueOutboundBufferConsumer { element in
+        channel.channelcore._enqueueOutboundBufferConsumer { element in
             outboundInvocationPromise.succeed()
             switch element {
             case .failure(let failure):

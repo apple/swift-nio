@@ -425,7 +425,7 @@ public final class NIOAsyncTestingChannel: Channel {
                         continuation.resume(returning: element)
                         return
                     }
-                    self.channelcore.enqueueOutboundBufferConsumer { element in
+                    self.channelcore._enqueueOutboundBufferConsumer { element in
                         switch element {
                         case .success(let data):
                             continuation.resume(with: Result { try self._cast(data) })
@@ -478,7 +478,7 @@ public final class NIOAsyncTestingChannel: Channel {
                         continuation.resume(returning: element)
                         return
                     }
-                    self.channelcore.enqueueInboundBufferConsumer { element in
+                    self.channelcore._enqueueInboundBufferConsumer { element in
                         switch element {
                         case .success(let data):
                             continuation.resume(with: Result { try self._cast(data) })

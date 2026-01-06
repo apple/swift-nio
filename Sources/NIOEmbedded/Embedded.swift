@@ -681,7 +681,7 @@ class EmbeddedChannelCore: ChannelCore {
     /// Enqueue a consumer closure that will be invoked upon the next pending inbound write.
     /// - Parameter newElement: The consumer closure to enqueue. Returns a `.failure` result if the channel has already
     ///   closed.
-    func enqueueInboundBufferConsumer(_ newElement: @escaping (Result<NIOAny, Error>) -> Void) {
+    func _enqueueInboundBufferConsumer(_ newElement: @escaping (Result<NIOAny, Error>) -> Void) {
         self.eventLoop.preconditionInEventLoop()
 
         // The channel has already closed: there cannot be any further writes. Return a `.failure` result with an error.
@@ -696,7 +696,7 @@ class EmbeddedChannelCore: ChannelCore {
     /// Enqueue a consumer closure that will be invoked upon the next pending outbound write.
     /// - Parameter newElement: The consumer closure to enqueue. Returns a `.failure` result if the channel has already
     ///   closed.
-    func enqueueOutboundBufferConsumer(_ newElement: @escaping (Result<NIOAny, Error>) -> Void) {
+    func _enqueueOutboundBufferConsumer(_ newElement: @escaping (Result<NIOAny, Error>) -> Void) {
         self.eventLoop.preconditionInEventLoop()
 
         // The channel has already closed: there cannot be any further writes. Return a `.failure` result with an error.
