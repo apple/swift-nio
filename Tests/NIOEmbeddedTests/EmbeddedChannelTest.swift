@@ -697,6 +697,133 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertTrue(try channel.finish().isClean)
     }
 
+    func testWriteInboundBufferConsumer() throws {
+        let channel = EmbeddedChannel()
+        let invocationPromise = channel.eventLoop.makePromise(of: Void.self)
+
+        channel.channelcore._enqueueInboundBufferConsumer { element in
+            invocationPromise.succeed()
+            switch element {
+            case .success(let result):
+                XCTAssertEqual(
+                    channel.channelcore.tryUnwrapData(result, as: ByteBuffer.self),
+                    ByteBuffer(string: "hello")
+                )
+            case .failure(let error):
+                XCTFail("Unexpectedly received an error: \(error)")
+            }
+        }
+
+        var buf = channel.allocator.buffer(capacity: 10)
+        buf.writeString("hello")
+        try channel.writeInbound(buf)
+
+        XCTAssertTrue(invocationPromise.futureResult.isFulfilled)
+    }
+
+    func testWriteOutboundBufferConsumer() throws {
+        let channel = EmbeddedChannel()
+        let invocationPromise = channel.eventLoop.makePromise(of: Void.self)
+
+        channel.channelcore._enqueueOutboundBufferConsumer { element in
+            invocationPromise.succeed()
+            switch element {
+            case .success(let result):
+                XCTAssertEqual(
+                    channel.channelcore.tryUnwrapData(result, as: ByteBuffer.self),
+                    ByteBuffer(string: "hello")
+                )
+            case .failure(let error):
+                XCTFail("Unexpectedly received an error: \(error)")
+            }
+        }
+
+        var buf = channel.allocator.buffer(capacity: 10)
+        buf.writeString("hello")
+        channel.write(buf, promise: nil)
+        channel.flush()
+
+        XCTAssertTrue(invocationPromise.futureResult.isFulfilled)
+    }
+
+    func testQueueMultipleInboundAndOutboundBufferConsumersBeforeChannelClose() async throws {
+        let channel = EmbeddedChannel()
+        let inboundInvocationPromises = [EventLoopPromise<Void>](
+            repeating: channel.eventLoop.makePromise(of: Void.self),
+            count: 3
+        )
+        let outboundInvocationPromises = [EventLoopPromise<Void>](
+            repeating: channel.eventLoop.makePromise(of: Void.self),
+            count: 3
+        )
+
+        // Enqueue 3 inbound and outbound consumers
+        for i in 0..<3 {
+            // Since the channel closes, all queued consumers should get a `ChannelError.ioOnClosedChannel`
+            channel.channelcore._enqueueInboundBufferConsumer { element in
+                inboundInvocationPromises[i].succeed()
+                switch element {
+                case .failure(let failure):
+                    XCTAssertEqual(failure as? ChannelError, ChannelError.ioOnClosedChannel)
+                case .success:
+                    XCTFail("Unexpectedly received a successful result: no writes were performed on the channel.")
+                }
+            }
+
+            channel.channelcore._enqueueOutboundBufferConsumer { element in
+                outboundInvocationPromises[i].succeed()
+                switch element {
+                case .failure(let failure):
+                    XCTAssertEqual(failure as? ChannelError, ChannelError.ioOnClosedChannel)
+                case .success:
+                    XCTFail("Unexpectedly received a successful result: no writes were performed on the channel.")
+                }
+            }
+        }
+
+        // Close the channel without performing any writes
+        try await channel.close()
+        XCTAssertEqual(channel.channelcore.isOpen, false)
+
+        // Check that all consumer closures were invoked
+        XCTAssertTrue(inboundInvocationPromises.map(\.futureResult.isFulfilled).allSatisfy { $0 })
+        XCTAssertTrue(outboundInvocationPromises.map(\.futureResult.isFulfilled).allSatisfy { $0 })
+    }
+
+    func testQueueInboundAndOutboundBufferConsumerAfterChannelClose() async throws {
+        let channel = EmbeddedChannel()
+        let inboundInvocationPromise = channel.eventLoop.makePromise(of: Void.self)
+        let outboundInvocationPromise = channel.eventLoop.makePromise(of: Void.self)
+
+        // Close the channel immediately
+        try await channel.close()
+        XCTAssertEqual(channel.channelcore.isOpen, false)
+
+        // Since the consumers are enqueued after the channel closed, they should get a `ChannelError.ioOnClosedChannel`
+        channel.channelcore._enqueueInboundBufferConsumer { element in
+            inboundInvocationPromise.succeed()
+            switch element {
+            case .failure(let failure):
+                XCTAssertEqual(failure as? ChannelError, ChannelError.ioOnClosedChannel)
+            case .success:
+                XCTFail("Unexpectedly received a successful result: no writes were performed on the channel.")
+            }
+        }
+
+        channel.channelcore._enqueueOutboundBufferConsumer { element in
+            outboundInvocationPromise.succeed()
+            switch element {
+            case .failure(let failure):
+                XCTAssertEqual(failure as? ChannelError, ChannelError.ioOnClosedChannel)
+            case .success:
+                XCTFail("Unexpectedly received a successful result: no writes were performed on the channel.")
+            }
+        }
+
+        XCTAssertTrue(inboundInvocationPromise.futureResult.isFulfilled)
+        XCTAssertTrue(outboundInvocationPromise.futureResult.isFulfilled)
+    }
+
     func testGetSetOption() throws {
         let channel = EmbeddedChannel()
         let option = ChannelOptions.socket(IPPROTO_IP, IP_TTL)

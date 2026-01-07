@@ -35,6 +35,10 @@ import CNIOWindows
 #error("The system call helpers module was unable to identify your C library.")
 #endif
 
+#if os(Linux) || os(Android)
+import CNIOLinux
+#endif
+
 #if os(Windows)
 private let sysDup: @convention(c) (CInt) -> CInt = _dup
 private let sysClose: @convention(c) (CInt) -> CInt = _close
@@ -232,5 +236,18 @@ enum SystemCalls {
         }
     }
     #endif
+
+    #if os(Linux) || os(Android)
+    @inline(never)
+    @usableFromInline
+    internal static func statfs_ftype(
+        _ path: UnsafePointer<CChar>
+    ) throws -> f_type_t {
+        try syscall(blocking: false) {
+            CNIOLinux_statfs_ftype(path)
+        }.result
+    }
+    #endif
+
     #endif  // !os(WASI)
 }

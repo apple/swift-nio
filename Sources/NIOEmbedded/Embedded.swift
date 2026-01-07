@@ -487,8 +487,7 @@ class EmbeddedChannelCore: ChannelCore {
     var outboundBuffer: CircularBuffer<NIOAny> = CircularBuffer()
 
     /// Contains observers that want to consume the first element that would be appended to the `outboundBuffer`
-    @usableFromInline
-    var outboundBufferConsumer: Deque<(NIOAny) -> Void> = []
+    private var outboundBufferConsumer: Deque<(Result<NIOAny, Error>) -> Void> = []
 
     /// Contains the unflushed items that went into the `Channel`
     @usableFromInline
@@ -502,8 +501,7 @@ class EmbeddedChannelCore: ChannelCore {
     var inboundBuffer: CircularBuffer<NIOAny> = CircularBuffer()
 
     /// Contains observers that want to consume the first element that would be appended to the `inboundBuffer`
-    @usableFromInline
-    var inboundBufferConsumer: Deque<(NIOAny) -> Void> = []
+    private var inboundBufferConsumer: Deque<(Result<NIOAny, Error>) -> Void> = []
 
     @usableFromInline
     internal struct Addresses {
@@ -566,6 +564,14 @@ class EmbeddedChannelCore: ChannelCore {
         isOpen = false
         isActive = false
         promise?.succeed(())
+
+        // Return a `.failure` result containing an error to all pending inbound and outbound consumers.
+        while let consumer = self.inboundBufferConsumer.popFirst() {
+            consumer(.failure(ChannelError.ioOnClosedChannel))
+        }
+        while let consumer = self.outboundBufferConsumer.popFirst() {
+            consumer(.failure(ChannelError.ioOnClosedChannel))
+        }
 
         // As we called register() in the constructor of EmbeddedChannel we also need to ensure we call unregistered here.
         self.pipeline.syncOperations.fireChannelInactive()
@@ -661,15 +667,45 @@ class EmbeddedChannelCore: ChannelCore {
 
     private func addToBuffer(
         buffer: inout CircularBuffer<NIOAny>,
-        consumer: inout Deque<(NIOAny) -> Void>,
+        consumer: inout Deque<(Result<NIOAny, Error>) -> Void>,
         data: NIOAny
     ) {
         self.eventLoop.preconditionInEventLoop()
         if let consume = consumer.popFirst() {
-            consume(data)
+            consume(.success(data))
         } else {
             buffer.append(data)
         }
+    }
+
+    /// Enqueue a consumer closure that will be invoked upon the next pending inbound write.
+    /// - Parameter newElement: The consumer closure to enqueue. Returns a `.failure` result if the channel has already
+    ///   closed.
+    func _enqueueInboundBufferConsumer(_ newElement: @escaping (Result<NIOAny, Error>) -> Void) {
+        self.eventLoop.preconditionInEventLoop()
+
+        // The channel has already closed: there cannot be any further writes. Return a `.failure` result with an error.
+        guard self.isOpen else {
+            newElement(.failure(ChannelError.ioOnClosedChannel))
+            return
+        }
+
+        self.inboundBufferConsumer.append(newElement)
+    }
+
+    /// Enqueue a consumer closure that will be invoked upon the next pending outbound write.
+    /// - Parameter newElement: The consumer closure to enqueue. Returns a `.failure` result if the channel has already
+    ///   closed.
+    func _enqueueOutboundBufferConsumer(_ newElement: @escaping (Result<NIOAny, Error>) -> Void) {
+        self.eventLoop.preconditionInEventLoop()
+
+        // The channel has already closed: there cannot be any further writes. Return a `.failure` result with an error.
+        guard self.isOpen else {
+            newElement(.failure(ChannelError.ioOnClosedChannel))
+            return
+        }
+
+        self.outboundBufferConsumer.append(newElement)
     }
 }
 
