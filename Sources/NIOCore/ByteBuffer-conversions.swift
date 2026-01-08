@@ -31,6 +31,13 @@ extension Array where Element == UInt8 {
 extension String {
 
     /// Creates a `String` from a given `ByteBuffer`. The entire readable portion of the buffer will be read.
+    ///
+    /// This initializer always succeeds. If the buffer contains bytes that are not valid UTF-8, they will be
+    /// replaced with the Unicode replacement character (U+FFFD).
+    ///
+    /// If you need to validate that the buffer contains valid UTF-8, use ``ByteBuffer/readUTF8ValidatedString(length:)``
+    /// instead, which throws an error for invalid UTF-8.
+    ///
     /// - Parameter buffer: The buffer to read.
     @inlinable
     public init(buffer: ByteBuffer) {
