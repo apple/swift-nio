@@ -651,6 +651,17 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         }
     }
 
+    /// Returns the path of the current user's home directory.
+    public var homeDirectory: FilePath {
+        get async throws {
+            try await self.threadPool.runIfActive {
+                try Libc.homeDirectoryForCurrentUser().mapError { errno in
+                    FileSystemError.homeDirectory(errno: errno, location: .here())
+                }.get()
+            }
+        }
+    }
+
     /// Returns a path to a temporary directory.
     ///
     /// #### Implementation details

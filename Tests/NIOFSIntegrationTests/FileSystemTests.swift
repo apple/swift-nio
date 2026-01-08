@@ -542,6 +542,15 @@ final class FileSystemTests: XCTestCase {
         XCTAssert(directory.underlying.isAbsolute)
     }
 
+    func testHomeDirectory() async throws {
+        let directory = try await self.fs.homeDirectory
+        XCTAssert(!directory.underlying.isEmpty)
+        XCTAssert(directory.underlying.isAbsolute)
+
+        let info = try await self.fs.info(forFileAt: directory, infoAboutSymbolicLink: false)
+        XCTAssertEqual(info?.type, .directory)
+    }
+
     func testTemporaryDirectory() async throws {
         let directory = try await self.fs.temporaryDirectory
         XCTAssert(!directory.underlying.isEmpty)
