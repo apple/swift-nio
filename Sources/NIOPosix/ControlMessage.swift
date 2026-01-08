@@ -198,6 +198,7 @@ struct ControlMessageParser {
     var ecnValue: NIOExplicitCongestionNotificationState = .transportNotCapable  // Default
     var packetInfo: NIOPacketInfo? = nil
     var segmentSize: Int? = nil
+    var timestamp: Double? = nil
 
     init(parsing controlMessagesReceived: UnsafeControlMessageCollection) {
         for controlMessage in controlMessagesReceived {
@@ -228,6 +229,8 @@ struct ControlMessageParser {
             self.receiveIPv6Message(controlMessage)
         } else if controlMessage.level == Posix.SOL_UDP {
             self.receiveUDPMessage(controlMessage)
+        } else if controlMessage.level == SOL_SOCKET {
+            self.receiveTimestampMessage(controlMessage)
         }
     }
 
@@ -288,6 +291,15 @@ struct ControlMessageParser {
             }
         }
         #endif
+    }
+
+    private mutating func receiveTimestampMessage(_ controlMessage: UnsafeControlMessage) {
+        if controlMessage.type == SCM_TIMESTAMP {
+            if let data = controlMessage.data {
+                let timestamp = data.loadUnaligned(as: timeval.self)
+                self.timestamp = Double(timestamp.tv_sec) + Double(timestamp.tv_usec) / 1_000_000.0
+            }
+        }
     }
 }
 
@@ -434,7 +446,8 @@ extension AddressedEnvelope.Metadata {
         self.init(
             ecnState: controlMessageReceiver.ecnValue,
             packetInfo: controlMessageReceiver.packetInfo,
-            segmentSize: controlMessageReceiver.segmentSize
+            segmentSize: controlMessageReceiver.segmentSize,
+            timestamp: controlMessageReceiver.timestamp
         )
     }
 }
