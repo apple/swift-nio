@@ -52,9 +52,9 @@ public struct AddressedEnvelope<DataType> {
 
         /// The timestamp this datagram was received by the kernel.
         ///
-        /// When ``ChannelOptions.Types.TimestampOption`` (`SO_TIMESTAMP`) is enabled on a `DatagramChannel`, the
-        /// kernel records the time each packet arrives. This value is expressed as the number of seconds since the
-        /// Unix epoch (January 1, 1970), with sub-second precision.
+        /// When `SO_TIMESTAMP` is enabled on a `DatagramChannel`, the kernel records the time each packet arrives.
+        /// This value is expressed as the number of seconds since the Unix epoch (January 1, 1970), with
+        /// sub-second precision.
         public var timestamp: Double?
 
         public init(ecnState: NIOExplicitCongestionNotificationState) {
