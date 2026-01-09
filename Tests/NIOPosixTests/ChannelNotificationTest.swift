@@ -534,4 +534,50 @@ class ChannelNotificationTest: XCTestCase {
         XCTAssertNoThrow(try serverChannel.close().wait())
         XCTAssertNoThrow(try serverChannel.closeFuture.wait())
     }
+
+    func testNoActiveInactiveNotificationsWhenDirectlyClosed() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class OrderVerificationHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            init() {
+                // nop
+            }
+
+            public func channelActive(context: ChannelHandlerContext) {
+                XCTFail("There should be no events when the channel is closed directly.")
+            }
+
+            public func channelInactive(context: ChannelHandlerContext) {
+                XCTFail("There should be no events when the channel is closed directly.")
+            }
+        }
+
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
+
+        let connectFuture = ClientBootstrap(group: group)
+            .channelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(OrderVerificationHandler())
+                }
+            }
+            .connect(to: serverChannel.localAddress!)
+
+        // Close immediately in the promise callback. The channel must still become active before it becomes inactive!
+        let closeFuture = connectFuture.flatMap { channel in
+            channel.close()
+        }
+
+        XCTAssertNoThrow(try closeFuture.wait())
+
+        XCTAssertNoThrow(try serverChannel.close().wait())
+    }
 }

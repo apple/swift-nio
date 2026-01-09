@@ -37,6 +37,11 @@ private struct SocketChannelLifecycleManager {
     private let eventLoop: EventLoop
     // this is queried from the Channel, ie. must be thread-safe
     internal let isActiveAtomic: ManagedAtomic<Bool>
+    // Tracks whether channelActive event was actually fired to user handlers.
+    // When the state machine transitions to .closed before channelActive was fired,
+    // we want to suppress both events. This allows us to only fire channelInactive
+    // if channelActive was fired previously.
+    internal let firedChannelActive: NIOLoopBoundBox<Bool>
     // these are only to be accessed on the EventLoop
 
     // have we seen the `.readEOF` notification
@@ -70,6 +75,7 @@ private struct SocketChannelLifecycleManager {
         self.eventLoop = eventLoop
         self.isActiveAtomic = isActiveAtomic
         self.supportsReconnect = supportReconnect
+        self.firedChannelActive = NIOLoopBoundBox.makeBoxSendingValue(false, eventLoop: eventLoop)
     }
 
     // this is called from Channel's deinit, so don't assert we're on the EventLoop!
@@ -132,9 +138,15 @@ private struct SocketChannelLifecycleManager {
         // origin: .fullyRegistered
         case (.fullyRegistered, .activate):
             self.currentState = .activated
+            let firedChannelActive = self.firedChannelActive
+            let isActiveAtomic = self.isActiveAtomic
             return { promise, pipeline in
+                firedChannelActive.eventLoop.assertInEventLoop()
                 promise?.succeed(())
-                pipeline.syncOperations.fireChannelActive()
+                if isActiveAtomic.load(ordering: .relaxed) {
+                    firedChannelActive.value = true
+                    pipeline.syncOperations.fireChannelActive()
+                }
             }
 
         // origin: .preRegistered || .fullyRegistered
@@ -148,9 +160,13 @@ private struct SocketChannelLifecycleManager {
         // origin: .activated
         case (.activated, .close):
             self.currentState = .closed
+            let firedChannelActive = self.firedChannelActive
             return { promise, pipeline in
+                firedChannelActive.eventLoop.assertInEventLoop()
                 promise?.succeed(())
-                pipeline.syncOperations.fireChannelInactive()
+                if firedChannelActive.value {
+                    pipeline.syncOperations.fireChannelInactive()
+                }
                 pipeline.syncOperations.fireChannelUnregistered()
             }
 
