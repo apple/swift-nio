@@ -91,7 +91,10 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
         case .finished:
             return nil
 
-        case .awaitingUpgradeResponseHead, .awaitingUpgradeResponseEnd, .unbuffering, .upgrading:
+        case .awaitingUpgradeResponseHead:
+            return nil
+
+        case .awaitingUpgradeResponseEnd, .unbuffering, .upgrading:
             fatalError("Internal inconsistency in HTTPClientUpgradeStateMachine")
 
         case .modifying:
