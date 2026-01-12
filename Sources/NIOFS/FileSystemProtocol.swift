@@ -108,6 +108,9 @@ public protocol FileSystemProtocol: Sendable {
     /// Returns the current working directory.
     var currentWorkingDirectory: NIOFilePath { get async throws }
 
+    /// Returns the current user's home directory.
+    var homeDirectory: NIOFilePath { get async throws }
+
     /// Returns the path of the temporary directory.
     var temporaryDirectory: NIOFilePath { get async throws }
 

@@ -686,6 +686,70 @@ class AsyncTestingChannelTests: XCTestCase {
         try await XCTAsyncAssertTrue(try await channel.finish().isClean)
     }
 
+    func testWaitingForWriteTerminatesAfterChannelClose() async throws {
+        let channel = NIOAsyncTestingChannel()
+
+        // Write some inbound and outbound data
+        for i in 1...3 {
+            try await channel.writeInbound(i)
+            try await channel.writeOutbound(i)
+        }
+
+        // We should successfully see the three inbound and outbound writes
+        for i in 1...3 {
+            try await XCTAsyncAssertEqual(try await channel.waitForInboundWrite(), i)
+            try await XCTAsyncAssertEqual(try await channel.waitForOutboundWrite(), i)
+        }
+
+        let task = Task {
+            // We close the channel after the third inbound/outbound write. Waiting again should result in a
+            // `ChannelError.ioOnClosedChannel` error.
+            await XCTAsyncAssertThrowsError(try await channel.waitForInboundWrite(as: Int.self)) {
+                XCTAssertEqual($0 as? ChannelError, ChannelError.ioOnClosedChannel)
+            }
+            await XCTAsyncAssertThrowsError(try await channel.waitForOutboundWrite(as: Int.self)) {
+                XCTAssertEqual($0 as? ChannelError, ChannelError.ioOnClosedChannel)
+            }
+        }
+
+        // Close the channel without performing any writes
+        try await channel.close()
+        try await task.value
+    }
+
+    func testEnqueueWriteConsumersBeforeChannelClosesWithoutAnyWrites() async throws {
+        let channel = NIOAsyncTestingChannel()
+
+        let task = Task {
+            // We don't write anything to the channel and simply just close it. Waiting for an inbound/outbound write
+            // should result in a `ChannelError.ioOnClosedChannel` when the channel closes.
+            await XCTAsyncAssertThrowsError(try await channel.waitForInboundWrite(as: Int.self)) {
+                XCTAssertEqual($0 as? ChannelError, ChannelError.ioOnClosedChannel)
+            }
+            await XCTAsyncAssertThrowsError(try await channel.waitForOutboundWrite(as: Int.self)) {
+                XCTAssertEqual($0 as? ChannelError, ChannelError.ioOnClosedChannel)
+            }
+        }
+
+        // Close the channel without performing any inbound or outbound writes
+        try await channel.close()
+        try await task.value
+    }
+
+    func testEnqueueWriteConsumersAfterChannelClosesWithoutAnyWrites() async throws {
+        let channel = NIOAsyncTestingChannel()
+        // Immediately close the channel without performing any inbound or outbound writes
+        try await channel.close()
+
+        // Now try to wait for an inbound/outbound write. This should result in a `ChannelError.ioOnClosedChannel`.
+        await XCTAsyncAssertThrowsError(try await channel.waitForInboundWrite(as: Int.self)) {
+            XCTAssertEqual($0 as? ChannelError, ChannelError.ioOnClosedChannel)
+        }
+        await XCTAsyncAssertThrowsError(try await channel.waitForOutboundWrite(as: Int.self)) {
+            XCTAssertEqual($0 as? ChannelError, ChannelError.ioOnClosedChannel)
+        }
+    }
+
     func testGetSetOption() async throws {
         let channel = NIOAsyncTestingChannel()
         let option = ChannelOptions.socket(IPPROTO_IP, IP_TTL)
