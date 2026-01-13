@@ -309,6 +309,26 @@ extension ChannelCore {
         data.forceAs()
     }
 
+    /// Unwraps the given `NIOAny` as a specific concrete type.
+    ///
+    /// This method is intended for use when writing custom `ChannelCore` implementations.
+    /// This can safely be called in methods like `write0` to extract data from the `NIOAny`
+    /// provided in those cases.
+    ///
+    /// Note that if the unwrap fails, this will cause a runtime trap. `ChannelCore`
+    /// implementations should be concrete about what types they support writing. If multiple
+    /// types are supported, consider using a tagged union to store the type information like
+    /// NIO's own `IOData`, which will minimise the amount of runtime type checking.
+    ///
+    /// - Parameters:
+    ///   - data: The `NIOAny` to unwrap.
+    ///   - as: The type to extract from the `NIOAny`.
+    /// - Returns: The content of the `NIOAny`.
+    @inlinable
+    public static func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
+        data.forceAs()
+    }
+
     /// Attempts to unwrap the given `NIOAny` as a specific concrete type.
     ///
     /// This method is intended for use when writing custom `ChannelCore` implementations.
@@ -328,6 +348,28 @@ extension ChannelCore {
     ///     are doing something _extremely_ unusual.
     @inlinable
     public func tryUnwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T? {
+        data.tryAs()
+    }
+
+    /// Attempts to unwrap the given `NIOAny` as a specific concrete type.
+    ///
+    /// This method is intended for use when writing custom `ChannelCore` implementations.
+    /// This can safely be called in methods like `write0` to extract data from the `NIOAny`
+    /// provided in those cases.
+    ///
+    /// If the unwrap fails, this will return `nil`. `ChannelCore` implementations should almost
+    /// always support only one runtime type, so in general they should avoid using this and prefer
+    /// using `unwrapData` instead. This method exists for rare use-cases where tolerating type
+    /// mismatches is acceptable.
+    ///
+    /// - Parameters:
+    ///   - data: The `NIOAny` to unwrap.
+    ///   - as: The type to extract from the `NIOAny`.
+    /// - Returns: The content of the `NIOAny`, or `nil` if the type is incorrect.
+    /// - warning: If you are implementing a `ChannelCore`, you should use `unwrapData` unless you
+    ///     are doing something _extremely_ unusual.
+    @inlinable
+    public static func tryUnwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T? {
         data.tryAs()
     }
 
