@@ -31,9 +31,7 @@ jobs:
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
       - id: load-matrix
         run: |
-            printf "swift-matrix=%s" "$(jq -ec '.' ${INPUTS_MATRIX_PATH})" >> "$GITHUB_OUTPUT"
-        env:
-          INPUTS_MATRIX_PATH: ${{ inputs.matrix_path }}
+            printf "swift-matrix=%s" "$(jq -ec '.' ${{ inputs.matrix_path }})" >> "$GITHUB_OUTPUT"
 
 
   execute-matrix:
