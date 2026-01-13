@@ -70,7 +70,7 @@ jobs:
       - id: generate-matrix
         run: |
           # Validate JSON environment variables
-          macos_env_vars_json='${MATRIX_MACOS_ENV_VARS}'
+          macos_env_vars_json='${{ inputs.macos_env_vars }}'
 
           if ! echo "$macos_env_vars_json" | jq empty 2>/dev/null; then
             echo "Error: macos_env_vars is not valid JSON"
@@ -130,7 +130,6 @@ jobs:
           MACOS_XCODE_26_0_ENABLED: ${{ inputs.macos_xcode_26_0_enabled }}
           MACOS_XCODE_26_1_ENABLED: ${{ inputs.macos_xcode_26_1_enabled }}
           MACOS_XCODE_LATEST_BETA_ENABLED: ${{ inputs.macos_xcode_latest_beta_enabled }}
-          MATRIX_MACOS_ENV_VARS: ${{ inputs.macos_env_vars }}
 
   benchmarks-macos:
     name: ${{ matrix.config.name }}
@@ -157,8 +156,7 @@ jobs:
           echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "exporting \(.key)=\(.value)"'
       - name: Run benchmarks script
         run: |
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | bash -s -- --disable-sandbox --allow-writing-to-package-directory
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} bash -s -- --disable-sandbox --allow-writing-to-package-directory
         env:
           DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
           SWIFT_VERSION: "Xcode ${{ matrix.config.xcode_version }}"
-          BENCHMARK_PACKAGE_PATH: ${{ inputs.benchmark_package_path }}
