@@ -95,7 +95,7 @@ jobs:
       - id: generate-matrix
         run: |
           # Validate JSON environment variables
-          linux_env_vars_json='${MATRIX_LINUX_ENV_VARS}'
+          linux_env_vars_json='${{ inputs.linux_env_vars }}'
 
           if ! echo "$linux_env_vars_json" | jq empty 2>/dev/null; then
             echo "Error: linux_env_vars is not valid JSON"
@@ -114,7 +114,6 @@ jobs:
           MATRIX_LINUX_6_2_ENABLED: ${{ inputs.linux_6_2_enabled }}
           MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_6_1_enabled && inputs.linux_nightly_next_enabled  }}
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
-          MATRIX_LINUX_ENV_VARS: ${{ inputs.linux_env_vars }}
 
   benchmarks-linux:
     name: Benchmarks
