@@ -108,6 +108,9 @@ public protocol FileSystemProtocol: Sendable {
     /// Returns the current working directory.
     var currentWorkingDirectory: FilePath { get async throws }
 
+    /// Returns the current user's home directory.
+    var homeDirectory: FilePath { get async throws }
+
     /// Returns the path of the temporary directory.
     var temporaryDirectory: FilePath { get async throws }
 
@@ -314,9 +317,10 @@ extension FileSystemProtocol {
     /// Opens the file at the given path and provides scoped read-only access to it.
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
-    /// automatically before the call returns. Files may also be opened in read-write or write-only
-    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-9nqu3`` and
-    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)-1p6ka``.
+    /// automatically before the call returns.
+    /// Files may also be opened in read-write or write-only mode by calling
+    /// ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)`` and
+    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading.
@@ -341,9 +345,10 @@ extension FileSystemProtocol {
     /// Opens the file at the given path and provides scoped write-only access to it.
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
-    /// automatically before the call returns. Files may also be opened in read-write or read-only
-    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-9nqu3`` and
-    /// ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)-nsue``.
+    /// automatically before the call returns.
+    /// Files may also be opened in read-write or write-only mode by calling
+    /// ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)`` and
+    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading.
@@ -373,9 +378,10 @@ extension FileSystemProtocol {
     /// Opens the file at the given path and provides scoped read-write access to it.
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
-    /// automatically before the function returns. Files may also be opened in read-only or
-    /// write-only mode by with ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)-nsue`` and
-    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)-1p6ka``.
+    /// automatically before the function returns.
+    /// Files may also be opened in read-only or
+    /// write-only mode by with ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)`` and
+    /// ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading and writing.
