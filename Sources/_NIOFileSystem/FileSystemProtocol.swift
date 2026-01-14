@@ -175,7 +175,7 @@ public protocol FileSystemProtocol: Sendable {
     /// The following error codes may be thrown:
     /// - ``FileSystemError/Code-swift.struct/notFound`` if the item at `sourcePath` does not exist,
     /// - ``FileSystemError/Code-swift.struct/invalidArgument`` if an item at `destinationPath`
-    ///   exists prior to the copy or its parent directory does not exist.
+    ///   exists prior to the copy (when `overwriting` is `false`) or its parent directory does not exist.
     ///
     /// Note that other errors may also be thrown.
     ///
@@ -186,6 +186,10 @@ public protocol FileSystemProtocol: Sendable {
     ///   - sourcePath: The path to the item to copy.
     ///   - destinationPath: The path at which to place the copy.
     ///   - copyStrategy: How to deal with concurrent aspects of the copy, only relevant to directories.
+    ///   - overwriting: Whether to overwrite an existing file at `destinationPath`. When `true`,
+    ///       any existing regular file or symbolic link at the destination will be replaced atomically.
+    ///       This parameter only affects regular files and symbolic links; directories are not overwritten.
+    ///       Defaults to `false`.
     ///   - shouldProceedAfterError: A closure which is executed to determine whether to continue
     ///       copying files if an error is encountered during the operation. See Errors section for full details.
     ///   - shouldCopyItem: A closure which is executed before each copy to determine whether each
@@ -207,9 +211,9 @@ public protocol FileSystemProtocol: Sendable {
     ///
     /// The specific error thrown from copyItem is undefined, it does not have to be the same error thrown from
     /// `shouldProceedAfterError`.
-    /// In the event of any errors (ignored or otherwise) implementations are under no obbligation to
+    /// In the event of any errors (ignored or otherwise) implementations are under no obligation to
     /// attempt to 'tidy up' after themselves. The state of the file system within `destinationPath`
-    /// after an aborted copy should is undefined.
+    /// after an aborted copy is undefined.
     ///
     /// When calling `shouldProceedAfterError` implementations of this method
     /// MUST:
@@ -245,7 +249,8 @@ public protocol FileSystemProtocol: Sendable {
             @escaping @Sendable (
                 _ source: DirectoryEntry,
                 _ destination: FilePath
-            ) async -> Bool
+            ) async -> Bool,
+        overwriting: Bool
     ) async throws
 
     /// Deletes the file or directory (and its contents) at `path`.
@@ -488,11 +493,18 @@ extension FileSystemProtocol {
         to destinationPath: FilePath,
         strategy copyStrategy: CopyStrategy = .platformDefault
     ) async throws {
-        try await self.copyItem(at: sourcePath, to: destinationPath, strategy: copyStrategy) { path, error in
-            throw error
-        } shouldCopyItem: { source, destination in
-            true
-        }
+        try await self.copyItem(
+            at: sourcePath,
+            to: destinationPath,
+            strategy: copyStrategy,
+            shouldProceedAfterError: { path, error in
+                throw error
+            },
+            shouldCopyItem: { source, destination in
+                true
+            },
+            overwriting: false
+        )
     }
 
     /// Copies the item at the specified path to a new location.
@@ -546,7 +558,8 @@ extension FileSystemProtocol {
             shouldProceedAfterError: shouldProceedAfterError,
             shouldCopyItem: { (source, destination) in
                 await shouldCopyFile(source.path, destination)
-            }
+            },
+            overwriting: false
         )
     }
 
@@ -595,7 +608,8 @@ extension FileSystemProtocol {
             to: destinationPath,
             strategy: .platformDefault,
             shouldProceedAfterError: shouldProceedAfterError,
-            shouldCopyItem: shouldCopyItem
+            shouldCopyItem: shouldCopyItem,
+            overwriting: false
         )
     }
 
