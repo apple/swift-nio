@@ -62,7 +62,7 @@ public struct IOError: Swift.Error {
         .reason(self.failureDescription)
     }
 
-    private enum Error {
+    package enum Error {
         #if os(Windows)
         case windows(DWORD)
         case winsock(CInt)
@@ -70,7 +70,7 @@ public struct IOError: Swift.Error {
         case errno(CInt)
     }
 
-    private let error: Error
+    package let error: Error
 
     /// The `errno` that was set for the operation.
     public var errnoCode: CInt {
