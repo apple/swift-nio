@@ -127,6 +127,14 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
 
     public func handlerAdded(context: ChannelHandlerContext) {
         self._upgradeResultPromise = context.eventLoop.makePromise(of: UpgradeResult.self)
+        if context.channel.isActive {
+            switch self.stateMachine.channelActive() {
+            case .writeUpgradeRequest:
+                self.writeUpgradeRequest(context: context)
+            case .none:
+                break
+            }
+        }
     }
 
     public func handlerRemoved(context: ChannelHandlerContext) {
@@ -141,13 +149,7 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
     public func channelActive(context: ChannelHandlerContext) {
         switch self.stateMachine.channelActive() {
         case .writeUpgradeRequest:
-            context.write(
-                NIOTypedHTTPClientUpgradeHandler.wrapOutboundOut(.head(self.upgradeRequestHead)),
-                promise: nil
-            )
-            context.write(NIOTypedHTTPClientUpgradeHandler.wrapOutboundOut(.body(.byteBuffer(.init()))), promise: nil)
-            context.writeAndFlush(NIOTypedHTTPClientUpgradeHandler.wrapOutboundOut(.end(nil)), promise: nil)
-
+            self.writeUpgradeRequest(context: context)
         case .none:
             break
         }
@@ -196,6 +198,15 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
     public func errorCaught(context: ChannelHandlerContext, error: any Error) {
         self.upgradeResultPromise.fail(error)
         context.fireErrorCaught(error)
+    }
+
+    private func writeUpgradeRequest(context: ChannelHandlerContext) {
+        context.write(
+            NIOTypedHTTPClientUpgradeHandler.wrapOutboundOut(.head(self.upgradeRequestHead)),
+            promise: nil
+        )
+        context.write(NIOTypedHTTPClientUpgradeHandler.wrapOutboundOut(.body(.byteBuffer(.init()))), promise: nil)
+        context.writeAndFlush(NIOTypedHTTPClientUpgradeHandler.wrapOutboundOut(.end(nil)), promise: nil)
     }
 
     private func channelRead(context: ChannelHandlerContext, responsePart: HTTPClientResponsePart) {
