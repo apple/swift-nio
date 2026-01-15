@@ -47,6 +47,7 @@ let package = Package(
         .library(name: "NIO", targets: ["NIO"]),
         .library(name: "NIOEmbedded", targets: ["NIOEmbedded"]),
         .library(name: "NIOPosix", targets: ["NIOPosix"]),
+        .library(name: "NIOAsyncRuntime", targets: ["NIOAsyncRuntime"]),
         .library(name: "_NIOConcurrency", targets: ["_NIOConcurrency"]),
         .library(name: "NIOTLS", targets: ["NIOTLS"]),
         .library(name: "NIOHTTP1", targets: ["NIOHTTP1"]),
@@ -110,6 +111,15 @@ let package = Package(
             ],
             exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
             resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
+            swiftSettings: swiftSettings
+        ),
+        .target(
+            name: "NIOAsyncRuntime",
+            dependencies: [
+                "NIOCore",
+                swiftAtomics,
+            ],
+            exclude: ["README.md"],
             swiftSettings: swiftSettings
         ),
         .target(
@@ -498,6 +508,17 @@ let package = Package(
                 "CNIOLinux",
                 "CNIODarwin",
                 "NIOTLS",
+            ],
+            swiftSettings: swiftSettings
+        ),
+        .testTarget(
+            name: "NIOAsyncRuntimeTests",
+            dependencies: [
+                "NIOAsyncRuntime",
+                "NIOCore",
+                "NIOConcurrencyHelpers",
+                "NIOFoundationCompat",
+                "NIOTestUtils",
             ],
             swiftSettings: swiftSettings
         ),
