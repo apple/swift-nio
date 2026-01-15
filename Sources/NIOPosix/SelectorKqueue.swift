@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOConcurrencyHelpers
 import NIOCore
 
@@ -478,3 +480,4 @@ private struct KeventTriple {
 }
 
 #endif
+#endif  // !os(WASI)

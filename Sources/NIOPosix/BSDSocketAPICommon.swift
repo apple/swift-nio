@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import NIOCore
 
 #if os(Windows)
@@ -391,3 +394,4 @@ enum NIOBSDSocketControlMessage: _BSDSocketControlMessageProtocol {}
 
 /// The requested UDS path exists and has wrong type (not a socket).
 public struct UnixDomainSocketPathWrongType: Error {}
+#endif  // !os(WASI)

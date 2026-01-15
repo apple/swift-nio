@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import CNIOLinux
 import CNIOOpenBSD
@@ -693,3 +695,4 @@ extension PendingStreamWritesManager: CustomStringConvertible {
             + "writabilityFlag: \(self.channelWritabilityFlag.load(ordering: .relaxed))), state: \(self.state) }"
     }
 }
+#endif  // !os(WASI)

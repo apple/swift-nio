@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 // This is a companion to System.swift that provides only Linux specials: either things that exist
 // only on Linux, or things that have Linux-specific extensions.
 
@@ -208,3 +210,4 @@ internal enum Linux {
     }
 }
 #endif
+#endif  // !os(WASI)
