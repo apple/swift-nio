@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import NIOConcurrencyHelpers
 import NIOCore
@@ -660,3 +662,4 @@ extension MultiThreadedEventLoopGroup {
         }
     }
 }
+#endif  // !os(WASI)

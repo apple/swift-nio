@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 /// A server socket that can accept new connections.
@@ -150,3 +152,4 @@ class ServerSocket: BaseSocket, ServerSocketProtocol {
         }
     }
 }
+#endif  // !os(WASI)
