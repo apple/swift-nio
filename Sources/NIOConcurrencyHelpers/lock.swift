@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2026 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -68,6 +68,12 @@ public final class Lock {
 
         let err = pthread_mutex_init(self.mutex, &attr)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
+        // `pthread_mutexattr_t` only lives during init; destroy here instead of deinit.
+        let attrDestroyErr = pthread_mutexattr_destroy(&attr)
+        precondition(
+            attrDestroyErr == 0,
+            "\(#function) failed in pthread_mutexattr_destroy with error \(attrDestroyErr)"
+        )
         #endif
     }
 
