@@ -1139,9 +1139,26 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         clientUpgraders: [any TypedAndUntypedHTTPClientProtocolUpgrader],
         _ upgradeCompletionHandler: @escaping (ChannelHandlerContext, Result<Bool, Error>) -> Void
     ) throws -> EmbeddedChannel {
-
         let channel = EmbeddedChannel()
+        try setUpClientChannel(
+            channel: channel,
+            previousHTTPHandler: previousHTTPHandler,
+            clientHTTPHandler: clientHTTPHandler,
+            clientUpgraders: clientUpgraders,
+            upgradeCompletionHandler
+        )
+        try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
+            .wait()
+        return channel
+    }
 
+    func setUpClientChannel(
+        channel: Channel,
+        previousHTTPHandler: (RemovableChannelHandler & Sendable)? = nil,
+        clientHTTPHandler: RemovableChannelHandler & Sendable,
+        clientUpgraders: [any TypedAndUntypedHTTPClientProtocolUpgrader],
+        _ upgradeCompletionHandler: @escaping (ChannelHandlerContext, Result<Bool, Error>) -> Void
+    ) throws {
         if let previousHTTPHandler {
             try channel.pipeline.syncOperations.addHandler(previousHTTPHandler)
         }
@@ -1180,13 +1197,9 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         )
 
         let loopBoundContext = context.loopBound
-        try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
-            .wait()
         upgradeResult.assumeIsolated().whenComplete { result in
             upgradeCompletionHandler(loopBoundContext.value, result)
         }
-
-        return channel
     }
 
     override func setUpClientChannel(
@@ -1453,5 +1466,184 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
             try clientChannel.pipeline
                 .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self)
         )
+    }
+
+    // MARK: Tests specific to typed handler
+
+    func testUpgradeHappensAfterHandlerAdded() throws {
+        let upgradeProtocol = "myProto"
+        let addedUpgradeHeader = "myUpgradeHeader"
+        let addedUpgradeValue = "upgradeHeader"
+
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
+
+        // This header is not required by the server but we will validate its receipt.
+        let clientHeaders = [(addedUpgradeHeader, addedUpgradeValue)]
+
+        let clientUpgrader = SuccessfulClientUpgrader(
+            forProtocol: upgradeProtocol,
+            upgradeHeaders: clientHeaders
+        )
+
+        let clientChannel = EmbeddedChannel()
+        try clientChannel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
+            .wait()
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
+        }
+        try setUpClientChannel(
+            channel: clientChannel,
+            clientHTTPHandler: ExplodingHTTPHandler(),
+            clientUpgraders: [clientUpgrader]
+        ) { _, result in
+            switch result {
+            case .success(true):
+                upgradeHandlerCallbackFired.withLockedValue { $0 = true }
+            default:
+                break
+            }
+        }
+
+        // Read the server request.
+        if let requestString = try clientChannel.readByteBufferOutputAsString() {
+            XCTAssertEqual(
+                requestString,
+                "GET / HTTP/1.1\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 0\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol.lowercased())\r\n\(addedUpgradeHeader): \(addedUpgradeValue)\r\n\r\n"
+            )
+        } else {
+            XCTFail()
+        }
+
+        // Validate the pipeline still has http handlers.
+        clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
+        clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
+        assertPipelineContainsUpgradeHandler(channel: clientChannel)
+
+        // Push the successful server response.
+        let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol)\r\n\r\n"
+
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
+
+        clientChannel.embeddedEventLoop.run()
+
+        // Once upgraded, validate the pipeline has been removed.
+        XCTAssertNoThrow(
+            try clientChannel.pipeline
+                .assertDoesNotContain(handlerType: HTTPRequestEncoder.self)
+        )
+        XCTAssertNoThrow(
+            try clientChannel.pipeline
+                .assertDoesNotContain(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
+        )
+        XCTAssertNoThrow(
+            try clientChannel.pipeline
+                .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self)
+        )
+
+        // Check the client upgrader was used correctly.
+        XCTAssertEqual(1, clientUpgrader.addCustomUpgradeRequestHeadersCallCount)
+        XCTAssertEqual(1, clientUpgrader.shouldAllowUpgradeCallCount)
+        XCTAssertEqual(1, clientUpgrader.upgradeContextResponseCallCount)
+
+        XCTAssert(upgradeHandlerCallbackFired.withLockedValue { $0 })
+    }
+
+    func testUpgradeHappensWhenAddedDuringChannelActive() throws {
+        final class OnActiveChannelHandler: ChannelInboundHandler {
+            fileprivate typealias InboundIn = ByteBuffer
+            fileprivate typealias OutboundOut = ByteBuffer
+
+            let onActive: (Channel) throws -> Void
+
+            init(_ onActive: @escaping (Channel) throws -> Void) {
+                self.onActive = onActive
+            }
+            func channelActive(context: ChannelHandlerContext) {
+                do {
+                    try onActive(context.channel)
+                } catch {
+                    context.fireErrorCaught(error)
+                }
+                context.fireChannelActive()
+            }
+        }
+        let upgradeProtocol = "myProto"
+        let addedUpgradeHeader = "myUpgradeHeader"
+        let addedUpgradeValue = "upgradeHeader"
+
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
+
+        // This header is not required by the server but we will validate its receipt.
+        let clientHeaders = [(addedUpgradeHeader, addedUpgradeValue)]
+
+        let clientUpgrader = SuccessfulClientUpgrader(
+            forProtocol: upgradeProtocol,
+            upgradeHeaders: clientHeaders
+        )
+
+        let clientChannel = EmbeddedChannel()
+        let setupUpgraderOnActiveChannelHandler = OnActiveChannelHandler { [self] channel in
+            try setUpClientChannel(
+                channel: channel,
+                clientHTTPHandler: ExplodingHTTPHandler(),
+                clientUpgraders: [clientUpgrader]
+            ) { _, result in
+                switch result {
+                case .success(true):
+                    upgradeHandlerCallbackFired.withLockedValue { $0 = true }
+                default:
+                    break
+                }
+            }
+        }
+        try clientChannel.pipeline.syncOperations.addHandler(setupUpgraderOnActiveChannelHandler)
+        try clientChannel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
+            .wait()
+        defer {
+            XCTAssertNoThrow(try clientChannel.finish())
+        }
+
+        // Read the server request.
+        if let requestString = try clientChannel.readByteBufferOutputAsString() {
+            XCTAssertEqual(
+                requestString,
+                "GET / HTTP/1.1\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 0\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol.lowercased())\r\n\(addedUpgradeHeader): \(addedUpgradeValue)\r\n\r\n"
+            )
+        } else {
+            XCTFail()
+        }
+
+        // Validate the pipeline still has http handlers.
+        clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
+        clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
+        assertPipelineContainsUpgradeHandler(channel: clientChannel)
+
+        // Push the successful server response.
+        let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: \(upgradeProtocol)\r\n\r\n"
+
+        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
+
+        clientChannel.embeddedEventLoop.run()
+
+        // Once upgraded, validate the pipeline has been removed.
+        XCTAssertNoThrow(
+            try clientChannel.pipeline
+                .assertDoesNotContain(handlerType: HTTPRequestEncoder.self)
+        )
+        XCTAssertNoThrow(
+            try clientChannel.pipeline
+                .assertDoesNotContain(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
+        )
+        XCTAssertNoThrow(
+            try clientChannel.pipeline
+                .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self)
+        )
+
+        // Check the client upgrader was used correctly.
+        XCTAssertEqual(1, clientUpgrader.addCustomUpgradeRequestHeadersCallCount)
+        XCTAssertEqual(1, clientUpgrader.shouldAllowUpgradeCallCount)
+        XCTAssertEqual(1, clientUpgrader.upgradeContextResponseCallCount)
+
+        XCTAssert(upgradeHandlerCallbackFired.withLockedValue { $0 })
     }
 }

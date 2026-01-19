@@ -1,4 +1,4 @@
-# ``NIOFileSystem/FileSystemProtocol``
+# ``_NIOFileSystem/FileSystemProtocol``
 
 ## Topics
 

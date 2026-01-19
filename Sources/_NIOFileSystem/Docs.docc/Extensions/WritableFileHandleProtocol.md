@@ -1,4 +1,4 @@
-# ``NIOFileSystem/WritableFileHandleProtocol``
+# ``_NIOFileSystem/WritableFileHandleProtocol``
 
 ## Topics
 

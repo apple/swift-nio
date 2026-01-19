@@ -548,6 +548,49 @@ final class FileSystemTests: XCTestCase {
         XCTAssert(directory.underlying.isAbsolute)
     }
 
+    func testHomeDirectory() async throws {
+        let directory = try await self.fs.homeDirectory
+        XCTAssert(!directory.underlying.isEmpty)
+        XCTAssert(directory.underlying.isAbsolute)
+        let info = try await self.fs.info(forFileAt: directory, infoAboutSymbolicLink: false)
+        XCTAssertEqual(info?.type, .directory)
+    }
+
+    func testHomeDirectoryFromEnvironment() async throws {
+        // Should return a value when HOME is set (which it typically is)
+        if let path = Libc.homeDirectoryFromEnvironment() {
+            XCTAssert(!path.isEmpty)
+            XCTAssert(path.isAbsolute)
+
+            // Verify it matches the high-level API
+            let fsHome = try await self.fs.homeDirectory
+            XCTAssertEqual(path, fsHome.underlying)
+        } else {
+            // If it returns nil, then HOME check should fail
+            let home = getenv("HOME")
+            XCTAssertTrue(home == nil || home!.pointee == 0, "Expected HOME to be unset or empty")
+
+            #if os(Windows)
+            let profile = getenv("USERPROFILE")
+            XCTAssertTrue(profile == nil || profile!.pointee == 0, "Expected USERPROFILE to be unset or empty")
+            #endif
+        }
+    }
+
+    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android)
+    func testHomeDirectoryFromPasswd() {
+        // Should always succeed on Unix-like systems for the current user
+        let result = Libc.homeDirectoryFromPasswd()
+        switch result {
+        case .success(let path):
+            XCTAssert(!path.isEmpty)
+            XCTAssert(path.isAbsolute)
+        case .failure(let errno):
+            XCTFail("Expected success, got error: \(errno)")
+        }
+    }
+    #endif
+
     func testInfo() async throws {
         let info = try await self.fs.info(forFileAt: .testDataReadme, infoAboutSymbolicLink: false)
         XCTAssertEqual(info?.type, .regular)
