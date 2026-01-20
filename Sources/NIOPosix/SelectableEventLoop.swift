@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import CNIOPosix
 import DequeModule
@@ -1247,3 +1249,4 @@ struct SelectableEventLoopUniqueID: Sendable {
         c_nio_posix_set_el_id(0)
     }
 }
+#endif  // !os(WASI)
