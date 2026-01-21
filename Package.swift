@@ -138,6 +138,19 @@ let package = Package(
             ],
             swiftSettings: swiftSettings
         ),
+        // Sole purpose of this target is to check all modules
+        // currently expected to pass compilation for WASI platforms
+        .target(
+            name: "_NIOWASIPlatformCompilationChecks",
+            dependencies: [
+                .target(name: "NIOAsyncRuntime", condition: .when(platforms: [.wasi])),
+                "NIOCore",
+                "NIOEmbedded",  // This should be properly elided in source files for WASI platforms
+                "NIOPosix",  // This should be properly elided in source files for WASI platforms
+                swiftAtomics,
+            ],
+            swiftSettings: swiftSettings
+        ),
         .target(
             name: "NIOFoundationCompat",
             dependencies: [
