@@ -329,6 +329,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at sourcePath: FilePath,
         to destinationPath: FilePath,
         strategy copyStrategy: CopyStrategy,
+        overwriting: Bool = false,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -338,8 +339,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
             @escaping @Sendable (
                 _ source: DirectoryEntry,
                 _ destination: FilePath
-            ) async -> Bool,
-        overwriting: Bool = false
+            ) async -> Bool
     ) async throws {
         guard let info = try await self.info(forFileAt: sourcePath, infoAboutSymbolicLink: true)
         else {
