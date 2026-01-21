@@ -660,6 +660,37 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         }
     }
 
+    /// Returns the path of the current user's home directory.
+    ///
+    /// #### Implementation details
+    ///
+    /// This function first checks the `HOME` environment variable (and `USERPROFILE` on Windows).
+    /// If not set, on Darwin/Linux/Android it uses `getpwuid_r(3)` to query the password database.
+    ///
+    /// Note: `getpwuid_r` can potentially block on I/O (e.g., when using NIS or LDAP),
+    /// which is why this property is async when falling back to the password database.
+    ///
+    /// - Returns: The path to the current user's home directory.
+    public var homeDirectory: NIOFilePath {
+        get async throws {
+            if let path = Libc.homeDirectoryFromEnvironment() {
+                return NIOFilePath(path)
+            }
+
+            #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+            return try await self.threadPool.runIfActive {
+                NIOFilePath(
+                    try Libc.homeDirectoryFromPasswd().mapError { errno in
+                        FileSystemError.getpwuid_r(errno: errno, location: .here())
+                    }.get()
+                )
+            }
+            #else
+            throw FileSystemError.getpwuid_r(errno: .noSuchFileOrDirectory, location: .here())
+            #endif
+        }
+    }
+
     /// Returns a path to a temporary directory.
     ///
     /// #### Implementation details
