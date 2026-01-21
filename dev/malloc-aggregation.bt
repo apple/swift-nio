@@ -1,0 +1,51 @@
+#!/usr/bin/env bpftrace
+/*===----------------------------------------------------------------------===*
+ *
+ *  This source file is part of the SwiftNIO open source project
+ *
+ *  Copyright (c) 2017-2025 Apple Inc. and the SwiftNIO project authors
+ *  Licensed under Apache License v2.0
+ *
+ *  See LICENSE.txt for license information
+ *  See CONTRIBUTORS.txt for the list of SwiftNIO project authors
+ *
+ *  SPDX-License-Identifier: Apache-2.0
+ *
+ *===----------------------------------------------------------------------===*/
+
+/*
+ * Example invocation:
+ *   sudo dev/malloc-aggregation.bt -c .build/release/NIOHTTP1Server
+ *
+ * This will frequently lack symbols, so consider using the pid-based version:
+ *   sudo dev/malloc-aggregation.bt -p 19898
+ */
+
+BEGIN {
+    printf("\n\n");
+    printf("=====\n");
+    printf("This will collect stack shots of allocations and print it when ");
+    printf("you exit bpftrace.\n");
+    printf("So go ahead, run your tests and then press Ctrl+C in this window ");
+    printf("to see the aggregated result\n");
+    printf("=====\n");
+}
+
+uprobe:*:aligned_alloc,
+uprobe:*:calloc,
+uprobe:*:malloc,
+uprobe:*:posix_memalign,
+uprobe:*:realloc,
+uprobe:*:reallocf,
+uprobe:*:valloc,
+uprobe:*:malloc_zone_calloc,
+uprobe:*:malloc_zone_malloc,
+uprobe:*:malloc_zone_memalign,
+uprobe:*:malloc_zone_realloc,
+uprobe:*:malloc_zone_valloc {
+    @malloc_calls[ustack()] = count();
+}
+
+END {
+    print(@malloc_calls);
+}

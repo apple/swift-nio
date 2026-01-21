@@ -1,0 +1,15 @@
+.DS_Store
+.build
+/.index-build
+/Packages
+/*.xcodeproj
+Package.pins
+*.pem
+/docs/1.*
+/docs/2.*
+Package.resolved
+.podspecs
+DerivedData
+.swiftpm
+.*.sw?
+.vscode/launch.json

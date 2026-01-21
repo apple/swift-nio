@@ -1,0 +1,405 @@
+#!/bin/bash
+##===----------------------------------------------------------------------===##
+##
+## This source file is part of the SwiftNIO open source project
+##
+## Copyright (c) 2021 Apple Inc. and the SwiftNIO project authors
+## Licensed under Apache License v2.0
+##
+## See LICENSE.txt for license information
+## See CONTRIBUTORS.txt for the list of SwiftNIO project authors
+##
+## SPDX-License-Identifier: Apache-2.0
+##
+##===----------------------------------------------------------------------===##
+
+set -u # do _NOT_ set -e here, some output is better than none...
+
+PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+output_file=""
+
+function usage() {
+    echo >&2 "Usage: $0 [OPTIONS] PIDS..."
+    echo >&2
+    echo >&2 "Options:"
+    echo >&2 "  -o OUTPUT_FILE"
+    echo >&2
+    echo >&2 "Examples:"
+    echo >&2 "    $0 \$(pgrep MyService) # if your binary is called MyService"
+    echo >&2 "    $0 12334 3731 313     # if your NIO binaries have pid 12234, 3731 and 313"
+}
+
+function log() {
+    echo >&2 "$*"
+}
+
+function info() {
+    log "info: $*"
+}
+
+function warning() {
+    log "WARNING: $*"
+}
+
+function die() {
+    log "ERROR: $*"
+    exit 1
+}
+
+function is_linux() {
+    if [[ "$(uname -s)" == Linux ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+complained_about_missing=()
+function where_is() {
+    local where_is_var
+    local where_from
+    local found
+    found=false
+
+    for f in "${complained_about_missing[@]:+"${complained_about_missing[@]}"}"; do
+        if [[ "$f" == "$1" ]]; then
+            found=true
+        fi
+    done
+
+    if "$found"; then
+        return 0
+    fi
+
+    if is_linux; then
+        local where_is_netstat="sudo apt-get update && sudo apt-get install net-tools"
+        true "$where_is_netstat" # silence the unused warning
+
+        local where_is_lsof="sudo apt-get update && sudo apt-get install lsof"
+        true "$where_is_lsof" # silence the unused warning
+    fi
+
+    where_is_var="where_is_$1"
+    where_from=""
+    where_is_info="${!where_is_var:-}"
+    if [[ -n "$where_is_info" ]]; then
+        where_from=" (you might want to get it via \`${where_is_info}\`)"
+    fi
+
+    warning "\`$1\` not found$where_from"
+    complained_about_missing+=("$1")
+}
+
+while getopts "o:" opt; do
+    case "$opt" in
+        o)
+            output_file="$OPTARG"
+            true > "$output_file" # truncate the file
+            ;;
+        /?)
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+shift $(( OPTIND - 1 ))
+if ! is_linux; then
+    if [[ $# -lt 1 ]]; then
+        usage
+        die "At least one pid required"
+    fi
+fi
+
+if [[ -z "$output_file" ]]; then
+    output_file=$(mktemp "/tmp/nio-diagnose_$(date +%s)_XXXXXX")
+fi
+
+function output() {
+    if [[ "$output_file" == - ]]; then
+        echo "$*"
+    else
+        echo "$*" >> "$output_file"
+    fi
+}
+
+function stream_output() {
+    if [[ "$output_file" == - ]]; then
+        cat
+    else
+        cat >> "$output_file"
+    fi
+}
+
+function guess_nio_pids() {
+    declare -a nio_pids
+
+    if is_linux; then
+        nio_pids=()
+        while IFS=/ read -r _ _ pid _; do
+            nio_pids+=("$pid")
+        done < <(grep ^NIO-ELT /proc/*/task/*/comm 2> /dev/null || true)
+        for pid in "${nio_pids[@]+"${nio_pids[@]}"}"; do
+            echo "$pid"
+        done | sort | uniq
+    else
+        die "Sorry, can only guess the NIO pids on Linux"
+    fi
+}
+
+function nio_pids() {
+    if [[ $# -gt 0 ]]; then
+        for nio_pid in "$@"; do
+            echo "$nio_pid"
+        done
+    else
+        info "No pids provided, guessing NIO pids."
+        info "It's recommended that you pass the pids of your NIO programs as arguments."
+        guess_nio_pids
+    fi
+}
+
+function run_and_print() {
+    declare -ra command=( "$@" )
+
+    if ! command -v "${command[0]}" > /dev/null 2>&1; then
+        where_is "${command[0]}"
+    fi
+    output 'Command: `'"${command[*]}"'`'
+    output
+    output '```'
+    "${command[@]}" 2>&1 | stream_output
+    output '```'
+    output
+}
+
+function analyse_open_fds() {
+    local pid
+    declare -a command
+    pid=$1
+
+    command=( lsof -Pnp "$pid" )
+
+    output "### Open file descriptors (pid $pid)"
+    output
+    run_and_print "${command[@]}"
+    if ! which -v lsof > /dev/null 2> /dev/null; then
+        run_and_print ls -la "/proc/$pid/fd"
+    fi
+}
+
+function composite_command_ls_epoll() {
+    for fd_file in "/proc/$pid/fd"/*; do
+        if [[ "$(readlink "$fd_file")" =~ eventpoll ]]; then
+            fd=$(basename "$fd_file")
+            echo "epoll fd $fd"
+            echo "==========="
+            cat "/proc/$pid/fdinfo/$fd"
+            echo
+        fi
+    done
+}
+
+function composite_command_system_versions_darwin() {
+    date
+    uname -a
+    sw_vers
+    swift -version || true
+    id
+}
+
+function composite_command_system_versions_linux() {
+    date
+    uname -a
+    swift -version || true
+    id
+}
+
+function analyse_eventing_fds() {
+    local pid
+    declare -a command
+    pid=$1
+
+    if is_linux; then
+        command=( composite_command_ls_epoll "$pid" )
+    else
+        command=( lskq -p "$pid" )
+    fi
+
+    output "### Eventing fds state (pid $pid)"
+    output
+    run_and_print "${command[@]}"
+}
+
+function analyse_ulimit() {
+    declare -a command
+
+    command=( ulimit -a )
+
+    output "### ulimits"
+    output
+    run_and_print "${command[@]}"
+}
+
+function analyse_procs() {
+    declare -a command
+
+    if is_linux; then
+        command=( bash -c 'TERM=dumb top -H -n 1' )
+    else
+        command=( top -l 1 )
+    fi
+
+    output "### processes"
+    output
+    output "#### top"
+    output
+    run_and_print "${command[@]}"
+
+    output
+    output "#### ps"
+    output
+    run_and_print ps auxw
+}
+
+function analyse_system_versions() {
+    declare -a command
+
+    if is_linux; then
+        command=( composite_command_system_versions_linux )
+    else
+        command=( composite_command_system_versions_darwin )
+    fi
+
+    output "### System versions"
+    output
+    run_and_print "${command[@]}"
+}
+
+function analyse_syscalls() {
+    declare -a command
+
+    if is_linux; then
+        command=( grep -H ^ "/proc/$pid/task"/*/syscall )
+    else
+        command=( echo "Unsupported on Darwin" )
+    fi
+
+    output "### Syscalls by thread"
+    output
+    run_and_print "${command[@]}"
+}
+
+function analyse_thread_names() {
+    declare -a command
+
+    if is_linux; then
+        command=( grep -H ^ "/proc/$pid/task"/*/comm )
+    else
+        command=( echo "Unsupported on Darwin" )
+    fi
+
+    output "### Thread names"
+    output
+    run_and_print "${command[@]}"
+}
+
+function analyse_tcp_conns() {
+    declare -a command
+
+    if is_linux; then
+        command=( netstat --tcp -peona )
+    else
+        command=( netstat -n -p tcp -a )
+    fi
+
+    output "### TCP connections"
+    output
+    run_and_print "${command[@]}"
+}
+
+function analyse_udp() {
+    declare -a command
+
+    if is_linux; then
+        command=( netstat --udp -peona )
+    else
+        command=( netstat -n -p udp -a )
+    fi
+
+    output "### UDP"
+    output
+    run_and_print "${command[@]}"
+}
+
+function analyse_uds() {
+    declare -a command
+
+    if is_linux; then
+        command=( netstat --protocol=unix -peona )
+    else
+        command=( netstat -n -a -f unix )
+    fi
+
+    output "### Unix Domain Sockets"
+    output
+    run_and_print "${command[@]}"
+}
+
+
+function analyse_process() {
+    local pid
+    pid=$1
+
+    output "## Analysing pid $pid"
+    output
+
+    if ! kill -0 "$pid" 2> /dev/null; then # ignore-unacceptable-language
+        output "pid $pid is dead, skipping"
+        return 0
+    fi
+
+    analyse_open_fds "$pid"
+    analyse_eventing_fds "$pid"
+    analyse_thread_names "$pid"
+    analyse_syscalls "$pid"
+}
+
+function produce_network_stats() {
+    declare -a command
+
+    command=( netstat -s )
+
+    output "### System-wide network statistics"
+    output
+    run_and_print "${command[@]}"
+}
+
+number_of_nio_pids=0
+
+output "# NIO diagnose ($(shasum "${BASH_SOURCE[0]}"))"
+output
+output "## System information"
+output
+
+analyse_system_versions
+
+analyse_tcp_conns
+analyse_udp
+analyse_uds
+produce_network_stats
+analyse_procs
+analyse_ulimit
+
+while read -r nio_pid; do
+    number_of_nio_pids=$(( number_of_nio_pids + 1 ))
+    analyse_process "$nio_pid"
+done < <(nio_pids "$@")
+
+info "output written to $output_file"
+if [[ "$number_of_nio_pids" -gt 0 ]]; then
+    exit 0
+else
+    exit 1
+fi

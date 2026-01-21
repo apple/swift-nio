@@ -1,0 +1,121 @@
+name: PR
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  soundness:
+    name: Soundness
+    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@0.0.10
+    with:
+      license_header_check_project_name: "SwiftNIO"
+      # Workaround https://github.com/swiftlang/swift-docc/issues/1280
+      docs_check_container_image: "swift:6.1-noble"
+
+  unit-tests:
+    name: Unit tests
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/unit_tests.yml@main
+    with:
+      linux_6_1_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+      linux_6_2_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+      linux_6_3_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+      linux_nightly_next_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+      linux_nightly_main_arguments_override: "--explicit-target-dependency-import-check error"
+
+  benchmarks:
+    name: Benchmarks
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/benchmarks.yml@main
+    with:
+      benchmark_package_path: "Benchmarks"
+
+  cxx-interop:
+    name: Cxx interop
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/cxx_interop.yml@main
+
+  construct-integration-test-matrix:
+    name: Construct integration test matrix
+    runs-on: ubuntu-latest
+    outputs:
+      integration-test-matrix: '${{ steps.generate-matrix.outputs.integration-test-matrix }}'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+      - id: generate-matrix
+        run: echo "integration-test-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        env:
+          MATRIX_LINUX_SETUP_COMMAND: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq"
+          MATRIX_LINUX_COMMAND: "./scripts/integration_tests.sh"
+          MATRIX_LINUX_ENV_VARS_JSON: '{"NIO_ALLOC_COUNTER_TESTS_PARALLEL": "true"}'
+
+  integration-tests:
+    name: Integration tests
+    needs: construct-integration-test-matrix
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    with:
+      name: "Integration tests"
+      matrix_string: '${{ needs.construct-integration-test-matrix.outputs.integration-test-matrix }}'
+
+  vsock-tests:
+    name: Vsock tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Load vsock_loopback kernel module
+        run: sudo modprobe vsock_loopback
+      - name: Build package tests
+        run: swift build --build-tests
+      - name: Run Vsock tests
+        shell: bash  # explicitly choose bash, which ensures -o pipefail
+        run: swift test --filter "(?i)vsock" | tee test.out
+      - name: Check for skipped tests
+        run: test -r test.out && ! grep -i skipped test.out
+
+  macos-tests:
+    name: macOS tests
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/macos_tests.yml@main
+    with:
+      runner_pool: general
+      build_scheme: swift-nio-Package
+      xcode_16_3_enabled: false
+      xcode_16_4_enabled: false
+      xcode_26_0_enabled: false
+      xcode_26_1_enabled: false
+      xcode_26_2_enabled: false
+      swift_6_1_enabled: true
+      swift_6_2_enabled: true
+      swift_6_3_enabled: true
+
+  static-sdk:
+    name: Static Linux Swift SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/static_sdk.yml@main
+
+  wasm-sdk:
+    name: WebAssembly Swift SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/wasm_swift_sdk.yml@main
+    with:
+      additional_command_arguments: "--target NIOCore"
+
+  android-sdk:
+    name: Android Swift SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/android_swift_sdk.yml@main
+
+  release-builds:
+    name: Release builds
+    uses: apple/swift-nio/.github/workflows/release_builds.yml@main
