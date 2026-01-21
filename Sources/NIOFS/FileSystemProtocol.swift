@@ -237,6 +237,7 @@ public protocol FileSystemProtocol: Sendable {
         at sourcePath: NIOFilePath,
         to destinationPath: NIOFilePath,
         strategy copyStrategy: CopyStrategy,
+        overwriting: Bool,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -246,8 +247,7 @@ public protocol FileSystemProtocol: Sendable {
             @escaping @Sendable (
                 _ source: DirectoryEntry,
                 _ destination: NIOFilePath
-            ) async -> Bool,
-        overwriting: Bool
+            ) async -> Bool
     ) async throws
 
     /// Deletes the file or directory (and its contents) at `path`.
@@ -491,13 +491,13 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: copyStrategy,
+            overwriting: false,
             shouldProceedAfterError: { path, error in
                 throw error
             },
             shouldCopyItem: { source, destination in
                 true
-            },
-            overwriting: false
+            }
         )
     }
 
@@ -545,9 +545,9 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: .platformDefault,
+            overwriting: false,
             shouldProceedAfterError: shouldProceedAfterError,
-            shouldCopyItem: shouldCopyItem,
-            overwriting: false
+            shouldCopyItem: shouldCopyItem
         )
     }
 
