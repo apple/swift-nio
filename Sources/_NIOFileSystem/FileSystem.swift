@@ -608,7 +608,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// The destination of the symbolic link is not guaranteed to be a valid path, nor is it
     /// guaranteed to be an absolute path. If you need to open a file which is the destination of a
     /// symbolic link then the appropriate `open` function:
-    /// - ``openFile(forReadingAt:)-55z6f``
+    /// - ``openFile(forReadingAt:options:)
     /// - ``openFile(forWritingAt:options:)``
     /// - ``openFile(forReadingAndWritingAt:options:)``
     /// - ``openDirectory(atPath:options:)``
@@ -649,6 +649,35 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                 }.get()
             }
             return result
+        }
+    }
+
+    /// Returns the path of the current user's home directory.
+    ///
+    /// #### Implementation details
+    ///
+    /// This function first checks the `HOME` environment variable (and `USERPROFILE` on Windows).
+    /// If not set, on Darwin/Linux/Android it uses `getpwuid_r(3)` to query the password database.
+    ///
+    /// Note: `getpwuid_r` can potentially block on I/O (e.g., when using NIS or LDAP),
+    /// which is why this property is async when falling back to the password database.
+    ///
+    /// - Returns: The path to the current user's home directory.
+    public var homeDirectory: FilePath {
+        get async throws {
+            if let path = Libc.homeDirectoryFromEnvironment() {
+                return path
+            }
+
+            #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android)
+            return try await self.threadPool.runIfActive {
+                try Libc.homeDirectoryFromPasswd().mapError { errno in
+                    FileSystemError.getpwuid_r(errno: errno, location: .here())
+                }.get()
+            }
+            #else
+            throw FileSystemError.getpwuid_r(errno: .noSuchFileOrDirectory, location: .here())
+            #endif
         }
     }
 

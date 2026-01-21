@@ -278,6 +278,13 @@ public enum Syscall: Sendable {
             system_futimens(fd.rawValue, times)
         }
     }
+
+    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    @_spi(Testing)
+    public static func getuid() -> uid_t {
+        system_getuid()
+    }
+    #endif
 }
 
 @_spi(Testing)
@@ -437,4 +444,47 @@ public enum Libc: Sendable {
             libc_fts_close(pointer)
         }
     }
+
+    @_spi(Testing)
+    public static func homeDirectoryFromEnvironment() -> FilePath? {
+        if let home = getenv("HOME"), home.pointee != 0 {
+            return FilePath(String(cString: home))
+        }
+        #if os(Windows)
+        if let profile = getenv("USERPROFILE"), profile.pointee != 0 {
+            return FilePath(String(cString: profile))
+        }
+        #endif
+        return nil
+    }
+
+    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    @_spi(Testing)
+    public static func homeDirectoryFromPasswd() -> Result<FilePath, Errno> {
+        let uid = Syscall.getuid()
+        var pwd = passwd()
+        var result: UnsafeMutablePointer<passwd>? = nil
+
+        return withUnsafeTemporaryAllocation(of: CChar.self, capacity: 1024) { buffer in
+            let callResult = nothingOrErrno(retryOnInterrupt: true) {
+                libc_getpwuid_r(
+                    uid,
+                    &pwd,
+                    buffer.baseAddress!,
+                    buffer.count,
+                    &result
+                )
+            }
+            switch callResult {
+            case .success:
+                guard result != nil, let directoryPointer = pwd.pw_dir else {
+                    return .failure(.noSuchFileOrDirectory)
+                }
+                return .success(FilePath(String(cString: directoryPointer)))
+            case .failure(let errno):
+                return .failure(errno)
+            }
+        }
+    }
+    #endif
 }
