@@ -36,5 +36,17 @@ let package = Package(
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]
         ),
+        .executableTarget(
+            name: "NIOAsyncRuntimeBenchmarks",
+            dependencies: [
+                .product(name: "Benchmark", package: "package-benchmark"),
+                .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "NIOAsyncRuntime", package: "swift-nio"),
+            ],
+            path: "Benchmarks/NIOAsyncRuntimeBenchmarks",
+            plugins: [
+                .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
+            ]
+        ),
     ]
 )
