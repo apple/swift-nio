@@ -306,7 +306,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     // MARK: - File copying, removal, and moving
 
-    /// See ``FileSystemProtocol/copyItem(at:to:shouldProceedAfterError:shouldCopyFile:)``
+    /// See ``FileSystemProtocol/copyItem(at:to:strategy:overwriting:shouldProceedAfterError:shouldCopyItem:)``
     ///
     /// The item to be copied must be a:
     /// - regular file,
