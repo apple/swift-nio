@@ -511,6 +511,17 @@ let package = Package(
             swiftSettings: swiftSettings
         ),
         .testTarget(
+            name: "NIOAsyncRuntimeTests",
+            dependencies: [
+                "NIOAsyncRuntime",
+                "NIOCore",
+                "NIOConcurrencyHelpers",
+                "NIOFoundationCompat",
+                "NIOTestUtils",
+            ],
+            swiftSettings: swiftSettings
+        ),
+        .testTarget(
             name: "NIOConcurrencyHelpersTests",
             dependencies: [
                 "NIOConcurrencyHelpers",
