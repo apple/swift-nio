@@ -1402,14 +1402,15 @@ extension FileSystem {
                 options: options.descriptorOptions,
                 permissions: options.permissionsForRegularFile
             ).mapError { errno in
-                FileSystemError(
-                    message: "Can't copy '\(sourcePath)' as '\(path)' couldn't be opened.",
-                    cause: FileSystemError.open(
-                        errno: errno,
-                        path: path,
-                        location: .here()
-                    ),
+                let openError = FileSystemError.open(
+                    "openat",
+                    error: errno,
+                    path: path,
                     location: .here()
+                )
+                return FileSystemError(
+                    message: "Can't copy '\(sourcePath)' as '\(path)' couldn't be opened.",
+                    wrapping: openError
                 )
             }.map { fd in
                 let handle = SystemFileHandle(
