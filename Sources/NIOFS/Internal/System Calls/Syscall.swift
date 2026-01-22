@@ -106,6 +106,29 @@ public enum Syscall: Sendable {
             Self(rawValue: UInt32(bitPattern: RENAME_SWAP))
         }
     }
+
+    @_spi(Testing)
+    public static func rename(
+        from old: FilePath,
+        relativeTo oldFD: FileDescriptor,
+        to new: FilePath,
+        relativeTo newFD: FileDescriptor,
+        options: RenameOptions
+    ) -> Result<Void, Errno> {
+        nothingOrErrno(retryOnInterrupt: false) {
+            old.withPlatformString { oldPath in
+                new.withPlatformString { newPath in
+                    system_renameatx_np(
+                        oldFD.rawValue,
+                        oldPath,
+                        newFD.rawValue,
+                        newPath,
+                        options.rawValue
+                    )
+                }
+            }
+        }
+    }
     #endif
 
     #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)

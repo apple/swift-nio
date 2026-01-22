@@ -317,6 +317,46 @@ final class SyscallTests: XCTestCase {
         #endif
     }
 
+    func test_renameatx_np() throws {
+        #if canImport(Darwin)
+        let oldFD = FileDescriptor(rawValue: 13)
+        let newFD = FileDescriptor(rawValue: 42)
+
+        let testCases: [MockTestCase] = [
+            MockTestCase(name: "renameatx_np", .noInterrupt, 13, "old", 42, "new", 0) { _ in
+                _ = try Syscall.rename(
+                    from: "old",
+                    relativeTo: oldFD,
+                    to: "new",
+                    relativeTo: newFD,
+                    options: []
+                ).get()
+            },
+            MockTestCase(name: "renameatx_np", .noInterrupt, 13, "old", 42, "new", 2) { _ in
+                _ = try Syscall.rename(
+                    from: "old",
+                    relativeTo: oldFD,
+                    to: "new",
+                    relativeTo: newFD,
+                    options: [.exclusive]
+                ).get()
+            },
+            MockTestCase(name: "renameatx_np", .noInterrupt, 13, "old", 42, "new", 4) { _ in
+                _ = try Syscall.rename(
+                    from: "old",
+                    relativeTo: oldFD,
+                    to: "new",
+                    relativeTo: newFD,
+                    options: [.swap]
+                ).get()
+            },
+        ]
+        testCases.run()
+        #else
+        throw XCTSkip("'renameatx_np' is only supported on Darwin")
+        #endif
+    }
+
     func test_renameat2() throws {
         #if canImport(Glibc) || canImport(Bionic)
         let fd1 = FileDescriptor(rawValue: 13)

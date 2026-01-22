@@ -285,6 +285,21 @@ internal func system_renamex_np(
     #endif
     return renamex_np(old, new, flags)
 }
+
+internal func system_renameatx_np(
+    _ oldFD: FileDescriptor.RawValue,
+    _ old: UnsafePointer<CInterop.PlatformChar>,
+    _ newFD: FileDescriptor.RawValue,
+    _ new: UnsafePointer<CInterop.PlatformChar>,
+    _ flags: CUnsignedInt
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(oldFD, old, newFD, new, flags)
+    }
+    #endif
+    return renameatx_np(oldFD, old, newFD, new, flags)
+}
 #endif
 
 #if canImport(Glibc) || canImport(Musl) || canImport(Android)
