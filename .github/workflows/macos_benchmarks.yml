@@ -91,35 +91,35 @@ jobs:
               matrix=$(echo "$matrix" | jq -c \
               --arg runner_pool "$runner_pool" \
               --argjson env_vars "$macos_env_vars_json" \
-              '.config[.config| length] |= . + { "name": "macOS (Xcode 16.3)", "xcode_version": "16.3", "xcode_app": "Xcode_16.3.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+              '.config[.config| length] |= . + { "name": "macOS (Xcode 16.3)", "xcode_version": "16.3", "xcode_app": "Xcode_16.3.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
           fi
 
           if [[ "$xcode_16_4_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
               --arg runner_pool "$runner_pool" \
               --argjson env_vars "$macos_env_vars_json" \
-              '.config[.config| length] |= . + { "name": "macOS (Xcode 16.4)", "xcode_version": "16.4", "xcode_app": "Xcode_16.4.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+              '.config[.config| length] |= . + { "name": "macOS (Xcode 16.4)", "xcode_version": "16.4", "xcode_app": "Xcode_16.4.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
           fi
 
           if [[ "$xcode_26_0_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
               --arg runner_pool "$runner_pool" \
               --argjson env_vars "$macos_env_vars_json" \
-              '.config[.config| length] |= . + { "name": "macOS (Xcode 26.0)", "xcode_version": "26.0", "xcode_app": "Xcode_26.0.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+              '.config[.config| length] |= . + { "name": "macOS (Xcode 26.0)", "xcode_version": "26.0", "xcode_app": "Xcode_26.0.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
           fi
 
           if [[ "$xcode_26_1_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
               --arg runner_pool "$runner_pool" \
               --argjson env_vars "$macos_env_vars_json" \
-              '.config[.config| length] |= . + { "name": "macOS (Xcode 26.1)", "xcode_version": "26.1", "xcode_app": "Xcode_26.1.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+              '.config[.config| length] |= . + { "name": "macOS (Xcode 26.1)", "xcode_version": "26.1", "xcode_app": "Xcode_26.1.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
           fi
 
           if [[ "$xcode_latest_beta_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
               --arg runner_pool "$runner_pool" \
               --argjson env_vars "$macos_env_vars_json" \
-              '.config[.config| length] |= . + { "name": "macOS (Xcode latest beta)", "xcode_version": "latest beta", "xcode_app": "Xcode-latest.app", "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+              '.config[.config| length] |= . + { "name": "macOS (Xcode latest beta)", "xcode_version": "latest beta", "xcode_app": "Xcode-latest.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
           fi
 
           echo "macos-matrix=$matrix" >> "$GITHUB_OUTPUT"
