@@ -149,6 +149,20 @@ internal func system_symlink(
     return symlink(destination, source)
 }
 
+/// symlinkat(2): Make symbolic link to a file relative to directory file descriptor
+internal func system_symlinkat(
+    _ destination: UnsafePointer<CInterop.PlatformChar>,
+    _ dirfd: FileDescriptor.RawValue,
+    _ source: UnsafePointer<CInterop.PlatformChar>
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(destination, dirfd, source)
+    }
+    #endif
+    return symlinkat(destination, dirfd, source)
+}
+
 /// readlink(2): Read value of a symolic link
 internal func system_readlink(
     _ path: UnsafePointer<CInterop.PlatformChar>,

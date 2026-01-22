@@ -234,6 +234,21 @@ public enum Syscall: Sendable {
     }
 
     @_spi(Testing)
+    public static func symlinkat(
+        to destination: FilePath,
+        in directoryDescriptor: FileDescriptor,
+        from source: FilePath
+    ) -> Result<Void, Errno> {
+        nothingOrErrno(retryOnInterrupt: false) {
+            source.withPlatformString { src in
+                destination.withPlatformString { dst in
+                    system_symlinkat(dst, directoryDescriptor.rawValue, src)
+                }
+            }
+        }
+    }
+
+    @_spi(Testing)
     public static func readlink(at path: FilePath) -> Result<FilePath, Errno> {
         do {
             let resolved = try path.withPlatformString { p in

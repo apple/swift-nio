@@ -190,6 +190,18 @@ final class SyscallTests: XCTestCase {
         testCases.run()
     }
 
+    func test_symlinkat() throws {
+        let dirfd = FileDescriptor(rawValue: 42)
+
+        let testCases = [
+            MockTestCase(name: "symlinkat", .noInterrupt, "one", 42, "two") { _ in
+                try Syscall.symlinkat(to: "one", in: dirfd, from: "two").get()
+            }
+        ]
+
+        testCases.run()
+    }
+
     func test_readlink() throws {
         let testCases = [
             MockTestCase(
