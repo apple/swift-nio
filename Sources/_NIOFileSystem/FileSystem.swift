@@ -325,6 +325,11 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///
     /// This function is platform dependent. On Darwin the `copyfile(2)` system call is used and
     /// items are cloned where possible. On Linux the `sendfile(2)` system call is used.
+    /// 
+    /// When `overwriting` is `true`, regular files are atomically replaced using `COPYFILE_UNLINK`
+    /// on Darwin or a temporary file followed by `renameat2(2)` on Linux. Symbolic links are
+    /// atomically replaced using a temporary symlink followed by `renamex_np(2)` on Darwin or
+    /// `renameat2(2)` on Linux.
     public func copyItem(
         at sourcePath: FilePath,
         to destinationPath: FilePath,
@@ -1490,7 +1495,7 @@ extension FileSystem {
         }
 
         // to keep the copy atomic we first create a temporary symlink
-        // and then atomically rename it with rename(2)
+        // and then atomically rename it with renamex_np(2) on Darwin or renameat2(2) on Linux
         let temporarySymlinkName = ".tmp-link-" + String(randomAlphaNumericOfLength: 6)
         let temporarySymlinkPath = destinationPath.removingLastComponent().appending(temporarySymlinkName)
 
@@ -1508,13 +1513,18 @@ extension FileSystem {
             return createResult
         }
 
-        switch Syscall.rename(from: temporarySymlinkPath, to: destinationPath) {
+        #if canImport(Darwin)
+        switch Syscall.rename(
+            from: temporarySymlinkPath,
+            to: destinationPath,
+            options: []
+        ) {
         case .success:
             return .success(())
         case .failure(let errno):
             _ = Libc.remove(temporarySymlinkPath)
             let error = FileSystemError.rename(
-                "rename",
+                "renamex_np",
                 errno: errno,
                 oldName: temporarySymlinkPath,
                 newName: destinationPath,
@@ -1522,6 +1532,28 @@ extension FileSystem {
             )
             return .failure(error)
         }
+        #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        switch Syscall.rename(
+            from: temporarySymlinkPath,
+            relativeTo: .currentWorkingDirectory,
+            to: destinationPath,
+            relativeTo: .currentWorkingDirectory,
+            flags: []
+        ) {
+        case .success:
+            return .success(())
+        case .failure(let errno):
+            _ = Libc.remove(temporarySymlinkPath)
+            let error = FileSystemError.rename(
+                "renameat2",
+                errno: errno,
+                oldName: temporarySymlinkPath,
+                newName: destinationPath,
+                location: .here()
+            )
+            return .failure(error)
+        }
+        #endif
     }
 
     @_spi(Testing)
