@@ -1315,14 +1315,23 @@ extension FileSystem {
 
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
         if !overwriting {
-            return self._copyRegularFileOnLinux(from: sourcePath, to: destinationPath) { destinationPath, options in
-                self._openFile(forWritingAt: destinationPath, options: options).mapError {
+            func openDestination(
+                _ path: FilePath,
+                options: OpenOptions.Write
+            ) -> Result<WriteFileHandle, FileSystemError> {
+                self._openFile(forWritingAt: path, options: options).mapError {
                     FileSystemError(
-                        message: "Can't copy '\(sourcePath)' as '\(destinationPath)' couldn't be opened.",
+                        message: "Can't copy '\(sourcePath)' as '\(path)' couldn't be opened.",
                         wrapping: $0
                     )
                 }
             }
+
+            return self._copyRegularFileOnLinux(
+                from: sourcePath,
+                to: destinationPath,
+                openDestination: openDestination
+            )
         }
 
         // on Linux platforms we want to imitate overwriting by copying the source file into
@@ -1384,22 +1393,21 @@ extension FileSystem {
             )
         }
 
-        let temporaryFilePath = FilePath(".tmp-" + String(randomAlphaNumericOfLength: 6))
-        let copyResult = self._copyRegularFileOnLinux(
-            from: sourcePath,
-            to: temporaryFilePath
-        ) { destinationPath, options in
+        func openDestination(
+            _ path: FilePath,
+            options: OpenOptions.Write
+        ) -> Result<WriteFileHandle, FileSystemError> {
             destinationParentDirectoryFD.open(
-                atPath: destinationPath,
+                atPath: path,
                 mode: .writeOnly,
                 options: options.descriptorOptions,
                 permissions: options.permissionsForRegularFile
             ).mapError { errno in
                 FileSystemError(
-                    message: "Can't copy '\(sourcePath)' as '\(destinationPath)' couldn't be opened.",
+                    message: "Can't copy '\(sourcePath)' as '\(path)' couldn't be opened.",
                     cause: FileSystemError.open(
                         errno: errno,
-                        path: destinationPath,
+                        path: path,
                         location: .here()
                     ),
                     location: .here()
@@ -1407,7 +1415,7 @@ extension FileSystem {
             }.flatMap { fd in
                 SystemFileHandle.syncOpen(
                     wrapping: fd,
-                    path: destinationPath,
+                    path: path,
                     options: options,
                     threadPool: self.threadPool
                 ).map {
@@ -1416,8 +1424,14 @@ extension FileSystem {
             }
         }
 
+        let temporaryFilePath = FilePath(".tmp-" + String(randomAlphaNumericOfLength: 6))
+        let copyResult = self._copyRegularFileOnLinux(
+            from: sourcePath,
+            to: temporaryFilePath,
+            openDestination: openDestination
+        )
+
         guard case .success = copyResult else {
-            // copy to a temp file has failed, so we cleanup
             _ = Syscall.unlinkat(path: temporaryFilePath, relativeTo: destinationParentDirectoryFD)
             return copyResult
         }

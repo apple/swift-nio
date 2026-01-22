@@ -1320,14 +1320,23 @@ extension FileSystem {
 
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
         if !overwriting {
-            return self._copyRegularFileOnLinux(from: sourcePath, to: destinationPath) { destinationPath, options in
-                self._openFile(forWritingAt: destinationPath, options: options).mapError {
+            func openDestination(
+                _ path: FilePath,
+                options: OpenOptions.Write
+            ) -> Result<WriteFileHandle, FileSystemError> {
+                self._openFile(forWritingAt: path, options: options).mapError {
                     FileSystemError(
-                        message: "Can't copy '\(sourcePath)' as '\(destinationPath)' couldn't be opened.",
+                        message: "Can't copy '\(sourcePath)' as '\(path)' couldn't be opened.",
                         wrapping: $0
                     )
                 }
             }
+
+            return self._copyRegularFileOnLinux(
+                from: sourcePath,
+                to: destinationPath,
+                openDestination: openDestination
+            )
         }
 
         // On Linux platforms there is no COPYFILE_UNLINK analog, so we use the next
@@ -1368,11 +1377,18 @@ extension FileSystem {
         }
 
         defer {
-            _ = destinationParentDirectoryHandle.fileHandle.systemFileHandle.sendableView._close(materialize: true)
+            _ = destinationParentDirectoryHandle
+                .fileHandle
+                .systemFileHandle
+                .sendableView
+                ._close(materialize: true)
         }
 
         guard
-            let destinationParentDirectoryFD = destinationParentDirectoryHandle.fileHandle.systemFileHandle.sendableView
+            let destinationParentDirectoryFD = destinationParentDirectoryHandle
+                .fileHandle
+                .systemFileHandle
+                .sendableView
                 .descriptorIfAvailable()
         else {
             return .failure(
@@ -1386,26 +1402,21 @@ extension FileSystem {
             )
         }
 
-        // Copy to temporary file using relative path
-        let temporaryFilePath = FilePath(".tmp-" + String(randomAlphaNumericOfLength: 6))
-        let copyResult = self._copyRegularFileOnLinux(
-            from: sourcePath,
-            to: temporaryFilePath
-        ) { destinationPath, options in
-            // Use openat with directory FD for TOCTOU protection
-            let fdResult = destinationParentDirectoryFD.open(
-                atPath: destinationPath,
+        func openDestination(
+            _ path: FilePath,
+            options: OpenOptions.Write
+        ) -> Result<WriteFileHandle, FileSystemError> {
+            destinationParentDirectoryFD.open(
+                atPath: path,
                 mode: .writeOnly,
                 options: options.descriptorOptions,
                 permissions: options.permissionsForRegularFile
-            )
-
-            return fdResult.mapError { errno in
+            ).mapError { errno in
                 FileSystemError(
-                    message: "Can't copy '\(sourcePath)' as '\(destinationPath)' couldn't be opened.",
+                    message: "Can't copy '\(sourcePath)' as '\(path)' couldn't be opened.",
                     cause: FileSystemError.open(
                         errno: errno,
-                        path: destinationPath,
+                        path: path,
                         location: .here()
                     ),
                     location: .here()
@@ -1413,7 +1424,7 @@ extension FileSystem {
             }.flatMap { fd in
                 SystemFileHandle.syncOpen(
                     wrapping: fd,
-                    path: destinationPath,
+                    path: path,
                     options: options,
                     threadPool: self.threadPool
                 ).map {
@@ -1422,13 +1433,18 @@ extension FileSystem {
             }
         }
 
+        let temporaryFilePath = FilePath(".tmp-" + String(randomAlphaNumericOfLength: 6))
+        let copyResult = self._copyRegularFileOnLinux(
+            from: sourcePath,
+            to: temporaryFilePath,
+            openDestination: openDestination
+        )
+
         guard case .success = copyResult else {
-            // Clean up temp file on error using unlinkat to maintain TOCTOU protection
             _ = Syscall.unlinkat(path: temporaryFilePath, relativeTo: destinationParentDirectoryFD)
             return copyResult
         }
 
-        // Atomically rename using directory FD
         let destinationFilePath = FilePath(filename)
         switch Syscall.rename(
             from: temporaryFilePath,
