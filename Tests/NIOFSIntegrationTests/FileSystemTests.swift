@@ -1503,7 +1503,7 @@ final class FileSystemTests: XCTestCase {
         _ = try await self.fs.withFileHandle(
             forWritingAt: destination,
             options: .newFile(
-                replaceExisting: false, 
+                replaceExisting: false,
                 permissions: .ownerReadWriteExecute  // different permissions
             )
         ) { handle in
@@ -1550,14 +1550,14 @@ final class FileSystemTests: XCTestCase {
             let sourceContent: [UInt8] = [1, 2, 3]
             try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
         }
-    
+
         try await self.fs.withFileHandle(
             forWritingAt: source,
             options: .modifyFile(createIfNecessary: false)
         ) { handle in
             try await handle.replacePermissions(.ownerWrite)
         }
-        
+
         let destination = NIOFilePath(testDirectory.underlying.appending("destination"))
         let destinationContent: [UInt8] = [4, 5, 6]
         _ = try await self.fs.withFileHandle(
