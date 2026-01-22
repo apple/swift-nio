@@ -46,7 +46,7 @@ public final class Lock {
     #elseif os(OpenBSD)
     fileprivate let mutex: UnsafeMutablePointer<pthread_mutex_t?> =
         UnsafeMutablePointer.allocate(capacity: 1)
-    #else
+    #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
     fileprivate let mutex: UnsafeMutablePointer<pthread_mutex_t> =
         UnsafeMutablePointer.allocate(capacity: 1)
     #endif
@@ -81,12 +81,12 @@ public final class Lock {
 
     deinit {
         #if os(Windows)
-        // SRWLOCK does not need to be free'd
+        mutex.deallocate()
         #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
         let err = pthread_mutex_destroy(self.mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
-        #endif
         mutex.deallocate()
+        #endif
     }
 
     /// Acquire the lock.
