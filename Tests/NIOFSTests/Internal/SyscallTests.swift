@@ -180,6 +180,18 @@ final class SyscallTests: XCTestCase {
         testCases.run()
     }
 
+    func test_unlinkat() throws {
+        let dirfd = FileDescriptor(rawValue: 42)
+
+        let testCases = [
+            MockTestCase(name: "unlinkat", .noInterrupt, 42, "path", 0) { _ in
+                try Syscall.unlinkat(path: "path", relativeTo: dirfd).get()
+            }
+        ]
+
+        testCases.run()
+    }
+
     func test_symlink() throws {
         let testCases = [
             MockTestCase(name: "symlink", .noInterrupt, "one", "two") { _ in

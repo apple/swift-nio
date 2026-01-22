@@ -1316,34 +1316,124 @@ extension FileSystem {
 
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
         if !overwriting {
-            return self._copyRegularFileOnLinux(from: sourcePath, to: destinationPath)
+            return self._copyRegularFileOnLinux(from: sourcePath, to: destinationPath) { destinationPath, options in
+                self._openFile(forWritingAt: destinationPath, options: options).mapError {
+                    FileSystemError(
+                        message: "Can't copy '\(sourcePath)' as '\(destinationPath)' couldn't be opened.",
+                        wrapping: $0
+                    )
+                }
+            }
         }
 
-        // On Linux platforms there is no COPYFILE_UNLINK analog, so we use the next
-        // best thing - write to a temporary file and then atomically rename it with renameat2(2)
-        let temporaryFileName = ".tmp-" + String(randomAlphaNumericOfLength: 6)
-        let temporaryDestinationPath = destinationPath.removingLastComponent().appending(temporaryFileName)
-        let copyResult = self._copyRegularFileOnLinux(from: sourcePath, to: temporaryDestinationPath)
+        // on Linux platforms we want to imitate overwriting by copying the source file into
+        // a temporary destination and then atomically renaming it, using the renameat2(2) system call
+        guard let filenameComponent = destinationPath.lastComponent else {
+            return .failure(
+                FileSystemError(
+                    code: .invalidArgument,
+                    message: "Can't copy to '\(destinationPath)', path has no filename component.",
+                    cause: nil,
+                    location: .here()
+                )
+            )
+        }
+        let filename = filenameComponent.string
+        let destinationParentDirectory = destinationPath.removingLastComponent()
+
+        let destinationParentDirectoryHandle: DirectoryFileHandle
+        switch self._openDirectory(
+            at: destinationParentDirectory,
+            // not following symlinks here to prevent TOCTOU attacks where the parent directory
+            // is replaced with a symlink pointing to an attacker-controlled location
+            options: OpenOptions.Directory(followSymbolicLinks: false)
+        ) {
+        case let .success(handle):
+            destinationParentDirectoryHandle = handle
+        case let .failure(error):
+            return .failure(
+                FileSystemError(
+                    message: "Can't copy '\(sourcePath)' to '\(destinationPath)', parent directory couldn't be opened.",
+                    wrapping: error
+                )
+            )
+        }
+
+        defer {
+            _ = destinationParentDirectoryHandle.fileHandle.systemFileHandle.sendableView._close(materialize: true)
+        }
+
+        guard
+            let destinationParentDirectoryFD = destinationParentDirectoryHandle
+                .fileHandle
+                .systemFileHandle
+                .sendableView
+                .descriptorIfAvailable()
+        else {
+            return .failure(
+                FileSystemError(
+                    code: .closed,
+                    message:
+                        "Can't copy '\(sourcePath)' to '\(destinationPath)', parent directory descriptor unavailable.",
+                    cause: nil,
+                    location: .here()
+                )
+            )
+        }
+
+        let temporaryFilePath = FilePath(".tmp-" + String(randomAlphaNumericOfLength: 6))
+        let copyResult = self._copyRegularFileOnLinux(
+            from: sourcePath,
+            to: temporaryFilePath
+        ) { destinationPath, options in
+            destinationParentDirectoryFD.open(
+                atPath: destinationPath,
+                mode: .writeOnly,
+                options: options.descriptorOptions,
+                permissions: options.permissionsForRegularFile
+            ).mapError { errno in
+                FileSystemError(
+                    message: "Can't copy '\(sourcePath)' as '\(destinationPath)' couldn't be opened.",
+                    cause: FileSystemError.open(
+                        errno: errno,
+                        path: destinationPath,
+                        location: .here()
+                    ),
+                    location: .here()
+                )
+            }.flatMap { fd in
+                SystemFileHandle.syncOpen(
+                    wrapping: fd,
+                    path: destinationPath,
+                    options: options,
+                    threadPool: self.threadPool
+                ).map {
+                    WriteFileHandle(wrapping: $0)
+                }
+            }
+        }
 
         guard case .success = copyResult else {
-            _ = Libc.remove(temporaryDestinationPath)
+            // copy to a temp file has failed, so we cleanup
+            _ = Syscall.unlinkat(path: temporaryFilePath, relativeTo: destinationParentDirectoryFD)
             return copyResult
         }
 
+        let destinationFilePath = FilePath(filename)
         switch Syscall.rename(
-            from: temporaryDestinationPath,
-            relativeTo: .currentWorkingDirectory,
-            to: destinationPath,
-            relativeTo: .currentWorkingDirectory,
+            from: temporaryFilePath,
+            relativeTo: destinationParentDirectoryFD,
+            to: destinationFilePath,
+            relativeTo: destinationParentDirectoryFD,
             flags: []
         ) {
         case .failure(let errno):
-            _ = Libc.remove(temporaryDestinationPath)
+            _ = Syscall.unlinkat(path: temporaryFilePath, relativeTo: destinationParentDirectoryFD)
             let error = FileSystemError.rename(
                 "renameat2",
                 errno: errno,
-                oldName: temporaryDestinationPath,
-                newName: destinationPath,
+                oldName: temporaryFilePath,
+                newName: destinationFilePath,
                 location: .here()
             )
             return .failure(error)
@@ -1356,7 +1446,8 @@ extension FileSystem {
     #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
     private func _copyRegularFileOnLinux(
         from sourcePath: FilePath,
-        to destinationPath: FilePath
+        to destinationPath: FilePath,
+        openDestination: (FilePath, OpenOptions.Write) -> Result<WriteFileHandle, FileSystemError>
     ) -> Result<Void, FileSystemError> {
         func makeOnUnavailableError(
             path: FilePath,
@@ -1408,18 +1499,8 @@ extension FileSystem {
             )
         )
 
-        let openDestinationResult = self._openFile(
-            forWritingAt: destinationPath,
-            options: options
-        ).mapError {
-            FileSystemError(
-                message: "Can't copy '\(sourcePath)' as '\(destinationPath)' couldn't be opened.",
-                wrapping: $0
-            )
-        }
-
         let destination: WriteFileHandle
-        switch openDestinationResult {
+        switch openDestination(destinationPath, options) {
         case let .success(handle):
             destination = handle
         case let .failure(error):
@@ -1493,10 +1574,63 @@ extension FileSystem {
             }
         }
 
-        // to keep the copy atomic we first create a temporary symlink
-        // and then atomically rename it with renamex_np(2) on Darwin or renameat2(2) on Linux
-        let temporarySymlinkName = ".tmp-link-" + String(randomAlphaNumericOfLength: 6)
-        let temporarySymlinkPath = destinationPath.removingLastComponent().appending(temporarySymlinkName)
+        // there is no atomic symlink overwriting copy on either Darwin or Linux platforms
+        // so we copy the symlink into a temporary symlink using `symlinkat` system call and then
+        // rename it into the destination symlink using the `renameatx_np(2)` on Darwin and
+        // `renameat2(2)` on non-Darwin platforms
+        guard let filenameComponent = destinationPath.lastComponent else {
+            return .failure(
+                FileSystemError(
+                    code: .invalidArgument,
+                    message: "Can't copy to '\(destinationPath)', path has no filename component.",
+                    cause: nil,
+                    location: .here()
+                )
+            )
+        }
+
+        let filename = filenameComponent.string
+        let destinationParentDirectory = destinationPath.removingLastComponent()
+
+        let destinationParentDirectoryHandle: DirectoryFileHandle
+        switch self._openDirectory(
+            at: destinationParentDirectory,
+            // not following symlinks here to prevent TOCTOU attacks where the parent directory
+            // is replaced with a symlink pointing to an attacker-controlled location
+            options: OpenOptions.Directory(followSymbolicLinks: false)
+        ) {
+        case let .success(handle):
+            destinationParentDirectoryHandle = handle
+        case let .failure(error):
+            return .failure(
+                FileSystemError(
+                    message: "Can't copy '\(sourcePath)' to '\(destinationPath)', parent directory couldn't be opened.",
+                    wrapping: error
+                )
+            )
+        }
+
+        defer {
+            _ = destinationParentDirectoryHandle.fileHandle.systemFileHandle.sendableView._close(materialize: true)
+        }
+
+        guard
+            let destinationParentDirectoryFD = destinationParentDirectoryHandle
+                .fileHandle
+                .systemFileHandle
+                .sendableView
+                .descriptorIfAvailable()
+        else {
+            return .failure(
+                FileSystemError(
+                    code: .closed,
+                    message:
+                        "Can't copy '\(sourcePath)' to '\(destinationPath)', parent directory descriptor unavailable.",
+                    cause: nil,
+                    location: .here()
+                )
+            )
+        }
 
         let linkTarget: FilePath
         switch self._destinationOfSymbolicLink(at: sourcePath) {
@@ -1506,27 +1640,39 @@ extension FileSystem {
             return .failure(error)
         }
 
-        let createResult = self._createSymbolicLink(at: temporarySymlinkPath, withDestination: linkTarget)
-        guard case .success = createResult else {
-            _ = Libc.remove(temporarySymlinkPath)
-            return createResult
+        let temporarySymlinkPath = FilePath(".tmp-link-" + String(randomAlphaNumericOfLength: 6))
+        if case let .failure(errno) = Syscall.symlinkat(
+            to: linkTarget,
+            in: destinationParentDirectoryFD,
+            from: temporarySymlinkPath
+        ) {
+            let error = FileSystemError.symlink(
+                errno: errno,
+                link: temporarySymlinkPath,
+                target: linkTarget,
+                location: .here()
+            )
+            return .failure(error)
         }
 
+        let destinationFilePath = FilePath(filename)
         #if canImport(Darwin)
         switch Syscall.rename(
             from: temporarySymlinkPath,
-            to: destinationPath,
+            relativeTo: destinationParentDirectoryFD,
+            to: destinationFilePath,
+            relativeTo: destinationParentDirectoryFD,
             options: []
         ) {
         case .success:
             return .success(())
         case .failure(let errno):
-            _ = Libc.remove(temporarySymlinkPath)
+            _ = Syscall.unlinkat(path: temporarySymlinkPath, relativeTo: destinationParentDirectoryFD)
             let error = FileSystemError.rename(
-                "renamex_np",
+                "renameatx_np",
                 errno: errno,
                 oldName: temporarySymlinkPath,
-                newName: destinationPath,
+                newName: destinationFilePath,
                 location: .here()
             )
             return .failure(error)
@@ -1534,20 +1680,20 @@ extension FileSystem {
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
         switch Syscall.rename(
             from: temporarySymlinkPath,
-            relativeTo: .currentWorkingDirectory,
-            to: destinationPath,
-            relativeTo: .currentWorkingDirectory,
+            relativeTo: destinationParentDirectoryFD,
+            to: destinationFilePath,
+            relativeTo: destinationParentDirectoryFD,
             flags: []
         ) {
         case .success:
             return .success(())
         case .failure(let errno):
-            _ = Libc.remove(temporarySymlinkPath)
+            _ = Syscall.unlinkat(path: temporarySymlinkPath, relativeTo: destinationParentDirectoryFD)
             let error = FileSystemError.rename(
                 "renameat2",
                 errno: errno,
                 oldName: temporarySymlinkPath,
-                newName: destinationPath,
+                newName: destinationFilePath,
                 location: .here()
             )
             return .failure(error)

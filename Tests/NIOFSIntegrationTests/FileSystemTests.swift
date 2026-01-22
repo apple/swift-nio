@@ -1231,7 +1231,7 @@ final class FileSystemTests: XCTestCase {
             XCTAssertEqual(Array(buffer: contents), sourceContent)
         }
         #else
-        throw XCTSkip("This test requires Linux temp file mechanism")
+        throw XCTSkip("Darwin uses copyfile which doesn't create temp files during overwriting")
         #endif
     }
 
@@ -1424,6 +1424,187 @@ final class FileSystemTests: XCTestCase {
         // Verify source symlink still exists
         let sourceInfoAfterCopy = try await self.fs.info(forFileAt: sourceSymlink, infoAboutSymbolicLink: true)
         XCTAssertEqual(sourceInfoAfterCopy?.type, .symlink)
+    }
+
+    func testCopySymlinkOverwritingCleansUpTempLink() async throws {
+        let testDirectory = try await self.fs.temporaryFilePath()
+        try await self.fs.createDirectory(
+            at: testDirectory,
+            withIntermediateDirectories: false,
+            permissions: nil
+        )
+
+        let sourceTarget = NIOFilePath(testDirectory.underlying.appending("source-target"))
+        try await self.fs.withFileHandle(
+            forWritingAt: sourceTarget,
+            options: .newFile(replaceExisting: false)
+        ) { _ in }
+
+        let destinationTarget = NIOFilePath(testDirectory.underlying.appending("destination-target"))
+        try await self.fs.withFileHandle(
+            forWritingAt: destinationTarget,
+            options: .newFile(replaceExisting: false)
+        ) { _ in }
+
+        let sourceSymlink = NIOFilePath(testDirectory.underlying.appending("source-symlink"))
+        try await self.fs.createSymbolicLink(
+            at: sourceSymlink,
+            withDestination: sourceTarget
+        )
+
+        let destinationSymlink = NIOFilePath(testDirectory.underlying.appending("destination-symlink"))
+        try await self.fs.createSymbolicLink(
+            at: destinationSymlink,
+            withDestination: destinationTarget
+        )
+
+        try await self.fs.copyItem(
+            at: sourceSymlink,
+            to: destinationSymlink,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        // Verify no .tmp-link- files are left after copying the symlink
+        let temporaryFiles = try await self.fs.withDirectoryHandle(
+            atPath: testDirectory
+        ) { dir in
+            var temporaryFiles: [String] = []
+            for try await batch in dir.listContents().batched() {
+                for entry in batch where entry.name.hasPrefix(".tmp-link-") {
+                    temporaryFiles.append(entry.name)
+                }
+            }
+            return temporaryFiles
+        }
+
+        XCTAssertTrue(temporaryFiles.isEmpty, "Found temp symlink files: \(temporaryFiles)")
+
+        // Verify destination symlink points to expected target
+        let destinationTargetAfterCopy = try await self.fs.destinationOfSymbolicLink(at: destinationSymlink)
+        XCTAssertEqual(destinationTargetAfterCopy, sourceTarget)
+    }
+
+    func testCopyFileOverwritingPreservesPermissions() async throws {
+        let sourceContent: [UInt8] = [1, 2, 3]
+        let destinationContent: [UInt8] = [4, 5, 6]
+
+        let source = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false, permissions: .ownerReadWrite)
+        ) { handle in
+            try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
+        }
+
+        let destination = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: destination,
+            options: .newFile(
+                replaceExisting: false, 
+                permissions: .ownerReadWriteExecute  // different permissions
+            )
+        ) { handle in
+            try await handle.write(contentsOf: destinationContent, toAbsoluteOffset: 0)
+        }
+
+        try await self.fs.copyItem(
+            at: source,
+            to: destination,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        // verify destination has source's permissions after copying
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let info = try await handle.info()
+            XCTAssertEqual(info.permissions, .ownerReadWrite)
+        }
+
+        // verify destination has source content
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), sourceContent)
+        }
+    }
+
+    func testCopyFileOverwritingCleansUpTempFileOnFailure() async throws {
+        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        let testDirectory = try await self.fs.temporaryFilePath()
+        try await self.fs.createDirectory(
+            at: testDirectory,
+            withIntermediateDirectories: false,
+            permissions: nil
+        )
+
+        // Create source file, then remove read permissions to cause copy failure
+        let source = NIOFilePath(testDirectory.underlying.appending("source"))
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false, permissions: .ownerReadWrite)
+        ) { handle in
+            let sourceContent: [UInt8] = [1, 2, 3]
+            try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
+        }
+    
+        try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .modifyFile(createIfNecessary: false)
+        ) { handle in
+            try await handle.replacePermissions(.ownerWrite)
+        }
+        
+        let destination = NIOFilePath(testDirectory.underlying.appending("destination"))
+        let destinationContent: [UInt8] = [4, 5, 6]
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: destination,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: destinationContent, toAbsoluteOffset: 0)
+        }
+
+        // should fail because source is not readable
+        do {
+            try await self.fs.copyItem(
+                at: source,
+                to: destination,
+                strategy: .platformDefault,
+                overwriting: true,
+                shouldProceedAfterError: { _, error in throw error },
+                shouldCopyItem: { _, _ in true }
+            )
+            XCTFail("Copy should have failed due to unreadable source")
+        } catch let error as FileSystemError {
+            XCTAssertEqual(error.code, .permissionDenied)
+        }
+
+        // verify no .tmp- files are left after the failed copy
+        let temporaryFiles = try await self.fs.withDirectoryHandle(
+            atPath: testDirectory
+        ) { dir in
+            var temporaryFiles: [String] = []
+            for try await batch in dir.listContents().batched() {
+                for entry in batch where entry.name.hasPrefix(".tmp-") {
+                    temporaryFiles.append(entry.name)
+                }
+            }
+            return temporaryFiles
+        }
+
+        XCTAssertTrue(temporaryFiles.isEmpty, "Found leftover temp files after failed copy: \(temporaryFiles)")
+
+        // verify destination still exists with original content (not corrupted)
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), destinationContent)
+        }
+        #else
+        throw XCTSkip("Darwin uses copyfile which doesn't create temp files during overwriting")
+        #endif
     }
 
     func testRemoveSingleFile() async throws {

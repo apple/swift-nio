@@ -243,6 +243,19 @@ public enum Syscall: Sendable {
     }
 
     @_spi(Testing)
+    public static func unlinkat(
+        path: FilePath,
+        relativeTo directoryDescriptor: FileDescriptor,
+        flags: CInt = 0
+    ) -> Result<Void, Errno> {
+        nothingOrErrno(retryOnInterrupt: false) {
+            path.withPlatformString { ptr in
+                system_unlinkat(directoryDescriptor.rawValue, ptr, flags)
+            }
+        }
+    }
+
+    @_spi(Testing)
     public static func symlink(
         to destination: FilePath,
         from source: FilePath

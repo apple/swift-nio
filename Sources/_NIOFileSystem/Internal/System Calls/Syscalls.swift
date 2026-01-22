@@ -362,6 +362,20 @@ internal func system_unlink(
     return unlink(path)
 }
 
+/// unlinkat(2): Remove a directory entry relative to a directory file descriptor.
+internal func system_unlinkat(
+    _ fd: FileDescriptor.RawValue,
+    _ path: UnsafePointer<CInterop.PlatformChar>,
+    _ flags: CInt
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(fd, path, flags)
+    }
+    #endif
+    return unlinkat(fd, path, flags)
+}
+
 #if canImport(Glibc) || canImport(Musl) || canImport(Android)
 /// sendfile(2): Transfer data between descriptors
 internal func system_sendfile(
