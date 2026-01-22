@@ -1320,7 +1320,7 @@ extension FileSystem {
         }
 
         // On Linux platforms there is no COPYFILE_UNLINK analog, so we use the next
-        // best thing - write to a temporary file and then atomically rename it with rename(2)
+        // best thing - write to a temporary file and then atomically rename it with renameat2(2)
         let temporaryFileName = ".tmp-" + String(randomAlphaNumericOfLength: 6)
         let temporaryDestinationPath = destinationPath.removingLastComponent().appending(temporaryFileName)
         let copyResult = self._copyRegularFileOnLinux(from: sourcePath, to: temporaryDestinationPath)
@@ -1330,11 +1330,17 @@ extension FileSystem {
             return copyResult
         }
 
-        switch Syscall.rename(from: temporaryDestinationPath, to: destinationPath) {
+        switch Syscall.rename(
+            from: temporaryDestinationPath,
+            relativeTo: .currentWorkingDirectory,
+            to: destinationPath,
+            relativeTo: .currentWorkingDirectory,
+            flags: []
+        ) {
         case .failure(let errno):
             _ = Libc.remove(temporaryDestinationPath)
             let error = FileSystemError.rename(
-                "rename",
+                "renameat2",
                 errno: errno,
                 oldName: temporaryDestinationPath,
                 newName: destinationPath,
