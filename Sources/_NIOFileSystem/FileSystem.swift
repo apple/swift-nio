@@ -325,7 +325,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///
     /// This function is platform dependent. On Darwin the `copyfile(2)` system call is used and
     /// items are cloned where possible. On Linux the `sendfile(2)` system call is used.
-    /// 
+    ///
     /// When `overwriting` is `true`, regular files are atomically replaced using `COPYFILE_UNLINK`
     /// on Darwin or a temporary file followed by `renameat2(2)` on Linux. Symbolic links are
     /// atomically replaced using a temporary symlink followed by `renamex_np(2)` on Darwin or
