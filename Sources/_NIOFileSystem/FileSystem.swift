@@ -1387,15 +1387,14 @@ extension FileSystem {
                 .sendableView
                 .descriptorIfAvailable()
         else {
-            return .failure(
-                FileSystemError(
-                    code: .closed,
-                    message:
-                        "Can't copy '\(sourcePath)' to '\(destinationPath)', parent directory descriptor unavailable.",
-                    cause: nil,
-                    location: .here()
-                )
+            let error = FileSystemError(
+                code: .closed,
+                message:
+                    "Can't copy '\(sourcePath)' to '\(destinationPath)', parent directory descriptor unavailable.",
+                cause: nil,
+                location: .here()
             )
+            return .failure(error)
         }
 
         func openDestination(
@@ -1643,15 +1642,14 @@ extension FileSystem {
                 .sendableView
                 .descriptorIfAvailable()
         else {
-            return .failure(
-                FileSystemError(
-                    code: .closed,
-                    message:
-                        "Can't copy '\(sourcePath)' to '\(destinationPath)', parent directory descriptor unavailable.",
-                    cause: nil,
-                    location: .here()
-                )
+            let error = FileSystemError(
+                code: .closed,
+                message:
+                    "Can't copy '\(sourcePath)' to '\(destinationPath)', parent directory descriptor unavailable.",
+                cause: nil,
+                location: .here()
             )
+            return .failure(error)
         }
 
         let linkTarget: FilePath
