@@ -1301,7 +1301,6 @@ extension FileSystem {
         //    COPYFILE_STAT | COPYFILE_ACL | COPYFILE_XATTR | COPYFILE_DATA
         var flags = copyfile_flags_t(COPYFILE_CLONE) | copyfile_flags_t(COPYFILE_ALL)
         if overwriting {
-            // COPYFILE_UNLINK atomically removes the destination if it exists before copying
             flags |= copyfile_flags_t(COPYFILE_UNLINK)
         }
 
