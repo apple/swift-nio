@@ -1339,11 +1339,8 @@ extension FileSystem {
             )
         }
 
-        // On Linux platforms there is no COPYFILE_UNLINK analog, so we use the next
-        // best thing - write to a temporary file and then atomically rename it with renameat2(2).
-        // To prevent TOCTOU attacks, we open the parent directory and use relative paths.
-
-        // Extract filename safely
+        // on Linux platforms we want to imitate overwriting by copying the source file into
+        // a temporary destination and then atomically renaming it, using the renameat2(2) system call
         guard let filenameComponent = destinationPath.lastComponent else {
             return .failure(
                 FileSystemError(
@@ -1357,11 +1354,10 @@ extension FileSystem {
         let filename = filenameComponent.string
         let destinationParentDirectory = destinationPath.removingLastComponent()
 
-        // Open parent directory to pin operations to a specific directory inode
         let destinationParentDirectoryHandle: DirectoryFileHandle
         switch self._openDirectory(
             at: destinationParentDirectory,
-            // Not following symlinks here to prevent TOCTOU attacks where the parent directory
+            // not following symlinks here to prevent TOCTOU attacks where the parent directory
             // is replaced with a symlink pointing to an attacker-controlled location
             options: OpenOptions.Directory(followSymbolicLinks: false)
         ) {
@@ -1596,10 +1592,10 @@ extension FileSystem {
             }
         }
 
-        // To keep the copy atomic we first create a temporary symlink
-        // and then atomically rename it using directory FDs for TOCTOU protection
-
-        // Extract filename safely
+        // there is no atomic symlink overwriting copy on either Darwin or Linux platforms
+        // so we copy the symlink into a temporary symlink using `symlinkat` system call and then
+        // rename it into the destination symlink using the `renameatx_np(2)` on Darwin and
+        // `renameat2(2)` on non-Darwin platforms
         guard let filenameComponent = destinationPath.lastComponent else {
             return .failure(
                 FileSystemError(
@@ -1610,22 +1606,14 @@ extension FileSystem {
                 )
             )
         }
+
         let filename = filenameComponent.string
         let destinationParentDirectory = destinationPath.removingLastComponent()
 
-        let linkTarget: FilePath
-        switch self._destinationOfSymbolicLink(at: sourcePath) {
-        case let .success(target):
-            linkTarget = target
-        case let .failure(error):
-            return .failure(error)
-        }
-
-        // Open parent directory to pin operations to a specific directory inode
         let destinationParentDirectoryHandle: DirectoryFileHandle
         switch self._openDirectory(
             at: destinationParentDirectory,
-            // Not following symlinks here to prevent TOCTOU attacks where the parent directory
+            // not following symlinks here to prevent TOCTOU attacks where the parent directory
             // is replaced with a symlink pointing to an attacker-controlled location
             options: OpenOptions.Directory(followSymbolicLinks: false)
         ) {
@@ -1641,11 +1629,18 @@ extension FileSystem {
         }
 
         defer {
-            _ = destinationParentDirectoryHandle.fileHandle.systemFileHandle.sendableView._close(materialize: true)
+            _ = destinationParentDirectoryHandle
+                .fileHandle
+                .systemFileHandle
+                .sendableView
+                ._close(materialize: true)
         }
 
         guard
-            let destinationParentDirectoryFD = destinationParentDirectoryHandle.fileHandle.systemFileHandle.sendableView
+            let destinationParentDirectoryFD = destinationParentDirectoryHandle
+                .fileHandle
+                .systemFileHandle
+                .sendableView
                 .descriptorIfAvailable()
         else {
             return .failure(
@@ -1659,7 +1654,14 @@ extension FileSystem {
             )
         }
 
-        // Create temporary symlink using symlinkat
+        let linkTarget: FilePath
+        switch self._destinationOfSymbolicLink(at: sourcePath) {
+        case let .success(target):
+            linkTarget = target
+        case let .failure(error):
+            return .failure(error)
+        }
+
         let temporarySymlinkPath = FilePath(".tmp-link-" + String(randomAlphaNumericOfLength: 6))
         if case let .failure(errno) = Syscall.symlinkat(
             to: linkTarget,
@@ -1675,7 +1677,6 @@ extension FileSystem {
             return .failure(error)
         }
 
-        // Atomically rename using platform-specific syscall with directory FD
         let destinationFilePath = FilePath(filename)
         #if canImport(Darwin)
         switch Syscall.rename(
