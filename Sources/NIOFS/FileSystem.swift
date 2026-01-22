@@ -1411,15 +1411,13 @@ extension FileSystem {
                     ),
                     location: .here()
                 )
-            }.flatMap { fd in
-                SystemFileHandle.syncOpen(
-                    wrapping: fd,
+            }.map { fd in
+                let handle = SystemFileHandle(
+                    takingOwnershipOf: fd,
                     path: path,
-                    options: options,
                     threadPool: self.threadPool
-                ).map {
-                    WriteFileHandle(wrapping: $0)
-                }
+                )
+                return WriteFileHandle(wrapping: handle)
             }
         }
 
