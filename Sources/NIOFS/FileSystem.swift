@@ -1360,7 +1360,11 @@ extension FileSystem {
         }
 
         defer {
-            _ = destinationParentDirectoryHandle.fileHandle.systemFileHandle.sendableView._close(materialize: true)
+            _ = destinationParentDirectoryHandle
+                .fileHandle
+                .systemFileHandle
+                .sendableView
+                ._close(materialize: true)
         }
 
         guard
@@ -1611,7 +1615,11 @@ extension FileSystem {
         }
 
         defer {
-            _ = destinationParentDirectoryHandle.fileHandle.systemFileHandle.sendableView._close(materialize: true)
+            _ = destinationParentDirectoryHandle
+                .fileHandle
+                .systemFileHandle
+                .sendableView
+                ._close(materialize: true)
         }
 
         guard
