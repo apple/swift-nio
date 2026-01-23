@@ -24,12 +24,12 @@ public typealias NIOPreconcurrencySendable = _NIOPreconcurrencySendable
 /// As the name implies, the usage of this is unsafe because it disables the sendable checking of the compiler.
 /// It can be used similar to `@unsafe Sendable` but for values instead of types.
 @usableFromInline
-struct UnsafeTransfer<Wrapped> {
+package struct UnsafeTransfer<Wrapped> {
     @usableFromInline
-    var wrappedValue: Wrapped
+    package var wrappedValue: Wrapped
 
     @inlinable
-    init(_ wrappedValue: Wrapped) {
+    package init(_ wrappedValue: Wrapped) {
         self.wrappedValue = wrappedValue
     }
 }
@@ -43,12 +43,12 @@ extension UnsafeTransfer: Hashable where Wrapped: Hashable {}
 /// It can be used to capture local mutable values in a `@Sendable` closure and mutate them from within the closure.
 /// As the name implies, the usage of this is unsafe because it disables the sendable checking of the compiler and does not add any synchronisation.
 @usableFromInline
-final class UnsafeMutableTransferBox<Wrapped> {
+package final class UnsafeMutableTransferBox<Wrapped> {
     @usableFromInline
-    var wrappedValue: Wrapped
+    package var wrappedValue: Wrapped
 
     @inlinable
-    init(_ wrappedValue: Wrapped) {
+    package init(_ wrappedValue: Wrapped) {
         self.wrappedValue = wrappedValue
     }
 }
