@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 // MARK: _UInt24
 
 /// A 24-bit unsigned integer value type.
@@ -132,3 +134,4 @@ extension _UInt56: CustomStringConvertible {
         UInt64(self).description
     }
 }
+#endif  // !os(WASI)
