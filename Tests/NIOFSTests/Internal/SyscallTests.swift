@@ -344,7 +344,7 @@ final class SyscallTests: XCTestCase {
                     options: []
                 ).get()
             },
-            MockTestCase(name: "renameatx_np", .noInterrupt, 13, "old", 42, "new", 2) { _ in
+            MockTestCase(name: "renameatx_np", .noInterrupt, 13, "old", 42, "new", 4) { _ in
                 _ = try Syscall.rename(
                     from: "old",
                     relativeTo: oldFD,
@@ -353,7 +353,7 @@ final class SyscallTests: XCTestCase {
                     options: [.exclusive]
                 ).get()
             },
-            MockTestCase(name: "renameatx_np", .noInterrupt, 13, "old", 42, "new", 4) { _ in
+            MockTestCase(name: "renameatx_np", .noInterrupt, 13, "old", 42, "new", 2) { _ in
                 _ = try Syscall.rename(
                     from: "old",
                     relativeTo: oldFD,
