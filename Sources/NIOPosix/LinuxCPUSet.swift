@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 #if os(Linux) || os(Android)
 import CNIOLinux
 
@@ -97,3 +99,4 @@ extension MultiThreadedEventLoopGroup {
     }
 }
 #endif
+#endif  // !os(WASI)

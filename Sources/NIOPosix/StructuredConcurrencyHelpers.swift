@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the AsyncHTTPClient open source project
@@ -58,3 +60,4 @@ internal func asyncDo<R>(
     }.value
     return result
 }
+#endif  // !os(WASI)
