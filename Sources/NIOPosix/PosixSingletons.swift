@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 extension NIOSingletons {
@@ -120,3 +122,4 @@ private let globalPosixBlockingPool: NIOThreadPool = {
     _ = Unmanaged.passRetained(pool)  // never gonna let you down.
     return pool
 }()
+#endif  // !os(WASI)

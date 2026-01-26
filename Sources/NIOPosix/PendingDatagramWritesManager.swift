@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import CNIODarwin
 import CNIOLinux
@@ -718,3 +720,4 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         assert(self.state.isEmpty)
     }
 }
+#endif  // !os(WASI)

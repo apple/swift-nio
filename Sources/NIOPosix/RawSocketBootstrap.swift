@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import NIOCore
 
 /// A `RawSocketBootstrap` is an easy way to interact with IP based protocols other then TCP and UDP.
@@ -380,3 +383,4 @@ extension NIORawSocketBootstrap {
 
 @available(*, unavailable)
 extension NIORawSocketBootstrap: Sendable {}
+#endif  // !os(WASI)

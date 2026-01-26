@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import DequeModule
 import NIOConcurrencyHelpers
@@ -552,3 +554,4 @@ extension ConditionLock {
         return result
     }
 }
+#endif  // !os(WASI)

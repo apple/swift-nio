@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import NIOCore
 
@@ -139,3 +141,4 @@ where
 {
     typealias AtomicRep = Wrapped.AtomicOptionalRepresentation
 }
+#endif  // !os(WASI)
