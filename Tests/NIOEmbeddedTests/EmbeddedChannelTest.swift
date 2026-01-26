@@ -836,4 +836,17 @@ class EmbeddedChannelTest: XCTestCase {
         let optionValue2 = try channel.getOption(option).wait()
         XCTAssertEqual(2, optionValue2)
     }
+
+    func testGetSetOptionOptInThrowing() {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.close().wait())
+
+        XCTAssert(channel.allowOptionsWhenClosed)
+        XCTAssertNoThrow(try channel.setOption(.connectTimeout, value: .milliseconds(42)).wait())
+        XCTAssertNoThrow(XCTAssertEqual(try channel.getOption(.connectTimeout).wait(), .milliseconds(42)))
+
+        channel.allowOptionsWhenClosed = false
+        XCTAssertThrowsError(try channel.setOption(.connectTimeout, value: .milliseconds(42)).wait())
+        XCTAssertThrowsError(try channel.getOption(.connectTimeout).wait())
+    }
 }
