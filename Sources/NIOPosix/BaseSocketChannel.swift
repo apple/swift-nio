@@ -39,9 +39,8 @@ private struct SocketChannelLifecycleManager {
     internal let isActiveAtomic: ManagedAtomic<Bool>
     // Tracks whether channelActive event was actually fired to user handlers.
     // When the state machine transitions to .closed before channelActive was fired,
-    // we want to suppress both events. This allows us to only fire channelInactive
-    // if channelActive was fired previously.
-    internal let firedChannelActive: NIOLoopBoundBox<Bool>
+    // we want to suppress both events.
+    private let firedChannelActive: NIOLoopBoundBox<Bool>
     // these are only to be accessed on the EventLoop
 
     // have we seen the `.readEOF` notification
@@ -144,8 +143,8 @@ private struct SocketChannelLifecycleManager {
                 firedChannelActive.eventLoop.assertInEventLoop()
                 promise?.succeed(())
                 if isActiveAtomic.load(ordering: .relaxed) {
-                    firedChannelActive.value = true
                     pipeline.syncOperations.fireChannelActive()
+                    firedChannelActive.value = true
                 }
             }
 
