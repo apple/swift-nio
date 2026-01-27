@@ -1071,6 +1071,46 @@ class DatagramChannelTests: XCTestCase {
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: true, receivePacketInfo: true)
     }
 
+    func testReceiveTimestamp() throws {
+        let address = "127.0.0.1"
+        let receiveChannel = try DatagramBootstrap(group: group)
+            .channelOption(.timestamp, value: true)
+            .channelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(
+                        DatagramReadRecorder<ByteBuffer>(),
+                        name: "ByteReadRecorder"
+                    )
+                }
+            }
+            .bind(host: address, port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try receiveChannel.close().wait())
+        }
+        let sendChannel = try DatagramBootstrap(group: group)
+            .bind(host: address, port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try sendChannel.close().wait())
+        }
+
+        var buffer = sendChannel.allocator.buffer(capacity: 1)
+        buffer.writeRepeatingByte(0, count: 1)
+
+        let writeData = AddressedEnvelope(
+            remoteAddress: receiveChannel.localAddress!,
+            data: buffer,
+            metadata: .init(ecnState: .transportNotCapable)
+        )
+        try sendChannel.writeAndFlush(writeData).wait()
+
+        let expectedReads = 1
+        let reads = try receiveChannel.waitForDatagrams(count: 1)
+        XCTAssertEqual(reads.count, expectedReads)
+        XCTAssertNotNil(reads[0].metadata?.timestamp)
+    }
+
     func testDoingICMPWithoutRoot() throws {
         // This test validates we can send ICMP messages on a datagram socket without having root privilege.
         //
@@ -1886,7 +1926,7 @@ class DatagramChannelTests: XCTestCase {
         let writeData = AddressedEnvelope(
             remoteAddress: self.secondChannel.localAddress!,
             data: buffer,
-            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize)
+            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize, timestamp: nil)
         )
         XCTAssertNoThrow(try self.firstChannel.writeAndFlush(writeData).wait())
 
@@ -1936,12 +1976,12 @@ class DatagramChannelTests: XCTestCase {
         let writeData1 = AddressedEnvelope(
             remoteAddress: self.secondChannel.localAddress!,
             data: buffer1,
-            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize1)
+            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize1, timestamp: nil)
         )
         let writeData2 = AddressedEnvelope(
             remoteAddress: self.secondChannel.localAddress!,
             data: buffer2,
-            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize2)
+            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize2, timestamp: nil)
         )
         let write1 = self.firstChannel.write(writeData1)
         let write2 = self.firstChannel.write(writeData2)
@@ -1969,7 +2009,7 @@ class DatagramChannelTests: XCTestCase {
         let gsoEnvelope = AddressedEnvelope(
             remoteAddress: self.secondChannel.localAddress!,
             data: gsoBuffer,
-            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize)
+            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize, timestamp: nil)
         )
 
         // Non-GSO message
@@ -2010,7 +2050,7 @@ class DatagramChannelTests: XCTestCase {
         let envelope = AddressedEnvelope(
             remoteAddress: self.secondChannel.localAddress!,
             data: buffer,
-            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize)
+            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: segmentSize, timestamp: nil)
         )
 
         XCTAssertNoThrow(try self.firstChannel.writeAndFlush(envelope).wait())
@@ -2033,7 +2073,7 @@ class DatagramChannelTests: XCTestCase {
         let envelope = AddressedEnvelope(
             remoteAddress: self.secondChannel.localAddress!,
             data: buffer,
-            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: 500)
+            metadata: .init(ecnState: .transportNotCapable, packetInfo: nil, segmentSize: 500, timestamp: nil)
         )
 
         XCTAssertThrowsError(try self.firstChannel.writeAndFlush(envelope).wait()) { error in
