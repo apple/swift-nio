@@ -635,6 +635,61 @@ final class HTTPHeaderValidationTests: XCTestCase {
         XCTAssertEqual(maybeReceivedHeadBytes, toleratedRequestBytes)
         XCTAssertEqual(maybeReceivedTrailerBytes, toleratedTrailerBytes)
     }
+
+    func testBadRequestResponseIsReturnedIfHeadersInvalidAndConfiguredToDoSo() throws {
+        let channel = EmbeddedChannel()
+        var pipelineConfig = ChannelPipeline.SynchronousOperations.Configuration()
+        pipelineConfig.headerValidationResponse = true
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(withConfiguration: pipelineConfig)
+        try channel.primeForResponse()
+
+        func assertReadHead(from channel: EmbeddedChannel) throws {
+            if case .head = try channel.readInbound(as: HTTPServerRequestPart.self) {
+                ()
+            } else {
+                XCTFail("Expected 'head'")
+            }
+        }
+
+        func assertReadEnd(from channel: EmbeddedChannel) throws {
+            if case .end = try channel.readInbound(as: HTTPServerRequestPart.self) {
+                ()
+            } else {
+                XCTFail("Expected 'end'")
+            }
+        }
+
+        // Read the first request.
+        try assertReadHead(from: channel)
+        try assertReadEnd(from: channel)
+        XCTAssertNil(try channel.readInbound(as: HTTPServerRequestPart.self))
+
+        // Respond with bad headers; they should cause an error and result in the rest of the
+        // response being dropped, but a fallback response being sent
+        let head = HTTPResponseHead(version: .http1_1, status: .ok, headers: [":pseudo-header": "not-here"])
+        XCTAssertThrowsError(try channel.writeOutbound(HTTPServerResponsePart.head(head)))
+
+        // We expect exactly one ByteBuffer in the output.
+        guard var written = try channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("No writes")
+            return
+        }
+
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
+
+        // Check the response.
+        assertResponseIs(
+            response: written.readString(length: written.readableBytes)!,
+            expectedResponseLine: "HTTP/1.1 500 Internal Server Error",
+            expectedResponseHeaders: ["Connection: close", "Content-Length: 0"]
+        )
+        XCTAssertThrowsError(try channel.writeOutbound(HTTPServerResponsePart.body(.byteBuffer(ByteBuffer()))))
+        XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertThrowsError(try channel.writeOutbound(HTTPServerResponsePart.end(nil)))
+        XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self))
+
+        _ = try? channel.finish()
+    }
 }
 
 extension EmbeddedChannel {
