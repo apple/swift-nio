@@ -1,7 +1,7 @@
 {
     "1_reqs_1000_conn": 372050,
-    "1000_addHandlers_sync": 38050,
-    "1000_addHandlers": 45050,
+    "1000_addHandlers_sync": 39050,
+    "1000_addHandlers": 46050,
     "1000_addRemoveHandlers_handlercontext": 8050,
     "1000_addRemoveHandlers_handlername": 8050,
     "1000_addRemoveHandlers_handlertype": 8050,
@@ -9,7 +9,7 @@
     "1000_autoReadGetAndSet": 18050,
     "1000_copying_bytebufferview_to_array": 1050,
     "1000_copying_circularbuffer_to_array": 1050,
-    "1000_getHandlers_sync": 36,
+    "1000_getHandlers_sync": 37,
     "1000_getHandlers": 8050,
     "1000_reqs_1_conn": 26350,
     "1000_rst_connections": 136050,
