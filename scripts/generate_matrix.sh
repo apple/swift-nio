@@ -69,7 +69,7 @@ linux_5_10_container_image="swift:5.10-jammy"
 linux_6_0_container_image="swift:6.0-jammy"
 linux_6_1_container_image="swift:6.1-jammy"
 linux_6_2_container_image="swift:6.2-noble"
-linux_nightly_next_container_image="swiftlang/swift:nightly-6.2-jammy"
+linux_nightly_next_container_image="swiftlang/swift:nightly-6.3-jammy"
 linux_nightly_main_container_image="swiftlang/swift:nightly-main-jammy"
 
 windows_6_0_runner="windows-2022"
