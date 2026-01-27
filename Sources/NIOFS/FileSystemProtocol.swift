@@ -175,7 +175,7 @@ public protocol FileSystemProtocol: Sendable {
     /// The following error codes may be thrown:
     /// - ``FileSystemError/Code-swift.struct/notFound`` if the item at `sourcePath` does not exist,
     /// - ``FileSystemError/Code-swift.struct/invalidArgument`` if an item at `destinationPath`
-    ///   exists prior to the copy or its parent directory does not exist.
+    ///   exists prior to the copy (when `overwriting` is `false`) or its parent directory does not exist.
     ///
     /// Note that other errors may also be thrown.
     ///
@@ -186,6 +186,7 @@ public protocol FileSystemProtocol: Sendable {
     ///   - sourcePath: The path to the item to copy.
     ///   - destinationPath: The path at which to place the copy.
     ///   - copyStrategy: How to deal with concurrent aspects of the copy, only relevant to directories.
+    ///   - overwriting: Whether to overwrite an existing file or symlink at `destinationPath`.
     ///   - shouldProceedAfterError: A closure which is executed to determine whether to continue
     ///       copying files if an error is encountered during the operation. See Errors section for full details.
     ///   - shouldCopyItem: A closure which is executed before each copy to determine whether each
@@ -195,7 +196,7 @@ public protocol FileSystemProtocol: Sendable {
     ///
     /// No errors should be throw by implementors without first calling `shouldProceedAfterError`,
     /// if that returns without throwing this is taken as permission to continue and the error is swallowed.
-    /// If instead the closure throws then ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
+    /// If instead the closure throws then ``copyItem(at:to:strategy:overwriting:shouldProceedAfterError:shouldCopyItem:)``
     ///  will throw and copying will stop, though the precise semantics of this can depend on the `strategy`.
     ///
     /// if using ``CopyStrategy/parallel(maxDescriptors:)``
@@ -236,6 +237,7 @@ public protocol FileSystemProtocol: Sendable {
         at sourcePath: NIOFilePath,
         to destinationPath: NIOFilePath,
         strategy copyStrategy: CopyStrategy,
+        overwriting: Bool,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -472,7 +474,7 @@ extension FileSystemProtocol {
     ///
     /// Note that other errors may also be thrown. If any error is encountered during the copy
     /// then the copy is aborted. You can modify the behaviour with the `shouldProceedAfterError`
-    /// parameter of ``FileSystemProtocol/copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``.
+    /// parameter of ``FileSystemProtocol/copyItem(at:to:strategy:overwriting:shouldProceedAfterError:shouldCopyItem:)``.
     ///
     /// If the file at `sourcePath` is a symbolic link then only the link is copied to the new path.
     ///
@@ -485,11 +487,18 @@ extension FileSystemProtocol {
         to destinationPath: NIOFilePath,
         strategy copyStrategy: CopyStrategy = .platformDefault
     ) async throws {
-        try await self.copyItem(at: sourcePath, to: destinationPath, strategy: copyStrategy) { path, error in
-            throw error
-        } shouldCopyItem: { source, destination in
-            true
-        }
+        try await self.copyItem(
+            at: sourcePath,
+            to: destinationPath,
+            strategy: copyStrategy,
+            overwriting: false,
+            shouldProceedAfterError: { path, error in
+                throw error
+            },
+            shouldCopyItem: { source, destination in
+                true
+            }
+        )
     }
 
     /// Copies the item at the specified path to a new location.
@@ -516,7 +525,7 @@ extension FileSystemProtocol {
     ///
     /// This overload uses ``CopyStrategy/platformDefault`` which is likely to result in multiple concurrency domains being used
     /// in the event of copying a directory.
-    /// See the detailed description on ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
+    /// See the detailed description on ``copyItem(at:to:strategy:overwriting:shouldProceedAfterError:shouldCopyItem:)``
     /// for the implications of this with respect to the `shouldProceedAfterError` and `shouldCopyItem` callbacks
     public func copyItem(
         at sourcePath: NIOFilePath,
@@ -536,6 +545,7 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: .platformDefault,
+            overwriting: false,
             shouldProceedAfterError: shouldProceedAfterError,
             shouldCopyItem: shouldCopyItem
         )
