@@ -443,7 +443,7 @@ jobs:
           MATRIX_MACOS_26_1_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_1_build_arguments_override }}
           MATRIX_MACOS_26_1_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_1_test_arguments_override }}
           MATRIX_MACOS_26_1_SETUP_COMMAND: ${{ inputs.xcode_26_1_setup_command }}
-          MATRIX_MACOS_26_2_ENABLED: ${{ inputs.xcode_26_1_enabled }}
+          MATRIX_MACOS_26_2_ENABLED: ${{ inputs.xcode_26_2_enabled }}
           MATRIX_MACOS_26_2_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_2_build_arguments_override }}
           MATRIX_MACOS_26_2_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_2_test_arguments_override }}
           MATRIX_MACOS_26_2_SETUP_COMMAND: ${{ inputs.xcode_26_2_setup_command }}
