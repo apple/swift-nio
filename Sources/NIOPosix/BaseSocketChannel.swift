@@ -22,12 +22,14 @@ private struct SocketChannelLifecycleManager {
         case fresh
         case preRegistered  // register() has been run but the selector doesn't know about it yet
         case fullyRegistered  // fully registered, ie. the selector knows about it
-        case activated
+        case preActivation // activated, but we have not fired channelActivated yet
+        case fullyActivated // fully activated, i.e., the signal has been fired
         case closed
     }
 
     private enum Event {
-        case activate
+        case beginActivation
+        case finishActivation
         case beginRegistration
         case finishRegistration
         case close
@@ -37,10 +39,6 @@ private struct SocketChannelLifecycleManager {
     private let eventLoop: EventLoop
     // this is queried from the Channel, ie. must be thread-safe
     internal let isActiveAtomic: ManagedAtomic<Bool>
-    // Tracks whether channelActive event was actually fired to user handlers.
-    // When the state machine transitions to .closed before channelActive was fired,
-    // we want to suppress both events.
-    private let firedChannelActive: NIOLoopBoundBox<Bool>
     // these are only to be accessed on the EventLoop
 
     // have we seen the `.readEOF` notification
@@ -54,9 +52,11 @@ private struct SocketChannelLifecycleManager {
         didSet {
             self.eventLoop.assertInEventLoop()
             switch (oldValue, self.currentState) {
-            case (_, .activated):
+            case (_, .preActivation):
                 self.isActiveAtomic.store(true, ordering: .relaxed)
-            case (.activated, _):
+            case (.preActivation, .fullyActivated):
+                () // Stay active
+            case (.preActivation, _), (.fullyActivated, _):
                 self.isActiveAtomic.store(false, ordering: .relaxed)
             default:
                 ()
@@ -74,7 +74,6 @@ private struct SocketChannelLifecycleManager {
         self.eventLoop = eventLoop
         self.isActiveAtomic = isActiveAtomic
         self.supportsReconnect = supportReconnect
-        self.firedChannelActive = NIOLoopBoundBox.makeBoxSendingValue(false, eventLoop: eventLoop)
     }
 
     // this is called from Channel's deinit, so don't assert we're on the EventLoop!
@@ -102,8 +101,13 @@ private struct SocketChannelLifecycleManager {
 
     // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
     @inline(__always)
-    internal mutating func activate() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
-        self.moveState(event: .activate)
+    internal mutating func beginActivation() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
+        self.moveState(event: .beginActivation)
+    }
+
+    @inline(__always)
+    internal mutating func finishActivation() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
+        self.moveState(event: .finishActivation)
     }
 
     // MARK: private API
@@ -135,17 +139,18 @@ private struct SocketChannelLifecycleManager {
             }
 
         // origin: .fullyRegistered
-        case (.fullyRegistered, .activate):
-            self.currentState = .activated
-            let firedChannelActive = self.firedChannelActive
-            let isActiveAtomic = self.isActiveAtomic
+        case (.fullyRegistered, .beginActivation):
+            self.currentState = .preActivation
             return { promise, pipeline in
-                firedChannelActive.eventLoop.assertInEventLoop()
                 promise?.succeed(())
-                if isActiveAtomic.load(ordering: .relaxed) {
-                    pipeline.syncOperations.fireChannelActive()
-                    firedChannelActive.value = true
-                }
+            }
+
+        // origin: .activated
+        case (.preActivation, .finishActivation):
+            self.currentState = .fullyActivated
+            return { promise, pipeline in
+                promise?.succeed(())
+                pipeline.syncOperations.fireChannelActive()
             }
 
         // origin: .preRegistered || .fullyRegistered
@@ -157,32 +162,53 @@ private struct SocketChannelLifecycleManager {
             }
 
         // origin: .activated
-        case (.activated, .close):
+        case (.preActivation, .close):
             self.currentState = .closed
-            let firedChannelActive = self.firedChannelActive
             return { promise, pipeline in
-                firedChannelActive.eventLoop.assertInEventLoop()
                 promise?.succeed(())
-                if firedChannelActive.value {
-                    pipeline.syncOperations.fireChannelInactive()
-                }
+                // Don't fire channelInactive here.
                 pipeline.syncOperations.fireChannelUnregistered()
             }
 
-        // origin: .activated
-        case (.activated, .activate) where self.supportsReconnect:
+        case (.preActivation, .beginActivation) where self.supportsReconnect:
+            return { promise, pipeline in
+                promise?.succeed(())
+            }
+
+        // origin: .activatedAndSignaled
+        case (.fullyActivated, .close):
+            self.currentState = .closed
+            return { promise, pipeline in
+                promise?.succeed(())
+                pipeline.syncOperations.fireChannelInactive()
+                pipeline.syncOperations.fireChannelUnregistered()
+            }
+
+        case (.fullyActivated, .beginActivation) where self.supportsReconnect:
+            return { promise, pipeline in
+                promise?.succeed(())
+            }
+
+        case (.fullyActivated, .finishActivation) where self.supportsReconnect:
             return { promise, pipeline in
                 promise?.succeed(())
             }
 
         // bad transitions
-        case (.fresh, .activate),  // should go through .registered first
-            (.preRegistered, .activate),  // need to first be fully registered
+        case (.fresh, .beginActivation),  // should go through .registered first
+            (.fresh, .finishActivation), // should go through .registerd first
+            (.preRegistered, .beginActivation),  // need to first be fully registered
+            (.preRegistered, .finishActivation), // need to first be fully registered
             (.preRegistered, .beginRegistration),  // already registered
             (.fullyRegistered, .beginRegistration),  // already registered
-            (.activated, .activate),  // already activated
-            (.activated, .beginRegistration),  // already fully registered (and activated)
-            (.activated, .finishRegistration),  // already fully registered (and activated)
+            (.fullyRegistered, .finishActivation), // need to activate first
+            (.preActivation, .beginActivation),  // already activated
+            (.preActivation, .beginRegistration),  // already fully registered (and activated)
+            (.preActivation, .finishRegistration),  // already fully registered (and activated)
+            (.fullyActivated, .beginActivation), // need to activate first
+            (.fullyActivated, .beginRegistration), // already fully registered
+            (.fullyActivated, .finishRegistration), // already fully registered
+            (.fullyActivated, .finishActivation), // already signaled
             (.fullyRegistered, .finishRegistration),  // already fully registered
             (.fresh, .finishRegistration),  // need to register lazily first
             (.closed, _):  // already closed
@@ -197,7 +223,12 @@ private struct SocketChannelLifecycleManager {
     // MARK: convenience properties
     internal var isActive: Bool {
         self.eventLoop.assertInEventLoop()
-        return self.currentState == .activated
+        switch self.currentState {
+        case .preActivation, .fullyActivated:
+            return true
+        case .fresh, .preRegistered, .fullyRegistered, .closed:
+            return false
+        }
     }
 
     internal var isPreRegistered: Bool {
@@ -205,7 +236,7 @@ private struct SocketChannelLifecycleManager {
         switch self.currentState {
         case .fresh, .closed:
             return false
-        case .preRegistered, .fullyRegistered, .activated:
+        case .preRegistered, .fullyRegistered, .preActivation, .fullyActivated:
             return true
         }
     }
@@ -215,7 +246,7 @@ private struct SocketChannelLifecycleManager {
         switch self.currentState {
         case .fresh, .closed, .preRegistered:
             return false
-        case .fullyRegistered, .activated:
+        case .fullyRegistered, .preActivation, .fullyActivated:
             return true
         }
     }
@@ -1379,7 +1410,13 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 return
             }
         }
-        self.lifecycleManager.activate()(promise, self.pipeline)
+        self.lifecycleManager.beginActivation()(promise, self.pipeline)
+        guard self.lifecycleManager.isActive else {
+            // the channel got closed in the promise succeed closure
+            return
+        }
+        // if the channel wasn't closed, continue to fully activate
+        self.lifecycleManager.finishActivation()(nil, self.pipeline)
         guard self.lifecycleManager.isOpen else {
             // in the user callout for `channelActive` the channel got closed.
             return
