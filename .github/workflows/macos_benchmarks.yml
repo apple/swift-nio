@@ -30,6 +30,10 @@ on:
         type: boolean
         description: "Boolean to enable the macOS Xcode 26.1 benchmark job. Defaults to false."
         default: false
+      macos_xcode_26_2_enabled:
+        type: boolean
+        description: "Boolean to enable the macOS Xcode 26.2 benchmark job. Defaults to false."
+        default: false
       macos_xcode_latest_beta_enabled:
         type: boolean
         description: "Boolean to enable the macOS Xcode latest beta benchmark job. Defaults to false."
@@ -59,6 +63,7 @@ jobs:
       inputs.macos_xcode_16_4_enabled ||
       inputs.macos_xcode_26_0_enabled ||
       inputs.macos_xcode_26_1_enabled ||
+      inputs.macos_xcode_26_2_enabled ||
       inputs.macos_xcode_latest_beta_enabled
     outputs:
       macos-matrix: '${{ steps.generate-matrix.outputs.macos-matrix }}'
@@ -82,6 +87,7 @@ jobs:
           xcode_16_4_enabled="${MACOS_XCODE_16_4_ENABLED}"
           xcode_26_0_enabled="${MACOS_XCODE_26_0_ENABLED}"
           xcode_26_1_enabled="${MACOS_XCODE_26_1_ENABLED}"
+          xcode_26_2_enabled="${MACOS_XCODE_26_2_ENABLED}"
           xcode_latest_beta_enabled="${MACOS_XCODE_LATEST_BETA_ENABLED}"
 
           # Create matrix from inputs
@@ -115,6 +121,13 @@ jobs:
               '.config[.config| length] |= . + { "name": "macOS (Xcode 26.1)", "xcode_version": "26.1", "xcode_app": "Xcode_26.1.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
           fi
 
+          if [[ "$xcode_26_2_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+              --arg runner_pool "$runner_pool" \
+              --argjson env_vars "$macos_env_vars_json" \
+              '.config[.config| length] |= . + { "name": "macOS (Xcode 26.2)", "xcode_version": "26.2", "xcode_app": "Xcode_26.2.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+          fi
+
           if [[ "$xcode_latest_beta_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
               --arg runner_pool "$runner_pool" \
@@ -129,6 +142,7 @@ jobs:
           MACOS_XCODE_16_4_ENABLED: ${{ inputs.macos_xcode_16_4_enabled }}
           MACOS_XCODE_26_0_ENABLED: ${{ inputs.macos_xcode_26_0_enabled }}
           MACOS_XCODE_26_1_ENABLED: ${{ inputs.macos_xcode_26_1_enabled }}
+          MACOS_XCODE_26_2_ENABLED: ${{ inputs.macos_xcode_26_2_enabled }}
           MACOS_XCODE_LATEST_BETA_ENABLED: ${{ inputs.macos_xcode_latest_beta_enabled }}
 
   benchmarks-macos:
