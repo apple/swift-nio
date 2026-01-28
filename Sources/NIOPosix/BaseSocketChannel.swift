@@ -22,8 +22,8 @@ private struct SocketChannelLifecycleManager {
         case fresh
         case preRegistered  // register() has been run but the selector doesn't know about it yet
         case fullyRegistered  // fully registered, ie. the selector knows about it
-        case preActivation // activated, but we have not fired channelActivated yet
-        case fullyActivated // fully activated, i.e., the signal has been fired
+        case preActivation  // activated, but we have not fired channelActivated yet
+        case fullyActivated  // fully activated, i.e., the signal has been fired
         case closed
     }
 
@@ -55,7 +55,7 @@ private struct SocketChannelLifecycleManager {
             case (_, .preActivation):
                 self.isActiveAtomic.store(true, ordering: .relaxed)
             case (.preActivation, .fullyActivated):
-                () // Stay active
+                ()  // Stay active
             case (.preActivation, _), (.fullyActivated, _):
                 self.isActiveAtomic.store(false, ordering: .relaxed)
             default:
@@ -196,19 +196,19 @@ private struct SocketChannelLifecycleManager {
 
         // bad transitions
         case (.fresh, .beginActivation),  // should go through .registered first
-            (.fresh, .finishActivation), // should go through .registerd first
+            (.fresh, .finishActivation),  // should go through .registerd first
             (.preRegistered, .beginActivation),  // need to first be fully registered
-            (.preRegistered, .finishActivation), // need to first be fully registered
+            (.preRegistered, .finishActivation),  // need to first be fully registered
             (.preRegistered, .beginRegistration),  // already registered
             (.fullyRegistered, .beginRegistration),  // already registered
-            (.fullyRegistered, .finishActivation), // need to activate first
+            (.fullyRegistered, .finishActivation),  // need to activate first
             (.preActivation, .beginActivation),  // already activated
             (.preActivation, .beginRegistration),  // already fully registered (and activated)
             (.preActivation, .finishRegistration),  // already fully registered (and activated)
-            (.fullyActivated, .beginActivation), // need to activate first
-            (.fullyActivated, .beginRegistration), // already fully registered
-            (.fullyActivated, .finishRegistration), // already fully registered
-            (.fullyActivated, .finishActivation), // already signaled
+            (.fullyActivated, .beginActivation),  // need to activate first
+            (.fullyActivated, .beginRegistration),  // already fully registered
+            (.fullyActivated, .finishRegistration),  // already fully registered
+            (.fullyActivated, .finishActivation),  // already signaled
             (.fullyRegistered, .finishRegistration),  // already fully registered
             (.fresh, .finishRegistration),  // need to register lazily first
             (.closed, _):  // already closed
