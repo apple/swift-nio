@@ -46,7 +46,7 @@ elif [[ "$swift_version" == "6.2" ]] && [[ -n "$command_6_2" ]]; then
   log "Running 6.2 command override"
   eval "$command_6_2"
 elif [[ "$swift_version" == "nightly-next" ]] && [[ -n "$command_nightly_next" ]]; then
-  log "Running nightly 6.1 command override"
+  log "Running nightly next command override"
   eval "$command_nightly_next"
 elif [[ "$swift_version" == "nightly-main" ]] && [[ -n "$command_nightly_main" ]]; then
   log "Running nightly main command override"

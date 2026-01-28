@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import NIOConcurrencyHelpers
 import NIOCore
@@ -1487,3 +1489,4 @@ func executeAndComplete<Value: Sendable>(_ promise: EventLoopPromise<Value>?, _ 
         promise?.fail(e)
     }
 }
+#endif  // !os(WASI)

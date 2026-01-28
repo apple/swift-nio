@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2026 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -46,7 +46,7 @@ public final class Lock {
     #elseif os(OpenBSD)
     fileprivate let mutex: UnsafeMutablePointer<pthread_mutex_t?> =
         UnsafeMutablePointer.allocate(capacity: 1)
-    #else
+    #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
     fileprivate let mutex: UnsafeMutablePointer<pthread_mutex_t> =
         UnsafeMutablePointer.allocate(capacity: 1)
     #endif
@@ -57,7 +57,9 @@ public final class Lock {
         InitializeSRWLock(self.mutex)
         #elseif os(OpenBSD)
         var attr = pthread_mutexattr_t(bitPattern: 0)
-        let err = pthread_mutex_init(self.mutex, &attr)
+        var err = pthread_mutexattr_init(&attr)
+        precondition(err == 0, "\(#function) failed in pthread_mutexattr_init with error \(err)")
+        err = pthread_mutex_init(self.mutex, &attr)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
         var attr = pthread_mutexattr_t()
@@ -68,17 +70,23 @@ public final class Lock {
 
         let err = pthread_mutex_init(self.mutex, &attr)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
+        // `pthread_mutexattr_t` only lives during init; destroy here instead of deinit.
+        let attrDestroyErr = pthread_mutexattr_destroy(&attr)
+        precondition(
+            attrDestroyErr == 0,
+            "\(#function) failed in pthread_mutexattr_destroy with error \(attrDestroyErr)"
+        )
         #endif
     }
 
     deinit {
         #if os(Windows)
-        // SRWLOCK does not need to be free'd
+        mutex.deallocate()
         #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
         let err = pthread_mutex_destroy(self.mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
-        #endif
         mutex.deallocate()
+        #endif
     }
 
     /// Acquire the lock.

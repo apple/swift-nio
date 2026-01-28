@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import CNIOLinux
 import CNIOOpenBSD
 import NIOCore
@@ -375,3 +377,4 @@ class Socket: BaseSocket, SocketProtocol {
         }
     }
 }
+#endif  // !os(WASI)
