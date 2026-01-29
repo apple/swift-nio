@@ -147,14 +147,6 @@ private struct SocketChannelLifecycleManager {
                 promise?.succeed(())
             }
 
-        // origin: .activated
-        case (.preActivation, .finishActivation):
-            self.currentState = .fullyActivated
-            return { promise, pipeline in
-                promise?.succeed(())
-                pipeline.syncOperations.fireChannelActive()
-            }
-
         // origin: .preRegistered || .fullyRegistered
         case (.preRegistered, .close), (.fullyRegistered, .close):
             self.currentState = .closed
@@ -163,7 +155,14 @@ private struct SocketChannelLifecycleManager {
                 pipeline.syncOperations.fireChannelUnregistered()
             }
 
-        // origin: .activated
+        // origin: .preActivation
+        case (.preActivation, .finishActivation):
+            self.currentState = .fullyActivated
+            return { promise, pipeline in
+                promise?.succeed(())
+                pipeline.syncOperations.fireChannelActive()
+            }
+
         case (.preActivation, .close):
             self.currentState = .closed
             return { promise, pipeline in
@@ -177,7 +176,7 @@ private struct SocketChannelLifecycleManager {
                 promise?.succeed(())
             }
 
-        // origin: .activatedAndSignaled
+        // origin: .fullyActivated
         case (.fullyActivated, .close):
             self.currentState = .closed
             return { promise, pipeline in
