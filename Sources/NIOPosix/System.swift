@@ -196,7 +196,14 @@ func isUnacceptableErrno(_ code: CInt) -> Bool {
     // is valid but the accepted one is not. The right solution here is to perform a check for
     // SO_ISDEFUNCT when we see this happen, but we haven't yet invested the time to do that.
     // In the meantime, we just tolerate EBADF on iOS.
-    #if canImport(Darwin) && !os(macOS)
+    //
+    // NOTE: We now also tolerate EBADF on macOS because vsock (virtual sockets) used by
+    // Apple's Containerization framework can experience similar file descriptor invalidation
+    // issues. The vsock hypervisor layer may close descriptors in ways that cause EBADF
+    // during normal operation.
+    // See: https://github.com/apple/swift-nio/issues/3500
+    //      https://github.com/apple/containerization/issues/503
+    #if canImport(Darwin)
     switch code {
     case EFAULT:
         return true
@@ -227,7 +234,9 @@ public func isUnacceptableErrnoOnClose(_ code: CInt) -> Bool {
 @inlinable
 internal func isUnacceptableErrnoForbiddingEINVAL(_ code: CInt) -> Bool {
     // We treat read() and pread() differently since we also want to catch EINVAL.
-    #if canImport(Darwin) && !os(macOS)
+    // NOTE: We tolerate EBADF on all Darwin platforms (not just iOS) because vsock
+    // can cause file descriptor invalidation on macOS as well.
+    #if canImport(Darwin)
     switch code {
     case EFAULT, EINVAL:
         return true
