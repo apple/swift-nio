@@ -223,12 +223,26 @@ func isUnacceptableErrno(_ code: CInt) -> Bool {
 @inlinable
 public func isUnacceptableErrnoOnClose(_ code: CInt) -> Bool {
     // We treat close() differently to all other FDs: we still want to catch EBADF here.
+    // NOTE: On Darwin, we tolerate EBADF because vsock (virtual sockets) used by
+    // Apple's Containerization framework can have file descriptors invalidated by
+    // the hypervisor layer during normal operation, causing EBADF on close.
+    // See: https://github.com/apple/swift-nio/issues/3500
+    //      https://github.com/apple/containerization/issues/503
+    #if canImport(Darwin)
+    switch code {
+    case EFAULT:
+        return true
+    default:
+        return false
+    }
+    #else
     switch code {
     case EFAULT, EBADF:
         return true
     default:
         return false
     }
+    #endif
 }
 
 @inlinable
