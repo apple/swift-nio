@@ -13,10 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 import NIOConcurrencyHelpers
+@_spi(CustomByteBufferAllocator) @testable import NIOCore
 import NIOEmbedded
 import XCTest
 
-@testable import NIOCore
 @testable import NIOPosix
 
 private let testDecoderIsNotQuadratic_mallocs = NIOLockedValueBox(0)
@@ -32,10 +32,11 @@ private func testDecoderIsNotQuadratic_mallocHook(_ size: Int) -> UnsafeMutableR
 
 private func testDecoderIsNotQuadratic_reallocHook(
     _ ptr: UnsafeMutableRawPointer?,
-    _ count: Int
+    _ oldSize: Int,
+    _ newSize: Int
 ) -> UnsafeMutableRawPointer? {
     testDecoderIsNotQuadratic_reallocs.withLockedValue { $0 += 1 }
-    return realloc(ptr, count)
+    return realloc(ptr, newSize)
 }
 
 private func testDecoderIsNotQuadratic_memcpyHook(_ dst: UnsafeMutableRawPointer, _ src: UnsafeRawPointer, _ count: Int)
@@ -194,10 +195,10 @@ final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(ForeverDecoder())))
 
         let dummyAllocator = ByteBufferAllocator(
-            hookedMalloc: testDecoderIsNotQuadratic_mallocHook,
-            hookedRealloc: testDecoderIsNotQuadratic_reallocHook,
-            hookedFree: testDecoderIsNotQuadratic_freeHook,
-            hookedMemcpy: testDecoderIsNotQuadratic_memcpyHook
+            allocate: testDecoderIsNotQuadratic_mallocHook,
+            reallocate: testDecoderIsNotQuadratic_reallocHook,
+            deallocate: testDecoderIsNotQuadratic_freeHook,
+            copy: testDecoderIsNotQuadratic_memcpyHook
         )
         channel.allocator = dummyAllocator
         var inputBuffer = dummyAllocator.buffer(capacity: 8)
