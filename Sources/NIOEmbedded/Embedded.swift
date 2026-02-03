@@ -456,9 +456,19 @@ class EmbeddedChannelCore: ChannelCore {
         }
     }
 
+    var allowOptionsWhenClosed: Bool {
+        get {
+            self._allowOptionsWhenClosed.load(ordering: .sequentiallyConsistent)
+        }
+        set {
+            self._allowOptionsWhenClosed.store(newValue, ordering: .sequentiallyConsistent)
+        }
+    }
+
     private let _isOpen = ManagedAtomic(true)
     private let _isActive = ManagedAtomic(false)
     private let _allowRemoteHalfClosure = ManagedAtomic(false)
+    private let _allowOptionsWhenClosed = ManagedAtomic(true)
 
     let eventLoop: EventLoop
     let closePromise: EventLoopPromise<Void>
@@ -825,6 +835,9 @@ public final class EmbeddedChannel: Channel {
     /// - Note: An `EmbeddedChannel` starts _inactive_ and can be activated, for example by calling `connect`.
     public var isActive: Bool { channelcore.isActive }
 
+    @usableFromInline
+    internal var isOpen: Bool { channelcore.isOpen }
+
     /// - see: `ChannelOptions.Types.AllowRemoteHalfClosureOption`
     public var allowRemoteHalfClosure: Bool {
         get {
@@ -834,6 +847,17 @@ public final class EmbeddedChannel: Channel {
         set {
             self.embeddedEventLoop.checkCorrectThread()
             channelcore.allowRemoteHalfClosure = newValue
+        }
+    }
+
+    public var allowOptionsWhenClosed: Bool {
+        get {
+            self.embeddedEventLoop.checkCorrectThread()
+            return channelcore.allowOptionsWhenClosed
+        }
+        set {
+            self.embeddedEventLoop.checkCorrectThread()
+            channelcore.allowOptionsWhenClosed = newValue
         }
     }
 
@@ -1089,13 +1113,16 @@ public final class EmbeddedChannel: Channel {
     @inlinable
     public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
         self.embeddedEventLoop.checkCorrectThread()
-        self.setOptionSync(option, value: value)
-        return self.eventLoop.makeSucceededVoidFuture()
+        return self.eventLoop.makeCompletedFuture { try self.setOptionSync(option, value: value) }
     }
 
     @inlinable
-    internal func setOptionSync<Option: ChannelOption>(_ option: Option, value: Option.Value) {
+    internal func setOptionSync<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
         self.embeddedEventLoop.checkCorrectThread()
+
+        guard self.isOpen || self.allowOptionsWhenClosed else {
+            throw ChannelError.alreadyClosed
+        }
 
         self.addOption(option, value: value)
 
@@ -1109,12 +1136,17 @@ public final class EmbeddedChannel: Channel {
     @inlinable
     public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
         self.embeddedEventLoop.checkCorrectThread()
-        return self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
+        return self.eventLoop.makeCompletedFuture { try self.getOptionSync(option) }
     }
 
     @inlinable
-    internal func getOptionSync<Option: ChannelOption>(_ option: Option) -> Option.Value {
+    internal func getOptionSync<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
         self.embeddedEventLoop.checkCorrectThread()
+
+        guard self.isOpen || self.allowOptionsWhenClosed else {
+            throw ChannelError.alreadyClosed
+        }
+
         if option is ChannelOptions.Types.AutoReadOption {
             return true as! Option.Value
         }
@@ -1231,12 +1263,12 @@ extension EmbeddedChannel {
 
         @inlinable
         public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
-            self.channel.setOptionSync(option, value: value)
+            try self.channel.setOptionSync(option, value: value)
         }
 
         @inlinable
         public func getOption<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
-            self.channel.getOptionSync(option)
+            try self.channel.getOptionSync(option)
         }
     }
 
