@@ -69,62 +69,117 @@ extension Selector: _SelectorBackendProtocol {
     func initialiseState0() throws {
         self.pollFDs.reserveCapacity(16)
         self.deregisteredFDs.reserveCapacity(16)
-        
-        // Create a loopback socket pair for wakeup signaling.
-        // Since Windows doesn't support socketpair(), we create a pair of connected
-        // loopback UDP sockets to wake up the event loop.
+
+        // Create a UNIX domain socket pair for wakeup signaling.
+        // Since Windows doesn't support socketpair(), we emulate it with
+        // listen/connect/accept on a temporary UNIX domain socket path.
         let (readSocket, writeSocket) = try Self.createWakeupSocketPair()
         self.wakeupReadSocket = readSocket
         self.wakeupWriteSocket = writeSocket
-        
+
         // Add the read end to pollFDs so WSAPoll will wake up when data is written to the write end
         let wakeupPollFD = pollfd(fd: UInt64(readSocket), events: Int16(WinSDK.POLLRDNORM), revents: 0)
         self.pollFDs.append(wakeupPollFD)
         self.deregisteredFDs.append(false)
-        
+
         self.lifecycleState = .open
     }
-    
-    /// Creates a pair of connected loopback UDP sockets for wakeup signaling.
+
+    /// Creates a pair of connected UNIX domain sockets for wakeup signaling.
+    /// Since Windows doesn't support socketpair(), we emulate it with listen/connect/accept.
     /// Returns (readSocket, writeSocket) tuple.
     private static func createWakeupSocketPair() throws -> (NIOBSDSocket.Handle, NIOBSDSocket.Handle) {
-        // Create a UDP socket to receive wakeup signals
-        let readSocket = try NIOBSDSocket.socket(domain: .inet, type: .datagram, protocolSubtype: .default)
-        
+        // Get a unique path for the UNIX domain socket
+        let socketPath = try Self.generateUniqueSocketPath()
+
+        // Create the listener socket
+        let listenerSocket = try NIOBSDSocket.socket(domain: .unix, type: .stream, protocolSubtype: .default)
+
         do {
-            // Bind to loopback on an ephemeral port
-            var addr = sockaddr_in()
-            addr.sin_family = ADDRESS_FAMILY(AF_INET)
-            addr.sin_addr.S_un.S_addr = WinSDK.htonl(UInt32(bitPattern: INADDR_LOOPBACK))
-            addr.sin_port = 0  // Let the system assign a port
-            
+            // Set up the sockaddr_un structure
+            var addr = sockaddr_un()
+            addr.sun_family = ADDRESS_FAMILY(AF_UNIX)
+
+            // Copy the path into sun_path
+            let pathBytes = socketPath.utf8CString
+            precondition(pathBytes.count <= MemoryLayout.size(ofValue: addr.sun_path), "Socket path too long")
+            withUnsafeMutableBytes(of: &addr.sun_path) { destPtr in
+                pathBytes.withUnsafeBufferPointer { srcPtr in
+                    destPtr.copyMemory(from: UnsafeRawBufferPointer(srcPtr))
+                }
+            }
+
+            // Bind the listener socket
             try withUnsafeBytes(of: &addr) { addrPtr in
                 let socketPointer = addrPtr.baseAddress!.assumingMemoryBound(to: sockaddr.self)
-                try NIOBSDSocket.bind(socket: readSocket, address: socketPointer, address_len: socklen_t(MemoryLayout<sockaddr_in>.size))
+                try NIOBSDSocket.bind(socket: listenerSocket, address: socketPointer, address_len: socklen_t(MemoryLayout<sockaddr_un>.size))
             }
-            
-            // Get the assigned port
-            var boundAddr = sockaddr()
-            var size = Int32(MemoryLayout<sockaddr>.size)
-            try NIOBSDSocket.getsockname(socket: readSocket, address: &boundAddr, address_len: &size)
-            
-            // Create the write socket
-            let writeSocket = try NIOBSDSocket.socket(domain: .inet, type: .datagram, protocolSubtype: .default)
-            
+
+            // Listen for connections (backlog of 1 is enough)
+            if WinSDK.listen(listenerSocket, 1) == SOCKET_ERROR {
+                throw IOError(winsock: WSAGetLastError(), reason: "listen")
+            }
+
+            // Create the client (write) socket and connect
+            let writeSocket = try NIOBSDSocket.socket(domain: .unix, type: .stream, protocolSubtype: .default)
+
             do {
-                // Connect the write socket to the read socket's address
-                guard try NIOBSDSocket.connect(socket: writeSocket, address: &boundAddr, address_len: size) else {
-                    throw IOError(winsock: WSAGetLastError(), reason: "connect")
+                // Connect to the listener
+                try withUnsafeMutableBytes(of: &addr) { addrPtr in
+                    let sockaddrPtr = addrPtr.baseAddress!.assumingMemoryBound(to: sockaddr.self)
+                    guard try NIOBSDSocket.connect(socket: writeSocket, address: sockaddrPtr, address_len: socklen_t(MemoryLayout<sockaddr_un>.size)) else {
+                        throw IOError(winsock: WSAGetLastError(), reason: "connect")
+                    }
                 }
+
+                // Accept the connection to get the read socket
+                let readSocket = WinSDK.accept(listenerSocket, nil, nil)
+                if readSocket == INVALID_SOCKET {
+                    throw IOError(winsock: WSAGetLastError(), reason: "accept")
+                }
+
+                // Close the listener socket - we don't need it anymore
+                _ = try? NIOBSDSocket.close(socket: listenerSocket)
+
+                // Delete the socket file - it's no longer needed after the connection is established
+                _ = socketPath.withCString { DeleteFileA($0) }
+
                 return (readSocket, writeSocket)
             } catch {
                 _ = try? NIOBSDSocket.close(socket: writeSocket)
+                _ = try? NIOBSDSocket.close(socket: listenerSocket)
+                _ = socketPath.withCString { DeleteFileA($0) }
                 throw error
             }
         } catch {
-            _ = try? NIOBSDSocket.close(socket: readSocket)
+            _ = try? NIOBSDSocket.close(socket: listenerSocket)
+            _ = socketPath.withCString { DeleteFileA($0) }
             throw error
         }
+    }
+
+    /// Generates a unique socket path in the Windows temp directory.
+    private static func generateUniqueSocketPath() throws -> String {
+        // Get the temp directory path
+        var tempPathBuffer = [CChar](repeating: 0, count: Int(MAX_PATH) + 1)
+        let tempPathLen = GetTempPathA(DWORD(tempPathBuffer.count), &tempPathBuffer)
+        guard tempPathLen > 0 && tempPathLen < MAX_PATH else {
+            throw IOError(errnoCode: ENOENT, reason: "GetTempPathA failed")
+        }
+        // Convert the C string to Swift String, truncating at the null terminator
+        let tempDir = tempPathBuffer.withUnsafeBufferPointer { buffer in
+            let utf8Bytes = buffer.prefix(Int(tempPathLen)).map { UInt8(bitPattern: $0) }
+            return String(decoding: utf8Bytes, as: UTF8.self)
+        }
+
+        // Generate a unique identifier using process ID, thread ID, and tick count
+        // This combination ensures uniqueness within a machine
+        let processId = GetCurrentProcessId()
+        let threadId = GetCurrentThreadId()
+        let tickCount = GetTickCount64()
+        let uniqueId = "\(processId)-\(threadId)-\(tickCount)"
+
+        return "\(tempDir)nio-wakeup-\(uniqueId).sock"
     }
 
     func deinitAssertions0() {
