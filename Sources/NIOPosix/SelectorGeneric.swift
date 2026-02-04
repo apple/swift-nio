@@ -215,10 +215,14 @@ internal class Selector<R: Registration> {
     #elseif os(Windows)
     @usableFromInline
     typealias EventType = WinSDK.pollfd
+    /// Array of poll file descriptors monitored by WSAPoll. The first entry is always the wakeup socket.
     @usableFromInline
     var pollFDs = [pollfd]()
+    /// Tracks indexes of file descriptors pending removal from `pollFDs`. We defer removal until after
+    /// processing all events in `whenReady0` to avoid invalidating indexes during iteration. Stored as
+    /// indexes rather than a parallel boolean array for O(1) lookup during cleanup.
     @usableFromInline
-    var deregisteredFDs = [Bool]()
+    var deregisteredFDs = Set<Int>()
     /// The read end of the wakeup socket pair. This is monitored in WSAPoll to allow waking up the event loop.
     @usableFromInline
     var wakeupReadSocket: NIOBSDSocket.Handle = NIOBSDSocket.invalidHandle

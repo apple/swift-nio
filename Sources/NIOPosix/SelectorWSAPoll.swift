@@ -80,7 +80,6 @@ extension Selector: _SelectorBackendProtocol {
         // Add the read end to pollFDs so WSAPoll will wake up when data is written to the write end
         let wakeupPollFD = pollfd(fd: UInt64(readSocket), events: Int16(WinSDK.POLLRDNORM), revents: 0)
         self.pollFDs.append(wakeupPollFD)
-        self.deregisteredFDs.append(false)
 
         self.lifecycleState = .open
     }
@@ -254,18 +253,14 @@ extension Selector: _SelectorBackendProtocol {
                 try body((SelectorEvent(io: selectorEvent, registration: registration)))
             }
 
-            // now clean up any deregistered fds
-            // In reverse order so we don't have to copy elements out of the array
-            // If we do in in normal order, we'll have to shift all elements after the removed one
-            for i in self.deregisteredFDs.indices.reversed() {
-                if self.deregisteredFDs[i] {
-                    // remove this one
-                    let fd = self.pollFDs[i].fd
-                    self.pollFDs.remove(at: i)
-                    self.deregisteredFDs.remove(at: i)
-                    self.registrations.removeValue(forKey: Int(fd))
-                }
+            // Clean up any deregistered fds. Process in descending order so that removing
+            // elements doesn't invalidate the indexes of elements we still need to remove.
+            for i in self.deregisteredFDs.sorted(by: >) {
+                let fd = self.pollFDs[i].fd
+                self.pollFDs.remove(at: i)
+                self.registrations.removeValue(forKey: Int(fd))
             }
+            self.deregisteredFDs.removeAll(keepingCapacity: true)
         } else if result == 0 {
             // nothing has happened
         } else if result == WinSDK.SOCKET_ERROR {
@@ -283,7 +278,6 @@ extension Selector: _SelectorBackendProtocol {
         //                 that will allow O(1) access here.
         let poll = pollfd(fd: UInt64(fileDescriptor), events: interested.wsaPollEvent, revents: 0)
         self.pollFDs.append(poll)
-        self.deregisteredFDs.append(false)
     }
 
     func reregister0(
@@ -305,7 +299,7 @@ extension Selector: _SelectorBackendProtocol {
         registrationID: SelectorRegistrationID
     ) throws {
         if let index = self.pollFDs.firstIndex(where: { $0.fd == UInt64(fileDescriptor) }) {
-            self.deregisteredFDs[index] = true
+            self.deregisteredFDs.insert(index)
         }
     }
 
