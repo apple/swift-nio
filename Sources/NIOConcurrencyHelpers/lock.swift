@@ -55,20 +55,23 @@ public final class Lock {
     public init() {
         #if os(Windows)
         InitializeSRWLock(self.mutex)
-        #elseif os(FreeBSD) || os(OpenBSD)
+        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
+        #if os(FreeBSD) || os(OpenBSD)
         var attr = pthread_mutexattr_t(bitPattern: 0)
+        #else
+        var attr = pthread_mutexattr_t()
+        #endif
         var err = pthread_mutexattr_init(&attr)
         precondition(err == 0, "\(#function) failed in pthread_mutexattr_init with error \(err)")
-        err = pthread_mutex_init(self.mutex, &attr)
-        precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
-        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
-        var attr = pthread_mutexattr_t()
-        pthread_mutexattr_init(&attr)
         debugOnly {
+            #if os(FreeBSD) || os(OpenBSD)
+            pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK.rawValue))
+            #else
             pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
+            #endif
         }
 
-        let err = pthread_mutex_init(self.mutex, &attr)
+        err = pthread_mutex_init(self.mutex, &attr)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         // `pthread_mutexattr_t` only lives during init; destroy here instead of deinit.
         let attrDestroyErr = pthread_mutexattr_destroy(&attr)
