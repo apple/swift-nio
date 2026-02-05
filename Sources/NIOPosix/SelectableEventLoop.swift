@@ -137,7 +137,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     // This may only be read/written while holding the _tasksLock.
     internal var _pendingTaskPop = false
     @usableFromInline
-    internal var scheduledTaskCounter = ManagedAtomic<UInt64>(0)
+    internal let scheduledTaskCounter = ManagedAtomic<UInt64>(0)
     @usableFromInline
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>()
     @usableFromInline
