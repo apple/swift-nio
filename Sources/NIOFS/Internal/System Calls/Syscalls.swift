@@ -149,6 +149,20 @@ internal func system_symlink(
     return symlink(destination, source)
 }
 
+/// symlinkat(2): Make symbolic link to a file relative to directory file descriptor
+internal func system_symlinkat(
+    _ destination: UnsafePointer<CInterop.PlatformChar>,
+    _ dirfd: FileDescriptor.RawValue,
+    _ source: UnsafePointer<CInterop.PlatformChar>
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(destination, dirfd, source)
+    }
+    #endif
+    return symlinkat(destination, dirfd, source)
+}
+
 /// readlink(2): Read value of a symolic link
 internal func system_readlink(
     _ path: UnsafePointer<CInterop.PlatformChar>,
@@ -271,6 +285,21 @@ internal func system_renamex_np(
     #endif
     return renamex_np(old, new, flags)
 }
+
+internal func system_renameatx_np(
+    _ oldFD: FileDescriptor.RawValue,
+    _ old: UnsafePointer<CInterop.PlatformChar>,
+    _ newFD: FileDescriptor.RawValue,
+    _ new: UnsafePointer<CInterop.PlatformChar>,
+    _ flags: CUnsignedInt
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(oldFD, old, newFD, new, flags)
+    }
+    #endif
+    return renameatx_np(oldFD, old, newFD, new, flags)
+}
 #endif
 
 #if canImport(Glibc) || canImport(Musl) || canImport(Android)
@@ -331,6 +360,20 @@ internal func system_unlink(
     }
     #endif
     return unlink(path)
+}
+
+/// unlinkat(2): Remove a directory entry relative to a directory file descriptor.
+internal func system_unlinkat(
+    _ fd: FileDescriptor.RawValue,
+    _ path: UnsafePointer<CInterop.PlatformChar>,
+    _ flags: CInt
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(fd, path, flags)
+    }
+    #endif
+    return unlinkat(fd, path, flags)
 }
 
 #if canImport(Glibc) || canImport(Musl) || canImport(Android)
