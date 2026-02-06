@@ -32,7 +32,7 @@ Within this repository we have a number of products that provide different funct
 - `NIOHTTP1`. This provides a low-level HTTP/1.1 protocol implementation.
 - `NIOWebSocket`. This provides a low-level WebSocket protocol implementation.
 - `NIOTestUtils`. This provides a number of helpers for testing projects that use SwiftNIO.
-- `NIOFileSystem`. This provides `async` APIs for interacting with the file system.
+- `_NIOFileSystem`. This provides `async` APIs for interacting with the file system.
 
 ### Protocol Implementations
 
@@ -103,7 +103,7 @@ SwiftNIO aims to support all of the platforms where Swift is supported. Currentl
 * Ubuntu 18.04+
 * macOS 10.9+, iOS 7+; (macOS 10.14+, iOS 12+, tvOS 12+ or watchOS 6+ with [swift-nio-transport-services][repo-nio-transport-services])
 
-SwiftNIO has experimental support on OpenBSD for all SwiftNIO libraries _except_ for NIOFileSystem, which is not yet supported. You can use all other SwiftNIO libraries on OpenBSD by adding them as dependencies in `Package.swift`.
+SwiftNIO has experimental support on OpenBSD for all SwiftNIO libraries _except_ for `_NIOFileSystem`, which is not yet supported. You can use all other SwiftNIO libraries on OpenBSD by adding them as dependencies in `Package.swift`.
 
 ### Compatibility
 
