@@ -37,6 +37,7 @@ private final class StringEnvelopeForwardingHandler: ChannelInboundHandler, Send
 // MARK: - Benchmarks
 
 let benchmarks = {
+asdasd
     #if LOCAL_TESTING
     let defaultMetrics: [BenchmarkMetric] = [
         .mallocCountTotal,
