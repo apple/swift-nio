@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2020-2024 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2020-2026 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -17,18 +17,21 @@ import Dispatch
 import NIOConcurrencyHelpers
 import NIOCore
 import NIOEmbedded
-import XCTest
+import Testing
 
 @testable import NIOPosix
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-class NIOThreadPoolTest: XCTestCase {
+@Suite("NIOThreadPoolTest", .timeLimit(.minutes(1)))
+class NIOThreadPoolTest {
+    @Test
     func testThreadNamesAreSetUp() {
         let numberOfThreads = 11
         let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
         pool.start()
         defer {
-            XCTAssertNoThrow(try pool.syncShutdownGracefully())
+            #expect(throws: Never.self) {
+                try pool.syncShutdownGracefully()
+            }
         }
 
         let allThreadNames = NIOLockedValueBox<Set<String>>([])
@@ -40,7 +43,7 @@ class NIOThreadPoolTest: XCTestCase {
             pool.submit { s in
                 switch s {
                 case .cancelled:
-                    XCTFail("work item \(i) cancelled")
+                    Issue.record("work item \(i) cancelled")
                 case .active:
                     allThreadNames.withLockedValue {
                         $0.formUnion([NIOThread.currentThreadName ?? "n/a"])
@@ -62,54 +65,61 @@ class NIOThreadPoolTest: XCTestCase {
 
         let localAllThreads = allThreadNames.withLockedValue { $0 }
         for threadNumber in (0..<numberOfThreads) {
-            XCTAssert(localAllThreads.contains("TP-#\(threadNumber)"), "\(localAllThreads)")
+            #expect(localAllThreads.contains("TP-#\(threadNumber)"), Comment(rawValue: "\(localAllThreads)"))
         }
     }
 
-    func testThreadPoolStartsMultipleTimes() throws {
+    @Test
+    func testThreadPoolStartsMultipleTimes() async throws {
         let numberOfThreads = 1
         let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
         pool.start()
-        defer {
-            XCTAssertNoThrow(try pool.syncShutdownGracefully())
-        }
 
-        let completionGroup = DispatchGroup()
+        await withTaskGroup(of: Void.self) { group in
+            // The lock here is arguably redundant with the dispatchgroup, but let's make
+            // this test thread-safe even if something unexpected happens
+            let threadOne: NIOLockedValueBox<UInt?> = NIOLockedValueBox(UInt?.none)
+            let threadTwo: NIOLockedValueBox<UInt?> = NIOLockedValueBox(UInt?.none)
 
-        // The lock here is arguably redundant with the dispatchgroup, but let's make
-        // this test thread-safe even if I screw up.
-        let threadOne: NIOLockedValueBox<UInt?> = NIOLockedValueBox(UInt?.none)
-        let threadTwo: NIOLockedValueBox<UInt?> = NIOLockedValueBox(UInt?.none)
-
-        completionGroup.enter()
-        pool.submit { s in
-            precondition(s == .active)
-            threadOne.withLockedValue { threadOne in
-                XCTAssertNil(threadOne)
-                threadOne = NIOThread.currentThreadID
+            group.addTask {
+                await withCheckedContinuation { continuation in
+                    pool.submit { s in
+                        precondition(s == .active)
+                        threadOne.withLockedValue { threadOne in
+                            #expect(threadOne == nil)
+                            threadOne = NIOThread.currentThreadID
+                        }
+                        continuation.resume()
+                    }
+                }
             }
-            completionGroup.leave()
-        }
 
-        // Now start the thread pool again. This must not destroy existing threads, so our thread should be the same.
-        pool.start()
-        completionGroup.enter()
-        pool.submit { s in
-            precondition(s == .active)
-            threadTwo.withLockedValue { threadTwo in
-                XCTAssertNil(threadTwo)
-                threadTwo = NIOThread.currentThreadID
+            // Now start the thread pool again. This must not destroy existing threads, so our thread should be the same.
+            pool.start()
+            group.addTask {
+                await withCheckedContinuation { continuation in
+                    pool.submit { s in
+                        precondition(s == .active)
+                        threadTwo.withLockedValue { threadTwo in
+                            #expect(threadTwo == nil)
+                            threadTwo = NIOThread.currentThreadID
+                        }
+                        continuation.resume()
+                    }
+                }
             }
-            completionGroup.leave()
+
+            await group.waitForAll()
+
+            #expect(threadOne.withLockedValue { $0 } != nil)
+            #expect(threadTwo.withLockedValue { $0 } != nil)
+            #expect(threadOne.withLockedValue { $0 } == threadTwo.withLockedValue { $0 })
         }
 
-        completionGroup.wait()
-
-        XCTAssertNotNil(threadOne.withLockedValue { $0 })
-        XCTAssertNotNil(threadTwo.withLockedValue { $0 })
-        XCTAssert(threadOne.withLockedValue { $0 } == threadTwo.withLockedValue { $0 })
+        await #expect(throws: Never.self) { try await pool.shutdownGracefully() }
     }
 
+    @Test
     func testAsyncThreadPool() async throws {
         let numberOfThreads = 1
         let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
@@ -119,11 +129,12 @@ class NIOThreadPoolTest: XCTestCase {
             try await pool.runIfActive {
                 hitCount.store(true, ordering: .relaxed)
             }
-            XCTAssertEqual(hitCount.load(ordering: .relaxed), true)
+            #expect(hitCount.load(ordering: .relaxed) == true)
         } catch {}
         try await pool.shutdownGracefully()
     }
 
+    @Test
     func testAsyncThreadPoolErrorPropagation() async throws {
         struct ThreadPoolError: Error {}
         let numberOfThreads = 1
@@ -133,13 +144,14 @@ class NIOThreadPoolTest: XCTestCase {
             try await pool.runIfActive {
                 throw ThreadPoolError()
             }
-            XCTFail("Should not get here as closure sent to runIfActive threw an error")
+            Issue.record("Should not get here as closure sent to runIfActive threw an error")
         } catch {
-            XCTAssertNotNil(error as? ThreadPoolError, "Error thrown should be of type ThreadPoolError")
+            #expect(error as? ThreadPoolError != nil, "Error thrown should be of type ThreadPoolError")
         }
         try await pool.shutdownGracefully()
     }
 
+    @Test
     func testAsyncThreadPoolNotActiveError() async throws {
         struct ThreadPoolError: Error {}
         let numberOfThreads = 1
@@ -148,13 +160,17 @@ class NIOThreadPoolTest: XCTestCase {
             try await pool.runIfActive {
                 throw ThreadPoolError()
             }
-            XCTFail("Should not get here as thread pool isn't active")
+            Issue.record("Should not get here as thread pool isn't active")
         } catch {
-            XCTAssertNotNil(error as? CancellationError, "Error thrown should be of type CancellationError")
+            #expect(
+                error as? CancellationError != nil,
+                "Error thrown should be of type CancellationError"
+            )
         }
         try await pool.shutdownGracefully()
     }
 
+    @Test
     func testAsyncThreadPoolCancellation() async throws {
         let pool = NIOThreadPool(numberOfThreads: 1)
         pool.start()
@@ -163,21 +179,22 @@ class NIOThreadPoolTest: XCTestCase {
             group.cancelAll()
             group.addTask {
                 try await pool.runIfActive {
-                    XCTFail("Should be cancelled before executed")
+                    _ = Issue.record("Should be cancelled before executed")
                 }
             }
 
             do {
                 try await group.waitForAll()
-                XCTFail("Expected CancellationError to be thrown")
+                Issue.record("Expected CancellationError to be thrown")
             } catch {
-                XCTAssert(error is CancellationError)
+                #expect(error is CancellationError)
             }
         }
 
         try await pool.shutdownGracefully()
     }
 
+    @Test
     func testAsyncShutdownWorks() async throws {
         let threadPool = NIOThreadPool(numberOfThreads: 17)
         let eventLoop = NIOAsyncTestingEventLoop()
@@ -185,9 +202,12 @@ class NIOThreadPoolTest: XCTestCase {
         threadPool.start()
         try await threadPool.shutdownGracefully()
 
-        let future = threadPool.runIfActive(eventLoop: eventLoop) {
-            XCTFail("This shouldn't run because the pool is shutdown.")
+        let future: EventLoopFuture = threadPool.runIfActive(eventLoop: eventLoop) {
+            Issue.record("This shouldn't run because the pool is shutdown.")
         }
-        await XCTAssertThrowsError { try await future.get() }
+
+        await #expect(throws: (any Error).self) {
+            try await future.get()
+        }
     }
 }
