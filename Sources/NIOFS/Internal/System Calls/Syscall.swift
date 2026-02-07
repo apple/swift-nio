@@ -91,6 +91,29 @@ public enum Syscall: Sendable {
     }
 
     @_spi(Testing)
+    public static func rename(
+        from old: FilePath,
+        relativeTo oldFD: FileDescriptor,
+        to new: FilePath,
+        relativeTo newFD: FileDescriptor,
+        options: RenameOptions
+    ) -> Result<Void, Errno> {
+        nothingOrErrno(retryOnInterrupt: false) {
+            old.withPlatformString { oldPath in
+                new.withPlatformString { newPath in
+                    system_renameatx_np(
+                        oldFD.rawValue,
+                        oldPath,
+                        newFD.rawValue,
+                        newPath,
+                        options.rawValue
+                    )
+                }
+            }
+        }
+    }
+
+    @_spi(Testing)
     public struct RenameOptions: OptionSet, Sendable {
         public var rawValue: CUnsignedInt
 
@@ -220,6 +243,19 @@ public enum Syscall: Sendable {
     }
 
     @_spi(Testing)
+    public static func unlinkat(
+        path: FilePath,
+        relativeTo directoryDescriptor: FileDescriptor,
+        flags: CInt = 0
+    ) -> Result<Void, Errno> {
+        nothingOrErrno(retryOnInterrupt: false) {
+            path.withPlatformString { ptr in
+                system_unlinkat(directoryDescriptor.rawValue, ptr, flags)
+            }
+        }
+    }
+
+    @_spi(Testing)
     public static func symlink(
         to destination: FilePath,
         from source: FilePath
@@ -228,6 +264,21 @@ public enum Syscall: Sendable {
             source.withPlatformString { src in
                 destination.withPlatformString { dst in
                     system_symlink(dst, src)
+                }
+            }
+        }
+    }
+
+    @_spi(Testing)
+    public static func symlinkat(
+        to destination: FilePath,
+        in directoryDescriptor: FileDescriptor,
+        from source: FilePath
+    ) -> Result<Void, Errno> {
+        nothingOrErrno(retryOnInterrupt: false) {
+            source.withPlatformString { src in
+                destination.withPlatformString { dst in
+                    system_symlinkat(dst, directoryDescriptor.rawValue, src)
                 }
             }
         }
