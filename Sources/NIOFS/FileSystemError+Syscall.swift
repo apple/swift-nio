@@ -988,6 +988,17 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
+    public static func getpwuid_r(errno: Errno, location: SourceLocation) -> Self {
+        FileSystemError(
+            code: .unavailable,
+            message: "Can't get home directory for current user.",
+            systemCall: "getpwuid_r",
+            errno: errno,
+            location: location
+        )
+    }
+
+    @_spi(Testing)
     public static func fcopyfile(
         errno: Errno,
         from sourcePath: FilePath,

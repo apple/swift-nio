@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOCore
+
 /// Executes the closure and masks cancellation.
 @_spi(Testing)
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)

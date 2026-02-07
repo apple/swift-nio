@@ -523,3 +523,21 @@ internal func libc_fts_close(
 ) -> CInt {
     fts_close(fts)
 }
+
+#if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android)
+/// getuid(2): Get user identification
+internal func system_getuid() -> uid_t {
+    getuid()
+}
+
+/// getpwuid_r(3): Get password file entry
+internal func libc_getpwuid_r(
+    _ uid: uid_t,
+    _ pwd: UnsafeMutablePointer<passwd>,
+    _ buffer: UnsafeMutablePointer<CChar>,
+    _ bufferSize: Int,
+    _ result: UnsafeMutablePointer<UnsafeMutablePointer<passwd>?>
+) -> CInt {
+    getpwuid_r(uid, pwd, buffer, bufferSize, result)
+}
+#endif

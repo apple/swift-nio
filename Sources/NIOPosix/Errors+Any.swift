@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 // 'any Error' is unconditionally boxed, avoid allocating per use by statically boxing them.
@@ -35,3 +37,4 @@ extension EventLoopError {
     static let _shutdown: any Error = EventLoopError.shutdown
     static let _unsupportedOperation: any Error = EventLoopError.unsupportedOperation
 }
+#endif  // !os(WASI)

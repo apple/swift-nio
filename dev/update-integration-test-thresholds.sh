@@ -206,8 +206,8 @@ update_threshold_file() {
 
     # Compare old and new files (both sorted with jq) and only overwrite if there are substantive differences
     if [ -f "$threshold_file" ]; then
-        old_normalized=$("$JQ_BIN" -S . "$threshold_file" 2>/dev/null || echo "")
-        new_normalized=$(echo "$new_thresholds" | "$JQ_BIN" -S . 2>/dev/null || echo "")
+        old_normalized=$("$JQ_BIN" -S --indent 4 . "$threshold_file" 2>/dev/null || echo "")
+        new_normalized=$(echo "$new_thresholds" | "$JQ_BIN" -S --indent 4 . 2>/dev/null || echo "")
 
         if [ "$old_normalized" = "$new_normalized" ]; then
             log "No changes for $threshold_file_relative (skipping)"
@@ -215,7 +215,7 @@ update_threshold_file() {
         fi
     fi
 
-    echo "$new_thresholds" > "$threshold_file"
+    echo "$new_thresholds" | "$JQ_BIN" -S --indent 4 . > "$threshold_file"
     log "Updated $threshold_file_relative"
     updated_count=$((updated_count + 1))
 }

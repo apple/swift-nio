@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOConcurrencyHelpers
 
 #if os(Linux) || os(FreeBSD) || os(Android)
@@ -285,3 +287,4 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
 }
 
 extension ThreadSpecificVariable: @unchecked Sendable where Value: Sendable {}
+#endif  // !os(WASI)
