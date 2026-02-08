@@ -56,6 +56,9 @@ private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, size_t) -> 
 
 #if os(Android)
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>) -> CUnsignedInt = if_nametoindex
+#if compiler(>=6.3)
+@available(Android 24, *)
+#endif
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>) -> CInt = getifaddrs
 #elseif !os(WASI)
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
@@ -228,8 +231,12 @@ enum SystemCalls {
     }
 
     #if !os(Windows)
+    
     @inline(never)
     @usableFromInline
+#if compiler(>=6.3)
+    @available(Android 24, *)
+#endif
     internal static func getifaddrs(_ addrs: UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>) throws {
         _ = try syscall(blocking: false) {
             sysGetifaddrs(addrs)

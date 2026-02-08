@@ -53,7 +53,19 @@ let targetDevice: NIONetworkDevice? = {
     if let interfaceAddress = CommandLine.arguments.dropFirst().first,
         let targetAddress = try? SocketAddress(ipAddress: interfaceAddress, port: 0)
     {
-        for device in try! System.enumerateDevices() {
+        let devices: [NIONetworkDevice]
+
+#if compiler(>=6.3)
+        if #available(Android 24, *) {
+            devices = try! System.enumerateDevices()
+        } else {
+            fatalError("This demo only works on Android API 24+")
+        }
+#else
+        devices = try! System.enumerateDevices()
+#endif
+
+        for device in devices {
             if device.address == targetAddress {
                 return device
             }
