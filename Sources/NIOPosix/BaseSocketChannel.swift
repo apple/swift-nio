@@ -159,7 +159,7 @@ private struct SocketChannelLifecycleManager {
         case (.preActivation, .finishActivation):
             self.currentState = .fullyActivated
             return { promise, pipeline in
-                promise?.succeed(())
+                assert(promise == nil)
                 pipeline.syncOperations.fireChannelActive()
             }
 
@@ -192,7 +192,7 @@ private struct SocketChannelLifecycleManager {
 
         case (.fullyActivated, .finishActivation) where self.supportsReconnect:
             return { promise, pipeline in
-                promise?.succeed(())
+                assert(promise == nil)
             }
 
         // bad transitions
