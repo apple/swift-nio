@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 #if os(Windows)
 
 import WinSDK
@@ -124,3 +126,4 @@ enum ThreadOpsWindows: ThreadOps {
 }
 
 #endif
+#endif  // !os(WASI)

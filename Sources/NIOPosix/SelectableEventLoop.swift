@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import CNIOPosix
 import DequeModule
@@ -187,9 +189,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     private let promiseCreationStoreLock = NIOLock()
     private var _promiseCreationStore: [_NIOEventLoopFutureIdentifier: (file: StaticString, line: UInt)] = [:]
 
-    private let metricsDelegate: (any NIOEventLoopMetricsDelegate)?
-
-    private var lastTickEndTime: NIODeadline
+    private var metricsDelegateState: MetricsDelegateState?
 
     @usableFromInline
     internal func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
@@ -261,7 +261,9 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         canBeShutdownIndividually: Bool,
         metricsDelegate: NIOEventLoopMetricsDelegate?
     ) {
-        self.metricsDelegate = metricsDelegate
+        self.metricsDelegateState = metricsDelegate.map { delegate in
+            MetricsDelegateState(metricsDelegate: delegate, lastTickEndime: .now())
+        }
         self._uniqueID = uniqueID
         self._parentGroup = parentGroup
         self._selector = selector
@@ -270,7 +272,6 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         self.msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
         self.tasksCopy.reserveCapacity(Self.tasksCopyBatchSize)
         self.canBeShutdownIndividually = canBeShutdownIndividually
-        self.lastTickEndTime = .now()
         // note: We are creating a reference cycle here that we'll break when shutting the SelectableEventLoop down.
         // note: We have to create the promise and complete it because otherwise we'll hit a loop in `makeSucceededFuture`. This is
         //       fairly dumb, but it's the only option we have.
@@ -747,21 +748,35 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         return nextDeadline
     }
 
-    private func runLoop(selfIdentifier: ObjectIdentifier) -> NIODeadline? {
-        let tickStartTime: NIODeadline = .now()
-        let sleepTime: TimeAmount = tickStartTime - self.lastTickEndTime
+    private func runOneLoopTick(selfIdentifier: ObjectIdentifier) -> NIODeadline? {
+        let tickStartInfo:
+            (
+                metricsDelegate: any NIOEventLoopMetricsDelegate,
+                tickStartTime: NIODeadline,
+                sleepTime: TimeAmount
+            )? = self.metricsDelegateState.map { metricsDelegateState in
+                let tickStartTime = NIODeadline.now()  // Potentially expensive, only if delegate set.
+                return (
+                    metricsDelegate: metricsDelegateState.metricsDelegate,
+                    tickStartTime: tickStartTime,
+                    sleepTime: tickStartTime - metricsDelegateState.lastTickEndime
+                )
+            }
+
         var tasksProcessedInTick = 0
         defer {
-            let tickEndTime: NIODeadline = .now()
-            let tickInfo = NIOEventLoopTickInfo(
-                eventLoopID: selfIdentifier,
-                numberOfTasks: tasksProcessedInTick,
-                sleepTime: sleepTime,
-                startTime: tickStartTime,
-                endTime: tickEndTime
-            )
-            self.metricsDelegate?.processedTick(info: tickInfo)
-            self.lastTickEndTime = tickEndTime
+            if let tickStartInfo = tickStartInfo {
+                let tickEndTime = NIODeadline.now()  // Potentially expensive, only if delegate set.
+                let tickInfo = NIOEventLoopTickInfo(
+                    eventLoopID: selfIdentifier,
+                    numberOfTasks: tasksProcessedInTick,
+                    sleepTime: tickStartInfo.sleepTime,
+                    startTime: tickStartInfo.tickStartTime,
+                    endTime: tickEndTime
+                )
+                tickStartInfo.metricsDelegate.processedTick(info: tickInfo)
+                self.metricsDelegateState?.lastTickEndime = tickEndTime
+            }
         }
         while true {
             let nextReadyDeadline = self._tasksLock.withLock { () -> NIODeadline? in
@@ -905,7 +920,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
                     }
                 }
             }
-            nextReadyDeadline = runLoop(selfIdentifier: selfIdentifier)
+            nextReadyDeadline = self.runOneLoopTick(selfIdentifier: selfIdentifier)
         }
 
         // This EventLoop was closed so also close the underlying selector.
@@ -1034,6 +1049,11 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         self.assertInEventLoop()
         return self._parentGroup
     }
+}
+
+struct MetricsDelegateState {
+    var metricsDelegate: any NIOEventLoopMetricsDelegate
+    var lastTickEndime: NIODeadline
 }
 
 extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvertible {
@@ -1229,3 +1249,4 @@ struct SelectableEventLoopUniqueID: Sendable {
         c_nio_posix_set_el_id(0)
     }
 }
+#endif  // !os(WASI)

@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 #if os(Windows)
 import CNIOWindows
 import NIOConcurrencyHelpers
@@ -335,3 +337,4 @@ extension Selector: _SelectorBackendProtocol {
     }
 }
 #endif
+#endif  // !os(WASI)

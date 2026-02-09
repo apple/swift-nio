@@ -233,11 +233,26 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         withIntermediateDirectories createIntermediateDirectories: Bool,
         permissions: FilePermissions?
     ) async throws {
+        try await self.createDirectory(
+            at: path,
+            withIntermediateDirectories: createIntermediateDirectories,
+            permissions: permissions,
+            idempotent: true
+        )
+    }
+
+    private func createDirectory(
+        at path: FilePath,
+        withIntermediateDirectories createIntermediateDirectories: Bool,
+        permissions: FilePermissions?,
+        idempotent: Bool
+    ) async throws {
         try await self.threadPool.runIfActive {
             try self._createDirectory(
                 at: path,
                 withIntermediateDirectories: createIntermediateDirectories,
-                permissions: permissions ?? .defaultsForDirectory
+                permissions: permissions ?? .defaultsForDirectory,
+                idempotent: idempotent
             ).get()
         }
     }
@@ -592,7 +607,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// The destination of the symbolic link is not guaranteed to be a valid path, nor is it
     /// guaranteed to be an absolute path. If you need to open a file which is the destination of a
     /// symbolic link then the appropriate `open` function:
-    /// - ``openFile(forReadingAt:)-55z6f``
+    /// - ``openFile(forReadingAt:options:)
     /// - ``openFile(forWritingAt:options:)``
     /// - ``openFile(forReadingAndWritingAt:options:)``
     /// - ``openDirectory(atPath:options:)``
@@ -633,6 +648,35 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                 }.get()
             }
             return result
+        }
+    }
+
+    /// Returns the path of the current user's home directory.
+    ///
+    /// #### Implementation details
+    ///
+    /// This function first checks the `HOME` environment variable (and `USERPROFILE` on Windows).
+    /// If not set, on Darwin/Linux/Android it uses `getpwuid_r(3)` to query the password database.
+    ///
+    /// Note: `getpwuid_r` can potentially block on I/O (e.g., when using NIS or LDAP),
+    /// which is why this property is async when falling back to the password database.
+    ///
+    /// - Returns: The path to the current user's home directory.
+    public var homeDirectory: FilePath {
+        get async throws {
+            if let path = Libc.homeDirectoryFromEnvironment() {
+                return path
+            }
+
+            #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android)
+            return try await self.threadPool.runIfActive {
+                try Libc.homeDirectoryFromPasswd().mapError { errno in
+                    FileSystemError.getpwuid_r(errno: errno, location: .here())
+                }.get()
+            }
+            #else
+            throw FileSystemError.getpwuid_r(errno: .noSuchFileOrDirectory, location: .here())
+            #endif
         }
     }
 
@@ -809,7 +853,8 @@ extension FileSystem {
     private func _createDirectory(
         at fullPath: FilePath,
         withIntermediateDirectories createIntermediateDirectories: Bool,
-        permissions: FilePermissions
+        permissions: FilePermissions,
+        idempotent: Bool = true
     ) -> Result<Void, FileSystemError> {
         // We assume that we will be creating intermediate directories:
         // - Try creating the directory. If it fails with ENOENT (no such file or directory), then
@@ -840,16 +885,20 @@ extension FileSystem {
 
             case let .failure(errno):
                 if errno == .fileExists {
-                    switch self._info(forFileAt: path, infoAboutSymbolicLink: false) {
-                    case let .success(maybeInfo):
-                        if let info = maybeInfo, info.type == .directory {
-                            break loop
-                        } else {
-                            // A file exists at this path.
+                    if idempotent {
+                        switch self._info(forFileAt: path, infoAboutSymbolicLink: false) {
+                        case let .success(maybeInfo):
+                            if let info = maybeInfo, info.type == .directory {
+                                break loop
+                            } else {
+                                // A file exists at this path.
+                                return .failure(.mkdir(errno: errno, path: path, location: .here()))
+                            }
+                        case .failure:
+                            // Unable to determine what exists at this path.
                             return .failure(.mkdir(errno: errno, path: path, location: .here()))
                         }
-                    case .failure:
-                        // Unable to determine what exists at this path.
+                    } else {
                         return .failure(.mkdir(errno: errno, path: path, location: .here()))
                     }
                 }
@@ -944,7 +993,8 @@ extension FileSystem {
             try await self.createDirectory(
                 at: destinationPath,
                 withIntermediateDirectories: false,
-                permissions: info.permissions
+                permissions: info.permissions,
+                idempotent: false  // Fail if the destination dir already exists.
             )
 
             #if !os(Android)
@@ -1179,13 +1229,19 @@ extension FileSystem {
             }
 
         case .directory:
-            let addToQueue = try await self.prepareDirectoryForRecusiveCopy(
-                from: from.path,
-                to: to,
-                shouldProceedAfterError: shouldProceedAfterError,
-                shouldCopyItem: shouldCopyItem
-            )
-            yield(addToQueue)
+            do {
+                let addToQueue = try await self.prepareDirectoryForRecusiveCopy(
+                    from: from.path,
+                    to: to,
+                    shouldProceedAfterError: shouldProceedAfterError,
+                    shouldCopyItem: shouldCopyItem
+                )
+                yield(addToQueue)
+            } catch {
+                // The caller expects an end-of-dir regardless of whether there was an error or not.
+                yield([.endOfDir])
+                try await shouldProceedAfterError(from, error)
+            }
 
         default:
             let error = FileSystemError(

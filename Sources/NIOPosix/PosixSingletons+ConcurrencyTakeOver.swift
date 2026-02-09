@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import NIOCore
 
@@ -44,7 +46,7 @@ extension NIOSingletons {
         return false
         #else
         // Guard between the minimum and maximum supported version for the hook
-        #if compiler(<6.3)
+        #if compiler(<6.4)
         guard #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) else {
             return false
         }
@@ -139,3 +141,4 @@ where
 {
     typealias AtomicRep = Wrapped.AtomicOptionalRepresentation
 }
+#endif  // !os(WASI)

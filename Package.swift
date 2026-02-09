@@ -23,7 +23,13 @@ let swiftSystem: PackageDescription.Target.Dependency = .product(name: "SystemPa
 // compatibility with previous NIO versions.
 let historicalNIOPosixDependencyRequired: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android]
 
-let swiftSettings: [SwiftSetting] = []
+let swiftSettings: [SwiftSetting] = [
+    // The Language Steering Group has promised that they won't break the APIs that currently exist under
+    // this "experimental" feature flag without two subsequent releases. We assume they will respect that
+    // promise, so we enable this here. For more, see:
+    // https://forums.swift.org/t/experimental-support-for-lifetime-dependencies-in-swift-6-2-and-beyond/78638
+    .enableExperimentalFeature("Lifetimes")
+]
 
 // This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and
 // Foundation will be linked. This is, however, strictly better than unconditionally adding the
@@ -59,6 +65,7 @@ let package = Package(
             dependencies: [
                 "NIOConcurrencyHelpers",
                 "_NIOBase64",
+                "CNIOOpenBSD",
                 "CNIODarwin",
                 "CNIOLinux",
                 "CNIOWindows",
@@ -91,6 +98,7 @@ let package = Package(
         .target(
             name: "NIOPosix",
             dependencies: [
+                "CNIOOpenBSD",
                 "CNIOLinux",
                 "CNIODarwin",
                 "CNIOWindows",
@@ -145,6 +153,10 @@ let package = Package(
         ),
         .target(
             name: "CNIOSHA1",
+            dependencies: []
+        ),
+        .target(
+            name: "CNIOOpenBSD",
             dependencies: []
         ),
         .target(
@@ -482,6 +494,7 @@ let package = Package(
                 "NIOTestUtils",
                 "NIOConcurrencyHelpers",
                 "NIOEmbedded",
+                "CNIOOpenBSD",
                 "CNIOLinux",
                 "CNIODarwin",
                 "NIOTLS",

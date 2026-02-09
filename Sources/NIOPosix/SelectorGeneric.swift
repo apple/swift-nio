@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOConcurrencyHelpers
 import NIOCore
 
@@ -185,7 +187,7 @@ internal class Selector<R: Registration> {
     var selectorFD: CInt = -1  // -1 == we're closed
 
     // Here we add the stored properties that are used by the specific backends
-    #if canImport(Darwin)
+    #if canImport(Darwin) || os(OpenBSD)
     @usableFromInline
     typealias EventType = kevent
     #elseif os(Linux) || os(Android)
@@ -545,3 +547,4 @@ enum SelectorStrategy: Sendable {
         hasher.combine(self._rawValue)
     }
 }
+#endif  // !os(WASI)

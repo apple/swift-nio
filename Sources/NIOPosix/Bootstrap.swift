@@ -11,7 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import CNIOLinux
+import CNIOOpenBSD
 import NIOCore
 
 #if os(Windows)
@@ -459,7 +463,7 @@ public final class ServerBootstrap {
         }
 
         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-            let accepted = Self.unwrapInboundIn(data)
+            let accepted = AcceptHandler.unwrapInboundIn(data)
             let ctxEventLoop = context.eventLoop
             let childEventLoop = accepted.eventLoop
             let childChannelInit = self.childChannelInit ?? { (_: Channel) in childEventLoop.makeSucceededFuture(()) }
@@ -484,7 +488,7 @@ public final class ServerBootstrap {
                     guard context.channel.isActive else {
                         return ctxEventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
                     }
-                    context.fireChannelRead(Self.wrapInboundOut(accepted))
+                    context.fireChannelRead(AcceptHandler.wrapInboundOut(accepted))
                     return context.eventLoop.makeSucceededFuture(())
                 }.whenFailure { error in
                     self.closeAndFire(context: context, accepted: accepted, err: error)
@@ -2700,3 +2704,4 @@ private struct DefaultNIOPipeBootstrapHooks: NIOPipeBootstrapHooks {
         try PipeChannel(eventLoop: eventLoop, input: input, output: output)
     }
 }
+#endif  // !os(WASI)

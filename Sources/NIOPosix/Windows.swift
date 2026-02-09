@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 #if os(Windows)
 import NIOCore
 import WinSDK
@@ -133,3 +135,4 @@ extension NIOCore.Windows {
 }
 
 #endif
+#endif  // !os(WASI)

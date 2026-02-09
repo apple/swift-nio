@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import NIOConcurrencyHelpers
 import NIOCore
@@ -107,9 +109,9 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                 canBeShutdownIndividually: canEventLoopBeShutdownIndividually,
                 metricsDelegate: metricsDelegate
             )
-            threadSpecificEventLoop.currentValue = loop
+            Self.threadSpecificEventLoop.currentValue = loop
             defer {
-                threadSpecificEventLoop.currentValue = nil
+                Self.threadSpecificEventLoop.currentValue = nil
             }
             callback(loop)
             try loop.run()
@@ -660,3 +662,4 @@ extension MultiThreadedEventLoopGroup {
         }
     }
 }
+#endif  // !os(WASI)

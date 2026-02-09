@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 #if canImport(Dispatch)
@@ -236,3 +238,4 @@ internal final class GetaddrinfoResolver: Resolver, Sendable {
         }
     }
 }
+#endif  // !os(WASI)

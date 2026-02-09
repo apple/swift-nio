@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 #if os(Windows)
@@ -807,3 +809,4 @@ extension WSAMSG {
     }
 }
 #endif
+#endif  // !os(WASI)

@@ -12,7 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import CNIOLinux
+import CNIOOpenBSD
 import NIOConcurrencyHelpers
 import NIOCore
 
@@ -419,3 +422,4 @@ func __testOnly_withMutableSockAddr<ReturnType>(
 ) rethrows -> ReturnType {
     try addr.withMutableSockAddr(body)
 }
+#endif  // !os(WASI)

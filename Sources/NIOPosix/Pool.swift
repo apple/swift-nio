@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 protocol PoolElement {
     init()
     func evictedFromPool()
@@ -384,3 +386,4 @@ struct PooledMsgBuffer: PoolElement {
         }
     }
 }
+#endif  // !os(WASI)
