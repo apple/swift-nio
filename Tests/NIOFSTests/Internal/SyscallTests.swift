@@ -180,10 +180,41 @@ final class SyscallTests: XCTestCase {
         testCases.run()
     }
 
+    func test_unlinkat() throws {
+        let directoryFileDescriptor = FileDescriptor(rawValue: 42)
+
+        let testCases = [
+            MockTestCase(name: "unlinkat", .noInterrupt, 42, "filename.txt", 0) { _ in
+                try Syscall.unlinkat(
+                    path: "filename.txt",
+                    relativeTo: directoryFileDescriptor
+                ).get()
+            }
+        ]
+
+        testCases.run()
+    }
+
     func test_symlink() throws {
         let testCases = [
             MockTestCase(name: "symlink", .noInterrupt, "one", "two") { _ in
                 try Syscall.symlink(to: "one", from: "two").get()
+            }
+        ]
+
+        testCases.run()
+    }
+
+    func test_symlinkat() throws {
+        let directoryFileDescriptor = FileDescriptor(rawValue: 42)
+
+        let testCases = [
+            MockTestCase(name: "symlinkat", .noInterrupt, "target.txt", 42, "linkpath.txt") { _ in
+                try Syscall.symlinkat(
+                    to: "target.txt",
+                    in: directoryFileDescriptor,
+                    from: "linkpath.txt"
+                ).get()
             }
         ]
 
@@ -302,6 +333,46 @@ final class SyscallTests: XCTestCase {
         testCases.run()
         #else
         throw XCTSkip("'renamex_np' is only supported on Darwin")
+        #endif
+    }
+
+    func test_renameatx_np() throws {
+        #if canImport(Darwin)
+        let sourceDirectoryFileDescriptor = FileDescriptor(rawValue: 13)
+        let destinationDirectoryFileDescriptor = FileDescriptor(rawValue: 42)
+
+        let testCases: [MockTestCase] = [
+            MockTestCase(name: "renameatx_np", .noInterrupt, 13, "source.txt", 42, "destination.txt", 0) { _ in
+                _ = try Syscall.rename(
+                    from: "source.txt",
+                    relativeTo: sourceDirectoryFileDescriptor,
+                    to: "destination.txt",
+                    relativeTo: destinationDirectoryFileDescriptor,
+                    options: []
+                ).get()
+            },
+            MockTestCase(name: "renameatx_np", .noInterrupt, 13, "source.txt", 42, "destination.txt", 4) { _ in
+                _ = try Syscall.rename(
+                    from: "source.txt",
+                    relativeTo: sourceDirectoryFileDescriptor,
+                    to: "destination.txt",
+                    relativeTo: destinationDirectoryFileDescriptor,
+                    options: [.exclusive]
+                ).get()
+            },
+            MockTestCase(name: "renameatx_np", .noInterrupt, 13, "source.txt", 42, "destination.txt", 2) { _ in
+                _ = try Syscall.rename(
+                    from: "source.txt",
+                    relativeTo: sourceDirectoryFileDescriptor,
+                    to: "destination.txt",
+                    relativeTo: destinationDirectoryFileDescriptor,
+                    options: [.swap]
+                ).get()
+            },
+        ]
+        testCases.run()
+        #else
+        throw XCTSkip("'renameatx_np' is only supported on Darwin")
         #endif
     }
 
