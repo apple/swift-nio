@@ -160,9 +160,9 @@ public enum System: Sendable {
     /// - Returns: An array of network interfaces available on this machine.
     /// - Throws: If an error is encountered while enumerating interfaces.
     @available(*, deprecated, renamed: "enumerateDevices")
-#if compiler(>=6.3)
+    #if compiler(>=6.3)
     @available(Android 24, *)
-#endif
+    #endif
     public static func enumerateInterfaces() throws -> [NIONetworkInterface] {
         var interfaces: [NIONetworkInterface] = []
         interfaces.reserveCapacity(12)  // Arbitrary choice.
@@ -193,9 +193,9 @@ public enum System: Sendable {
     ///
     /// - Returns: An array of network devices available on this machine.
     /// - Throws: If an error is encountered while enumerating interfaces.
-#if compiler(>=6.3)
+    #if compiler(>=6.3)
     @available(Android 24, *)
-#endif
+    #endif
     public static func enumerateDevices() throws -> [NIONetworkDevice] {
         var devices: [NIONetworkDevice] = []
         devices.reserveCapacity(12)  // Arbitrary choice.

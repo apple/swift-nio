@@ -231,12 +231,12 @@ enum SystemCalls {
     }
 
     #if !os(Windows)
-    
+
     @inline(never)
     @usableFromInline
-#if compiler(>=6.3)
+    #if compiler(>=6.3)
     @available(Android 24, *)
-#endif
+    #endif
     internal static func getifaddrs(_ addrs: UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>) throws {
         _ = try syscall(blocking: false) {
             sysGetifaddrs(addrs)

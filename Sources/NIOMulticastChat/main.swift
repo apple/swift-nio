@@ -55,15 +55,15 @@ let targetDevice: NIONetworkDevice? = {
     {
         let devices: [NIONetworkDevice]
 
-#if compiler(>=6.3)
+        #if compiler(>=6.3)
         if #available(Android 24, *) {
             devices = try! System.enumerateDevices()
         } else {
             fatalError("This demo only works on Android API 24+")
         }
-#else
+        #else
         devices = try! System.enumerateDevices()
-#endif
+        #endif
 
         for device in devices {
             if device.address == targetAddress {
