@@ -171,4 +171,38 @@ let benchmarks = {
             await actor.foo()
         }
     }
+
+    // MARK: - NIOThreadPool submit benchmarks
+
+    // Serial wakeup: submit one item, wait for completion, repeat.
+    // Every submit hits N sleeping threads — this is where wake-one
+    // vs wake-all (thundering herd) matters most.
+    let pool16 = NIOThreadPool(numberOfThreads: 16)
+    let pool4 = NIOThreadPool(numberOfThreads: 4)
+
+    Benchmark(
+        "NIOThreadPool.serial_wakeup(16 threads)",
+        configuration: .init(
+            metrics: [.wallClock, .cpuUser, .cpuSystem, .cpuTotal, .contextSwitches, .syscalls],
+            maxDuration: .seconds(30),
+            maxIterations: 30,
+            setup: { pool16.start() },
+            teardown: { try! pool16.syncShutdownGracefully() }
+        )
+    ) { _ in
+        runNIOThreadPoolSerialWakeup(pool: pool16, count: 10_000)
+    }
+
+    Benchmark(
+        "NIOThreadPool.serial_wakeup(4 threads)",
+        configuration: .init(
+            metrics: [.wallClock, .cpuUser, .cpuSystem, .cpuTotal, .contextSwitches, .syscalls],
+            maxDuration: .seconds(30),
+            maxIterations: 30,
+            setup: { pool4.start() },
+            teardown: { try! pool4.syncShutdownGracefully() }
+        )
+    ) { _ in
+        runNIOThreadPoolSerialWakeup(pool: pool4, count: 10_000)
+    }
 }
