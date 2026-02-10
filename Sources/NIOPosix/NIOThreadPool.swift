@@ -134,7 +134,7 @@ public final class NIOThreadPool {
             return
         }
 
-        let threadsToJoin = self._workAvailable.withLock { workAvailable in
+        let threadsToJoin = self._workAvailable.withLockSettingWorkAvailable {
             switch self._state {
             case .running(let items):
                 self._state = .modifying
@@ -149,11 +149,11 @@ public final class NIOThreadPool {
                 self.threads = nil
 
                 // Wake all threads so they can see .shuttingDown and exit.
-                workAvailable = self.numberOfThreads
-                return (signal: .broadcastAll, result: threads)
+                return (workAvailable: self.numberOfThreads, signal: .broadcastAll, result: threads)
 
             case .shuttingDown, .stopped:
-                return (signal: .none, result: [])
+                // Don't modify workAvailable - threads may still be waking up to see .shuttingDown
+                return (workAvailable: nil, signal: .none, result: [])
 
             case .modifying:
                 fatalError(".modifying state misuse")
@@ -182,7 +182,7 @@ public final class NIOThreadPool {
     }
 
     private func _submit(id: Int?, _ body: @escaping WorkItem) {
-        let submitted = self._workAvailable.withLock { workAvailable in
+        let submitted = self._workAvailable.withLock {
             let submitted: Bool
 
             switch self._state {
@@ -190,7 +190,6 @@ public final class NIOThreadPool {
                 self._state = .modifying
                 items.append(.init(workItem: body, id: id))
                 self._state = .running(items)
-                workAvailable += 1
                 submitted = true
 
             case .shuttingDown, .stopped:
@@ -200,7 +199,7 @@ public final class NIOThreadPool {
                 fatalError(".modifying state misuse")
             }
 
-            return (signal: submitted ? .signalOne : .none, result: submitted)
+            return (workDelta: submitted ? 1 : 0, signal: submitted ? .signalOne : .none, result: submitted)
         }
 
         // if item couldn't be added run it immediately indicating that it couldn't be run
@@ -241,7 +240,7 @@ public final class NIOThreadPool {
     // when only interested in on-CPU work.
     @inlinable
     internal func _blockingWaitForWork(identifier: Int) -> (item: WorkItem, state: WorkItemState)? {
-        self._workAvailable.withLockWaitingForWork { workAvailable in
+        self._workAvailable.withLockWaitingForWork {
             let result: (WorkItem, WorkItemState)?
 
             switch self._state {
@@ -258,7 +257,6 @@ public final class NIOThreadPool {
 
                 self._state = .running(items)
 
-                workAvailable -= 1
                 result = (itemAndID.workItem, state)
 
             case .shuttingDown(var aliveStates):
@@ -267,7 +265,6 @@ public final class NIOThreadPool {
                 aliveStates[identifier] = false
                 self._state = .shuttingDown(aliveStates)
 
-                workAvailable -= 1
                 result = nil
 
             case .stopped:
@@ -279,7 +276,7 @@ public final class NIOThreadPool {
                 fatalError(".modifying state misuse")
             }
 
-            return (signal: .none, result: result)
+            return (workDelta: -1, signal: .none, result: result)
         }
     }
 
@@ -302,12 +299,12 @@ public final class NIOThreadPool {
     }
 
     public func _start(threadNamePrefix: String) {
-        let alreadyRunning = self._workAvailable.withLock { _ in
+        let alreadyRunning = self._workAvailable.withLock {
             switch self._state {
             case .running:
                 // Already running, this has no effect on whether there is more work for the
                 // threads to run.
-                return (signal: .none, result: true)
+                return (workDelta: 0, signal: .none, result: true)
 
             case .shuttingDown:
                 // This should never happen
@@ -318,7 +315,7 @@ public final class NIOThreadPool {
                 assert(self.threads == nil)
                 self.threads = []
                 self.threads!.reserveCapacity(self.numberOfThreads)
-                return (signal: .none, result: false)
+                return (workDelta: 0, signal: .none, result: false)
 
             case .modifying:
                 fatalError(".modifying state misuse")
@@ -337,10 +334,10 @@ public final class NIOThreadPool {
             // We should keep thread names under 16 characters because Linux doesn't allow more.
             NIOThread.spawnAndRun(name: "\(threadNamePrefix)\(id)") { thread in
                 readyThreads.withLock {
-                    let threadCount = self._workAvailable.withLock { _ in
+                    let threadCount = self._workAvailable.withLock {
                         self.threads!.append(thread)
                         let threadCount = self.threads!.count
-                        return (signal: .none, result: threadCount)
+                        return (workDelta: 0, signal: .none, result: threadCount)
                     }
 
                     return (unlockWith: threadCount, result: ())
@@ -355,8 +352,8 @@ public final class NIOThreadPool {
         readyThreads.unlock()
 
         func threadCount() -> Int {
-            self._workAvailable.withLock { _ in
-                (signal: .none, result: self.threads?.count ?? -1)
+            self._workAvailable.withLock {
+                (workDelta: 0, signal: .none, result: self.threads?.count ?? -1)
             }
         }
         assert(threadCount() == self.numberOfThreads)
@@ -437,9 +434,9 @@ extension NIOThreadPool {
                 }
             }
         } onCancel: {
-            self._workAvailable.withLock { _ in
+            self._workAvailable.withLock {
                 self._cancelledWorkIDs.insert(workID)
-                return (signal: .none, result: ())
+                return (workDelta: 0, signal: .none, result: ())
             }
         }
     }

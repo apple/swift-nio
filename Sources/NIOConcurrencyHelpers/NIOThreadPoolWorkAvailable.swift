@@ -104,24 +104,42 @@ package struct NIOThreadPoolWorkAvailable: @unchecked Sendable {
         self._storage = _Storage()
     }
 
-    /// Lock, run `body` with access to the `workAvailable` counter,
+    /// Lock, run `body`, apply the returned delta to `workAvailable`,
     /// unlock, then signal as indicated by the return value.
     @inlinable
     package func withLock<Result>(
-        _ body: (inout Int) -> (signal: Signal, result: Result)
+        _ body: () -> (workDelta: Int, signal: Signal, result: Result)
     ) -> Result {
         self._storage.lock.lock()
-        let (signal, result) = body(&self._storage.workAvailable)
+        let (workDelta, signal, result) = body()
+        self._storage.workAvailable += workDelta
         self._storage.lock.unlock()
         self._signal(signal)
         return result
     }
 
-    /// Lock, wait while `workAvailable <= 0`, run `body` with access to the
-    /// `workAvailable` counter, unlock, then signal as indicated.
+    /// Lock, run `body`, set `workAvailable` to the returned value if non-nil,
+    /// unlock, then signal as indicated. Use for shutdown where an
+    /// absolute value is needed rather than a delta.
+    @inlinable
+    package func withLockSettingWorkAvailable<Result>(
+        _ body: () -> (workAvailable: Int?, signal: Signal, result: Result)
+    ) -> Result {
+        self._storage.lock.lock()
+        let (workAvailable, signal, result) = body()
+        if let workAvailable = workAvailable {
+            self._storage.workAvailable = workAvailable
+        }
+        self._storage.lock.unlock()
+        self._signal(signal)
+        return result
+    }
+
+    /// Lock, wait while `workAvailable <= 0`, run `body`, apply the
+    /// returned delta to `workAvailable`, unlock, then signal as indicated.
     @inlinable
     package func withLockWaitingForWork<Result>(
-        _ body: (inout Int) -> (signal: Signal, result: Result)
+        _ body: () -> (workDelta: Int, signal: Signal, result: Result)
     ) -> Result {
         self._storage.lock.lock()
         while self._storage.workAvailable <= 0 {
@@ -138,7 +156,8 @@ package struct NIOThreadPoolWorkAvailable: @unchecked Sendable {
                 #endif
             }
         }
-        let (signal, result) = body(&self._storage.workAvailable)
+        let (workDelta, signal, result) = body()
+        self._storage.workAvailable += workDelta
         self._storage.lock.unlock()
         self._signal(signal)
         return result
