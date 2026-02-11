@@ -38,7 +38,7 @@ jobs:
   cxx-interop:
     name: Cxx interop
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/cxx_interop.yml@sb/fix-cxx-interop-ci
+    uses: apple/swift-nio/.github/workflows/cxx_interop.yml@main
 
   construct-integration-test-matrix:
     name: Construct integration test matrix
