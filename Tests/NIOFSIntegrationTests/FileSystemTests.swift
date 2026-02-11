@@ -2000,4 +2000,492 @@ extension FileSystemTests {
 
         XCTAssertEqual(contents, [0, 1, 2])
     }
+
+    func testCopyFileOverwritingExistingFile() async throws {
+        let sourceFileContent: [UInt8] = [1, 2, 3]
+        let source = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false, permissions: .ownerReadWrite)
+        ) { handle in
+            try await handle.write(
+                contentsOf: sourceFileContent,
+                toAbsoluteOffset: 0
+            )
+        }
+
+        let existingFileContent: [UInt8] = [4, 5, 6]
+        let destination = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: destination,
+            options: .newFile(replaceExisting: false, permissions: .ownerReadWriteExecute)
+        ) { handle in
+            try await handle.write(
+                contentsOf: existingFileContent,
+                toAbsoluteOffset: 0
+            )
+        }
+
+        try await self.fs.copyItem(
+            at: source,
+            to: destination,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in
+                throw error
+            },
+            shouldCopyItem: { _, _ in
+                true
+            }
+        )
+
+        // verify destination now has source content and permissions
+        let destInfo = try await self.fs.info(forFileAt: destination)
+        XCTAssertEqual(destInfo?.permissions, .ownerReadWrite)
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), sourceFileContent)
+        }
+
+        // verify source still exists with original content and permissions
+        let sourceInfo = try await self.fs.info(forFileAt: source)
+        XCTAssertEqual(sourceInfo?.permissions, .ownerReadWrite)
+        try await self.fs.withFileHandle(forReadingAt: source) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), sourceFileContent)
+        }
+
+        // verify no temp files are left (Linux only - Darwin uses COPYFILE_UNLINK)
+        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        let destinationDirectory = NIOFilePath(destination.underlying.removingLastComponent())
+        let temporaryFiles = try await self.fs.withDirectoryHandle(atPath: destinationDirectory) { dir in
+            var temporaryFiles: [String] = []
+            for try await batch in dir.listContents().batched() {
+                for entry in batch where entry.name.hasPrefix(".tmp-") {
+                    temporaryFiles.append(entry.name)
+                }
+            }
+            return temporaryFiles
+        }
+        XCTAssertTrue(temporaryFiles.isEmpty, "Found temp files: \(temporaryFiles)")
+        #endif
+    }
+
+    func testCopyFileToNonExistingDestinationWithOverwriting() async throws {
+        let sourceFileContent: [UInt8] = [7, 8, 9]
+        let source = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(
+                contentsOf: sourceFileContent,
+                toAbsoluteOffset: 0
+            )
+        }
+
+        // destination doesn't exist
+        let destination = try await self.fs.temporaryFilePath()
+
+        try await self.fs.copyItem(
+            at: source,
+            to: destination,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        // verify destination now exists with expected content
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), sourceFileContent)
+        }
+
+        // verify source still exists with original content
+        try await self.fs.withFileHandle(forReadingAt: source) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), sourceFileContent)
+        }
+    }
+
+    func testCopySymlinkOverwritingExistingSymlink() async throws {
+        let sourceTarget = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(
+            forWritingAt: sourceTarget,
+            options: .newFile(replaceExisting: false)
+        ) { _ in }
+        let sourceSymlink = try await self.fs.temporaryFilePath()
+        try await self.fs.createSymbolicLink(
+            at: sourceSymlink,
+            withDestination: sourceTarget
+        )
+
+        let destinationTarget = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(
+            forWritingAt: destinationTarget,
+            options: .newFile(replaceExisting: false)
+        ) { _ in }
+        let destinationSymlink = try await self.fs.temporaryFilePath()
+        try await self.fs.createSymbolicLink(
+            at: destinationSymlink,
+            withDestination: destinationTarget
+        )
+
+        try await self.fs.copyItem(
+            at: sourceSymlink,
+            to: destinationSymlink,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        // verify destination symlink now points to source's target
+        let destinationTargetAfterCopy = try await self.fs.destinationOfSymbolicLink(at: destinationSymlink)
+        XCTAssertEqual(destinationTargetAfterCopy, sourceTarget)
+
+        // verify source symlink has not changed
+        let sourceTargetAfterCopy = try await self.fs.destinationOfSymbolicLink(at: sourceSymlink)
+        XCTAssertEqual(sourceTargetAfterCopy, sourceTarget)
+
+        // verify no temp symlinks are left
+        let destinationDirectory = NIOFilePath(destinationSymlink.underlying.removingLastComponent())
+        let temporarySymlinks = try await self.fs.withDirectoryHandle(atPath: destinationDirectory) { dir in
+            var temporarySymlinks: [String] = []
+            for try await batch in dir.listContents().batched() {
+                for entry in batch where entry.name.hasPrefix(".tmp-link-") {
+                    temporarySymlinks.append(entry.name)
+                }
+            }
+            return temporarySymlinks
+        }
+        XCTAssertTrue(temporarySymlinks.isEmpty, "Found temp symlinks: \(temporarySymlinks)")
+    }
+
+    func testCopySymlinkToNonExistingDestinationWithOverwriting() async throws {
+        let sourceTarget = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(
+            forWritingAt: sourceTarget,
+            options: .newFile(replaceExisting: false)
+        ) { _ in }
+        let sourceSymlink = try await self.fs.temporaryFilePath()
+        try await self.fs.createSymbolicLink(
+            at: sourceSymlink,
+            withDestination: sourceTarget
+        )
+
+        // destination symlink doesn't exist
+        let destinationSymlink = try await self.fs.temporaryFilePath()
+
+        try await self.fs.copyItem(
+            at: sourceSymlink,
+            to: destinationSymlink,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        // verify destination symlink now exists and points to source's target
+        let destinationTargetAfterCopy = try await self.fs.destinationOfSymbolicLink(at: destinationSymlink)
+        XCTAssertEqual(destinationTargetAfterCopy, sourceTarget)
+
+        // verify source symlink has not changed
+        let sourceTargetAfterCopy = try await self.fs.destinationOfSymbolicLink(at: sourceSymlink)
+        XCTAssertEqual(sourceTargetAfterCopy, sourceTarget)
+    }
+
+    func testCopySymlinkToExistingDestinationFailsWithoutOverwriting() async throws {
+        let sourceTarget = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(
+            forWritingAt: sourceTarget,
+            options: .newFile(replaceExisting: false)
+        ) { _ in }
+        let sourceSymlink = try await self.fs.temporaryFilePath()
+        try await self.fs.createSymbolicLink(at: sourceSymlink, withDestination: sourceTarget)
+
+        let destinationTarget = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(
+            forWritingAt: destinationTarget,
+            options: .newFile(replaceExisting: false)
+        ) { _ in }
+        let destinationSymlink = try await self.fs.temporaryFilePath()
+        try await self.fs.createSymbolicLink(at: destinationSymlink, withDestination: destinationTarget)
+
+        // should fail with `fileAlreadyExists`
+        await XCTAssertThrowsFileSystemErrorAsync {
+            try await self.fs.copyItem(
+                at: sourceSymlink,
+                to: destinationSymlink,
+                strategy: .platformDefault,
+                overwriting: false,
+                shouldProceedAfterError: { _, error in throw error },
+                shouldCopyItem: { _, _ in true }
+            )
+        } onError: { error in
+            XCTAssertEqual(error.code, .fileAlreadyExists)
+        }
+
+        // verify destination symlink is unchanged
+        let destinationTargetAfterCopy = try await self.fs.destinationOfSymbolicLink(at: destinationSymlink)
+        XCTAssertEqual(destinationTargetAfterCopy, destinationTarget)
+
+        // verify source symlink is unchanged
+        let sourceTargetAfterCopy = try await self.fs.destinationOfSymbolicLink(at: sourceSymlink)
+        XCTAssertEqual(sourceTargetAfterCopy, sourceTarget)
+    }
+
+    func testCopyFileToExistingDestinationFailsWithoutOverwriting() async throws {
+        let sourceContent: [UInt8] = [1, 2, 3]
+        let source = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
+        }
+
+        let destinationContent: [UInt8] = [4, 5, 6]
+        let destination = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: destination,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: destinationContent, toAbsoluteOffset: 0)
+        }
+
+        // should fail with `fileAlreadyExists`
+        await XCTAssertThrowsFileSystemErrorAsync {
+            try await self.fs.copyItem(
+                at: source,
+                to: destination,
+                strategy: .platformDefault,
+                overwriting: false,
+                shouldProceedAfterError: { _, error in throw error },
+                shouldCopyItem: { _, _ in true }
+            )
+        } onError: { error in
+            XCTAssertEqual(error.code, .fileAlreadyExists)
+        }
+
+        // verify the destination is unchanged
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), destinationContent)
+        }
+
+        // verify the source is unchanged
+        try await self.fs.withFileHandle(forReadingAt: source) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), sourceContent)
+        }
+    }
+
+    func testCopyFileOverwritesExistingSymlink() async throws {
+        let sourceContent: [UInt8] = [10, 20, 30]
+        let source = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
+        }
+
+        let symlinkTarget = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(
+            forWritingAt: symlinkTarget,
+            options: .newFile(replaceExisting: false)
+        ) { _ in }
+
+        let destination = try await self.fs.temporaryFilePath()
+        try await self.fs.createSymbolicLink(at: destination, withDestination: symlinkTarget)
+
+        // verify destination is a symlink before copy
+        let infoBefore = try await self.fs.info(forFileAt: destination, infoAboutSymbolicLink: true)
+        XCTAssertEqual(infoBefore?.type, .symlink)
+
+        // overwrite symlink with regular file
+        try await self.fs.copyItem(
+            at: source,
+            to: destination,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        // verify destination is now a regular file
+        let infoAfter = try await self.fs.info(forFileAt: destination, infoAboutSymbolicLink: true)
+        XCTAssertEqual(infoAfter?.type, .regular)
+
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), sourceContent)
+        }
+
+        // verify source is unchanged
+        try await self.fs.withFileHandle(forReadingAt: source) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: contents), sourceContent)
+        }
+    }
+
+    func testCopySymlinkOverwritesExistingFile() async throws {
+        let destinationContent: [UInt8] = [40, 50, 60]
+        let destination = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: destination,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: destinationContent, toAbsoluteOffset: 0)
+        }
+
+        let symlinkTarget = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(
+            forWritingAt: symlinkTarget,
+            options: .newFile(replaceExisting: false)
+        ) { _ in }
+        let sourceSymlink = try await self.fs.temporaryFilePath()
+        try await self.fs.createSymbolicLink(at: sourceSymlink, withDestination: symlinkTarget)
+
+        // verify destination is a regular file before copy
+        let infoBefore = try await self.fs.info(forFileAt: destination, infoAboutSymbolicLink: true)
+        XCTAssertEqual(infoBefore?.type, .regular)
+
+        // overwrite regular file with symlink
+        try await self.fs.copyItem(
+            at: sourceSymlink,
+            to: destination,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        // verify destination is now a symlink pointing to correct target
+        let infoAfter = try await self.fs.info(forFileAt: destination, infoAboutSymbolicLink: true)
+        XCTAssertEqual(infoAfter?.type, .symlink)
+
+        let target = try await self.fs.destinationOfSymbolicLink(at: destination)
+        XCTAssertEqual(target, symlinkTarget)
+
+        // verify source symlink is unchanged
+        let sourceTarget = try await self.fs.destinationOfSymbolicLink(at: sourceSymlink)
+        XCTAssertEqual(sourceTarget, symlinkTarget)
+    }
+
+    func testCopyDanglingSymlink() async throws {
+        let nonExistentTarget = try await self.fs.temporaryFilePath()
+        let sourceSymlink = try await self.fs.temporaryFilePath()
+
+        // dangling symbolic link
+        try await self.fs.createSymbolicLink(at: sourceSymlink, withDestination: nonExistentTarget)
+        let targetInfo = try await self.fs.info(forFileAt: nonExistentTarget)
+        XCTAssertNil(targetInfo)
+
+        let destinationSymlink = try await self.fs.temporaryFilePath()
+
+        try await self.fs.copyItem(
+            at: sourceSymlink,
+            to: destinationSymlink,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        // verify destination symlink exists and points to same (non-existent) target
+        let destTarget = try await self.fs.destinationOfSymbolicLink(at: destinationSymlink)
+        XCTAssertEqual(destTarget, nonExistentTarget)
+
+        let destInfo = try await self.fs.info(forFileAt: destinationSymlink, infoAboutSymbolicLink: false)
+        XCTAssertNil(destInfo)
+
+        // verify source symlink is unchanged
+        let sourceTargetAfterCopy = try await self.fs.destinationOfSymbolicLink(at: sourceSymlink)
+        XCTAssertEqual(sourceTargetAfterCopy, nonExistentTarget)
+    }
+
+    func testCopyFileOverwritingLargeSourceToSmallDestination() async throws {
+        let sourceContent: [UInt8] = Array(repeating: 0xAB, count: 1024)
+        let source = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
+        }
+
+        let destinationContent: [UInt8] = [1, 2, 3]
+        let destination = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: destination,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: destinationContent, toAbsoluteOffset: 0)
+        }
+
+        try await self.fs.copyItem(
+            at: source,
+            to: destination,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        // verify destination now has source content
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(2048))
+            XCTAssertEqual(Array(buffer: contents), sourceContent)
+        }
+
+        // verify source is unchanged
+        try await self.fs.withFileHandle(forReadingAt: source) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(2048))
+            XCTAssertEqual(Array(buffer: contents), sourceContent)
+        }
+    }
+
+    func testCopyFileOverwritingSmallSourceToLargeDestination() async throws {
+        let sourceContent: [UInt8] = [1, 2, 3]
+        let source = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
+        }
+
+        let destinationContent: [UInt8] = Array(repeating: 0xAB, count: 1024)
+        let destination = try await self.fs.temporaryFilePath()
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: destination,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: destinationContent, toAbsoluteOffset: 0)
+        }
+
+        try await self.fs.copyItem(
+            at: source,
+            to: destination,
+            strategy: .platformDefault,
+            overwriting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        // verify destination now has source content
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(2048))
+            XCTAssertEqual(Array(buffer: contents), sourceContent)
+        }
+
+        // verify source is unchanged
+        try await self.fs.withFileHandle(forReadingAt: source) { handle in
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(2048))
+            XCTAssertEqual(Array(buffer: contents), sourceContent)
+        }
+    }
 }
