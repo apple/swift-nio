@@ -1233,3 +1233,19 @@ if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) {
         benchmark: TCPThroughputBenchmark(messages: 100_000, messageSize: 500)
     )
 }
+
+try measureAndPrint(
+    desc: "thread_pool_serial_wakeup_4_threads_10k",
+    benchmark: NIOThreadPoolSerialWakeupBenchmark(
+        numberOfThreads: 4,
+        numberOfTasks: 10_000
+    )
+)
+
+try measureAndPrint(
+    desc: "thread_pool_serial_wakeup_16_threads_10k",
+    benchmark: NIOThreadPoolSerialWakeupBenchmark(
+        numberOfThreads: 16,
+        numberOfTasks: 10_000
+    )
+)
