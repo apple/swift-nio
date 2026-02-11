@@ -47,7 +47,7 @@ elif [[ "$rc" == 2 ]]; then
 
   if [[ "$update_rc" != 0 ]]; then
     error "Benchmark failed to run due to build error."
-    exit 1
+    exit $update_rc
   fi
 
   echo "=== BEGIN DIFF ==="  # use echo, not log for clean output to be scraped
@@ -55,7 +55,7 @@ elif [[ "$rc" == 2 ]]; then
 # all other errors
 else
   error "Benchmark failed to run due to build error."
-  exit 1
+  exit $rc
 fi
 
 
