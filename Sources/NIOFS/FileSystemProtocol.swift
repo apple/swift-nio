@@ -182,11 +182,6 @@ public protocol FileSystemProtocol: Sendable {
     /// If `sourcePath` is a symbolic link then only the link is copied. The copied file will
     /// preserve permissions and any extended attributes (if supported by the file system).
     ///
-    /// When `overwriting` is `true`, regular files are atomically replaced using `COPYFILE_UNLINK`
-    /// on Darwin or a temporary file followed by `renameat2(2)` on Linux. Symbolic links are
-    /// atomically replaced using a temporary symlink followed by `renamex_np(2)` on Darwin or
-    /// `renameat2(2)` on Linux.
-    ///
     /// - Parameters:
     ///   - sourcePath: The path to the item to copy.
     ///   - destinationPath: The path at which to place the copy.
