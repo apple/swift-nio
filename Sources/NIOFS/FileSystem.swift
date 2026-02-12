@@ -330,6 +330,9 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// on Darwin or a temporary file followed by `renameat2(2)` on Linux. Symbolic links are
     /// atomically replaced using a temporary symlink followed by `renamex_np(2)` on Darwin or
     /// `renameat2(2)` on Linux.
+    /// 
+    /// Note that `replaceExisting` is ignored for directories and implemented only for regular 
+    /// files and symbolic links.
     public func copyItem(
         at sourcePath: NIOFilePath,
         to destinationPath: NIOFilePath,
