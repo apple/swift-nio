@@ -1436,6 +1436,7 @@ extension FileSystem {
             )
         }
         let destinationFilepath = FilePath(destinationFilename.string)
+
         switch Syscall.rename(
             from: temporaryFilepath,
             relativeTo: destinationDirectoryFD,
