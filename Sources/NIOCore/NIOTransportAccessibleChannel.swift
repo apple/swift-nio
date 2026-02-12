@@ -20,7 +20,7 @@ public protocol NIOTransportAccessibleChannel<Transport>: Channel {
     /// Provides scoped access to the underlying transport.
     ///
     /// This is an advanced API for reading or manipulating the underlying transport that backs a channel. Users must
-    /// not close the channel or invalidate any invariants that NIO relies upon for the channel operation.
+    /// not close the transport or invalidate any invariants that NIO relies upon for the channel operation.
     ///
     /// Not all channels are expected to conform to ``NIOTransportAccessibleChannel``, but this can be determined at
     /// runtime:
