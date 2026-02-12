@@ -1582,16 +1582,23 @@ extension FileSystem {
         to destinationPath: FilePath,
         replaceExisting: Bool
     ) -> Result<Void, FileSystemError> {
-        if !replaceExisting {
+        if replaceExisting {
+            return self._copySymbolicLinkReplacing(from: sourcePath, to: destinationPath)
+        } else {
             return self._destinationOfSymbolicLink(at: sourcePath).flatMap { linkDestination in
                 self._createSymbolicLink(at: destinationPath, withDestination: linkDestination)
             }
         }
+    }
 
-        // there is no atomic symlink replaceExisting copy on either Darwin or Linux platforms
+    private func _copySymbolicLinkReplacing(
+        from sourcePath: FilePath,
+        to destinationPath: FilePath
+    ) -> Result<Void, FileSystemError> {
+        // There is no atomic symlink replace copy on either Darwin or Linux platforms
         // so we copy the source symlink into a temporary symlink using `symlinkat` system call and then
         // rename it into the destination symlink using the `renameatx_np(2)` on Darwin and
-        // `renameat2(2)` on non-Darwin platforms
+        // `renameat2(2)` on Linux.
         let destinationDirectory = destinationPath.removingLastComponent()
         let destinationDirectoryHandle: DirectoryFileHandle
         switch self._openDirectory(
