@@ -326,7 +326,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// This function is platform dependent. On Darwin the `copyfile(2)` system call is used and
     /// items are cloned where possible. On Linux the `sendfile(2)` system call is used.
     ///
-    /// When `overwriting` is `true`, regular files are atomically replaced using `COPYFILE_UNLINK`
+    /// When `replaceExisting` is `true`, regular files are atomically replaced using `COPYFILE_UNLINK`
     /// on Darwin or a temporary file followed by `renameat2(2)` on Linux. Symbolic links are
     /// atomically replaced using a temporary symlink followed by `renamex_np(2)` on Darwin or
     /// `renameat2(2)` on Linux.
@@ -334,7 +334,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at sourcePath: NIOFilePath,
         to destinationPath: NIOFilePath,
         strategy copyStrategy: CopyStrategy,
-        overwriting: Bool = false,
+        replaceExisting: Bool,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -364,14 +364,14 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                 try await self.copyRegularFile(
                     from: sourcePath.underlying,
                     to: destinationPath.underlying,
-                    overwriting: overwriting
+                    replaceExisting: replaceExisting
                 )
 
             case .symlink:
                 try await self.copySymbolicLink(
                     from: sourcePath.underlying,
                     to: destinationPath.underlying,
-                    overwriting: overwriting
+                    replaceExisting: replaceExisting
                 )
 
             case .directory:
@@ -1106,7 +1106,8 @@ extension FileSystem {
                     do {
                         try await self.copyRegularFile(
                             from: source.path.underlying,
-                            to: destination
+                            to: destination,
+                            replaceExisting: false
                         )
                     } catch {
                         try await shouldProceedAfterError(source, error)
@@ -1214,7 +1215,8 @@ extension FileSystem {
             do {
                 try await self.copyRegularFile(
                     from: from.path.underlying,
-                    to: to
+                    to: to,
+                    replaceExisting: false
                 )
             } catch {
                 try await shouldProceedAfterError(from, error)
@@ -1263,13 +1265,13 @@ extension FileSystem {
     private func copyRegularFile(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
-        overwriting: Bool = false
+        replaceExisting: Bool
     ) async throws {
         try await self.threadPool.runIfActive {
             try self._copyRegularFile(
                 from: sourcePath,
                 to: destinationPath,
-                overwriting: overwriting
+                replaceExisting: replaceExisting
             ).get()
         }
     }
@@ -1277,7 +1279,7 @@ extension FileSystem {
     private func _copyRegularFile(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
-        overwriting: Bool = false
+        replaceExisting: Bool = false
     ) -> Result<Void, FileSystemError> {
         func makeOnUnavailableError(
             path: FilePath,
@@ -1296,7 +1298,7 @@ extension FileSystem {
         // COPYFILE_ALL is shorthand for:
         //    COPYFILE_STAT | COPYFILE_ACL | COPYFILE_XATTR | COPYFILE_DATA
         var flags = copyfile_flags_t(COPYFILE_CLONE) | copyfile_flags_t(COPYFILE_ALL)
-        if overwriting {
+        if replaceExisting {
             flags |= copyfile_flags_t(COPYFILE_UNLINK)
         }
         return Libc.copyfile(
@@ -1314,7 +1316,7 @@ extension FileSystem {
         }
 
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
-        if !overwriting {
+        if !replaceExisting {
             return self._copyFileOnLinux(
                 from: sourcePath,
                 to: destinationPath
@@ -1331,7 +1333,7 @@ extension FileSystem {
             }
         }
 
-        // on Linux platforms we implement overwriting by copying the source file into
+        // on Linux platforms we implement replaceExisting by copying the source file into
         // a temporary destination and then atomically renaming it, using the renameat2(2) system call
         let destinationDirectoryHandle: DirectoryFileHandle
         switch self._openDirectory(
@@ -1562,13 +1564,13 @@ extension FileSystem {
     private func copySymbolicLink(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
-        overwriting: Bool = false
+        replaceExisting: Bool = false
     ) async throws {
         try await self.threadPool.runIfActive {
             try self._copySymbolicLink(
                 from: sourcePath,
                 to: destinationPath,
-                overwriting: overwriting
+                replaceExisting: replaceExisting
             ).get()
         }
     }
@@ -1576,15 +1578,15 @@ extension FileSystem {
     private func _copySymbolicLink(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
-        overwriting: Bool
+        replaceExisting: Bool
     ) -> Result<Void, FileSystemError> {
-        if !overwriting {
+        if !replaceExisting {
             return self._destinationOfSymbolicLink(at: sourcePath).flatMap { linkDestination in
                 self._createSymbolicLink(at: destinationPath, withDestination: linkDestination)
             }
         }
 
-        // there is no atomic symlink overwriting copy on either Darwin or Linux platforms
+        // there is no atomic symlink replaceExisting copy on either Darwin or Linux platforms
         // so we copy the source symlink into a temporary symlink using `symlinkat` system call and then
         // rename it into the destination symlink using the `renameatx_np(2)` on Darwin and
         // `renameat2(2)` on non-Darwin platforms

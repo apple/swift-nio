@@ -860,7 +860,7 @@ final class FileSystemTests: XCTestCase {
         )
 
         let copyPath = try await self.fs.temporaryFilePath()
-        try await self.fs.copyItem(at: path, to: copyPath, strategy: copyStrategy) { _, error in
+        try await self.fs.copyItem(at: path, to: copyPath, strategy: copyStrategy, replaceExisting: false) { _, error in
             throw error
         } shouldCopyItem: { source, destination in
             // Copy the directory and 'file-1-regular'
@@ -965,7 +965,7 @@ final class FileSystemTests: XCTestCase {
         let cancelRequested = expectation(description: "cancel requested")
 
         let task = Task { [fs] in
-            try await fs.copyItem(at: path, to: copyPath, strategy: copyStrategy) { _, error in
+            try await fs.copyItem(at: path, to: copyPath, strategy: copyStrategy, replaceExisting: false) { _, error in
                 throw error
             } shouldCopyItem: { source, destination in
                 // Abuse shouldCopy to trigger the cancellation after getting some way in.
@@ -2001,7 +2001,7 @@ extension FileSystemTests {
         XCTAssertEqual(contents, [0, 1, 2])
     }
 
-    func testCopyFileOverwritingExistingFile() async throws {
+    func testCopyFileReplacingExistingFileSucceeds() async throws {
         let sourceFileContent: [UInt8] = [1, 2, 3]
         let source = try await self.fs.temporaryFilePath()
         _ = try await self.fs.withFileHandle(
@@ -2030,7 +2030,7 @@ extension FileSystemTests {
             at: source,
             to: destination,
             strategy: .platformDefault,
-            overwriting: true,
+            replaceExisting: true,
             shouldProceedAfterError: { _, error in
                 throw error
             },
@@ -2071,7 +2071,7 @@ extension FileSystemTests {
         #endif
     }
 
-    func testCopyFileToNonExistingDestinationWithOverwriting() async throws {
+    func testCopyFileToNonExistingDestinationSucceeds() async throws {
         let sourceFileContent: [UInt8] = [7, 8, 9]
         let source = try await self.fs.temporaryFilePath()
         _ = try await self.fs.withFileHandle(
@@ -2091,7 +2091,7 @@ extension FileSystemTests {
             at: source,
             to: destination,
             strategy: .platformDefault,
-            overwriting: true,
+            replaceExisting: true,
             shouldProceedAfterError: { _, error in throw error },
             shouldCopyItem: { _, _ in true }
         )
@@ -2109,7 +2109,7 @@ extension FileSystemTests {
         }
     }
 
-    func testCopySymlinkOverwritingExistingSymlink() async throws {
+    func testCopySymlinkReplacingExistingSymlinkSucceeds() async throws {
         let sourceTarget = try await self.fs.temporaryFilePath()
         try await self.fs.withFileHandle(
             forWritingAt: sourceTarget,
@@ -2136,7 +2136,7 @@ extension FileSystemTests {
             at: sourceSymlink,
             to: destinationSymlink,
             strategy: .platformDefault,
-            overwriting: true,
+            replaceExisting: true,
             shouldProceedAfterError: { _, error in throw error },
             shouldCopyItem: { _, _ in true }
         )
@@ -2163,7 +2163,7 @@ extension FileSystemTests {
         XCTAssertTrue(temporarySymlinks.isEmpty, "Found temp symlinks: \(temporarySymlinks)")
     }
 
-    func testCopySymlinkToNonExistingDestinationWithOverwriting() async throws {
+    func testCopySymlinkToNonExistingDestinationSucceeds() async throws {
         let sourceTarget = try await self.fs.temporaryFilePath()
         try await self.fs.withFileHandle(
             forWritingAt: sourceTarget,
@@ -2182,7 +2182,7 @@ extension FileSystemTests {
             at: sourceSymlink,
             to: destinationSymlink,
             strategy: .platformDefault,
-            overwriting: true,
+            replaceExisting: true,
             shouldProceedAfterError: { _, error in throw error },
             shouldCopyItem: { _, _ in true }
         )
@@ -2196,7 +2196,7 @@ extension FileSystemTests {
         XCTAssertEqual(sourceTargetAfterCopy, sourceTarget)
     }
 
-    func testCopySymlinkToExistingDestinationFailsWithoutOverwriting() async throws {
+    func testCopySymlinkToExistingDestinationFailsWithoutReplaceExisting() async throws {
         let sourceTarget = try await self.fs.temporaryFilePath()
         try await self.fs.withFileHandle(
             forWritingAt: sourceTarget,
@@ -2219,7 +2219,7 @@ extension FileSystemTests {
                 at: sourceSymlink,
                 to: destinationSymlink,
                 strategy: .platformDefault,
-                overwriting: false,
+                replaceExisting: false,
                 shouldProceedAfterError: { _, error in throw error },
                 shouldCopyItem: { _, _ in true }
             )
@@ -2236,7 +2236,7 @@ extension FileSystemTests {
         XCTAssertEqual(sourceTargetAfterCopy, sourceTarget)
     }
 
-    func testCopyFileToExistingDestinationFailsWithoutOverwriting() async throws {
+    func testCopyFileToExistingDestinationFailsWithoutReplaceExisting() async throws {
         let sourceContent: [UInt8] = [1, 2, 3]
         let source = try await self.fs.temporaryFilePath()
         _ = try await self.fs.withFileHandle(
@@ -2261,7 +2261,7 @@ extension FileSystemTests {
                 at: source,
                 to: destination,
                 strategy: .platformDefault,
-                overwriting: false,
+                replaceExisting: false,
                 shouldProceedAfterError: { _, error in throw error },
                 shouldCopyItem: { _, _ in true }
             )
@@ -2282,7 +2282,7 @@ extension FileSystemTests {
         }
     }
 
-    func testCopyFileOverwritesExistingSymlink() async throws {
+    func testCopyFileReplacingExistingSymlinkSucceeds() async throws {
         let sourceContent: [UInt8] = [10, 20, 30]
         let source = try await self.fs.temporaryFilePath()
         _ = try await self.fs.withFileHandle(
@@ -2310,7 +2310,7 @@ extension FileSystemTests {
             at: source,
             to: destination,
             strategy: .platformDefault,
-            overwriting: true,
+            replaceExisting: true,
             shouldProceedAfterError: { _, error in throw error },
             shouldCopyItem: { _, _ in true }
         )
@@ -2331,7 +2331,7 @@ extension FileSystemTests {
         }
     }
 
-    func testCopySymlinkOverwritesExistingFile() async throws {
+    func testCopySymlinkReplacingExistingFileSucceeds() async throws {
         let destinationContent: [UInt8] = [40, 50, 60]
         let destination = try await self.fs.temporaryFilePath()
         _ = try await self.fs.withFileHandle(
@@ -2358,7 +2358,7 @@ extension FileSystemTests {
             at: sourceSymlink,
             to: destination,
             strategy: .platformDefault,
-            overwriting: true,
+            replaceExisting: true,
             shouldProceedAfterError: { _, error in throw error },
             shouldCopyItem: { _, _ in true }
         )
@@ -2375,7 +2375,7 @@ extension FileSystemTests {
         XCTAssertEqual(sourceTarget, symlinkTarget)
     }
 
-    func testCopyDanglingSymlink() async throws {
+    func testCopyDanglingSymlinkSucceeds() async throws {
         let nonExistentTarget = try await self.fs.temporaryFilePath()
         let sourceSymlink = try await self.fs.temporaryFilePath()
 
@@ -2390,7 +2390,7 @@ extension FileSystemTests {
             at: sourceSymlink,
             to: destinationSymlink,
             strategy: .platformDefault,
-            overwriting: true,
+            replaceExisting: true,
             shouldProceedAfterError: { _, error in throw error },
             shouldCopyItem: { _, _ in true }
         )
@@ -2407,7 +2407,7 @@ extension FileSystemTests {
         XCTAssertEqual(sourceTargetAfterCopy, nonExistentTarget)
     }
 
-    func testCopyFileOverwritingLargeSourceToSmallDestination() async throws {
+    func testCopyFileReplacingExistingFileWithLargerSourceSucceeds() async throws {
         let sourceContent: [UInt8] = Array(repeating: 0xAB, count: 1024)
         let source = try await self.fs.temporaryFilePath()
         _ = try await self.fs.withFileHandle(
@@ -2430,7 +2430,7 @@ extension FileSystemTests {
             at: source,
             to: destination,
             strategy: .platformDefault,
-            overwriting: true,
+            replaceExisting: true,
             shouldProceedAfterError: { _, error in throw error },
             shouldCopyItem: { _, _ in true }
         )
@@ -2448,7 +2448,7 @@ extension FileSystemTests {
         }
     }
 
-    func testCopyFileOverwritingSmallSourceToLargeDestination() async throws {
+    func testCopyFileReplacingExistingFileWithSmallerSourceSucceeds() async throws {
         let sourceContent: [UInt8] = [1, 2, 3]
         let source = try await self.fs.temporaryFilePath()
         _ = try await self.fs.withFileHandle(
@@ -2471,7 +2471,7 @@ extension FileSystemTests {
             at: source,
             to: destination,
             strategy: .platformDefault,
-            overwriting: true,
+            replaceExisting: true,
             shouldProceedAfterError: { _, error in throw error },
             shouldCopyItem: { _, _ in true }
         )
