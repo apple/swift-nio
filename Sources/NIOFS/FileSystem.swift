@@ -1339,9 +1339,10 @@ extension FileSystem {
     ) -> Result<Void, FileSystemError> {
         // on Linux platforms we implement replaceExisting by copying the source file into
         // a temporary destination and then atomically renaming it, using the renameat2(2) system call.
+        let parentDirectory = destinationPath.removingLastComponent()
         let destinationDirectoryHandle: DirectoryFileHandle
         switch self._openDirectory(
-            at: destinationPath.removingLastComponent(),
+            at: parentDirectory.isEmpty ? FilePath(".") : parentDirectory,
             // not following symlinks here to prevent TOCTOU attacks where the parent directory
             // is replaced with a symlink pointing to an attacker-controlled location
             options: OpenOptions.Directory(followSymbolicLinks: false)
@@ -1599,10 +1600,10 @@ extension FileSystem {
         // so we copy the source symlink into a temporary symlink using `symlinkat` system call and then
         // rename it into the destination symlink using the `renameatx_np(2)` on Darwin and
         // `renameat2(2)` on Linux.
-        let destinationDirectory = destinationPath.removingLastComponent()
+        let parentDirectory = destinationPath.removingLastComponent()
         let destinationDirectoryHandle: DirectoryFileHandle
         switch self._openDirectory(
-            at: destinationDirectory,
+            at: parentDirectory.isEmpty ? FilePath(".") : parentDirectory,
             // not following symlinks here to prevent TOCTOU attacks where the parent directory
             // is replaced with a symlink pointing to an attacker-controlled location
             options: OpenOptions.Directory(followSymbolicLinks: false)

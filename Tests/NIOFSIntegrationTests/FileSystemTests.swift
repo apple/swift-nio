@@ -2488,4 +2488,88 @@ extension FileSystemTests {
             XCTAssertEqual(Array(buffer: contents), sourceContent)
         }
     }
+
+    func testCopyFileWithRelativePathsSucceeds() async throws {
+        let source = NIOFilePath("source")
+        let destination = NIOFilePath("destination")
+        let sourceContent: [UInt8] = [1, 2, 3, 4, 5]
+        let destinationContent: [UInt8] = [9, 9, 9, 9, 9]
+
+        self.addTeardownBlock { [fs] in
+            _ = try? await fs.removeItem(at: source, strategy: .platformDefault)
+            _ = try? await fs.removeItem(at: destination, strategy: .platformDefault)
+        }
+
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: source,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: sourceContent, toAbsoluteOffset: 0)
+        }
+        _ = try await self.fs.withFileHandle(
+            forWritingAt: destination,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            try await handle.write(contentsOf: destinationContent, toAbsoluteOffset: 0)
+        }
+
+        try await self.fs.copyItem(
+            at: source,
+            to: destination,
+            strategy: .platformDefault,
+            replaceExisting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        try await self.fs.withFileHandle(forReadingAt: destination) { handle in
+            let destinationContentAfterCopy = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: destinationContentAfterCopy), sourceContent)
+        }
+
+        try await self.fs.withFileHandle(forReadingAt: source) { handle in
+            let sourceContentAfterCopy = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(Array(buffer: sourceContentAfterCopy), sourceContent)
+        }
+    }
+
+    func testCopySymlinkWithRelativePathsSucceeds() async throws {
+        let sourceTarget = NIOFilePath("source-target")
+        let source = NIOFilePath("source-link")
+        let destinationTarget = NIOFilePath("destination-target")
+        let destination = NIOFilePath("destination-link")
+
+        self.addTeardownBlock { [fs] in
+            _ = try? await fs.removeItem(at: sourceTarget, strategy: .platformDefault)
+            _ = try? await fs.removeItem(at: destinationTarget, strategy: .platformDefault)
+            _ = try? await fs.removeItem(at: source, strategy: .platformDefault)
+            _ = try? await fs.removeItem(at: destination, strategy: .platformDefault)
+        }
+
+        try await self.fs.withFileHandle(
+            forWritingAt: sourceTarget,
+            options: .newFile(replaceExisting: false)
+        ) { _ in }
+        try await self.fs.withFileHandle(
+            forWritingAt: destinationTarget,
+            options: .newFile(replaceExisting: false)
+        ) { _ in }
+        try await self.fs.createSymbolicLink(at: source, withDestination: sourceTarget)
+        try await self.fs.createSymbolicLink(at: destination, withDestination: destinationTarget)
+
+        try await self.fs.copyItem(
+            at: source,
+            to: destination,
+            strategy: .platformDefault,
+            replaceExisting: true,
+            shouldProceedAfterError: { _, error in throw error },
+            shouldCopyItem: { _, _ in true }
+        )
+
+        let destinationTargetAfterCopy = try await self.fs.destinationOfSymbolicLink(at: destination)
+        XCTAssertEqual(destinationTargetAfterCopy, sourceTarget)
+
+        let sourceTargetAfterCopy = try await self.fs.destinationOfSymbolicLink(at: source)
+        XCTAssertEqual(sourceTargetAfterCopy, sourceTarget)
+    }
 }
