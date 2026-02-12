@@ -330,8 +330,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// on Darwin or a temporary file followed by `renameat2(2)` on Linux. Symbolic links are
     /// atomically replaced using a temporary symlink followed by `renamex_np(2)` on Darwin or
     /// `renameat2(2)` on Linux.
-    /// 
-    /// Note that `replaceExisting` is ignored for directories and implemented only for regular 
+    ///
+    /// Note that `replaceExisting` is ignored for directories and implemented only for regular
     /// files and symbolic links.
     public func copyItem(
         at sourcePath: NIOFilePath,
@@ -1284,18 +1284,6 @@ extension FileSystem {
         to destinationPath: FilePath,
         replaceExisting: Bool = false
     ) -> Result<Void, FileSystemError> {
-        func makeOnUnavailableError(
-            path: FilePath,
-            location: FileSystemError.SourceLocation
-        ) -> FileSystemError {
-            FileSystemError(
-                code: .closed,
-                message: "Can't copy '\(sourcePath)' to '\(destinationPath)', '\(path)' is closed.",
-                cause: nil,
-                location: location
-            )
-        }
-
         #if canImport(Darwin)
         // COPYFILE_CLONE clones the file if possible and will fallback to doing a copy.
         // COPYFILE_ALL is shorthand for:
@@ -1304,6 +1292,7 @@ extension FileSystem {
         if replaceExisting {
             flags |= copyfile_flags_t(COPYFILE_UNLINK)
         }
+
         return Libc.copyfile(
             from: sourcePath,
             to: destinationPath,
@@ -1319,8 +1308,13 @@ extension FileSystem {
         }
 
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
-        if !replaceExisting {
-            return self._copyFileOnLinux(
+        if replaceExisting {
+            return self._copyRegularFileReplacing(
+                from: sourcePath,
+                to: destinationPath
+            )
+        } else {
+            return self._copyFileContents(
                 from: sourcePath,
                 to: destinationPath
             ) { destinationPath, writeOptions in
@@ -1335,9 +1329,16 @@ extension FileSystem {
                 }
             }
         }
+        #endif
+    }
 
+    #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    private func _copyRegularFileReplacing(
+        from sourcePath: FilePath,
+        to destinationPath: FilePath
+    ) -> Result<Void, FileSystemError> {
         // on Linux platforms we implement replaceExisting by copying the source file into
-        // a temporary destination and then atomically renaming it, using the renameat2(2) system call
+        // a temporary destination and then atomically renaming it, using the renameat2(2) system call.
         let destinationDirectoryHandle: DirectoryFileHandle
         switch self._openDirectory(
             at: destinationPath.removingLastComponent(),
@@ -1413,7 +1414,7 @@ extension FileSystem {
         }
 
         let temporaryFilepath = FilePath(".tmp-" + String(randomAlphaNumericOfLength: 6))
-        let copyResult = self._copyFileOnLinux(
+        let copyResult = self._copyFileContents(
             from: sourcePath,
             to: temporaryFilepath,
             openDestination: openDestination
@@ -1455,11 +1456,9 @@ extension FileSystem {
         case .success:
             return .success(())
         }
-        #endif
     }
 
-    #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
-    private func _copyFileOnLinux(
+    private func _copyFileContents(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
         openDestination: (FilePath, OpenOptions.Write) -> Result<WriteFileHandle, FileSystemError>
