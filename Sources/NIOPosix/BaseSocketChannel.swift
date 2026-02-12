@@ -1484,7 +1484,7 @@ extension BaseSocketChannel: NIOTransportAccessibleChannel where SocketType: Bas
     typealias Transport = NIOBSDSocket.Handle
 
     /// Provides scoped access to the BSD socket file handle.
-    func withUnsafeTransport<T>(_ body: (NIOBSDSocket.Handle) throws -> T) throws -> T {
+    func withUnsafeTransport<Result>(_ body: (_ transport: NIOBSDSocket.Handle) throws -> Result) throws -> Result {
         try self.socket.withUnsafeHandle(body)
     }
 }

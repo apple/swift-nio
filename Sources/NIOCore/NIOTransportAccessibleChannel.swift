@@ -42,5 +42,5 @@ public protocol NIOTransportAccessibleChannel<Transport>: Channel {
     /// - Parameter body: A closure that takes the underlying transport.
     /// - Returns: The value returned by the closure.
     /// - Throws: If the underlying transport is unavailable, or rethrows any error thrown by the closure.
-    func withUnsafeTransport<T>(_ body: (Transport) throws -> T) throws -> T
+    func withUnsafeTransport<Result>(_ body: (_ transport: Transport) throws -> Result) throws -> Result
 }
