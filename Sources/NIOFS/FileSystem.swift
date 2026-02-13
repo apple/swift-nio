@@ -1382,44 +1382,38 @@ extension FileSystem {
             return .failure(error)
         }
 
-        func openDestination(
-            _ path: FilePath,
-            options: OpenOptions.Write
-        ) -> Result<WriteFileHandle, FileSystemError> {
+        let temporaryFilepath = FilePath(".tmp-" + String(randomAlphaNumericOfLength: 6))
+        let copyResult = self._copyFileContents(
+            from: sourcePath,
+            to: temporaryFilepath
+        ) { destinationPath, writeOptions in
             destinationDirectoryFD.open(
-                atPath: path,
+                atPath: destinationPath,
                 mode: .writeOnly,
-                options: options.descriptorOptions,
-                permissions: options.permissionsForRegularFile
+                options: writeOptions.descriptorOptions,
+                permissions: writeOptions.permissionsForRegularFile
             )
             .mapError { errno in
                 let openError = FileSystemError.open(
                     "openat",
                     error: errno,
-                    path: path,
+                    path: destinationPath,
                     location: .here()
                 )
                 return FileSystemError(
-                    message: "Can't copy '\(sourcePath)' as '\(path)' couldn't be opened.",
+                    message: "Can't copy '\(sourcePath)' as '\(destinationPath)' couldn't be opened.",
                     wrapping: openError
                 )
             }
             .map { fd in
                 let handle = SystemFileHandle(
                     takingOwnershipOf: fd,
-                    path: path,
+                    path: destinationPath,
                     threadPool: self.threadPool
                 )
                 return WriteFileHandle(wrapping: handle)
             }
         }
-
-        let temporaryFilepath = FilePath(".tmp-" + String(randomAlphaNumericOfLength: 6))
-        let copyResult = self._copyFileContents(
-            from: sourcePath,
-            to: temporaryFilepath,
-            openDestination: openDestination
-        )
         guard case .success = copyResult else {
             _ = Syscall.unlinkat(path: temporaryFilepath, relativeTo: destinationDirectoryFD)
             return copyResult
