@@ -1435,7 +1435,7 @@ extension FileSystem {
                 )
             )
         }
-        let destinationFilepath = FilePath(destinationFilename.string)
+        let destinationFilepath = FilePath(root: nil, components: destinationFilename)
 
         switch Syscall.rename(
             from: temporaryFilepath,
@@ -1668,7 +1668,7 @@ extension FileSystem {
             return .failure(error)
         }
 
-        guard let filenameComponent = destinationPath.lastComponent else {
+        guard let destinationFilename = destinationPath.lastComponent else {
             return .failure(
                 FileSystemError(
                     code: .invalidArgument,
@@ -1679,7 +1679,7 @@ extension FileSystem {
             )
         }
 
-        let destinationFilePath = FilePath(filenameComponent.string)
+        let destinationFilePath = FilePath(root: nil, components: destinationFilename)
         #if canImport(Darwin)
         switch Syscall.rename(
             from: temporarySymlinkPath,
