@@ -1605,6 +1605,29 @@ extension ChannelPipeline {
             self.eventLoop.assertInEventLoop()
             self._pipeline.triggerUserOutboundEvent0(event, promise: promise)
         }
+
+        /// Provides scoped access to the underlying transport, if the channel supports it.
+        ///
+        /// This is an advanced API for reading or manipulating the underlying transport that backs a channel. Users must
+        /// not close the transport or invalidate any invariants that NIO relies upon for the channel operation.
+        ///
+        /// Not all channels support access to the underlying channel. If the channel does not support this API, the
+        /// closure is not called and this function immediately returns `nil`.
+        ///
+        /// - Parameter body: A closure that takes the underlying transport, if the channel supports this operation.
+        /// - Returns: The value returned by the closure, or `nil` if the channel does not expose its transport.
+        /// - Throws: If the underlying transport is unavailable, or rethrows any error thrown by the closure.
+        @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+        public func withUnsafeTransportIfAvailable<Transport, Result>(
+            of _: Transport.Type,
+            _ body: (_ transport: Transport) throws -> Result
+        ) throws -> Result? {
+            self.eventLoop.assertInEventLoop()
+            guard let channel = self._pipeline._channel as? any NIOTransportAccessibleChannel<Transport> else {
+                return nil
+            }
+            return try channel.withUnsafeTransport(body)
+        }
     }
 
     /// Returns a view of operations which can be performed synchronously on this pipeline. All

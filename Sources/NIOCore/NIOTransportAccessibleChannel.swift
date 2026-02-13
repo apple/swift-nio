@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// A ``NIOTransportAccessibleChannel`` is a ``Channel`` that provides access to its underlying transport.
-public protocol NIOTransportAccessibleChannel<Transport>: Channel {
+/// A ``NIOTransportAccessibleChannel`` is a ``ChannelCore`` that provides access to its underlying transport.
+public protocol NIOTransportAccessibleChannel<Transport>: ChannelCore {
     /// The type of the underlying transport.
     associatedtype Transport
 
@@ -23,21 +23,10 @@ public protocol NIOTransportAccessibleChannel<Transport>: Channel {
     /// not close the transport or invalidate any invariants that NIO relies upon for the channel operation.
     ///
     /// Not all channels are expected to conform to ``NIOTransportAccessibleChannel``, but this can be determined at
-    /// runtime:
+    /// runtime.
     ///
-    /// ```swift
-    /// if let channel = channel as? any NIOTransportAccessibleChannel {
-    ///     channel.withUnsafeTransport { transport in /* Do something with untyped transport. */ }
-    /// }
-    /// ```
-    ///
-    /// When you expect a specific associated transport type, get a typed transport closure:
-    ///
-    /// ```swift
-    /// if let channel = channel as? any NIOTransportAccessibleChannel<NIOBSDSocket.Handle>) {
-    ///     channel.withUnsafeTransport { transport in /* Do something with typed transport. */ }
-    /// }
-    /// ```
+    /// Users should not attempt to use this API direcly, but should instead use
+    /// ``ChannelPipeline/SynchronousOperations/withUnsafeTransportIfAvailable(of:_:)``.
     ///
     /// - Parameter body: A closure that takes the underlying transport.
     /// - Returns: The value returned by the closure.

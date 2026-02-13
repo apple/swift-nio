@@ -46,5 +46,12 @@ import Testing
                 #expect(fd__ == fd_)
             }
         }
+
+        // But this is how we want people to use the API -- via sync operations.
+        try channel.eventLoop.submit {
+            try channel.pipeline.syncOperations.withUnsafeTransportIfAvailable(of: NIOBSDSocket.Handle.self) { transport in
+                #expect(type(of: transport) == NIOBSDSocket.Handle.self)
+            }
+        }.wait()
     }
 }
