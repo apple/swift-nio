@@ -12,8 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// A ``NIOTransportAccessibleChannel`` is a ``ChannelCore`` that provides access to its underlying transport.
-public protocol NIOTransportAccessibleChannel<Transport>: ChannelCore {
+/// A ``ChannelCore`` that provides access to its underlying transport.
+///
+/// This API is only used for ``Channel`` implementations: if you are not implementing a ``Channel``, do not use this
+/// protocol directly. Instead use ``ChannelPipeline/SynchronousOperations/withUnsafeTransportIfAvailable(of:_:)``.
+///
+/// Not all channels are expected to conform to ``NIOTransportAccessibleChannelCore``, but this is determined at runtime, by
+/// ``ChannelPipeline/SynchronousOperations/withUnsafeTransportIfAvailable(of:_:)``.
+public protocol NIOTransportAccessibleChannelCore<Transport>: ChannelCore {
     /// The type of the underlying transport.
     associatedtype Transport
 
@@ -22,10 +28,12 @@ public protocol NIOTransportAccessibleChannel<Transport>: ChannelCore {
     /// This is an advanced API for reading or manipulating the underlying transport that backs a channel. Users must
     /// not close the transport or invalidate any invariants that NIO relies upon for the channel operation.
     ///
-    /// Not all channels are expected to conform to ``NIOTransportAccessibleChannel``, but this can be determined at
-    /// runtime.
-    ///
     /// Users should not attempt to use this API direcly, but should instead use
+    /// ``ChannelPipeline/SynchronousOperations/withUnsafeTransportIfAvailable(of:_:)``.
+    ///
+    /// Not all channels are expected to conform to ``NIOTransportAccessibleChannelCore``. If your channel implementation
+    /// does not support this protocol, do not provide a throwing implementation to indicate this. Instead, simply do
+    /// not conform your channel core to this protocol. Availablity of this functionality is communicated to users by /// ///
     /// ``ChannelPipeline/SynchronousOperations/withUnsafeTransportIfAvailable(of:_:)``.
     ///
     /// - Parameter body: A closure that takes the underlying transport.

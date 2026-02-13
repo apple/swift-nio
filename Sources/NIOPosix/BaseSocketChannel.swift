@@ -1479,7 +1479,7 @@ extension BaseSocketChannel {
     }
 }
 
-extension BaseSocketChannel: NIOTransportAccessibleChannel where SocketType: BaseSocket {
+extension BaseSocketChannel: NIOTransportAccessibleChannelCore where SocketType: BaseSocket {
     /// The underlying transport which is a BSD socket file handle.
     typealias Transport = NIOBSDSocket.Handle
 
