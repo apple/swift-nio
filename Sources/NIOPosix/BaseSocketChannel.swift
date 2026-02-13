@@ -1479,16 +1479,6 @@ extension BaseSocketChannel {
     }
 }
 
-extension BaseSocketChannel: NIOTransportAccessibleChannelCore where SocketType: BaseSocket {
-    /// The underlying transport which is a BSD socket file handle.
-    typealias Transport = NIOBSDSocket.Handle
-
-    /// Provides scoped access to the BSD socket file handle.
-    func withUnsafeTransport<Result>(_ body: (_ transport: NIOBSDSocket.Handle) throws -> Result) throws -> Result {
-        try self.socket.withUnsafeHandle(body)
-    }
-}
-
 /// Execute the given function and synchronously complete the given `EventLoopPromise` (if not `nil`).
 func executeAndComplete<Value: Sendable>(_ promise: EventLoopPromise<Value>?, _ body: () throws -> Value) {
     do {

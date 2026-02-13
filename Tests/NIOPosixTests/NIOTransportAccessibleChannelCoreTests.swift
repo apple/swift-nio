@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore  // NOTE: Not @testable import here -- testing public API surface.
+import NIOEmbedded
 import NIOPosix  // NOTE: Not @testable import here -- testing public API surface.
 import Testing
 
@@ -63,21 +64,50 @@ import Testing
     @Test func testUnderlyingTransportForUnsupportedChannels() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { #expect(throws: Never.self) { try group.syncShutdownGracefully() } }
-
-        // Right now pipe channels do not expose their underlying transport, so we'll use this to test API behaviour.
-        let channel = try NIOPipeBootstrap(group: group).takingOwnershipOfDescriptor(output: STDOUT_FILENO).wait()
+        let channel = EmbeddedChannel()
         defer { #expect(throws: Never.self) { try channel.close().wait() } }
 
         #expect(channel is any NIOTransportAccessibleChannelCore == false)
 
-        try channel.eventLoop.submit {
-            let syncOps = channel.pipeline.syncOperations
+        // Calling the public API will never run the closure -- we cannot specify a type to pass the runtime check.
+        let syncOps = channel.pipeline.syncOperations
+        try #expect(syncOps.withUnsafeTransportIfAvailable { 42 } == nil)
+        try #expect(syncOps.withUnsafeTransportIfAvailable(of: Any.self) { _ in 42 } == nil)
+        try #expect(syncOps.withUnsafeTransportIfAvailable(of: CInt.self) { _ in 42 } == nil)
+        try #expect(syncOps.withUnsafeTransportIfAvailable(of: type(of: STDOUT_FILENO).self) { _ in 42 } == nil)
+    }
 
-            // Calling the public API will never run the closure -- we cannot specify a type to pass the runtime check.
-            try #expect(syncOps.withUnsafeTransportIfAvailable { 42 } == nil)
-            try #expect(syncOps.withUnsafeTransportIfAvailable(of: Any.self) { _ in 42 } == nil)
-            try #expect(syncOps.withUnsafeTransportIfAvailable(of: CInt.self) { _ in 42 } == nil)
-            try #expect(syncOps.withUnsafeTransportIfAvailable(of: type(of: STDOUT_FILENO).self) { _ in 42 } == nil)
-        }.wait()
+    @Test func testUnderlyingTransportConformanceForExpectedChannels() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { #expect(throws: Never.self) { try group.syncShutdownGracefully() } }
+
+        // SeverSocketChannel -- yep.
+        let serverChannel = try ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        defer { #expect(throws: Never.self) { try serverChannel.close().wait() } }
+        #expect(serverChannel is any NIOTransportAccessibleChannelCore)
+        #expect(serverChannel is any NIOTransportAccessibleChannelCore<NIOBSDSocket.Handle>)
+
+        // SocketChannel -- yep.
+        let clientChannel = try ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+        defer { #expect(throws: Never.self) { try clientChannel.close().wait() } }
+        #expect(clientChannel is any NIOTransportAccessibleChannelCore)
+        #expect(clientChannel is any NIOTransportAccessibleChannelCore<NIOBSDSocket.Handle>)
+
+        // DatagramChannel -- yep.
+        let datagramChannel = try DatagramBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        defer { #expect(throws: Never.self) { try datagramChannel.close().wait() } }
+        #expect(datagramChannel is any NIOTransportAccessibleChannelCore)
+        #expect(datagramChannel is any NIOTransportAccessibleChannelCore<NIOBSDSocket.Handle>)
+
+        // PipeChannel -- yep.
+        let pipeChannel = try NIOPipeBootstrap(group: group).takingOwnershipOfDescriptor(output: STDOUT_FILENO).wait()
+        defer { #expect(throws: Never.self) { try pipeChannel.close().wait() } }
+        #expect(pipeChannel is any NIOTransportAccessibleChannelCore)
+        #expect(pipeChannel is any NIOTransportAccessibleChannelCore<NIOBSDSocket.PipeHandle>)
+
+        // EmbeddedChannel -- nope.
+        let embeddedChannel = EmbeddedChannel()
+        defer { #expect(throws: Never.self) { try embeddedChannel.close().wait() } }
+        #expect(embeddedChannel is any NIOTransportAccessibleChannelCore == false)
     }
 }
