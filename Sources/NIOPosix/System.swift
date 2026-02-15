@@ -570,7 +570,7 @@ internal enum Posix: Sendable {
     #elseif os(Linux) || os(FreeBSD) || os(Android) || os(OpenBSD)
     static let SOL_UDP: CInt = CInt(IPPROTO_UDP)
     #elseif os(Windows)
-    static let SOL_UDP: CInt = CInt(IPPROTO_UDP)
+    static let SOL_UDP: CInt = CInt(IPPROTO_UDP.rawValue)
     #endif
 
     #if !os(Windows)
