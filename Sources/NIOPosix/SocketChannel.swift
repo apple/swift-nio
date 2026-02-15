@@ -908,8 +908,10 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
         // -    https://lists.gt.net/linux/kernel/39575
         case .errno(let code):
             return self.shouldCloseOnErrnoCode(code)
+        #if os(Windows)
         default:
             return true
+        #endif
         }
     }
 
