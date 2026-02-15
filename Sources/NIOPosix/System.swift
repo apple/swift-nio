@@ -494,7 +494,7 @@ internal enum Posix: Sendable {
     @usableFromInline
     static var UIO_MAXIOV: Int {
         // TODO: This is a placeholder value. Find the correct one for Windows.
-        return 64
+        64
     }
     @usableFromInline
     static var SHUT_RD: Int {

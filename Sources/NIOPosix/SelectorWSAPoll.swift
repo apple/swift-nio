@@ -113,7 +113,11 @@ extension Selector: _SelectorBackendProtocol {
             // Bind the listener socket
             try withUnsafeBytes(of: &addr) { addrPtr in
                 let socketPointer = addrPtr.baseAddress!.assumingMemoryBound(to: sockaddr.self)
-                try NIOBSDSocket.bind(socket: listenerSocket, address: socketPointer, address_len: socklen_t(MemoryLayout<sockaddr_un>.size))
+                try NIOBSDSocket.bind(
+                    socket: listenerSocket,
+                    address: socketPointer,
+                    address_len: socklen_t(MemoryLayout<sockaddr_un>.size)
+                )
             }
 
             // Listen for connections (backlog of 1 is enough)
@@ -128,7 +132,13 @@ extension Selector: _SelectorBackendProtocol {
                 // Connect to the listener
                 try withUnsafeMutableBytes(of: &addr) { addrPtr in
                     let sockaddrPtr = addrPtr.baseAddress!.assumingMemoryBound(to: sockaddr.self)
-                    guard try NIOBSDSocket.connect(socket: writeSocket, address: sockaddrPtr, address_len: socklen_t(MemoryLayout<sockaddr_un>.size)) else {
+                    guard
+                        try NIOBSDSocket.connect(
+                            socket: writeSocket,
+                            address: sockaddrPtr,
+                            address_len: socklen_t(MemoryLayout<sockaddr_un>.size)
+                        )
+                    else {
                         throw IOError(winsock: WSAGetLastError(), reason: "connect")
                     }
                 }
@@ -212,7 +222,10 @@ extension Selector: _SelectorBackendProtocol {
                 Int32(clamping: timeAmount.nanoseconds / 1_000_000)
             }
 
-        precondition(!self.pollFDs.isEmpty, "pollFDs should never be empty here, since we need an eventFD for waking up on demand")
+        precondition(
+            !self.pollFDs.isEmpty,
+            "pollFDs should never be empty here, since we need an eventFD for waking up on demand"
+        )
         // We always have at least the wakeup socket in pollFDs
         let result = self.pollFDs.withUnsafeMutableBufferPointer { ptr in
             WSAPoll(ptr.baseAddress!, UInt32(ptr.count), time)

@@ -45,17 +45,17 @@ enum ThreadOpsWindows: ThreadOps {
         let routine: @convention(c) (UnsafeMutableRawPointer?) -> CUnsignedInt = {
             let boxed = Unmanaged<NIOThread.ThreadBox>.fromOpaque($0!).takeRetainedValue()
             let (body, name) = (boxed.value.body, boxed.value.name)
-            
+
             // Get a real thread handle instead of pseudo-handle
             var realHandle: HANDLE? = nil
             let success = DuplicateHandle(
-                GetCurrentProcess(),    // Source process
-                GetCurrentThread(),     // Source handle (pseudo-handle)
-                GetCurrentProcess(),    // Target process
-                &realHandle,           // Target handle (real handle)
-                0,                     // Desired access (0 = same as source)
-                false,                 // Inherit handle
-                DWORD(DUPLICATE_SAME_ACCESS) // Options
+                GetCurrentProcess(),  // Source process
+                GetCurrentThread(),  // Source handle (pseudo-handle)
+                GetCurrentProcess(),  // Target process
+                &realHandle,  // Target handle (real handle)
+                0,  // Desired access (0 = same as source)
+                false,  // Inherit handle
+                DWORD(DUPLICATE_SAME_ACCESS)  // Options
             )
 
             guard success, let realHandle else {

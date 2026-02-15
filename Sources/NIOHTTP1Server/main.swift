@@ -15,6 +15,7 @@
 import NIOCore
 import NIOHTTP1
 import NIOPosix
+
 #if os(Windows)
 import WinSDK
 #endif
@@ -668,9 +669,12 @@ let channel = try { () -> Channel in
         return try socketBootstrap.bind(unixDomainSocketPath: path).wait()
     case .stdio:
         #if os(Windows)
-            return try pipeBootstrap.takingOwnershipOfDescriptors(input: Int32(bitPattern: STD_INPUT_HANDLE), output: Int32(bitPattern: STD_OUTPUT_HANDLE)).wait()
+        return try pipeBootstrap.takingOwnershipOfDescriptors(
+            input: Int32(bitPattern: STD_INPUT_HANDLE),
+            output: Int32(bitPattern: STD_OUTPUT_HANDLE)
+        ).wait()
         #else
-            return try pipeBootstrap.takingOwnershipOfDescriptors(input: STDIN_FILENO, output: STDOUT_FILENO).wait()
+        return try pipeBootstrap.takingOwnershipOfDescriptors(input: STDIN_FILENO, output: STDOUT_FILENO).wait()
         #endif
     }
 }()
