@@ -129,6 +129,16 @@ public enum NIOBSDSocket: Sendable {
     #else
     public typealias Handle = CInt
     #endif
+    public struct PipeHandle {
+        public var input: Handle
+        public var output: Handle
+
+        @inlinable
+        public init(input: Handle, output: Handle) {
+            self.input = input
+            self.output = output
+        }
+    }
 }
 
 extension NIOBSDSocket {
