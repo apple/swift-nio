@@ -53,7 +53,10 @@ import Testing
             try #expect(syncOps.withUnsafeTransportIfAvailable { 42 } == nil)
 
             // Fun aside: What is the resolved type of the above function and why does it allow ignoring closure param?
+            // Even more fun: This test crashes when compiled in release mode, but only in Swift 6.2.
+            #if !(swift(>=6.2) && swift(<6.3))
             try #expect(syncOps.withUnsafeTransportIfAvailable { $0.self } == nil)
+            #endif
             // Answer: `$0: any (~Copyable & ~Escapable).Type`
 
             // Calling without explicit transport type does not run closure, even if body uses compatible literal value.
