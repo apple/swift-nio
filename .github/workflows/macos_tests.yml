@@ -78,6 +78,10 @@ on:
         type: string
         description: "The command(s) to be executed before all other work."
         default: ""
+      xcode_16_3_required:
+        type: boolean
+        description: "Boolean to mark the Xcode 16.3 job as required. Defaults to true."
+        default: true
       xcode_16_4_enabled:
         type: boolean
         description: "Boolean to enable the Xcode version 16.4 jobs. Defaults to true."
@@ -94,6 +98,10 @@ on:
         type: string
         description: "The command(s) to be executed before all other work."
         default: ""
+      xcode_16_4_required:
+        type: boolean
+        description: "Boolean to mark the Xcode 16.4 job as required. Defaults to true."
+        default: true
       xcode_26_0_enabled:
         type: boolean
         description: "Boolean to enable the Xcode version 26.0 jobs. Defaults to true."
@@ -110,6 +118,10 @@ on:
         type: string
         description: "The command(s) to be executed before all other work."
         default: ""
+      xcode_26_0_required:
+        type: boolean
+        description: "Boolean to mark the Xcode 26.0 job as required. Defaults to true."
+        default: true
       xcode_26_1_enabled:
         type: boolean
         description: "Boolean to enable the Xcode version 26.1 jobs. Defaults to true."
@@ -126,6 +138,10 @@ on:
         type: string
         description: "The command(s) to be executed before all other work."
         default: ""
+      xcode_26_1_required:
+        type: boolean
+        description: "Boolean to mark the Xcode 26.1 job as required. Defaults to true."
+        default: true
       xcode_26_2_enabled:
         type: boolean
         description: "Boolean to enable the Xcode version 26.2 jobs. Defaults to true."
@@ -142,6 +158,10 @@ on:
         type: string
         description: "The command(s) to be executed before all other work."
         default: ""
+      xcode_26_2_required:
+        type: boolean
+        description: "Boolean to mark the Xcode 26.2 job as required. Defaults to true."
+        default: true
       xcode_26_beta_enabled:
         type: boolean
         description: "⚠️ Deprecated."
@@ -174,6 +194,10 @@ on:
         type: string
         description: "The command(s) to be executed before all other work."
         default: ""
+      xcode_latest_beta_required:
+        type: boolean
+        description: "Boolean to mark the Xcode latest beta job as required. Defaults to false."
+        default: false
 
       build_scheme:
         type: string
@@ -278,22 +302,27 @@ jobs:
             xcode_16_3_build_arguments_override="${MATRIX_MACOS_16_3_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_3_test_arguments_override="${MATRIX_MACOS_16_3_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_3_setup_command="${MATRIX_MACOS_16_3_SETUP_COMMAND:=""}"
+            xcode_16_3_required="${MATRIX_MACOS_16_3_REQUIRED:=true}"
             xcode_16_4_enabled="${MATRIX_MACOS_16_4_ENABLED:=true}"
             xcode_16_4_build_arguments_override="${MATRIX_MACOS_16_4_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_4_test_arguments_override="${MATRIX_MACOS_16_4_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_4_setup_command="${MATRIX_MACOS_16_4_SETUP_COMMAND:=""}"
+            xcode_16_4_required="${MATRIX_MACOS_16_4_REQUIRED:=true}"
             xcode_26_0_enabled="${MATRIX_MACOS_26_0_ENABLED:=true}"
             xcode_26_0_build_arguments_override="${MATRIX_MACOS_26_0_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_26_0_test_arguments_override="${MATRIX_MACOS_26_0_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_26_0_setup_command="${MATRIX_MACOS_26_0_SETUP_COMMAND:=""}"
+            xcode_26_0_required="${MATRIX_MACOS_26_0_REQUIRED:=true}"
             xcode_26_1_enabled="${MATRIX_MACOS_26_1_ENABLED:=true}"
             xcode_26_1_build_arguments_override="${MATRIX_MACOS_26_1_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_26_1_test_arguments_override="${MATRIX_MACOS_26_1_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_26_1_setup_command="${MATRIX_MACOS_26_1_SETUP_COMMAND:=""}"
+            xcode_26_1_required="${MATRIX_MACOS_26_1_REQUIRED:=true}"
             xcode_26_2_enabled="${MATRIX_MACOS_26_2_ENABLED:=true}"
             xcode_26_2_build_arguments_override="${MATRIX_MACOS_26_2_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_26_2_test_arguments_override="${MATRIX_MACOS_26_2_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_26_2_setup_command="${MATRIX_MACOS_26_2_SETUP_COMMAND:=""}"
+            xcode_26_2_required="${MATRIX_MACOS_26_2_REQUIRED:=true}"
             xcode_latest_beta_enabled="${MATRIX_MACOS_26_BETA_1_ENABLED:=true}" # TODO: remove once no repos use this
             xcode_latest_beta_build_arguments_override="${MATRIX_MACOS_26_BETA_1_BUILD_ARGUMENTS_OVERRIDE:=""}" # TODO: remove once no repos use this
             xcode_latest_beta_test_arguments_override="${MATRIX_MACOS_26_BETA_1_TEST_ARGUMENTS_OVERRIDE:=""}" # TODO: remove once no repos use this
@@ -302,6 +331,7 @@ jobs:
             xcode_latest_beta_build_arguments_override="${MATRIX_MACOS_LATEST_BETA_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_latest_beta_test_arguments_override="${MATRIX_MACOS_LATEST_BETA_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_latest_beta_setup_command="${MATRIX_MACOS_LATEST_BETA_SETUP_COMMAND:=""}"
+            xcode_latest_beta_required="${MATRIX_MACOS_LATEST_BETA_REQUIRED:=false}"
 
             # Create matrix from inputs
             matrix='{"config": []}'
@@ -353,7 +383,8 @@ jobs:
                 --arg test_arguments_override "$xcode_16_3_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
                 --argjson env_vars "$env_vars_json" \
-                '.config[.config| length] |= . + { "name": "Xcode 16.3", "xcode_version": "16.3", "xcode_app": "Xcode_16.3.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "required": true }')
+                --argjson required "$xcode_16_3_required" \
+                '.config[.config| length] |= . + { "name": "Xcode 16.3", "xcode_version": "16.3", "xcode_app": "Xcode_16.3.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "required": $required }')
             fi
 
             if [[ "$xcode_16_4_enabled" == "true" ]]; then
@@ -363,7 +394,8 @@ jobs:
                 --arg test_arguments_override "$xcode_16_4_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
                 --argjson env_vars "$env_vars_json" \
-                '.config[.config| length] |= . + { "name": "Xcode 16.4", "xcode_version": "16.4", "xcode_app": "Xcode_16.4.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "required": true }')
+                --argjson required "$xcode_16_4_required" \
+                '.config[.config| length] |= . + { "name": "Xcode 16.4", "xcode_version": "16.4", "xcode_app": "Xcode_16.4.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "required": $required }')
             fi
 
             if [[ "$xcode_26_0_enabled" == "true" ]]; then
@@ -373,7 +405,8 @@ jobs:
                 --arg test_arguments_override "$xcode_26_0_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
                 --argjson env_vars "$env_vars_json" \
-                '.config[.config| length] |= . + { "name": "Xcode 26.0", "xcode_version": "26.0", "xcode_app": "Xcode_26.0.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "required": true }')
+                --argjson required "$xcode_26_0_required" \
+                '.config[.config| length] |= . + { "name": "Xcode 26.0", "xcode_version": "26.0", "xcode_app": "Xcode_26.0.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "required": $required }')
             fi
 
             if [[ "$xcode_26_1_enabled" == "true" ]]; then
@@ -383,7 +416,8 @@ jobs:
                 --arg test_arguments_override "$xcode_26_1_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
                 --argjson env_vars "$env_vars_json" \
-                '.config[.config| length] |= . + { "name": "Xcode 26.1", "xcode_version": "26.1", "xcode_app": "Xcode_26.1.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "required": true }')
+                --argjson required "$xcode_26_1_required" \
+                '.config[.config| length] |= . + { "name": "Xcode 26.1", "xcode_version": "26.1", "xcode_app": "Xcode_26.1.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "required": $required }')
             fi
 
             if [[ "$xcode_26_2_enabled" == "true" ]]; then
@@ -393,7 +427,8 @@ jobs:
                 --arg test_arguments_override "$xcode_26_2_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
                 --argjson env_vars "$env_vars_json" \
-                '.config[.config| length] |= . + { "name": "Xcode 26.2", "xcode_version": "26.2", "xcode_app": "Xcode_26.2.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "required": true }')
+                --argjson required "$xcode_26_2_required" \
+                '.config[.config| length] |= . + { "name": "Xcode 26.2", "xcode_version": "26.2", "xcode_app": "Xcode_26.2.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "required": $required }')
             fi
 
             if [[ "$xcode_latest_beta_enabled" == "true" ]]; then
@@ -403,7 +438,8 @@ jobs:
                 --arg test_arguments_override "$xcode_latest_beta_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
                 --argjson env_vars "$env_vars_json" \
-                '.config[.config| length] |= . + { "name": "Xcode latest beta", "xcode_version": "latest beta", "xcode_app": "Xcode-latest.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "required": false }')
+                --argjson required "$xcode_latest_beta_required" \
+                '.config[.config| length] |= . + { "name": "Xcode latest beta", "xcode_version": "latest beta", "xcode_app": "Xcode-latest.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars, "required": $required }')
             fi
 
             echo "$matrix" | jq -c
@@ -431,22 +467,27 @@ jobs:
           MATRIX_MACOS_16_3_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_3_build_arguments_override }}
           MATRIX_MACOS_16_3_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_3_test_arguments_override }}
           MATRIX_MACOS_16_3_SETUP_COMMAND: ${{ inputs.xcode_16_3_setup_command }}
+          MATRIX_MACOS_16_3_REQUIRED: ${{ inputs.xcode_16_3_required }}
           MATRIX_MACOS_16_4_ENABLED: ${{ inputs.xcode_16_4_enabled }}
           MATRIX_MACOS_16_4_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_4_build_arguments_override }}
           MATRIX_MACOS_16_4_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_4_test_arguments_override }}
           MATRIX_MACOS_16_4_SETUP_COMMAND: ${{ inputs.xcode_16_4_setup_command }}
+          MATRIX_MACOS_16_4_REQUIRED: ${{ inputs.xcode_16_4_required }}
           MATRIX_MACOS_26_0_ENABLED: ${{ inputs.xcode_26_0_enabled }}
           MATRIX_MACOS_26_0_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_0_build_arguments_override }}
           MATRIX_MACOS_26_0_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_0_test_arguments_override }}
           MATRIX_MACOS_26_0_SETUP_COMMAND: ${{ inputs.xcode_26_0_setup_command }}
+          MATRIX_MACOS_26_0_REQUIRED: ${{ inputs.xcode_26_0_required }}
           MATRIX_MACOS_26_1_ENABLED: ${{ inputs.xcode_26_1_enabled }}
           MATRIX_MACOS_26_1_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_1_build_arguments_override }}
           MATRIX_MACOS_26_1_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_1_test_arguments_override }}
           MATRIX_MACOS_26_1_SETUP_COMMAND: ${{ inputs.xcode_26_1_setup_command }}
+          MATRIX_MACOS_26_1_REQUIRED: ${{ inputs.xcode_26_1_required }}
           MATRIX_MACOS_26_2_ENABLED: ${{ inputs.xcode_26_2_enabled }}
           MATRIX_MACOS_26_2_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_2_build_arguments_override }}
           MATRIX_MACOS_26_2_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_2_test_arguments_override }}
           MATRIX_MACOS_26_2_SETUP_COMMAND: ${{ inputs.xcode_26_2_setup_command }}
+          MATRIX_MACOS_26_2_REQUIRED: ${{ inputs.xcode_26_2_required }}
           MATRIX_MACOS_26_BETA_1_ENABLED: ${{ inputs.xcode_26_beta_1_enabled }}
           MATRIX_MACOS_26_BETA_1_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_beta_1_build_arguments_override }}
           MATRIX_MACOS_26_BETA_1_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_beta_1_test_arguments_override }}
@@ -455,6 +496,7 @@ jobs:
           MATRIX_MACOS_LATEST_BETA_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_latest_beta_build_arguments_override }}
           MATRIX_MACOS_LATEST_BETA_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_latest_beta_test_arguments_override }}
           MATRIX_MACOS_LATEST_BETA_SETUP_COMMAND: ${{ inputs.xcode_latest_beta_setup_command }}
+          MATRIX_MACOS_LATEST_BETA_REQUIRED: ${{ inputs.xcode_latest_beta_required }}
 
   darwin-job:
     name: ${{ matrix.config.name }}
