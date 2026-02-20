@@ -57,8 +57,14 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
                 self.iterator = iterator
             }
 
+            @concurrent
             public mutating func next() async -> Element? {
                 await self.iterator.next()
+            }
+
+            @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+            public mutating func next(isolation actor: isolated (any Actor)?) async -> Element? {
+                await self.iterator.next(isolation: actor)
             }
         }
     }
