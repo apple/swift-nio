@@ -37,25 +37,23 @@ rc="$?"
 # Benchmarks are unchanged, nothing to recalculate
 if [[ "$rc" == 0 ]]; then
   exit 0
-# Benchmark thresholds changed – 2 is defined in
-#   package-benchmark/BenchmarkShared/Command+Helpers.swift/ExitCode.thresholdRegression
-elif [[ "$rc" == 2 ]]; then
-  log "Recalculating thresholds..."
-
-  swift package --package-path "$benchmark_package_path" "${swift_package_arguments[@]}" benchmark thresholds update --format metricP90AbsoluteThresholds --path "${benchmark_package_path}/Thresholds/${swift_version}/"
-  update_rc="$?"
-
-  if [[ "$update_rc" != 0 ]]; then
-    error "Benchmark failed to run due to build error."
-    exit $update_rc
-  fi
-
-  echo "=== BEGIN DIFF ==="  # use echo, not log for clean output to be scraped
-  git diff --exit-code HEAD
-# all other errors
-else
-  error "Benchmark failed to run due to build error."
-  exit $rc
 fi
+
+# Non-zero exit from 'thresholds check' means thresholds regressed or a build
+# error occurred. Try 'thresholds update' to distinguish: if it also fails, it
+# was a build error; if it succeeds, thresholds were updated.
+log "Recalculating thresholds..."
+
+swift package --package-path "$benchmark_package_path" "${swift_package_arguments[@]}" benchmark thresholds update --format metricP90AbsoluteThresholds --path "${benchmark_package_path}/Thresholds/${swift_version}/"
+update_rc="$?"
+
+if [[ "$update_rc" != 0 ]]; then
+  error "Benchmark failed to run due to build error."
+  exit $update_rc
+fi
+
+echo "=== BEGIN DIFF ==="  # use echo, not log for clean output to be scraped
+git diff HEAD
+exit 1
 
 
