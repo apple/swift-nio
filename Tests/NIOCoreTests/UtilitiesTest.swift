@@ -18,6 +18,10 @@ import XCTest
 class UtilitiesTest: XCTestCase {
     func testCoreCountWorks() {
         XCTAssertGreaterThan(System.coreCount, 0)
+        // DO NOT SUBMIT: intentional failure to test required check fan-in behaviour
+        #if compiler(>=6.0) && compiler(<6.1)
+        XCTFail("Intentional CI failure on Swift 6.0 to verify required check fan-in")
+        #endif
     }
 
     @available(*, deprecated)
