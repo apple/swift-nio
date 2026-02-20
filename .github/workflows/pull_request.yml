@@ -28,6 +28,20 @@ jobs:
       linux_nightly_6_1_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_nightly_main_arguments_override: "--explicit-target-dependency-import-check error"
 
+  unit-tests-required:
+    name: Unit tests (All Required)
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    if: always()
+    steps:
+      - name: Check required jobs
+        run: |
+          if [[ "${{ needs.unit-tests.result }}" != "success" && \
+                "${{ needs.unit-tests.result }}" != "skipped" ]]; then
+            echo "Required unit test matrix jobs failed"
+            exit 1
+          fi
+
   benchmarks:
     name: Benchmarks
     # Workaround https://github.com/nektos/act/issues/1875
@@ -39,6 +53,20 @@ jobs:
     name: Cxx interop
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/cxx_interop.yml@main
+
+  cxx-interop-required:
+    name: Cxx interop (All Required)
+    runs-on: ubuntu-latest
+    needs: [cxx-interop]
+    if: always()
+    steps:
+      - name: Check required jobs
+        run: |
+          if [[ "${{ needs.cxx-interop.result }}" != "success" && \
+                "${{ needs.cxx-interop.result }}" != "skipped" ]]; then
+            echo "Required Cxx interop matrix jobs failed"
+            exit 1
+          fi
 
   construct-integration-test-matrix:
     name: Construct integration test matrix
@@ -93,6 +121,20 @@ jobs:
       xcode_16_2_build_arguments_override: "-Xswiftc -Xfrontend -Xswiftc -require-explicit-sendable"
       xcode_16_3_build_arguments_override: "-Xswiftc -Xfrontend -Xswiftc -require-explicit-sendable"
 
+  macos-tests-required:
+    name: macOS tests (All Required)
+    runs-on: ubuntu-latest
+    needs: [macos-tests]
+    if: always()
+    steps:
+      - name: Check required jobs
+        run: |
+          if [[ "${{ needs.macos-tests.result }}" != "success" && \
+                "${{ needs.macos-tests.result }}" != "skipped" ]]; then
+            echo "Required macOS test matrix jobs failed"
+            exit 1
+          fi
+
   static-sdk:
     name: Static Linux Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
@@ -113,3 +155,17 @@ jobs:
   release-builds:
     name: Release builds
     uses: apple/swift-nio/.github/workflows/release_builds.yml@main
+
+  release-builds-required:
+    name: Release builds (All Required)
+    runs-on: ubuntu-latest
+    needs: [release-builds]
+    if: always()
+    steps:
+      - name: Check required jobs
+        run: |
+          if [[ "${{ needs.release-builds.result }}" != "success" && \
+                "${{ needs.release-builds.result }}" != "skipped" ]]; then
+            echo "Required release build matrix jobs failed"
+            exit 1
+          fi

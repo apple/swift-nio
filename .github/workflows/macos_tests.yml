@@ -583,17 +583,3 @@ jobs:
       XCODE_VERSION: ${{ matrix.config.xcode_version }}
       DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
       BUILD_SCHEME: ${{ inputs.build_scheme }}
-
-  required-checks-passed:
-    name: macOS tests (All Required)
-    runs-on: ubuntu-latest
-    needs: [darwin-job]
-    if: always()
-    steps:
-      - name: Check required jobs
-        run: |
-          if [[ "${{ needs.darwin-job.result }}" != "success" && \
-                "${{ needs.darwin-job.result }}" != "skipped" ]]; then
-            echo "Required macOS test matrix jobs failed"
-            exit 1
-          fi
