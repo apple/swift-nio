@@ -246,6 +246,7 @@ should_include_version() {
 #   $7: container_image
 #   $8: runner
 #   $9: env_vars_json
+#   $10: required ("true" or "false")
 add_matrix_entry() {
     local platform="$1"
     local version="$2"
@@ -256,6 +257,7 @@ add_matrix_entry() {
     local container_image="$7"
     local runner="$8"
     local env_vars_json="$9"
+    local required="${10}"
 
     if [[ "$enabled" == "true" ]] && should_include_version "$version"; then
         # shellcheck disable=SC2016  # Our use of JQ_BIN means that shellcheck can't tell this is a `jq` invocation
@@ -268,7 +270,8 @@ add_matrix_entry() {
             --arg platform "$platform" \
             --arg version "$version" \
             --argjson env_vars "$env_vars_json" \
-            '.config[.config| length] |= . + { "name": $version, "image": $container_image, "swift_version": $version, "platform": $platform, "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars}')
+            --arg required "$required" \
+            '.config[.config| length] |= . + { "name": $version, "image": $container_image, "swift_version": $version, "platform": $platform, "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars, "required": ($required | test("true"))}')
     fi
 }
 
@@ -298,14 +301,14 @@ if [[ \
   fi
 fi
 
-#                 Platform   Version         Enabled                        Setup                   Command          Arguments                               Image                                 Runner           Env
-add_matrix_entry "Linux"    "5.9"           "$linux_5_9_enabled"           "$linux_setup_command"  "$linux_command" "$linux_5_9_command_arguments"          "$linux_5_9_container_image"          "$linux_runner"  "$linux_env_vars_json"
-add_matrix_entry "Linux"    "5.10"          "$linux_5_10_enabled"          "$linux_setup_command"  "$linux_command" "$linux_5_10_command_arguments"         "$linux_5_10_container_image"         "$linux_runner"  "$linux_env_vars_json"
-add_matrix_entry "Linux"    "6.0"           "$linux_6_0_enabled"           "$linux_setup_command"  "$linux_command" "$linux_6_0_command_arguments"          "$linux_6_0_container_image"          "$linux_runner"  "$linux_env_vars_json"
-add_matrix_entry "Linux"    "6.1"           "$linux_6_1_enabled"           "$linux_setup_command"  "$linux_command" "$linux_6_1_command_arguments"          "$linux_6_1_container_image"          "$linux_runner"  "$linux_env_vars_json"
-add_matrix_entry "Linux"    "6.2"           "$linux_6_2_enabled"           "$linux_setup_command"  "$linux_command" "$linux_6_2_command_arguments"          "$linux_6_2_container_image"          "$linux_runner"  "$linux_env_vars_json"
-add_matrix_entry "Linux"    "nightly-next"  "$linux_nightly_next_enabled"  "$linux_setup_command"  "$linux_command" "$linux_nightly_next_command_arguments" "$linux_nightly_next_container_image" "$linux_runner"  "$linux_env_vars_json"
-add_matrix_entry "Linux"    "nightly-main"  "$linux_nightly_main_enabled"  "$linux_setup_command"  "$linux_command" "$linux_nightly_main_command_arguments" "$linux_nightly_main_container_image" "$linux_runner"  "$linux_env_vars_json"
+#                 Platform   Version         Enabled                        Setup                   Command          Arguments                               Image                                 Runner           Env                    Required
+add_matrix_entry "Linux"    "5.9"           "$linux_5_9_enabled"           "$linux_setup_command"  "$linux_command" "$linux_5_9_command_arguments"          "$linux_5_9_container_image"          "$linux_runner"  "$linux_env_vars_json" "true"
+add_matrix_entry "Linux"    "5.10"          "$linux_5_10_enabled"          "$linux_setup_command"  "$linux_command" "$linux_5_10_command_arguments"         "$linux_5_10_container_image"         "$linux_runner"  "$linux_env_vars_json" "true"
+add_matrix_entry "Linux"    "6.0"           "$linux_6_0_enabled"           "$linux_setup_command"  "$linux_command" "$linux_6_0_command_arguments"          "$linux_6_0_container_image"          "$linux_runner"  "$linux_env_vars_json" "true"
+add_matrix_entry "Linux"    "6.1"           "$linux_6_1_enabled"           "$linux_setup_command"  "$linux_command" "$linux_6_1_command_arguments"          "$linux_6_1_container_image"          "$linux_runner"  "$linux_env_vars_json" "true"
+add_matrix_entry "Linux"    "6.2"           "$linux_6_2_enabled"           "$linux_setup_command"  "$linux_command" "$linux_6_2_command_arguments"          "$linux_6_2_container_image"          "$linux_runner"  "$linux_env_vars_json" "true"
+add_matrix_entry "Linux"    "nightly-next"  "$linux_nightly_next_enabled"  "$linux_setup_command"  "$linux_command" "$linux_nightly_next_command_arguments" "$linux_nightly_next_container_image" "$linux_runner"  "$linux_env_vars_json" "false"
+add_matrix_entry "Linux"    "nightly-main"  "$linux_nightly_main_enabled"  "$linux_setup_command"  "$linux_command" "$linux_nightly_main_command_arguments" "$linux_nightly_main_container_image" "$linux_runner"  "$linux_env_vars_json" "false"
 
 ## Windows
 if [[ \
@@ -319,12 +322,12 @@ if [[ \
   fi
 fi
 
-#                 Platform   Version         Enabled                          Setup                     Command            Arguments                                 Image                                   Runner                         Env
-add_matrix_entry "Windows"  "6.0"           "$windows_6_0_enabled"           "$windows_setup_command"  "$windows_command" "$windows_6_0_command_arguments"          "$windows_6_0_container_image"          "$windows_6_0_runner"          "$windows_env_vars_json"
-add_matrix_entry "Windows"  "6.1"           "$windows_6_1_enabled"           "$windows_setup_command"  "$windows_command" "$windows_6_1_command_arguments"          "$windows_6_1_container_image"          "$windows_6_1_runner"          "$windows_env_vars_json"
-add_matrix_entry "Windows"  "6.2"           "$windows_6_2_enabled"           "$windows_setup_command"  "$windows_command" "$windows_6_2_command_arguments"          "$windows_6_2_container_image"          "$windows_6_2_runner"          "$windows_env_vars_json"
-add_matrix_entry "Windows"  "nightly-next"  "$windows_nightly_next_enabled"  "$windows_setup_command"  "$windows_command" "$windows_nightly_next_command_arguments" "$windows_nightly_next_container_image" "$windows_nightly_next_runner" "$windows_env_vars_json"
-add_matrix_entry "Windows"  "nightly-main"  "$windows_nightly_main_enabled"  "$windows_setup_command"  "$windows_command" "$windows_nightly_main_command_arguments" "$windows_nightly_main_container_image" "$windows_nightly_main_runner" "$windows_env_vars_json"
+#                 Platform   Version         Enabled                          Setup                     Command            Arguments                                 Image                                   Runner                         Env                       Required
+add_matrix_entry "Windows"  "6.0"           "$windows_6_0_enabled"           "$windows_setup_command"  "$windows_command" "$windows_6_0_command_arguments"          "$windows_6_0_container_image"          "$windows_6_0_runner"          "$windows_env_vars_json" "true"
+add_matrix_entry "Windows"  "6.1"           "$windows_6_1_enabled"           "$windows_setup_command"  "$windows_command" "$windows_6_1_command_arguments"          "$windows_6_1_container_image"          "$windows_6_1_runner"          "$windows_env_vars_json" "true"
+add_matrix_entry "Windows"  "6.2"           "$windows_6_2_enabled"           "$windows_setup_command"  "$windows_command" "$windows_6_2_command_arguments"          "$windows_6_2_container_image"          "$windows_6_2_runner"          "$windows_env_vars_json" "true"
+add_matrix_entry "Windows"  "nightly-next"  "$windows_nightly_next_enabled"  "$windows_setup_command"  "$windows_command" "$windows_nightly_next_command_arguments" "$windows_nightly_next_container_image" "$windows_nightly_next_runner" "$windows_env_vars_json" "false"
+add_matrix_entry "Windows"  "nightly-main"  "$windows_nightly_main_enabled"  "$windows_setup_command"  "$windows_command" "$windows_nightly_main_command_arguments" "$windows_nightly_main_container_image" "$windows_nightly_main_runner" "$windows_env_vars_json" "false"
 
 
 echo "$matrix" | "$JQ_BIN" -c

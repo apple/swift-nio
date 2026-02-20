@@ -174,3 +174,17 @@ jobs:
     with:
       name: "Release builds"
       matrix_string: '${{ needs.construct-matrix.outputs.release-build-matrix }}'
+
+  required-checks-passed:
+    name: Release builds (All Required)
+    runs-on: ubuntu-latest
+    needs: [release-builds]
+    if: always()
+    steps:
+      - name: Check required jobs
+        run: |
+          if [[ "${{ needs.release-builds.result }}" != "success" && \
+                "${{ needs.release-builds.result }}" != "skipped" ]]; then
+            echo "Required release build matrix jobs failed"
+            exit 1
+          fi

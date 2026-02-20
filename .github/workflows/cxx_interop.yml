@@ -126,3 +126,17 @@ jobs:
     with:
       name: "Cxx interop"
       matrix_string: '${{ needs.construct-matrix.outputs.cxx-interop-matrix }}'
+
+  required-checks-passed:
+    name: Cxx interop (All Required)
+    runs-on: ubuntu-latest
+    needs: [cxx-interop]
+    if: always()
+    steps:
+      - name: Check required jobs
+        run: |
+          if [[ "${{ needs.cxx-interop.result }}" != "success" && \
+                "${{ needs.cxx-interop.result }}" != "skipped" ]]; then
+            echo "Required Cxx interop matrix jobs failed"
+            exit 1
+          fi
