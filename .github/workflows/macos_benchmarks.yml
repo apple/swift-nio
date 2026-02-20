@@ -170,7 +170,7 @@ jobs:
           echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "exporting \(.key)=\(.value)"'
       - name: Run benchmarks script
         run: |
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/matrix_fan_out_fan_in/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} bash -s -- --disable-sandbox --allow-writing-to-package-directory
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} bash -s -- --disable-sandbox --allow-writing-to-package-directory
         env:
           DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
           SWIFT_VERSION: "Xcode ${{ matrix.config.xcode_version }}"
