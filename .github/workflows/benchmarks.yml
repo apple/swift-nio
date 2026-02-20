@@ -25,13 +25,25 @@ on:
         type: boolean
         description: "Boolean to enable the Linux 6.0 Swift version matrix job. Defaults to true."
         default: true
+      linux_6_0_required:
+        type: boolean
+        description: "Boolean to mark the Linux 6.0 Swift version matrix job as required. Defaults to true."
+        default: true
       linux_6_1_enabled:
         type: boolean
         description: "Boolean to enable the Linux 6.1 Swift version matrix job. Defaults to true."
         default: true
+      linux_6_1_required:
+        type: boolean
+        description: "Boolean to mark the Linux 6.1 Swift version matrix job as required. Defaults to true."
+        default: true
       linux_6_2_enabled:
         type: boolean
         description: "Boolean to enable the Linux 6.2 Swift version matrix job. Defaults to true."
+        default: true
+      linux_6_2_required:
+        type: boolean
+        description: "Boolean to mark the Linux 6.2 Swift version matrix job as required. Defaults to true."
         default: true
       linux_nightly_6_0_enabled:
         type: boolean
@@ -45,10 +57,18 @@ on:
         type: boolean
         description: "Boolean to enable the Linux nightly matrix job for the next Swift version. Defaults to true."
         default: true
+      linux_nightly_next_required:
+        type: boolean
+        description: "Boolean to mark the Linux nightly-next matrix job as required. Defaults to false."
+        default: false
       linux_nightly_main_enabled:
         type: boolean
         description: "Boolean to enable the Linux nightly main Swift version matrix job. Defaults to true."
         default: true
+      linux_nightly_main_required:
+        type: boolean
+        description: "Boolean to mark the Linux nightly-main matrix job as required. Defaults to false."
+        default: false
 
       windows_6_0_enabled:
         type: boolean
@@ -110,10 +130,15 @@ jobs:
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
           MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
           MATRIX_LINUX_6_0_ENABLED: ${{ inputs.linux_6_0_enabled }}
+          MATRIX_LINUX_6_0_REQUIRED: ${{ inputs.linux_6_0_required }}
           MATRIX_LINUX_6_1_ENABLED: ${{ inputs.linux_6_1_enabled }}
+          MATRIX_LINUX_6_1_REQUIRED: ${{ inputs.linux_6_1_required }}
           MATRIX_LINUX_6_2_ENABLED: ${{ inputs.linux_6_2_enabled }}
+          MATRIX_LINUX_6_2_REQUIRED: ${{ inputs.linux_6_2_required }}
           MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_6_1_enabled && inputs.linux_nightly_next_enabled  }}
+          MATRIX_LINUX_NIGHTLY_NEXT_REQUIRED: ${{ inputs.linux_nightly_next_required }}
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
+          MATRIX_LINUX_NIGHTLY_MAIN_REQUIRED: ${{ inputs.linux_nightly_main_required }}
 
   benchmarks-linux:
     name: Benchmarks
