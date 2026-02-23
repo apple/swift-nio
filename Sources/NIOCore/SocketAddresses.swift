@@ -345,6 +345,10 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
     /// Create a new `SocketAddress` for an IP address in string form.
     ///
+    /// Supports both IPv4 and IPv6 addresses. IPv6 addresses may include a scope ID
+    /// suffix (e.g., `"fe80::1%eth0"`) for link-local addresses; the scope ID will be
+    /// preserved in the resulting `sockaddr_in6.sin6_scope_id`.
+    ///
     /// - Parameters:
     ///   - ipAddress: The IP address, in string form.
     ///   - port: The target port.
@@ -366,6 +370,17 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
                 // IPv6 address.
             }
 
+            // IPv6 addresses with scope IDs (e.g. "fe80::1%eth0") are not supported by
+            // inet_pton. Use getaddrinfo with AI_NUMERICHOST which handles %scope and
+            // properly sets sin6_scope_id.
+            if ipAddress.utf8.contains(UInt8(ascii: "%")) {
+                #if !os(Windows) && !os(WASI)
+                return try Self._parseScopedIPv6(ipAddress, port: port)
+                #else
+                throw SocketAddressError.failedToParseIPString(ipAddress)
+                #endif
+            }
+
             do {
                 var ipv6Addr = in6_addr()
                 try NIOBSDSocket.inet_pton(addressFamily: .inet6, addressDescription: $0, address: &ipv6Addr)
@@ -385,6 +400,23 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
             throw SocketAddressError.failedToParseIPString(ipAddress)
         }
     }
+
+    #if !os(Windows) && !os(WASI)
+    /// Parse a scoped IPv6 address (containing `%scope`) using `getaddrinfo` with `AI_NUMERICHOST`.
+    private static func _parseScopedIPv6(_ ipAddress: String, port: Int) throws -> SocketAddress {
+        var hints = addrinfo()
+        hints.ai_family = AF_INET6
+        hints.ai_flags = AI_NUMERICHOST
+        var result: UnsafeMutablePointer<addrinfo>?
+        let status = getaddrinfo(ipAddress, String(port), &hints, &result)
+        defer { if result != nil { freeaddrinfo(result) } }
+        guard status == 0, let addrInfo = result, let ai_addr = addrInfo.pointee.ai_addr else {
+            throw SocketAddressError.failedToParseIPString(ipAddress)
+        }
+        let sockaddr = ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee }
+        return .v6(.init(address: sockaddr, host: ipAddress))
+    }
+    #endif
 
     /// Create a new `SocketAddress` for an IP address in ByteBuffer form.
     ///

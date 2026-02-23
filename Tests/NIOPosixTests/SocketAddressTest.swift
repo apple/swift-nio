@@ -157,6 +157,92 @@ class SocketAddressTest: XCTestCase {
         }
     }
 
+    func testCanCreateScopedIPv6AddressFromString() throws {
+        #if os(Windows) || os(WASI)
+        // Scoped IPv6 parsing uses getaddrinfo, not available on these platforms.
+        #else
+        let loopback: String
+        #if canImport(Darwin)
+        loopback = "lo0"
+        #else
+        loopback = "lo"
+        #endif
+
+        let expectedIndex = if_nametoindex(loopback)
+        guard expectedIndex != 0 else { return }
+
+        let sa = try SocketAddress(ipAddress: "fe80::1%\(loopback)", port: 443)
+        if case .v6(let address) = sa {
+            XCTAssertEqual(address.address.sin6_family, sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue))
+            XCTAssertEqual(address.address.sin6_port, in_port_t(443).bigEndian)
+            XCTAssertEqual(address.address.sin6_scope_id, expectedIndex)
+            XCTAssertEqual(address.host, "fe80::1%\(loopback)")
+        } else {
+            XCTFail("Invalid address: \(sa)")
+        }
+        #endif
+    }
+
+    func testCanCreateScopedIPv6WithNumericIndex() throws {
+        #if os(Windows) || os(WASI)
+        // Scoped IPv6 parsing uses getaddrinfo, not available on these platforms.
+        #else
+        // getaddrinfo accepts both interface names (%lo) and numeric indices (%1).
+        let sa = try SocketAddress(ipAddress: "fe80::1%1", port: 80)
+        if case .v6(let address) = sa {
+            XCTAssertEqual(address.address.sin6_scope_id, 1)
+            XCTAssertEqual(address.address.sin6_port, in_port_t(80).bigEndian)
+        } else {
+            XCTFail("Invalid address: \(sa)")
+        }
+        #endif
+    }
+
+    func testScopedAndNonScopedIPv6AreNotEqual() throws {
+        #if os(Windows) || os(WASI)
+        #else
+        let scoped = try SocketAddress(ipAddress: "fe80::1%1", port: 80)
+        let nonScoped = try SocketAddress(ipAddress: "fe80::1", port: 80)
+        // sin6_scope_id differs, so these should not be equal.
+        XCTAssertNotEqual(scoped, nonScoped)
+        #endif
+    }
+
+    func testRejectsInvalidScopedIPv6() {
+        #if os(Windows) || os(WASI)
+        #else
+        // Empty scope after %
+        XCTAssertThrowsError(try SocketAddress(ipAddress: "fe80::1%", port: 80)) { error in
+            switch error as? SocketAddressError {
+            case .some(.failedToParseIPString("fe80::1%")):
+                ()  // ok
+            default:
+                XCTFail("unexpected error: \(error)")
+            }
+        }
+        // Nonexistent interface name
+        XCTAssertThrowsError(try SocketAddress(ipAddress: "fe80::1%doesnotexist999", port: 80)) { error in
+            switch error as? SocketAddressError {
+            case .some(.failedToParseIPString("fe80::1%doesnotexist999")):
+                ()  // ok
+            default:
+                XCTFail("unexpected error: \(error)")
+            }
+        }
+        #endif
+    }
+
+    func testCanCreateNonScopedIPv6AfterScopedIPv6Support() throws {
+        // Regression: ensure non-scoped IPv6 still works after adding scoped support.
+        let sa = try SocketAddress(ipAddress: "::1", port: 80)
+        if case .v6(let address) = sa {
+            XCTAssertEqual(address.address.sin6_scope_id, 0)
+            XCTAssertEqual(address.address.sin6_port, in_port_t(80).bigEndian)
+        } else {
+            XCTFail("Invalid address: \(sa)")
+        }
+    }
+
     func testRejectsNonIPStrings() {
         XCTAssertThrowsError(try SocketAddress(ipAddress: "definitelynotanip", port: 800)) { error in
             switch error as? SocketAddressError {
