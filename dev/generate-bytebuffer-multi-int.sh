@@ -79,6 +79,32 @@ function gen() {
     echo "    }"
     echo
 
+    # PEEK
+    echo "    @inlinable"
+    echo "    @_alwaysEmitIntoClient"
+    echo -n "    public func peekMultipleIntegers<T1: FixedWidthInteger"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", T$n: FixedWidthInteger"
+    done
+    echo -n ">("
+    echo -n "endianness: Endianness = .big, as: (T1"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", T$n"
+    done
+    echo -n ").Type = (T1"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", T$n"
+    done
+    echo -n ").self) -> (T1"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", T$n"
+    done
+    echo ")? {"
+    echo "        var copy = self"
+    echo "        return copy.readMultipleIntegers(endianness: endianness, as: \`as\`)"
+    echo "    }"
+    echo
+
     # WRITE
     echo "    @inlinable"
     echo "    @_alwaysEmitIntoClient"

@@ -12,10 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOConcurrencyHelpers
 import NIOCore
 
-#if canImport(Darwin)
+#if canImport(Darwin) || os(OpenBSD)
 
 /// Represents the `kqueue` filters we might use:
 ///
@@ -131,7 +133,13 @@ extension Selector: _SelectorBackendProtocol {
             // Clamp the timespec tv_sec value to the maximum supported by the Darwin-kernel.
             // Whilst this schedules the event far into the future (several years) it will still be triggered provided
             // the system stays up.
+            #if os(OpenBSD)
+            // Should double-check if this makes sense for OpenBSD, but
+            // let's just get this to compile for now.
+            ts.tv_sec = min(ts.tv_sec, time_t(sysIntervalTimerMaxSec))
+            #else
             ts.tv_sec = min(ts.tv_sec, sysIntervalTimerMaxSec)
+            #endif
 
             return ts
         }
@@ -170,7 +178,7 @@ extension Selector: _SelectorBackendProtocol {
         oldInterested: SelectorEventSet?,
         registrationID: SelectorRegistrationID
     ) throws {
-        assert(self.myThread == NIOThread.current)
+        assert(self.myThread.isCurrentSlow)
         let oldKQueueFilters = KQueueEventFilterSet(selectorEventSet: oldInterested ?? ._none)
         let newKQueueFilters = KQueueEventFilterSet(selectorEventSet: interested)
         assert(interested.contains(.reset))
@@ -258,7 +266,7 @@ extension Selector: _SelectorBackendProtocol {
         onLoopBegin loopStart: () -> Void,
         _ body: (SelectorEvent<R>) throws -> Void
     ) throws {
-        assert(self.myThread == NIOThread.current)
+        assert(self.myThread.isCurrentSlow)
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
         }
@@ -280,7 +288,7 @@ extension Selector: _SelectorBackendProtocol {
         loopStart()
 
         for i in 0..<ready {
-            let ev = events[i]
+            let ev = self.events[i]
             let filter = Int32(ev.filter)
             let eventRegistrationID = SelectorRegistrationID(kqueueUData: ev.udata)
             guard Int32(ev.flags) & EV_ERROR == 0 else {
@@ -354,7 +362,7 @@ extension Selector: _SelectorBackendProtocol {
 
     // attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`)
     func wakeup0() throws {
-        assert(NIOThread.current != self.myThread)
+        assert(!self.myThread.isCurrentSlow)
         try self.externalSelectorFDLock.withLock {
             guard self.selectorFD >= 0 else {
                 throw EventLoopError._shutdown
@@ -388,6 +396,7 @@ extension kevent {
         // we do it with NOTE_LOWAT set to Int.max, which will ensure that there is never enough data
         // in the send buffer to trigger EVFILT_EXCEPT. Thanks to the sensible design of kqueue,
         // this only affects our EXCEPT filter: EVFILT_READ behaves separately.
+        #if canImport(Darwin)
         if filter == EVFILT_EXCEPT {
             self.fflags = CUnsignedInt(NOTE_LOWAT)
             self.data = Int.max
@@ -395,6 +404,10 @@ extension kevent {
             self.fflags = 0
             self.data = 0
         }
+        #else
+        self.fflags = 0
+        self.data = 0
+        #endif
     }
 }
 
@@ -467,3 +480,4 @@ private struct KeventTriple {
 }
 
 #endif
+#endif  // !os(WASI)

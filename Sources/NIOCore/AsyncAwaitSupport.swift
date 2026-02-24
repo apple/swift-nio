@@ -280,7 +280,10 @@ extension ChannelPipeline {
             "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop"
     )
     @inlinable
-    public func context<Handler: ChannelHandler>(handlerType: Handler.Type) async throws -> ChannelHandlerContext {
+    @preconcurrency
+    public func context<Handler: ChannelHandler & _NIOCoreSendableMetatype>(
+        handlerType: Handler.Type
+    ) async throws -> ChannelHandlerContext {
         try await self.context(handlerType: handlerType).map { UnsafeTransfer($0) }.get().wrappedValue
     }
 

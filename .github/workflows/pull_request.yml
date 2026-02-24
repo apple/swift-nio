@@ -1,5 +1,8 @@
 name: PR
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     types: [opened, reopened, synchronize]
@@ -7,18 +10,21 @@ on:
 jobs:
   soundness:
     name: Soundness
-    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@main
+    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@0.0.7
     with:
       license_header_check_project_name: "SwiftNIO"
+      # Workaround https://github.com/swiftlang/swift-docc/issues/1280
+      docs_check_container_image: "swift:6.1-noble"
 
   unit-tests:
     name: Unit tests
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/unit_tests.yml@main
     with:
-      linux_5_9_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_5_10_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_6_0_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+      linux_6_1_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+      linux_6_2_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_nightly_6_1_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_nightly_main_arguments_override: "--explicit-target-dependency-import-check error"
 
@@ -41,11 +47,11 @@ jobs:
       integration-test-matrix: '${{ steps.generate-matrix.outputs.integration-test-matrix }}'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           persist-credentials: false
       - id: generate-matrix
-        run: echo "integration-test-matrix=$(curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        run: echo "integration-test-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_SETUP_COMMAND: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq"
           MATRIX_LINUX_COMMAND: "./scripts/integration_tests.sh"
@@ -64,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           persist-credentials: false
       - name: Load vsock_loopback kernel module
@@ -84,8 +90,26 @@ jobs:
     with:
       runner_pool: general
       build_scheme: swift-nio-Package
+      xcode_16_2_build_arguments_override: "-Xswiftc -Xfrontend -Xswiftc -require-explicit-sendable"
+      xcode_16_3_build_arguments_override: "-Xswiftc -Xfrontend -Xswiftc -require-explicit-sendable"
 
   static-sdk:
-    name: Static SDK
+    name: Static Linux Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/static_sdk.yml@main
+
+  wasm-sdk:
+    name: WebAssembly Swift SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/wasm_swift_sdk.yml@main
+    with:
+      additional_command_arguments: "--target NIOCore"
+
+  android-sdk:
+    name: Android Swift SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/android_swift_sdk.yml@main
+
+  release-builds:
+    name: Release builds
+    uses: apple/swift-nio/.github/workflows/release_builds.yml@main

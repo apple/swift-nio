@@ -82,6 +82,8 @@ let channel = try { () -> Channel in
     }
 }()
 
+// In production code, you should check if `channel.remoteAddress` is actually
+// present, as in rare situations it can be `nil`.
 print("ChatClient connected to ChatServer: \(channel.remoteAddress!), happy chatting\n. Press ^D to exit.")
 
 while let line = readLine(strippingNewline: false) {

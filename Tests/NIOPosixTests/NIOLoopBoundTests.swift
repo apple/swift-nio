@@ -75,7 +75,6 @@ final class NIOLoopBoundTests: XCTestCase {
         )
     }
 
-    #if compiler(>=6.0)
     func testLoopBoundBoxCanBeInitialisedWithTakingValueOffLoopAndLaterSetToValue() {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -106,7 +105,6 @@ final class NIOLoopBoundTests: XCTestCase {
             }.wait()
         )
     }
-    #endif
 
     func testInPlaceMutation() {
         var loopBound = NIOLoopBound(CoWValue(), eventLoop: loop)
@@ -114,6 +112,34 @@ final class NIOLoopBoundTests: XCTestCase {
 
         let loopBoundBox = NIOLoopBoundBox(CoWValue(), eventLoop: loop)
         XCTAssertTrue(loopBoundBox.value.mutateInPlace())
+    }
+
+    func testWithValue() {
+        var expectedValue = 0
+        let loopBound = NIOLoopBoundBox(expectedValue, eventLoop: loop)
+        for value in 1...100 {
+            loopBound.withValue { boundValue in
+                XCTAssertEqual(boundValue, expectedValue)
+                boundValue = value
+                expectedValue = value
+            }
+        }
+        XCTAssertEqual(100, loopBound.value)
+    }
+
+    func testWithValueRethrows() {
+        struct TestError: Error {}
+
+        let loopBound = NIOLoopBoundBox(0, eventLoop: loop)
+        XCTAssertThrowsError(
+            try loopBound.withValue { boundValue in
+                XCTAssertEqual(0, boundValue)
+                boundValue = 10
+                throw TestError()
+            }
+        )
+
+        XCTAssertEqual(10, loopBound.value, "Ensure value is set even if we throw")
     }
 
     // MARK: - Helpers

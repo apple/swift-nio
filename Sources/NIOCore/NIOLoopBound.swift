@@ -25,7 +25,13 @@
 /// or constructing it from any other place will crash your program with a precondition as it would be undefined
 /// behaviour to do so.
 public struct NIOLoopBound<Value>: @unchecked Sendable {
-    public let _eventLoop: EventLoop
+    /// The ``EventLoop`` that the value is bound to.
+    public let eventLoop: EventLoop
+
+    @available(*, deprecated, renamed: "eventLoop")
+    public var _eventLoop: EventLoop {
+        self.eventLoop
+    }
 
     @usableFromInline
     var _value: Value
@@ -34,7 +40,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     @inlinable
     public init(_ value: Value, eventLoop: EventLoop) {
         eventLoop.preconditionInEventLoop()
-        self._eventLoop = eventLoop
+        self.eventLoop = eventLoop
         self._value = value
     }
 
@@ -44,11 +50,11 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     @inlinable
     public var value: Value {
         get {
-            self._eventLoop.preconditionInEventLoop()
+            self.eventLoop.preconditionInEventLoop()
             return self._value
         }
         _modify {
-            self._eventLoop.preconditionInEventLoop()
+            self.eventLoop.preconditionInEventLoop()
             yield &self._value
         }
     }
@@ -72,14 +78,20 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
 /// whilst off the ``EventLoop`` by using ``NIOLoopBoundBox/makeEmptyBox(valueType:eventLoop:)``. Any read/write access to ``value``
 /// afterwards will require you to be on `eventLoop`.
 public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
-    public let _eventLoop: EventLoop
+    /// The ``EventLoop`` that the value is bound to.
+    public let eventLoop: EventLoop
+
+    @available(*, deprecated, renamed: "eventLoop")
+    public var _eventLoop: EventLoop {
+        self.eventLoop
+    }
 
     @usableFromInline
     var _value: Value
 
     @inlinable
     internal init(_value value: Value, uncheckedEventLoop eventLoop: EventLoop) {
-        self._eventLoop = eventLoop
+        self.eventLoop = eventLoop
         self._value = value
     }
 
@@ -127,7 +139,6 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         .init(_value: value, uncheckedEventLoop: eventLoop)
     }
 
-    #if compiler(>=6.0)
     /// Initialise a ``NIOLoopBoundBox`` by sending a  value, validly callable off `eventLoop`.
     ///
     /// Contrary to ``init(_:eventLoop:)``, this method can be called off `eventLoop` because `value` is moved into the box and can no longer be accessed outside the box.
@@ -147,7 +158,6 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         // - The only way to ever write (or read indeed) `self._value` is by proving to be inside the `EventLoop`.
         .init(_value: value, uncheckedEventLoop: eventLoop)
     }
-    #endif
 
     /// Access the `value` with the precondition that the code is running on `eventLoop`.
     ///
@@ -155,12 +165,32 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     @inlinable
     public var value: Value {
         get {
-            self._eventLoop.preconditionInEventLoop()
+            self.eventLoop.preconditionInEventLoop()
             return self._value
         }
         _modify {
-            self._eventLoop.preconditionInEventLoop()
+            self.eventLoop.preconditionInEventLoop()
             yield &self._value
         }
+    }
+
+    /// Safely access and potentially modify the contained value with a closure.
+    ///
+    /// This method provides a way to perform operations on the contained value while ensuring
+    /// thread safety through EventLoop verification. The closure receives an `inout` parameter
+    /// allowing both read and write access to the value.
+    ///
+    /// - Parameter handler: A closure that receives an `inout` reference to the contained value.
+    ///   The closure can read from and write to this value. Any modifications made within the
+    ///   closure will be reflected in the box after the closure completes, even if the closure throws.
+    /// - Returns: The value returned by the `handler` closure.
+    /// - Note: This method is particularly useful when you need to perform read and write operations
+    ///         on the value because it reduces the on EventLoop checks.
+    @inlinable
+    public func withValue<Success, Failure: Error>(
+        _ handler: (inout Value) throws(Failure) -> Success
+    ) throws(Failure) -> Success {
+        self.eventLoop.preconditionInEventLoop()
+        return try handler(&self._value)
     }
 }

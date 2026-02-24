@@ -1,5 +1,8 @@
 name: Matrix
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -13,8 +16,8 @@ on:
         required: true
       matrix_linux_5_9_enabled:
         type: boolean
-        description: "Boolean to enable the 5.9 Swift version matrix job. Defaults to true."
-        default: true
+        description: "Boolean to enable the 5.9 Swift version matrix job. Defaults to false."
+        default: false
       matrix_linux_5_9_container_image:
         type: string
         description: "Container image for the 5.9 Swift version matrix job. Defaults to matching Swift Ubuntu image."
@@ -145,7 +148,7 @@ jobs:
     steps:
       - name: Checkout repository
         if: ${{ matrix.swift.enabled }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           persist-credentials: false
           submodules: true
@@ -165,7 +168,7 @@ jobs:
           COMMAND_OVERRIDE_NIGHTLY_MAIN: ${{ inputs.matrix_linux_nightly_main_command_override }}
         run: |
           apt-get -qq update && apt-get -qq -y install curl
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.sh | bash
+          curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.sh | bash
 
   windows:
     name: Windows (${{ matrix.swift.swift_version }})
@@ -184,12 +187,12 @@ jobs:
         run: docker pull ${{ matrix.swift.image }}
       - name: Checkout repository
         if: ${{ matrix.swift.enabled }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           persist-credentials: false
       - name: Donwload matrix script
         if: ${{ matrix.swift.enabled }}
-        run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
+        run: curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
       - name: Run matrix job
         if: ${{ matrix.swift.enabled }}
         run: |
@@ -215,13 +218,13 @@ jobs:
         run: docker pull ${{ matrix.swift.image }}
       - name: Checkout repository
         if: ${{ matrix.swift.enabled }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           persist-credentials: false
           submodules: true
       - name: Donwload matrix script
         if: ${{ matrix.swift.enabled }}
-        run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
+        run: curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
       - name: Run matrix job
         if: ${{ matrix.swift.enabled }}
         run: |

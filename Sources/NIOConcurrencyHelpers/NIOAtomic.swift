@@ -19,7 +19,6 @@ import CNIOAtomics
 /// **Do not add conformance to this protocol for arbitrary types**. Only a small range
 /// of types have appropriate atomic operations supported by the CPU, and those types
 /// already have conformances implemented.
-#if compiler(>=6.0)
 @preconcurrency
 public protocol NIOAtomicPrimitive {
     associatedtype AtomicWrapper
@@ -35,18 +34,6 @@ public protocol NIOAtomicPrimitive {
     static var nio_atomic_load: @Sendable (UnsafeMutablePointer<AtomicWrapper>) -> Self { get }
     static var nio_atomic_store: @Sendable (UnsafeMutablePointer<AtomicWrapper>, Self) -> Void { get }
 }
-#else
-public protocol NIOAtomicPrimitive {
-    associatedtype AtomicWrapper
-    static var nio_atomic_create_with_existing_storage: (UnsafeMutablePointer<AtomicWrapper>, Self) -> Void { get }
-    static var nio_atomic_compare_and_exchange: (UnsafeMutablePointer<AtomicWrapper>, Self, Self) -> Bool { get }
-    static var nio_atomic_add: (UnsafeMutablePointer<AtomicWrapper>, Self) -> Self { get }
-    static var nio_atomic_sub: (UnsafeMutablePointer<AtomicWrapper>, Self) -> Self { get }
-    static var nio_atomic_exchange: (UnsafeMutablePointer<AtomicWrapper>, Self) -> Self { get }
-    static var nio_atomic_load: (UnsafeMutablePointer<AtomicWrapper>) -> Self { get }
-    static var nio_atomic_store: (UnsafeMutablePointer<AtomicWrapper>, Self) -> Void { get }
-}
-#endif
 
 extension Bool: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic__Bool
@@ -226,6 +213,7 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
 
     /// Create an atomic object with `value`
     @inlinable
+    @available(OpenBSD, unavailable, message: "malloc_size is unavailable.")
     public static func makeAtomic(value: T) -> NIOAtomic {
         let manager = Manager(bufferClass: self, minimumCapacity: 1) { _, _ in }
         manager.withUnsafeMutablePointerToElements {

@@ -22,6 +22,9 @@ import Darwin
 @preconcurrency import Bionic
 #endif
 import CNIOLinux
+#elseif os(OpenBSD)
+@preconcurrency import Glibc
+import CNIOOpenBSD
 #elseif os(Windows)
 import WinSDK
 #elseif canImport(WASILibc)

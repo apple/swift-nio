@@ -1315,9 +1315,10 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("a", buf.readString(length: 1))
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testReadUTF8ValidatedString() throws {
-        #if compiler(>=6)
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
+            throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
+        }
         buf.clear()
         let expected = "hello"
         buf.writeString(expected)
@@ -1325,27 +1326,23 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, actual)
         XCTAssertEqual("", try buf.readUTF8ValidatedString(length: 0))
         XCTAssertNil(try buf.readUTF8ValidatedString(length: 1))
-        #else
-        throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
-        #endif  // compiler(>=6)
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testGetUTF8ValidatedString() throws {
-        #if compiler(>=6)
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
+            throw XCTSkip("'getUTF8ValidatedString' is only available in Swift 6 and later")
+        }
         buf.clear()
         let expected = "hello, goodbye"
         buf.writeString(expected)
         let actual = try buf.getUTF8ValidatedString(at: 7, length: 7)
         XCTAssertEqual("goodbye", actual)
-        #else
-        throw XCTSkip("'getUTF8ValidatedString' is only available in Swift 6 and later")
-        #endif  // compiler(>=6)
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testReadUTF8InvalidString() throws {
-        #if compiler(>=6)
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
+            throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
+        }
         buf.clear()
         buf.writeBytes([UInt8](repeating: 255, count: 16))
         XCTAssertThrowsError(try buf.readUTF8ValidatedString(length: 16)) { error in
@@ -1357,9 +1354,6 @@ class ByteBufferTest: XCTestCase {
             }
         }
         XCTAssertEqual(buf.readableBytes, 16)
-        #else
-        throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
-        #endif  // compiler(>=6)
     }
 
     func testSetIntegerBeyondCapacity() throws {
@@ -1403,7 +1397,7 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testAllocationOfReallyBigByteBuffer() throws {
-        #if arch(arm) || arch(i386) || arch(arm64_32)
+        #if arch(arm) || arch(i386) || arch(arm64_32) || arch(wasm32)
         // this test doesn't work on 32-bit platforms because the address space is only 4GB large and we're trying
         // to make a 4GB ByteBuffer which just won't fit. Even going down to 2GB won't make it better.
         return
@@ -2412,7 +2406,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(view?.firstIndex(of: UInt8(0x3F)))
     }
 
-    func testBufferViewLastIndex() {
+    func testBufferViewFirstIndexWithWhereClosure() {
         self.buf.clear()
         self.buf.writeBytes(Array(repeating: UInt8(0x4E), count: 1024))
         self.buf.setBytes([UInt8(0x59)], at: 1000)
@@ -2422,8 +2416,42 @@ class ByteBufferTest: XCTestCase {
         self.buf.setBytes([UInt8(0x3F)], at: 1023)
         self.buf.setBytes([UInt8(0x3F)], at: 2)
         let view = self.buf.viewBytes(at: 5, length: 1010)
-        XCTAssertEqual(1001, view?.lastIndex(of: UInt8(0x59)))
+        XCTAssertEqual(1000, view?.firstIndex(where: { $0 == UInt8(0x59) }))
+        XCTAssertNil(view?.firstIndex(where: { $0 == UInt8(0x3F) }))
+    }
+
+    func testBufferViewLastIndex() {
+        self.buf.clear()
+        self.buf.writeBytes(Array(repeating: UInt8(0x4E), count: 1024))
+        self.buf.setBytes([UInt8(0x3F)], at: 2)
+        self.buf.setBytes([UInt8(0x59)], at: 3)
+        self.buf.setBytes([UInt8(0x61)], at: 1000)
+        self.buf.setBytes([UInt8(0x59)], at: 1001)
+        self.buf.setBytes([UInt8(0x61)], at: 1002)
+        self.buf.setBytes([UInt8(0x59)], at: 1003)
+        self.buf.setBytes([UInt8(0x61)], at: 1004)
+        self.buf.setBytes([UInt8(0x59)], at: 1023)
+        self.buf.setBytes([UInt8(0x3F)], at: 1024)
+        let view = self.buf.viewBytes(at: 5, length: 1010)
+        XCTAssertEqual(1003, view?.lastIndex(of: UInt8(0x59)))
         XCTAssertNil(view?.lastIndex(of: UInt8(0x3F)))
+    }
+
+    func testBufferViewLastIndexWithWhereClosure() {
+        self.buf.clear()
+        self.buf.writeBytes(Array(repeating: UInt8(0x4E), count: 1024))
+        self.buf.setBytes([UInt8(0x3F)], at: 2)
+        self.buf.setBytes([UInt8(0x59)], at: 3)
+        self.buf.setBytes([UInt8(0x61)], at: 1000)
+        self.buf.setBytes([UInt8(0x59)], at: 1001)
+        self.buf.setBytes([UInt8(0x61)], at: 1002)
+        self.buf.setBytes([UInt8(0x59)], at: 1003)
+        self.buf.setBytes([UInt8(0x61)], at: 1004)
+        self.buf.setBytes([UInt8(0x59)], at: 1023)
+        self.buf.setBytes([UInt8(0x3F)], at: 1024)
+        let view = self.buf.viewBytes(at: 5, length: 1010)
+        XCTAssertEqual(1003, view?.lastIndex(where: { $0 == UInt8(0x59) }))
+        XCTAssertNil(view?.lastIndex(where: { $0 == UInt8(0x3F) }))
     }
 
     func testBufferViewContains() {
@@ -3765,6 +3793,167 @@ extension ByteBufferTest {
         XCTAssertEqual(0, self.buf.readableBytes)
     }
 
+    func testPeekAndWriteMultipleIntegers() {
+        // This test mirrors 'testReadAndWriteMultipleIntegers' but uses peekMultipleIntegers
+        for endianness in [Endianness.little, .big] {
+            let v1: UInt8 = .random(in: .min ... .max)
+            let v2: UInt16 = .random(in: .min ... .max)
+            let v3: UInt32 = .random(in: .min ... .max)
+            let v4: UInt64 = .random(in: .min ... .max)
+            let v5: UInt64 = .random(in: .min ... .max)
+            let v6: UInt32 = .random(in: .min ... .max)
+            let v7: UInt16 = .random(in: .min ... .max)
+            let v8: UInt8 = .random(in: .min ... .max)
+            let v9: UInt16 = .random(in: .min ... .max)
+            let v10: UInt32 = .random(in: .min ... .max)
+
+            let startWriterIndex = self.buf.writerIndex
+            let written = self.buf.writeMultipleIntegers(
+                v1,
+                v2,
+                v3,
+                v4,
+                v5,
+                v6,
+                v7,
+                v8,
+                v9,
+                v10,
+                endianness: endianness,
+                as: (UInt8, UInt16, UInt32, UInt64, UInt64, UInt32, UInt16, UInt8, UInt16, UInt32).self
+            )
+            XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
+            XCTAssertEqual(written, self.buf.readableBytes)
+
+            // Check peek does not advance readerIndex
+            let startReadable = self.buf.readableBytes
+            let peeked = self.buf.peekMultipleIntegers(
+                endianness: endianness,
+                as: (UInt8, UInt16, UInt32, UInt64, UInt64, UInt32, UInt16, UInt8, UInt16, UInt32).self
+            )
+            XCTAssertNotNil(peeked, "peekMultipleIntegers should succeed.")
+            XCTAssertEqual(startReadable, self.buf.readableBytes, "Peeking should not consume any bytes.")
+
+            XCTAssertEqual(peeked?.0, v1, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.1, v2, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.2, v3, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.3, v4, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.4, v5, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.5, v6, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.6, v7, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.7, v8, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.8, v9, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.9, v10, "endianness: \(endianness)")
+
+            let result = self.buf.readMultipleIntegers(
+                endianness: endianness,
+                as: (UInt8, UInt16, UInt32, UInt64, UInt64, UInt32, UInt16, UInt8, UInt16, UInt32).self
+            )
+            XCTAssertNotNil(result, "Expected to successfully read after peeking.")
+            XCTAssertEqual(result?.0, v1, "endianness: \(endianness)")
+            XCTAssertEqual(result?.1, v2, "endianness: \(endianness)")
+            XCTAssertEqual(result?.2, v3, "endianness: \(endianness)")
+            XCTAssertEqual(result?.3, v4, "endianness: \(endianness)")
+            XCTAssertEqual(result?.4, v5, "endianness: \(endianness)")
+            XCTAssertEqual(result?.5, v6, "endianness: \(endianness)")
+            XCTAssertEqual(result?.6, v7, "endianness: \(endianness)")
+            XCTAssertEqual(result?.7, v8, "endianness: \(endianness)")
+            XCTAssertEqual(result?.8, v9, "endianness: \(endianness)")
+            XCTAssertEqual(result?.9, v10, "endianness: \(endianness)")
+            XCTAssertEqual(0, self.buf.readableBytes)
+        }
+    }
+
+    func testAllByteBufferMultiByteVersionsPeek() {
+        // This test mirrors 'testAllByteBufferMultiByteVersions' but using peekMultipleIntegers
+        let i = UInt8(86)
+        self.buf.writeMultipleIntegers(i, i)
+        self.buf.writeMultipleIntegers(i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, i, i, i)
+
+        XCTAssertEqual(Array(repeating: UInt8(86), count: 119), Array(self.buf.readableBytesView))
+
+        let peek2 = self.buf.peekMultipleIntegers(as: (UInt8, UInt8).self)
+        XCTAssertNotNil(peek2, "Expected to peek 2 UInt8s.")
+        XCTAssertEqual(peek2?.0, i, "First value mismatch in peek2")
+        XCTAssertEqual(peek2?.1, i, "Second value mismatch in peek2")
+        XCTAssertEqual(
+            Array(self.buf.readableBytesView),
+            Array(repeating: i, count: 119),
+            "No bytes should be consumed by peek."
+        )
+        let offset2 = MemoryLayout<UInt8>.size * 2
+        let peek3 = self.buf.getSlice(at: self.buf.readerIndex + offset2, length: 3)?.peekMultipleIntegers(
+            as: (UInt8, UInt8, UInt8).self
+        )
+        XCTAssertNotNil(peek3, "Expected to peek 3 UInt8s from the next region.")
+        XCTAssertEqual(peek3?.0, i, "First value mismatch in peek3")
+        XCTAssertEqual(peek3?.1, i, "Second value mismatch in peek3")
+        XCTAssertEqual(peek3?.2, i, "Third value mismatch in peek3")
+        var values2 = self.buf.readMultipleIntegers(as: (UInt8, UInt8).self)!
+        var values3 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8).self)!
+        var values4 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8).self)!
+        var values5 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values6 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values7 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values8 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values9 = self.buf.readMultipleIntegers(
+            as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self
+        )!
+        var values10 = self.buf.readMultipleIntegers(
+            as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self
+        )!
+        var values11 = self.buf.readMultipleIntegers(
+            as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self
+        )!
+        var values12 = self.buf.readMultipleIntegers(
+            as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self
+        )!
+        var values13 = self.buf.readMultipleIntegers(
+            as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self
+        )!
+        var values14 = self.buf.readMultipleIntegers(
+            as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self
+        )!
+        var values15 = self.buf.readMultipleIntegers(
+            as: (
+                UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8
+            ).self
+        )!
+
+        let iArray2 = withUnsafeBytes(of: &values2, { Array($0) })
+        XCTAssertEqual([i, i], iArray2)
+        XCTAssertEqual([i, i, i], withUnsafeBytes(of: &values3, { Array($0) }))
+        XCTAssertEqual([i, i, i, i], withUnsafeBytes(of: &values4, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i], withUnsafeBytes(of: &values5, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i], withUnsafeBytes(of: &values6, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i], withUnsafeBytes(of: &values7, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values8, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values9, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values10, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values11, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values12, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values13, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values14, { Array($0) }))
+        XCTAssertEqual(
+            [i, i, i, i, i, i, i, i, i, i, i, i, i, i, i],
+            withUnsafeBytes(of: &values15, { Array($0) })
+        )
+
+        XCTAssertEqual(0, self.buf.readableBytes, "Buffer should be fully consumed after all reads.")
+    }
+
     func testByteBufferEncode() throws {
         let encoder = JSONEncoder()
         let hello = "Hello, world!"
@@ -4060,9 +4249,10 @@ extension ByteBufferTest {
 
     // MARK: - peekUTF8ValidatedString Tests (available in Swift 6+)
 
-    #if compiler(>=6)
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testPeekUTF8ValidatedString_Normal() throws {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
+            throw XCTSkip("'peekUTF8ValidatedString' is only available in Swift 6 and later")
+        }
         var buffer = ByteBuffer()
         let testString = "UTF8 Validated"
         let written = buffer.writeString(testString)
@@ -4071,8 +4261,10 @@ extension ByteBufferTest {
         XCTAssertEqual(buffer.readerIndex, 0, "Reader index should remain unchanged.")
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testPeekUTF8ValidatedString_Empty() throws {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
+            throw XCTSkip("'peekUTF8ValidatedString' is only available in Swift 6 and later")
+        }
         var buffer = ByteBuffer()
         _ = buffer.writeString("")
         let peeked = try buffer.peekUTF8ValidatedString(length: 0)
@@ -4080,8 +4272,10 @@ extension ByteBufferTest {
         XCTAssertEqual(buffer.readerIndex, 0, "Reader index should remain unchanged for empty peek.")
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testPeekUTF8ValidatedString_Repeated() throws {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
+            throw XCTSkip("'peekUTF8ValidatedString' is only available in Swift 6 and later")
+        }
         var buffer = ByteBuffer()
         let testString = "Repeat UTF8"
         let written = buffer.writeString(testString)
@@ -4094,7 +4288,6 @@ extension ByteBufferTest {
         )
         XCTAssertEqual(buffer.readerIndex, 0, "peekUTF8ValidatedString() should not advance the reader index.")
     }
-    #endif
 
     // MARK: - peekDispatchData Tests (available when Dispatch is imported)
 
@@ -4149,4 +4342,215 @@ extension ByteBufferTest {
         XCTAssertEqual(buffer.readerIndex, 0, "peekDispatchData() should not advance the reader index.")
     }
     #endif
+
+    // MARK: - peekSlice Tests
+
+    func testPeekSlice_Normal() {
+        var buffer = ByteBuffer()
+        let bytes: [UInt8] = [0x01, 0x02, 0x03, 0x04]
+        buffer.writeBytes(bytes)
+
+        // Peek a slice of length 2.
+        guard let slice = buffer.peekSlice(length: 2) else {
+            XCTFail("Expected a valid slice.")
+            return
+        }
+        XCTAssertEqual(slice.readableBytes, 2, "Slice should contain 2 readable bytes.")
+        XCTAssertEqual(slice.getBytes(at: 0, length: 2), [0x01, 0x02])
+        XCTAssertEqual(buffer.readerIndex, 0, "peekSlice() should not advance the reader index.")
+    }
+
+    func testPeekSlice_OutOfRange() {
+        var buffer = ByteBuffer()
+        buffer.writeRepeatingByte(0xFF, count: 3)
+        // Request more bytes than available.
+        let slice = buffer.peekSlice(length: 10)
+        XCTAssertNil(slice, "Should return nil when requesting out-of-range slice.")
+    }
+
+    func testPeekSlice_Repeated() {
+        var buffer = ByteBuffer()
+        let bytes: [UInt8] = [0xAA, 0xBB, 0xCC, 0xDD]
+        buffer.writeBytes(bytes)
+
+        let firstPeek = buffer.peekSlice(length: 4)
+        let secondPeek = buffer.peekSlice(length: 4)
+        XCTAssertEqual(firstPeek?.readableBytes, 4)
+        XCTAssertEqual(secondPeek?.readableBytes, 4)
+        XCTAssertEqual(buffer.readerIndex, 0, "Repeated peekSlice() calls should not change reader index.")
+    }
+
+    // MARK: - peekData Tests
+
+    func testPeekData_Normal() {
+        var buffer = ByteBuffer()
+        let bytes: [UInt8] = [0x10, 0x20, 0x30]
+        buffer.writeBytes(bytes)
+        // Force a `.copy` strategy.
+        guard let data = buffer.peekData(length: bytes.count, byteTransferStrategy: .copy) else {
+            XCTFail("Expected non-nil Data.")
+            return
+        }
+        XCTAssertEqual(Array(data), bytes, "peekData() should return the correct bytes.")
+        XCTAssertEqual(buffer.readerIndex, 0, "peekData() should not change the reader index.")
+    }
+
+    func testPeekData_OutOfRange() {
+        var buffer = ByteBuffer()
+        buffer.writeBytes([0x01, 0x02])
+        // Request more bytes than written.
+        let data = buffer.peekData(length: 10, byteTransferStrategy: .copy)
+        XCTAssertNil(data, "Should return nil if requested length is not readable.")
+    }
+
+    func testPeekData_Repeated() {
+        var buffer = ByteBuffer()
+        let bytes: [UInt8] = [0xFF, 0x01, 0x02]
+        buffer.writeBytes(bytes)
+
+        // Repeated calls.
+        let firstPeek = buffer.peekData(length: bytes.count, byteTransferStrategy: .noCopy)
+        let secondPeek = buffer.peekData(length: bytes.count, byteTransferStrategy: .automatic)
+        XCTAssertEqual(firstPeek, secondPeek, "Repeated peeks should return the same Data.")
+        XCTAssertEqual(buffer.readerIndex, 0, "Reader index should remain unchanged.")
+    }
+
+    // MARK: - peekUUIDBytes Tests
+
+    func testPeekUUIDBytes_Normal() {
+        var buffer = ByteBuffer()
+        // Write 16 bytes that form a UUID.
+        let uuidBytes: [UInt8] = Array(repeating: 0xAB, count: 16)
+        buffer.writeBytes(uuidBytes)
+
+        guard let uuid = buffer.peekUUIDBytes() else {
+            XCTFail("Expected valid UUID bytes.")
+            return
+        }
+        // Convert the returned UUID to its 16-byte representation
+        let extracted = withUnsafeBytes(of: uuid.uuid) { Array($0) }
+        XCTAssertEqual(extracted, uuidBytes, "peekUUIDBytes() should read back the correct 16 bytes.")
+        XCTAssertEqual(buffer.readerIndex, 0, "peekUUIDBytes() should not advance the reader index.")
+    }
+
+    func testPeekUUIDBytes_NotEnoughBytes() {
+        var buffer = ByteBuffer()
+        buffer.writeBytes([0xAA, 0xBB])
+        let result = buffer.peekUUIDBytes()
+        XCTAssertNil(result, "peekUUIDBytes() should return nil when fewer than 16 bytes are readable.")
+    }
 }
+
+#if compiler(>=6.2)
+extension ByteBufferTest {
+    func testWriteBytesRawSpan() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
+        // Write 16 bytes into buffer using a RawSpan
+        let byteArray: [UInt8] = Array(0..<16)
+        let rawSpan = byteArray.span.bytes
+        let writeLength = self.buf.writeBytes(rawSpan)
+        XCTAssertEqual(writeLength, rawSpan.byteCount)
+
+        let read = self.buf.readBytes(length: 4)
+        XCTAssertEqual([0, 1, 2, 3], read)
+        XCTAssertEqual(buf.readerIndex, 4)
+
+        let peek = self.buf.peekBytes(length: 4)
+        XCTAssertEqual([4, 5, 6, 7], peek)
+        XCTAssertEqual(buf.readerIndex, 4)
+
+        let rest = self.buf.readBytes(length: 12)
+        XCTAssertEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], rest)
+        XCTAssertEqual(buf.readerIndex, 16)
+    }
+
+    func testSetBytesRawSpan() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
+        // Write 4 bytes using setBytes
+        let byteArray: [UInt8] = Array(0..<4)
+        let rawSpan = byteArray.span.bytes
+        let writeLength = self.buf.setBytes(rawSpan, at: 0)
+        XCTAssertEqual(writeLength, rawSpan.byteCount)
+
+        // Should not be readable as writer index is not moved by setBytes
+        let shouldBeNil = self.buf.readBytes(length: 4)
+        XCTAssertNil(shouldBeNil)
+
+        // Move writer index
+        self.buf.moveWriterIndex(to: 4)
+        let result = self.buf.readBytes(length: 4)
+        XCTAssertEqual(Array(0..<4), result!)
+    }
+
+    func testReadInlineArrayOfUInt8() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
+        let bytes = (0..<10).map { _ in UInt8.random(in: .min ... .max) }
+
+        let startWriterIndex = self.buf.writerIndex
+        let written = self.buf.writeBytes(bytes)
+        XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
+        XCTAssertEqual(written, self.buf.readableBytes)
+
+        let result = try XCTUnwrap(
+            self.buf.readInlineArray(as: InlineArray<10, UInt8>.self)
+        )
+        XCTAssertEqual(10, result.count)
+        for idx in result.indices {
+            XCTAssertEqual(bytes[idx], result[idx])
+        }
+        XCTAssertEqual(0, self.buf.readableBytes)
+        XCTAssertEqual(10, self.buf.readerIndex)
+    }
+
+    func testReadInlineArrayOfUInt64() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
+        let bytes = (0..<15).map { _ in UInt64.random(in: .min ... .max) }
+
+        let startWriterIndex = self.buf.writerIndex
+        var written = 0
+        for byte in bytes {
+            written += self.buf.writeInteger(byte)
+        }
+        XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
+        XCTAssertEqual(written, self.buf.readableBytes)
+
+        let result = try XCTUnwrap(
+            self.buf.readInlineArray(as: InlineArray<15, UInt64>.self)
+        )
+        XCTAssertEqual(15, result.count)
+        for idx in result.indices {
+            XCTAssertEqual(bytes[idx], result[idx])
+        }
+        XCTAssertEqual(0, self.buf.readableBytes)
+        XCTAssertEqual(120, self.buf.readerIndex)
+    }
+
+    func testNotEnoughBytesToReadInlineArrayOfInt32() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
+        let startWriterIndex = self.buf.writerIndex
+        var written = 0
+        /// Write 15 bytes. This won't be enough to read an `InlineArray<5, Int32>`.
+        for _ in 0..<15 {
+            written += self.buf.writeInteger(UInt8.random(in: .min ... .max))
+        }
+        XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
+        XCTAssertEqual(written, self.buf.readableBytes)
+
+        let result = self.buf.readInlineArray(as: InlineArray<5, Int32>.self)
+
+        XCTAssertNil(result)
+        XCTAssertEqual(written, self.buf.readableBytes)
+        XCTAssertEqual(0, self.buf.readerIndex)
+    }
+}
+#endif

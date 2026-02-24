@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import CNIOLinux
 import NIOCore
 
@@ -26,6 +29,10 @@ import let WinSDK.INADDR_ANY
 import struct WinSDK.ip_mreq
 import struct WinSDK.ipv6_mreq
 import struct WinSDK.socklen_t
+#endif
+
+#if os(OpenBSD)
+import CNIOOpenBSD
 #endif
 
 extension ByteBuffer {
@@ -121,7 +128,11 @@ final class SocketChannel: BaseStreamSocketChannel<Socket>, @unchecked Sendable 
         case _ as ChannelOptions.Types.ConnectTimeoutOption:
             return connectTimeout as! Option.Value
         case _ as ChannelOptions.Types.LocalVsockContextID:
+            #if os(Windows) || os(OpenBSD)
+            fallthrough
+            #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
+            #endif
         default:
             return try super.getOption0(option)
         }
@@ -276,7 +287,11 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
         case _ as ChannelOptions.Types.BacklogOption:
             return backlog as! Option.Value
         case _ as ChannelOptions.Types.LocalVsockContextID:
+            #if os(Windows) || os(OpenBSD)
+            fallthrough
+            #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
+            #endif
         default:
             return try super.getOption0(option)
         }
@@ -311,8 +326,13 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
             switch target {
             case .socketAddress(let address):
                 try socket.bind(to: address)
+            #if os(Windows) || os(OpenBSD)
+            case .vsockAddress:
+                fatalError(vsockUnimplemented)
+            #else
             case .vsockAddress(let address):
                 try socket.bind(to: address)
+            #endif
             }
             self.updateCachedAddressesFromSocket(updateRemote: false)
             try self.socket.listen(backlog: backlog)
@@ -454,6 +474,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
 final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
     private var reportExplicitCongestionNotifications = false
     private var receivePacketInfo = false
+    private var receiveSegmentSize = false
 
     // Guard against re-entrance of flushNow() method.
     private let pendingWrites: PendingDatagramWritesManager
@@ -562,12 +583,16 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             let valueAsInt: CInt = value as! Bool ? 1 : 0
             switch self.localAddress?.protocol {
             case .some(.inet):
+                #if os(OpenBSD)
+                throw ChannelError._operationUnsupported
+                #else
                 self.reportExplicitCongestionNotifications = true
                 try self.socket.setOption(
                     level: .ip,
                     name: .ip_recv_tos,
                     value: valueAsInt
                 )
+                #endif
             case .some(.inet6):
                 self.reportExplicitCongestionNotifications = true
                 try self.socket.setOption(
@@ -581,6 +606,9 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             }
         case _ as ChannelOptions.Types.ReceivePacketInfo:
             let valueAsInt: CInt = value as! Bool ? 1 : 0
+            #if os(OpenBSD)
+            throw ChannelError._operationUnsupported
+            #else
             switch self.localAddress?.protocol {
             case .some(.inet):
                 self.receivePacketInfo = true
@@ -600,6 +628,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                 // Receiving packet info is only supported for IP
                 throw ChannelError._operationUnsupported
             }
+            #endif
         case _ as ChannelOptions.Types.DatagramSegmentSize:
             guard System.supportsUDPSegmentationOffload else {
                 throw ChannelError._operationUnsupported
@@ -612,6 +641,12 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             }
             let enable = value as! ChannelOptions.Types.DatagramReceiveOffload.Value
             try self.socket.setUDPReceiveOffload(enable)
+        case _ as ChannelOptions.Types.DatagramReceiveSegmentSize:
+            guard System.supportsUDPReceiveOffload else {
+                throw ChannelError._operationUnsupported
+            }
+            let enable = value as! ChannelOptions.Types.DatagramReceiveSegmentSize.Value
+            self.receiveSegmentSize = enable
         default:
             try super.setOption0(option, value: value)
         }
@@ -634,11 +669,15 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
             switch self.localAddress?.protocol {
             case .some(.inet):
+                #if os(OpenBSD)
+                throw ChannelError._operationUnsupported
+                #else
                 return try
                     (self.socket.getOption(
                         level: .ip,
                         name: .ip_recv_tos
                     ) != 0) as! Option.Value
+                #endif
             case .some(.inet6):
                 return try
                     (self.socket.getOption(
@@ -650,6 +689,9 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                 throw ChannelError._operationUnsupported
             }
         case _ as ChannelOptions.Types.ReceivePacketInfo:
+            #if os(OpenBSD)
+            throw ChannelError._operationUnsupported
+            #else
             switch self.localAddress?.protocol {
             case .some(.inet):
                 return try
@@ -667,6 +709,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                 // Receiving packet info is only supported for IP
                 throw ChannelError._operationUnsupported
             }
+            #endif
         case _ as ChannelOptions.Types.DatagramSegmentSize:
             guard System.supportsUDPSegmentationOffload else {
                 throw ChannelError._operationUnsupported
@@ -677,6 +720,11 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                 throw ChannelError._operationUnsupported
             }
             return try self.socket.getUDPReceiveOffload() as! Option.Value
+        case _ as ChannelOptions.Types.DatagramReceiveSegmentSize:
+            guard System.supportsUDPReceiveOffload else {
+                throw ChannelError._operationUnsupported
+            }
+            return self.receiveSegmentSize as! Option.Value
         case _ as ChannelOptions.Types.BufferedWritableBytesOption:
             return Int(self.pendingWrites.bufferedBytes) as! Option.Value
         default:
@@ -723,7 +771,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
     override func readFromSocket() throws -> ReadResult {
         if self.vectorReadManager != nil {
             return try self.vectorReadFromSocket()
-        } else if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
+        } else if self.reportExplicitCongestionNotifications || self.receivePacketInfo || self.receiveSegmentSize {
             let pooledMsgBuffer = self.selectableEventLoop.msgBufferPool.get()
             defer { self.selectableEventLoop.msgBufferPool.put(pooledMsgBuffer) }
             return try pooledMsgBuffer.withUnsafePointers { _, _, controlMessageStorage in
@@ -768,7 +816,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                 readPending = false
 
                 let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
-                if self.reportExplicitCongestionNotifications || self.receivePacketInfo,
+                if self.reportExplicitCongestionNotifications || self.receivePacketInfo || self.receiveSegmentSize,
                     let controlMessagesReceived = controlBytes.receivedControlMessages
                 {
                     metadata = .init(from: controlMessagesReceived)
@@ -813,6 +861,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                     socket: self.socket,
                     buffer: &buffer,
                     parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo
+                        || self.receiveSegmentSize
                 )
             }
 
@@ -916,6 +965,14 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
     /// Buffer a write in preparation for a flush.
     private func bufferPendingAddressedWrite(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?)
     {
+        // Check if segment size is set on a non-Linux platform
+        #if !os(Linux)
+        if envelope.metadata?.segmentSize != nil {
+            promise?.fail(ChannelError.operationUnsupported)
+            return
+        }
+        #endif
+
         // If the socket is connected, check the remote provided matches the connected address.
         if let connectedRemoteAddress = self.remoteAddress {
             guard envelope.remoteAddress == connectedRemoteAddress else {
@@ -964,6 +1021,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                         metadata: metadata,
                         protocolFamily: self.localAddress?.protocol
                     )
+                    controlBytes.appendUDPSegmentSize(metadata: metadata)
                     return try self.socket.sendmsg(
                         pointer: ptr,
                         destinationPtr: destinationPtr,
@@ -1185,10 +1243,16 @@ extension DatagramChannel: MulticastChannel {
                 )
                 try self.socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
             case (.v4(let groupAddress), .none):
+                #if os(Windows)
+                var addr = in_addr()
+                addr.S_un.S_addr = INADDR_ANY
+                #else
+                let addr = in_addr(s_addr: INADDR_ANY)
+                #endif
                 // IPv4 binding without target interface.
                 let multicastRequest = ip_mreq(
                     imr_multiaddr: groupAddress.address.sin_addr,
-                    imr_interface: in_addr(s_addr: INADDR_ANY)
+                    imr_interface: addr
                 )
                 try self.socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
             case (.v6(let groupAddress), .some(.v6)):
@@ -1222,3 +1286,4 @@ extension DatagramChannel: MulticastChannel {
         }
     }
 }
+#endif  // !os(WASI)

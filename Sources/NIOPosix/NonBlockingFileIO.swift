@@ -12,7 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import CNIOLinux
+import CNIOOpenBSD
+import CNIOWindows
 import NIOConcurrencyHelpers
 import NIOCore
 
@@ -35,10 +39,12 @@ import NIOCore
 /// of blocking.
 public struct NonBlockingFileIO: Sendable {
     /// The default and recommended size for ``NonBlockingFileIO``'s thread pool.
-    public static let defaultThreadPoolSize = 2
+    @inlinable
+    public static var defaultThreadPoolSize: Int { 2 }
 
     /// The default and recommended chunk size.
-    public static let defaultChunkSize = 128 * 1024
+    @inlinable
+    public static var defaultChunkSize: Int { 128 * 1024 }
 
     /// ``NonBlockingFileIO`` errors.
     public enum Error: Swift.Error {
@@ -381,28 +387,38 @@ public struct NonBlockingFileIO: Sendable {
     ) throws -> ByteBuffer {
         var bytesRead = 0
         var buf = allocator.buffer(capacity: byteCount)
+
         while bytesRead < byteCount {
-            let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr in
+            let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr -> Int in
                 let res = try fileHandle.withUnsafeFileDescriptor { descriptor -> IOResult<ssize_t> in
                     if let offset = fromOffset {
+                        #if !os(Windows)
                         return try Posix.pread(
                             descriptor: descriptor,
                             pointer: ptr.baseAddress!,
                             size: byteCount - bytesRead,
                             offset: off_t(offset) + off_t(bytesRead)
                         )
-                    } else {
-                        return try Posix.read(
+                        #else
+                        return try Windows.pread(
                             descriptor: descriptor,
                             pointer: ptr.baseAddress!,
-                            size: byteCount - bytesRead
+                            size: byteCount - bytesRead,
+                            offset: off_t(offset) + off_t(bytesRead)
                         )
+                        #endif
                     }
+
+                    return try Posix.read(
+                        descriptor: descriptor,
+                        pointer: ptr.baseAddress!,
+                        size: byteCount - bytesRead
+                    )
                 }
                 switch res {
                 case .processed(let n):
                     assert(n >= 0, "read claims to have read a negative number of bytes \(n)")
-                    return n
+                    return numericCast(n)  // ssize_t is Int64 on Windows and Int everywhere else.
                 case .wouldBlock:
                     throw Error.descriptorSetToNonBlocking
                 }
@@ -522,24 +538,38 @@ public struct NonBlockingFileIO: Sendable {
                 precondition(ptr.count == byteCount - offsetAccumulator)
                 let res: IOResult<ssize_t> = try fileHandle.withUnsafeFileDescriptor { descriptor in
                     if let toOffset = toOffset {
+                        #if os(Windows)
+                        return try Windows.pwrite(
+                            descriptor: descriptor,
+                            pointer: ptr.baseAddress!,
+                            size: byteCount - offsetAccumulator,
+                            offset: off_t(toOffset + Int64(offsetAccumulator))
+                        )
+                        #else
                         return try Posix.pwrite(
                             descriptor: descriptor,
                             pointer: ptr.baseAddress!,
                             size: byteCount - offsetAccumulator,
                             offset: off_t(toOffset + Int64(offsetAccumulator))
                         )
+                        #endif
                     } else {
-                        return try Posix.write(
+                        let result = try Posix.write(
                             descriptor: descriptor,
                             pointer: ptr.baseAddress!,
                             size: byteCount - offsetAccumulator
                         )
+                        #if os(Windows)
+                        return result.map { ssize_t($0) }
+                        #else
+                        return result
+                        #endif
                     }
                 }
                 switch res {
                 case .processed(let n):
                     assert(n >= 0, "write claims to have written a negative number of bytes \(n)")
-                    return n
+                    return numericCast(n)
                 case .wouldBlock:
                     throw Error.descriptorSetToNonBlocking
                 }
@@ -802,8 +832,13 @@ public struct NonBlockingFileIO: Sendable {
                         let ptr = pointer.baseAddress!.assumingMemoryBound(to: CChar.self)
                         return String(cString: ptr)
                     }
+                    #if os(OpenBSD)
+                    let ino = entry.pointee.d_fileno
+                    #else
+                    let ino = entry.pointee.d_ino
+                    #endif
                     entries.append(
-                        NIODirectoryEntry(ino: UInt64(entry.pointee.d_ino), type: entry.pointee.d_type, name: name)
+                        NIODirectoryEntry(ino: UInt64(ino), type: entry.pointee.d_type, name: name)
                     )
                 }
                 try? Posix.closedir(dir: dir)
@@ -1251,8 +1286,13 @@ extension NonBlockingFileIO {
                         let ptr = pointer.baseAddress!.assumingMemoryBound(to: CChar.self)
                         return String(cString: ptr)
                     }
+                    #if os(OpenBSD)
+                    let ino = entry.pointee.d_fileno
+                    #else
+                    let ino = entry.pointee.d_ino
+                    #endif
                     entries.append(
-                        NIODirectoryEntry(ino: UInt64(entry.pointee.d_ino), type: entry.pointee.d_type, name: name)
+                        NIODirectoryEntry(ino: UInt64(ino), type: entry.pointee.d_type, name: name)
                     )
                 }
                 try? Posix.closedir(dir: dir)
@@ -1288,3 +1328,4 @@ extension NonBlockingFileIO {
     }
     #endif
 }
+#endif  // !os(WASI)

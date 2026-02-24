@@ -35,7 +35,7 @@ SwiftNIO has a number of products that provide different functionality. This pac
 - [NIOHTTP1][module-http1]. This provides a low-level HTTP/1.1 protocol implementation.
 - [NIOWebSocket][module-websocket]. This provides a low-level WebSocket protocol implementation.
 - [NIOTestUtils][module-test-utilities]. This provides a number of helpers for testing projects that use SwiftNIO.
-- [NIOFileSystem][module-filesystem]. This provides `async` APIs for interacting with the file system.
+- [_NIOFileSystem][module-filesystem]. This provides `async` APIs for interacting with the file system.
 
 ### Conceptual Overview
 
@@ -141,6 +141,13 @@ SwiftNIO is designed to be a powerful tool for building networked applications a
 Applications that need extremely high performance from their networking stack may choose to use SwiftNIO directly in order to reduce the overhead of their abstractions. These applications should be able to maintain extremely high performance with relatively little maintenance cost. SwiftNIO also focuses on providing useful abstractions for this use-case, such that extremely high performance network servers can be built directly.
 
 The core SwiftNIO repository will contain a few extremely important protocol implementations, such as HTTP, directly in tree. However, we believe that most protocol implementations should be decoupled from the release cycle of the underlying networking stack, as the release cadence is likely to be very different (either much faster or much slower). For this reason, we actively encourage the community to develop and maintain their protocol implementations out-of-tree. Indeed, some first-party SwiftNIO protocol implementations, including our TLS and HTTP/2 bindings, are developed out-of-tree!
+
+## Topics
+
+### Allocation Tests
+
+- <doc:Running-Alloction-Counting-Tests>
+- <doc:Debugging-Allocation-Regressions>
 
 
 <!-- links -->

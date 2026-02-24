@@ -118,12 +118,12 @@ private final class TLSUserEventHandler: ChannelInboundHandler, RemovableChannel
             let alpn = String(string.dropFirst(15))
             context.writeAndFlush(.init(ByteBuffer(string: "alpn:\(alpn)")), promise: nil)
             context.fireUserInboundEventTriggered(TLSUserEvent.handshakeCompleted(negotiatedProtocol: alpn))
-            context.pipeline.removeHandler(self, promise: nil)
+            context.pipeline.syncOperations.removeHandler(self, promise: nil)
         } else if string.hasPrefix("alpn:") {
             context.fireUserInboundEventTriggered(
                 TLSUserEvent.handshakeCompleted(negotiatedProtocol: String(string.dropFirst(5)))
             )
-            context.pipeline.removeHandler(self, promise: nil)
+            context.pipeline.syncOperations.removeHandler(self, promise: nil)
         } else {
             context.fireChannelRead(data)
         }
@@ -702,7 +702,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         try await withThrowingTaskGroup(of: EventLoopFuture<NegotiationResult>.self) { group in
             group.addTask {
                 // We have to use a fixed port here since we only get the channel once protocol negotiation is done
-                try await self.makeUDPServerChannelWithProtocolNegotiation(
+                try await Self.makeUDPServerChannelWithProtocolNegotiation(
                     eventLoopGroup: eventLoopGroup,
                     port: port
                 )
@@ -713,7 +713,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
             group.addTask {
                 // We have to use a fixed port here since we only get the channel once protocol negotiation is done
-                try await self.makeUDPClientChannelWithProtocolNegotiation(
+                try await Self.makeUDPClientChannelWithProtocolNegotiation(
                     eventLoopGroup: eventLoopGroup,
                     port: port,
                     proposedALPN: .string
@@ -1033,6 +1033,222 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         }
     }
 
+    func testPipeBootstrap_callsChannelInitializer() async throws {
+        let eventLoopGroup = self.group!
+        let (pipe1ReadFD, pipe1WriteFD, pipe2ReadFD, pipe2WriteFD) = self.makePipeFileDescriptors()
+        let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
+        let toChannel: NIOAsyncChannel<Never, ByteBuffer>
+        let fromChannel: NIOAsyncChannel<ByteBuffer, Never>
+        let didCallChannelInitializer = NIOLockedValueBox(0)
+
+        do {
+            channel = try await NIOPipeBootstrap(group: eventLoopGroup)
+                .channelInitializer { channel in
+                    didCallChannelInitializer.withLockedValue { $0 += 1 }
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                }
+                .takingOwnershipOfDescriptors(
+                    input: pipe1ReadFD,
+                    output: pipe2WriteFD
+                ) { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try NIOAsyncChannel(wrappingChannelSynchronously: channel)
+                    }
+                }
+        } catch {
+            for fileDescriptor in [pipe1ReadFD, pipe1WriteFD, pipe2ReadFD, pipe2WriteFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
+            throw error
+        }
+
+        do {
+            toChannel = try await NIOPipeBootstrap(group: eventLoopGroup)
+                .channelInitializer { channel in
+                    didCallChannelInitializer.withLockedValue { $0 += 1 }
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                }
+                .takingOwnershipOfDescriptor(
+                    output: pipe1WriteFD
+                ) { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try NIOAsyncChannel(wrappingChannelSynchronously: channel)
+                    }
+                }
+        } catch {
+            for fileDescriptor in [pipe1WriteFD, pipe2ReadFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
+            throw error
+        }
+
+        do {
+            fromChannel = try await NIOPipeBootstrap(group: eventLoopGroup)
+                .channelInitializer { channel in
+                    didCallChannelInitializer.withLockedValue { $0 += 1 }
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                }
+                .takingOwnershipOfDescriptor(
+                    input: pipe2ReadFD
+                ) { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try NIOAsyncChannel(wrappingChannelSynchronously: channel)
+                    }
+                }
+        } catch {
+            for fileDescriptor in [pipe2ReadFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
+            throw error
+        }
+
+        try await channel.executeThenClose { channelInbound, channelOutbound in
+            try await fromChannel.executeThenClose { fromChannelInbound, _ in
+                try await toChannel.executeThenClose { _, toChannelOutbound in
+                    var inboundIterator = channelInbound.makeAsyncIterator()
+                    var fromChannelInboundIterator = fromChannelInbound.makeAsyncIterator()
+
+                    try await toChannelOutbound.write(.init(string: "Request"))
+                    try await XCTAsyncAssertEqual(try await inboundIterator.next(), ByteBuffer(string: "Request"))
+
+                    let response = ByteBuffer(string: "Response")
+                    try await channelOutbound.write(response)
+                    try await XCTAsyncAssertEqual(try await fromChannelInboundIterator.next(), response)
+                }
+            }
+        }
+
+        XCTAssertEqual(didCallChannelInitializer.withLockedValue { $0 }, 3)
+    }
+
+    func testPipeBootstrap_whenInputNil_callsChannelInitializer() async throws {
+        let eventLoopGroup = self.group!
+        let (pipe1ReadFD, pipe1WriteFD) = self.makePipeFileDescriptors()
+        let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
+        let fromChannel: NIOAsyncChannel<ByteBuffer, Never>
+        let didCallChannelInitializer = NIOLockedValueBox(0)
+
+        do {
+            channel = try await NIOPipeBootstrap(group: eventLoopGroup)
+                .channelInitializer { channel in
+                    didCallChannelInitializer.withLockedValue { $0 += 1 }
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                }
+                .takingOwnershipOfDescriptor(
+                    output: pipe1WriteFD
+                ) { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try NIOAsyncChannel(wrappingChannelSynchronously: channel)
+                    }
+                }
+        } catch {
+            for fileDescriptor in [pipe1ReadFD, pipe1WriteFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
+            throw error
+        }
+
+        do {
+            fromChannel = try await NIOPipeBootstrap(group: eventLoopGroup)
+                .channelInitializer { channel in
+                    didCallChannelInitializer.withLockedValue { $0 += 1 }
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                }
+                .takingOwnershipOfDescriptor(
+                    input: pipe1ReadFD
+                ) { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try NIOAsyncChannel(wrappingChannelSynchronously: channel)
+                    }
+                }
+        } catch {
+            for fileDescriptor in [pipe1WriteFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
+            throw error
+        }
+
+        try await channel.executeThenClose { channelInbound, channelOutbound in
+            try await fromChannel.executeThenClose { fromChannelInbound, _ in
+                var inboundIterator = channelInbound.makeAsyncIterator()
+                var fromChannelInboundIterator = fromChannelInbound.makeAsyncIterator()
+
+                try await XCTAsyncAssertEqual(try await inboundIterator.next(), nil)
+
+                let response = ByteBuffer(string: "Response")
+                try await channelOutbound.write(response)
+                try await XCTAsyncAssertEqual(try await fromChannelInboundIterator.next(), response)
+            }
+        }
+
+        XCTAssertEqual(didCallChannelInitializer.withLockedValue { $0 }, 2)
+    }
+
+    func testPipeBootstrap_whenOutputNil_callsChannelInitializer() async throws {
+        let eventLoopGroup = self.group!
+        let (pipe1ReadFD, pipe1WriteFD) = self.makePipeFileDescriptors()
+        let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
+        let toChannel: NIOAsyncChannel<Never, ByteBuffer>
+        let didCallChannelInitializer = NIOLockedValueBox(0)
+
+        do {
+            channel = try await NIOPipeBootstrap(group: eventLoopGroup)
+                .channelInitializer { channel in
+                    didCallChannelInitializer.withLockedValue { $0 += 1 }
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                }
+                .takingOwnershipOfDescriptor(
+                    input: pipe1ReadFD
+                ) { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try NIOAsyncChannel(wrappingChannelSynchronously: channel)
+                    }
+                }
+        } catch {
+            for fileDescriptor in [pipe1ReadFD, pipe1WriteFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
+
+            throw error
+        }
+
+        do {
+            toChannel = try await NIOPipeBootstrap(group: eventLoopGroup)
+                .channelInitializer { channel in
+                    didCallChannelInitializer.withLockedValue { $0 += 1 }
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                }
+                .takingOwnershipOfDescriptor(
+                    output: pipe1WriteFD
+                ) { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try NIOAsyncChannel(wrappingChannelSynchronously: channel)
+                    }
+                }
+        } catch {
+            for fileDescriptor in [pipe1WriteFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
+            throw error
+        }
+
+        try await channel.executeThenClose { channelInbound, channelOutbound in
+            try await toChannel.executeThenClose { _, toChannelOutbound in
+                var inboundIterator = channelInbound.makeAsyncIterator()
+
+                try await toChannelOutbound.write(.init(string: "Request"))
+                try await XCTAsyncAssertEqual(try await inboundIterator.next(), ByteBuffer(string: "Request"))
+
+                let response = ByteBuffer(string: "Response")
+                await XCTAsyncAssertThrowsError(try await channelOutbound.write(response)) { error in
+                    XCTAssertEqual(error as? NIOAsyncWriterError, .alreadyFinished())
+                }
+            }
+        }
+
+        XCTAssertEqual(didCallChannelInitializer.withLockedValue { $0 }, 2)
+    }
+
     // MARK: RawSocket bootstrap
 
     func testRawSocketBootstrap() async throws {
@@ -1063,7 +1279,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         try await withThrowingTaskGroup(of: EventLoopFuture<NegotiationResult>.self) { group in
             group.addTask {
                 // We have to use a fixed port here since we only get the channel once protocol negotiation is done
-                try await self.makeRawSocketServerChannelWithProtocolNegotiation(
+                try await Self.makeRawSocketServerChannelWithProtocolNegotiation(
                     eventLoopGroup: eventLoopGroup
                 )
             }
@@ -1072,7 +1288,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             try await Task.sleep(nanoseconds: 100_000_000)
 
             group.addTask {
-                try await self.makeRawSocketClientChannelWithProtocolNegotiation(
+                try await Self.makeRawSocketClientChannelWithProtocolNegotiation(
                     eventLoopGroup: eventLoopGroup,
                     proposedALPN: .string
                 )
@@ -1239,7 +1455,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             }
     }
 
-    private func makeRawSocketServerChannelWithProtocolNegotiation(
+    private static func makeRawSocketServerChannelWithProtocolNegotiation(
         eventLoopGroup: EventLoopGroup
     ) async throws -> EventLoopFuture<NegotiationResult> {
         try await NIORawSocketBootstrap(group: eventLoopGroup)
@@ -1262,7 +1478,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             }
     }
 
-    private func makeRawSocketClientChannelWithProtocolNegotiation(
+    private static func makeRawSocketClientChannelWithProtocolNegotiation(
         eventLoopGroup: EventLoopGroup,
         proposedALPN: TLSUserEventHandler.ALPN
     ) async throws -> EventLoopFuture<NegotiationResult> {
@@ -1371,7 +1587,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             }
     }
 
-    private func makeUDPServerChannelWithProtocolNegotiation(
+    private static func makeUDPServerChannelWithProtocolNegotiation(
         eventLoopGroup: EventLoopGroup,
         port: Int,
         proposedALPN: TLSUserEventHandler.ALPN? = nil
@@ -1407,7 +1623,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             }
     }
 
-    private func makeUDPClientChannelWithProtocolNegotiation(
+    private static func makeUDPClientChannelWithProtocolNegotiation(
         eventLoopGroup: EventLoopGroup,
         port: Int,
         proposedALPN: TLSUserEventHandler.ALPN

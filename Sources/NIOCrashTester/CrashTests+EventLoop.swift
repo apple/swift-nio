@@ -82,9 +82,9 @@ struct EventLoopCrashTests {
                 exit(2)
             }
             func f() {
-                el.scheduleTask(in: .nanoseconds(0)) { [f] in
+                el.assumeIsolated().scheduleTask(in: .nanoseconds(0)) { [f] in
                     f()
-                }.futureResult.whenFailure { [f] error in
+                }.futureResult.assumeIsolated().whenFailure { [f] error in
                     guard case .some(.shutdown) = error as? EventLoopError else {
                         exit(3)
                     }
@@ -180,7 +180,7 @@ struct EventLoopCrashTests {
         NIOSingletons.groupLoopCountSuggestion = -1
     }
 
-    #if compiler(>=5.9) && swift(<6.2)  // We only support Concurrency executor take-over on those Swift versions, as versions greater than that have not been properly tested.
+    #if swift(<6.2)  // We only support Concurrency executor take-over on those Swift versions, as versions greater than that have not been properly tested.
     let testInstallingSingletonMTELGAsConcurrencyExecutorWorksButOnlyOnce = CrashTest(
         regex: #"Fatal error: Must be called only once"#
     ) {
@@ -207,6 +207,6 @@ struct EventLoopCrashTests {
         // This should crash
         _ = NIOSingletons.unsafeTryInstallSingletonPosixEventLoopGroupAsConcurrencyGlobalExecutor()
     }
-    #endif  // compiler(>=5.9) && swift(<6.2)
+    #endif  // swift(<6.2)
 }
 #endif  // !canImport(Darwin) || os(macOS)

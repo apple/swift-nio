@@ -24,7 +24,7 @@ public typealias NIOWebClientSocketUpgrader = NIOWebSocketClientUpgrader
 /// This upgrader assumes that the `HTTPClientUpgradeHandler` will create and send the upgrade request.
 /// This upgrader also assumes that the `HTTPClientUpgradeHandler` will appropriately mutate the
 /// pipeline to remove the HTTP `ChannelHandler`s.
-public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
+public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader, Sendable {
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
     /// None of the websocket headers are actually defined as 'required'.
@@ -74,7 +74,6 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     }
 }
 
-#if !canImport(Darwin) || swift(>=5.10)
 /// A `NIOTypedHTTPClientProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
 /// This upgrader assumes that the `HTTPClientUpgradeHandler` will create and send the upgrade request.
@@ -129,10 +128,6 @@ public final class NIOTypedWebSocketClientUpgrader<UpgradeResult: Sendable>: NIO
         )
     }
 }
-#endif
-
-@available(*, unavailable)
-extension NIOWebSocketClientUpgrader: Sendable {}
 
 extension NIOWebSocketClientUpgrader {
     /// Generates a random WebSocket Request Key by generating 16 bytes randomly and encoding them as a base64 string as defined in RFC6455 https://tools.ietf.org/html/rfc6455#section-4.1

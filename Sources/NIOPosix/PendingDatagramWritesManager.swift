@@ -12,10 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import CNIODarwin
 import CNIOLinux
+import CNIOOpenBSD
+import CNIOWindows
 import NIOCore
+
+#if canImport(WinSDK)
+import struct WinSDK.socklen_t
+#endif
 
 private struct PendingDatagramWrite {
     var data: ByteBuffer
@@ -136,13 +144,14 @@ private func doPendingDatagramWriteVectorOperation(
                     protocolFamily = connectedRemoteAddress.protocol
                 }
 
-                iovecs[c] = iovec(
+                iovecs[c] = IOVector(
                     iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!),
                     iov_len: numericCast(toWriteForThisBuffer)
                 )
 
                 var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[c])
                 controlBytes.appendExplicitCongestionState(metadata: p.metadata, protocolFamily: protocolFamily)
+                controlBytes.appendUDPSegmentSize(metadata: p.metadata)
                 let controlMessageBytePointer = controlBytes.validControlBytes
 
                 var msg = msghdr()
@@ -150,8 +159,7 @@ private func doPendingDatagramWriteVectorOperation(
                 msg.msg_namelen = addressLen
                 msg.msg_iov = iovecs.baseAddress! + c
                 msg.msg_iovlen = 1
-                msg.msg_control = controlMessageBytePointer.baseAddress
-                msg.msg_controllen = .init(controlMessageBytePointer.count)
+                msg.control_ptr = controlMessageBytePointer
                 msg.msg_flags = 0
                 msgs[c] = MMsgHdr(msg_hdr: msg, msg_len: 0)
             }
@@ -419,6 +427,13 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     internal var publishedWritability = true
     internal var writeSpinCount: UInt = 16
     private(set) var isOpen = true
+    var outboundCloseState: CloseState {
+        if self.isOpen {
+            .open
+        } else {
+            .closed
+        }
+    }
 
     /// Initialize with a pre-allocated array of message headers and storage references. We pass in these pre-allocated
     /// objects to save allocations. They can be safely be re-used for all `Channel`s on a given `EventLoop` as an
@@ -705,3 +720,4 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         assert(self.state.isEmpty)
     }
 }
+#endif  // !os(WASI)

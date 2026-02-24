@@ -12,20 +12,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOConcurrencyHelpers
 import NIOEmbedded
 import XCTest
 
 @testable import NIOCore
 @testable import NIOPosix
 
-private var testDecoderIsNotQuadratic_mallocs = 0
-private var testDecoderIsNotQuadratic_reallocs = 0
+private let testDecoderIsNotQuadratic_mallocs = NIOLockedValueBox(0)
+private let testDecoderIsNotQuadratic_reallocs = NIOLockedValueBox(0)
 private func testDecoderIsNotQuadratic_freeHook(_ ptr: UnsafeMutableRawPointer) {
     free(ptr)
 }
 
 private func testDecoderIsNotQuadratic_mallocHook(_ size: Int) -> UnsafeMutableRawPointer? {
-    testDecoderIsNotQuadratic_mallocs += 1
+    testDecoderIsNotQuadratic_mallocs.withLockedValue { $0 += 1 }
     return malloc(size)
 }
 
@@ -33,7 +34,7 @@ private func testDecoderIsNotQuadratic_reallocHook(
     _ ptr: UnsafeMutableRawPointer?,
     _ count: Int
 ) -> UnsafeMutableRawPointer? {
-    testDecoderIsNotQuadratic_reallocs += 1
+    testDecoderIsNotQuadratic_reallocs.withLockedValue { $0 += 1 }
     return realloc(ptr, count)
 }
 
@@ -56,7 +57,7 @@ private final class ChannelInactivePromiser: ChannelInboundHandler {
     }
 }
 
-public final class ByteToMessageDecoderTest: XCTestCase {
+final class ByteToMessageDecoderTest: XCTestCase {
     private final class ByteToInt32Decoder: ByteToMessageDecoder {
         typealias InboundIn = ByteBuffer
         typealias InboundOut = Int32
@@ -168,8 +169,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             XCTAssertNoThrow(try channel.finish())
         }
         let inactivePromiser = ChannelInactivePromiser(channel: channel)
-        _ = try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(ByteToInt32Decoder()))
-        _ = try channel.pipeline.addHandler(inactivePromiser).wait()
+        try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(ByteToInt32Decoder()))
+        try channel.pipeline.syncOperations.addHandler(inactivePromiser)
 
         var buffer = channel.allocator.buffer(capacity: 32)
         buffer.writeInteger(Int32(1))
@@ -188,8 +189,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             XCTAssertNoThrow(try channel.finish())
         }
 
-        XCTAssertEqual(testDecoderIsNotQuadratic_mallocs, 0)
-        XCTAssertEqual(testDecoderIsNotQuadratic_reallocs, 0)
+        XCTAssertEqual(testDecoderIsNotQuadratic_mallocs.withLockedValue { $0 }, 0)
+        XCTAssertEqual(testDecoderIsNotQuadratic_reallocs.withLockedValue { $0 }, 0)
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(ForeverDecoder())))
 
         let dummyAllocator = ByteBufferAllocator(
@@ -208,8 +209,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
         // We get one extra malloc the first time around the loop, when we have aliased the buffer. From then on it's
         // all reallocs of the underlying buffer.
-        XCTAssertEqual(testDecoderIsNotQuadratic_mallocs, 2)
-        XCTAssertEqual(testDecoderIsNotQuadratic_reallocs, 3)
+        XCTAssertEqual(testDecoderIsNotQuadratic_mallocs.withLockedValue { $0 }, 2)
+        XCTAssertEqual(testDecoderIsNotQuadratic_reallocs.withLockedValue { $0 }, 3)
     }
 
     func testMemoryIsReclaimedIfMostIsConsumed() {
@@ -907,7 +908,9 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             }
         }
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(Take16BytesThenCloseAndPassOnDecoder()))
-        XCTAssertNoThrow(try channel.pipeline.addHandler(DoNotForwardChannelInactiveHandler(), position: .first).wait())
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.addHandler(DoNotForwardChannelInactiveHandler(), position: .first)
+        )
         var buffer = channel.allocator.buffer(capacity: 16)
         buffer.writeStaticString("0123456789abcdefQWER")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
@@ -1283,7 +1286,10 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         let decoder = Decoder()
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
         XCTAssertNoThrow(
-            try channel.pipeline.addHandler(CheckStateOfDecoderHandler(decoder: decoder), position: .first).wait()
+            try channel.pipeline.syncOperations.addHandler(
+                CheckStateOfDecoderHandler(decoder: decoder),
+                position: .first
+            )
         )
         XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
         var buffer = channel.allocator.buffer(capacity: 3)
@@ -1620,7 +1626,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         let decoder = Decoder()
         let checker = CheckThingsAreOkayHandler()
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
-        XCTAssertNoThrow(try channel.pipeline.addHandler(checker).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(checker))
         XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
         channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
         XCTAssertEqual(1, decoder.decodeLastCalls)
@@ -1865,8 +1871,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
     }
 }
 
-public final class MessageToByteEncoderTest: XCTestCase {
-
+final class MessageToByteEncoderTest: XCTestCase {
     private struct Int32ToByteEncoder: MessageToByteEncoder {
         typealias OutboundIn = Int32
 
@@ -1982,7 +1987,7 @@ private class PairOfBytesDecoder: ByteToMessageDecoder {
     }
 }
 
-public final class MessageToByteHandlerTest: XCTestCase {
+final class MessageToByteHandlerTest: XCTestCase {
     private struct ThrowingMessageToByteEncoder: MessageToByteEncoder {
         private struct HandlerError: Error {}
 

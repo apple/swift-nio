@@ -71,7 +71,7 @@ This product contains a derivation of Fabian Fett's 'Base64.swift'.
 
 ---
 
-This product contains a derivation of "XCTest+AsyncAwait.swift" from AsyncHTTPClient.
+This product contains a derivation of "XCTest+AsyncAwait.swift" & "StructuredConcurrencyHelpers" from AsyncHTTPClient.
 
   * LICENSE (Apache License 2.0):
     * https://www.apache.org/licenses/LICENSE-2.0

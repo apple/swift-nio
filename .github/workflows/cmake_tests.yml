@@ -1,5 +1,8 @@
 name: CMake build
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:
@@ -28,7 +31,7 @@ jobs:
       image: ${{ inputs.image }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           persist-credentials: false
           submodules: true
@@ -40,11 +43,11 @@ jobs:
           which curl jq || apt -q update
           which curl || apt -yq install curl
           which jq || apt -yq install jq
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/update-cmake-lists.sh | CONFIG_JSON='${{ inputs.update_cmake_lists_config }}' FAIL_ON_CHANGES=true bash
+          curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/update-cmake-lists.sh | CONFIG_JSON='${{ inputs.update_cmake_lists_config }}' FAIL_ON_CHANGES=true bash
       - name: CMake build
         run: |
           which curl cmake ninja || apt -q update
           which curl || apt -yq install curl
           which cmake || apt -yq install cmake
           which ninja || apt -yq install ninja-build
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/cmake-build.sh | TARGET_DIRECTORY="${{ inputs.cmake_build_target_directory }}" CMAKE_VERSION="${{ inputs.cmake_version }}" bash
+          curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/cmake-build.sh | TARGET_DIRECTORY="${{ inputs.cmake_build_target_directory }}" CMAKE_VERSION="${{ inputs.cmake_version }}" bash

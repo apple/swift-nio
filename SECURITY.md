@@ -28,44 +28,15 @@ SwiftNIO 1.x is considered end of life and will not receive any security patches
 
 ## Disclosures
 
-### Private Disclosure Process
+If you believe that you have discovered a security or privacy vulnerability in our open source software, please report it to us using the GitHub private vulnerability feature. Reports should include specific product and software version(s) that you believe are affected; a technical description of the behavior that you observed and the behavior that you expected; the steps required to reproduce the issue; and a proof of concept or exploit.
 
-The SwiftNIO core team asks that known and suspected vulnerabilities be
-privately and responsibly disclosed by emailing
-[sswg-security-reports@forums.swift.org](mailto:sswg-security-reports@forums.swift.org)
-with the [details usually included with bug reports][issue-template].
-**Do not file a public issue.**
+The project team will do their best to acknowledge receiving all security reports within 7 days of submission. This initial acknowledgment is neither acceptance nor rejection of your report. The project team may come back to you with further questions or invite you to collaborate while working through the details of your report.
 
-#### When to report a vulnerability
+Keep these additional guidelines in mind when submitting your report:
 
-* You think you have discovered a potential security vulnerability in SwiftNIO
-  or any of the SwiftNIO projects.
-* You are unsure how a vulnerability affects SwiftNIO or any of the SwiftNIO
-  projects.
+* Reports concerning known, publicly disclosed CVEs can be submitted as normal issues to this project.
+* Output from automated security scans or fuzzers MUST include additional context demonstrating the vulnerability with a proof of concept or working exploit.
+* Application crashes due to malformed inputs are typically not treated as security vulnerabilities, unless they are shown to also impact other processes on the system.
 
-#### What happens next?
 
-* A member of the team will acknowledge receipt of the report within 3
-  working days (United States). This may include a request for additional
-  information about reproducing the vulnerability.
-* We will privately inform the Swift Server Work Group ([SSWG][sswg]) of the
-  vulnerability within 10 days of the report as per their [security
-  guidelines][sswg-security].
-* Once we have identified a fix we may ask you to validate it. We aim to do this
-  within 30 days. In some cases this may not be possible, for example when the
-  vulnerability exists at the protocol level and the industry must coordinate on
-  the disclosure process.
-* If a CVE number is required, one will be requested from [MITRE][mitre]
-  providing you with full credit for the discovery.
-* We will decide on a planned release date and let you know when it is.
-* Prior to release, we will inform major dependents that a security-related
-  patch is impending.
-* Once the fix has been released we will publish a security advisory on GitHub
-  and the [SSWG][sswg] will announce the vulnerability on the [Swift
-  forums][swift-forums-sec].
-
-[issue-template]: https://github.com/apple/swift-nio/blob/main/.github/ISSUE_TEMPLATE/bug-report.md
-[sswg]: https://github.com/swift-server/sswg
-[sswg-security]: https://www.swift.org/sswg/security/
-[swift-forums-sec]: https://forums.swift.org/c/server/security-updates/
-[mitre]: https://cveform.mitre.org/
+While we welcome reports for open source software projects, they are not eligible for Apple Security Bounties.

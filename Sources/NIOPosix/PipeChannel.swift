@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import NIOCore
 
 final class PipeChannel: BaseStreamSocketChannel<PipePair>, @unchecked Sendable {
@@ -121,6 +124,17 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair>, @unchecked Sendable 
         }
         try! self.selectableEventLoop.deregister(channel: self, mode: .output)
         try! outputSPH.close()
+
+        // Only close the entire channel if the input is already closed.
+        // If input is still open, we can continue half-duplex operation.
+        var inputIsClosed = true
+        if let inputSPH = self.pipePair.input {
+            inputIsClosed = !inputSPH.isOpen
+        }
+        if inputIsClosed {
+            let error = IOError(errnoCode: EPIPE, reason: "Broken pipe")
+            self.close0(error: error, mode: .all, promise: nil)
+        }
     }
 
     override func shutdownSocket(mode: CloseMode) throws {
@@ -141,3 +155,4 @@ extension PipeChannel: CustomStringConvertible {
         "PipeChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
     }
 }
+#endif  // !os(WASI)

@@ -11,9 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import NIOCore
 
-public enum VsockChannelEvents {
+public enum VsockChannelEvents: Sendable {
     /// Fired as an outbound event when NIO would like to ask itself to bind the socket.
     ///
     /// This flow for connect is required because we cannot extend `enum SocketAddress` without
@@ -38,3 +41,4 @@ public enum VsockChannelEvents {
         }
     }
 }
+#endif  // !os(WASI)

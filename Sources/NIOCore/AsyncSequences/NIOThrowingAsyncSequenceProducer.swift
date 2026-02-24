@@ -42,13 +42,13 @@ public struct NIOThrowingAsyncSequenceProducer<
     /// to yield new elements to the sequence.
     /// 2. The ``sequence`` which is the actual `AsyncSequence` and
     /// should be passed to the consumer.
-    public struct NewSequence {
+    public struct NewSequence: Sendable {
         /// The source of the ``NIOThrowingAsyncSequenceProducer`` used to yield and finish.
         public let source: Source
         /// The actual sequence which should be passed to the consumer.
         public let sequence: NIOThrowingAsyncSequenceProducer
 
-        @usableFromInline
+        @inlinable
         internal init(
             source: Source,
             sequence: NIOThrowingAsyncSequenceProducer
@@ -218,6 +218,7 @@ public struct NIOThrowingAsyncSequenceProducer<
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOThrowingAsyncSequenceProducer: AsyncSequence {
+    @inlinable
     public func makeAsyncIterator() -> AsyncIterator {
         AsyncIterator(storage: self._internalClass._storage)
     }
@@ -234,7 +235,8 @@ extension NIOThrowingAsyncSequenceProducer {
             @usableFromInline
             internal let _storage: Storage
 
-            fileprivate init(storage: Storage) {
+            @inlinable
+            init(storage: Storage) {
                 self._storage = storage
                 self._storage.iteratorInitialized()
             }
@@ -253,7 +255,8 @@ extension NIOThrowingAsyncSequenceProducer {
         @usableFromInline
         internal let _internalClass: InternalClass
 
-        fileprivate init(storage: Storage) {
+        @inlinable
+        init(storage: Storage) {
             self._internalClass = InternalClass(storage: storage)
         }
 
@@ -309,13 +312,13 @@ extension NIOThrowingAsyncSequenceProducer {
             self._internalClass._storage
         }
 
-        @usableFromInline
+        @inlinable
         internal init(storage: Storage, finishOnDeinit: Bool) {
             self._internalClass = .init(storage: storage, finishOnDeinit: finishOnDeinit)
         }
 
         /// The result of a call to ``NIOThrowingAsyncSequenceProducer/Source/yield(_:)``.
-        public enum YieldResult: Hashable {
+        public enum YieldResult: Hashable, Sendable {
             /// Indicates that the caller should produce more elements.
             case produceMore
             /// Indicates that the caller should stop producing elements.
@@ -422,7 +425,7 @@ extension NIOThrowingAsyncSequenceProducer {
         @usableFromInline
         internal let _state: NIOLockedValueBox<State>
 
-        @usableFromInline
+        @inlinable
         internal func _setDidSuspend(_ didSuspend: (@Sendable () -> Void)?) {
             self._state.withLockedValue {
                 $0.didSuspend = didSuspend
@@ -434,7 +437,7 @@ extension NIOThrowingAsyncSequenceProducer {
             self._state.withLockedValue { $0.stateMachine.isFinished }
         }
 
-        @usableFromInline
+        @inlinable
         internal init(
             backPressureStrategy: Strategy,
             delegate: Delegate
@@ -563,36 +566,33 @@ extension NIOThrowingAsyncSequenceProducer {
         @inlinable
         internal func next() async throws -> Element? {
             try await withTaskCancellationHandler { () async throws -> Element? in
-                let unsafe = self._state.unsafe
-                unsafe.lock()
-
-                let action = unsafe.withValueAssumingLockIsAcquired {
-                    $0.stateMachine.next()
+                let (action, delegate) = self._state.withLockedValue { state -> (StateMachine.NextAction, Delegate?) in
+                    let action = state.stateMachine.next(continuation: nil)
+                    switch action {
+                    case .returnElement, .returnCancellationError, .returnNil, .suspendTask_withoutContinuationOnly:
+                        return (action, nil)
+                    case .returnElementAndCallProduceMore:
+                        return (action, state.delegate)
+                    case .returnFailureAndCallDidTerminate:
+                        let delegate = state.delegate
+                        state.delegate = nil
+                        return (action, delegate)
+                    case .produceMore_withContinuationOnly, .doNothing_withContinuationOnly:
+                        // Can't be returned when 'next(continuation:)' is called with no
+                        // continuation.
+                        fatalError()
+                    }
                 }
 
                 switch action {
                 case .returnElement(let element):
-                    unsafe.unlock()
                     return element
 
                 case .returnElementAndCallProduceMore(let element):
-                    let delegate = unsafe.withValueAssumingLockIsAcquired {
-                        $0.delegate
-                    }
-                    unsafe.unlock()
-
                     delegate?.produceMore()
-
                     return element
 
                 case .returnFailureAndCallDidTerminate(let failure):
-                    let delegate = unsafe.withValueAssumingLockIsAcquired {
-                        let delegate = $0.delegate
-                        $0.delegate = nil
-                        return delegate
-                    }
-                    unsafe.unlock()
-
                     delegate?.didTerminate()
 
                     switch failure {
@@ -604,7 +604,6 @@ extension NIOThrowingAsyncSequenceProducer {
                     }
 
                 case .returnCancellationError:
-                    unsafe.unlock()
                     // We have deprecated the generic Failure type in the public API and Failure should
                     // now be `Swift.Error`. However, if users have not migrated to the new API they could
                     // still use a custom generic Error type and this cast might fail.
@@ -619,42 +618,79 @@ extension NIOThrowingAsyncSequenceProducer {
                     return nil
 
                 case .returnNil:
-                    unsafe.unlock()
                     return nil
 
-                case .suspendTask:
-                    // It is safe to hold the lock across this method
-                    // since the closure is guaranteed to be run straight away
+                case .produceMore_withContinuationOnly, .doNothing_withContinuationOnly:
+                    // Can't be returned when 'next(continuation:)' is called with no
+                    // continuation.
+                    fatalError()
+
+                case .suspendTask_withoutContinuationOnly:
+                    // Holding the lock here *should* be safe but because of a bug in the runtime
+                    // it isn't, so drop the lock, create the continuation and then try again.
+                    //
+                    // See https://github.com/swiftlang/swift/issues/85668
                     return try await withCheckedThrowingContinuation {
                         (continuation: CheckedContinuation<Element?, any Error>) in
-                        let (action, callDidSuspend) = unsafe.withValueAssumingLockIsAcquired {
-                            let action = $0.stateMachine.next(for: continuation)
-                            let callDidSuspend = $0.didSuspend != nil
-                            return (action, callDidSuspend)
+                        let (action, delegate, didSuspend) = self._state.withLockedValue { state in
+                            let action = state.stateMachine.next(continuation: continuation)
+                            let delegate = state.delegate
+                            return (action, delegate, state.didSuspend)
                         }
 
                         switch action {
-                        case .callProduceMore:
-                            let delegate = unsafe.withValueAssumingLockIsAcquired {
-                                $0.delegate
-                            }
-                            unsafe.unlock()
+                        case .returnElement(let element):
+                            continuation.resume(returning: element)
 
+                        case .returnElementAndCallProduceMore(let element):
+                            delegate?.produceMore()
+                            continuation.resume(returning: element)
+
+                        case .returnFailureAndCallDidTerminate(let failure):
+                            delegate?.didTerminate()
+                            switch failure {
+                            case .some(let error):
+                                continuation.resume(throwing: error)
+                            case .none:
+                                continuation.resume(returning: nil)
+                            }
+
+                        case .returnCancellationError:
+                            // We have deprecated the generic Failure type in the public API and Failure should
+                            // now be `Swift.Error`. However, if users have not migrated to the new API they could
+                            // still use a custom generic Error type and this cast might fail.
+                            // In addition, we use `NIOThrowingAsyncSequenceProducer` in the implementation of the
+                            // non-throwing variant `NIOAsyncSequenceProducer` where `Failure` will be `Never` and
+                            // this cast will fail as well.
+                            // Everything is marked @inlinable and the Failure type is known at compile time,
+                            // therefore this cast should be optimised away in release build.
+                            if let error = CancellationError() as? Failure {
+                                continuation.resume(throwing: error)
+                            } else {
+                                continuation.resume(returning: nil)
+                            }
+
+                        case .returnNil:
+                            continuation.resume(returning: nil)
+
+                        case .produceMore_withContinuationOnly:
                             delegate?.produceMore()
 
-                        case .none:
-                            unsafe.unlock()
+                        case .doNothing_withContinuationOnly:
+                            ()
+
+                        case .suspendTask_withoutContinuationOnly:
+                            // Can't be returned when 'next(continuation:)' is called with a
+                            // continuation.
+                            fatalError()
                         }
 
-                        if callDidSuspend {
-                            let didSuspend = self._state.withLockedValue { $0.didSuspend }
-                            didSuspend?()
-                        }
+                        didSuspend?()
                     }
                 }
             } onCancel: {
                 // We must not resume the continuation while holding the lock
-                // because it can deadlock in combination with the underlying ulock
+                // because it can deadlock in combination with the underlying unlock
                 // in cases where we race with a cancellation handler
                 let (delegate, action): (Delegate?, NIOThrowingAsyncSequenceProducer.StateMachine.CancelledAction) =
                     self._state.withLockedValue {
@@ -779,7 +815,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `sequenceDeinitialized()`.
         @usableFromInline
-        enum SequenceDeinitializedAction {
+        enum SequenceDeinitializedAction: Sendable {
             /// Indicates that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
             case callDidTerminate
             /// Indicates that nothing should be done.
@@ -869,7 +905,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `iteratorDeinitialized()`.
         @usableFromInline
-        enum IteratorDeinitializedAction {
+        enum IteratorDeinitializedAction: Sendable {
             /// Indicates that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
             case callDidTerminate
             /// Indicates that nothing should be done.
@@ -908,7 +944,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `yield()`.
         @usableFromInline
-        enum YieldAction {
+        enum YieldAction: Sendable {
             /// Indicates that ``NIOThrowingAsyncSequenceProducer/Source/YieldResult/produceMore`` should be returned.
             case returnProduceMore
             /// Indicates that ``NIOThrowingAsyncSequenceProducer/Source/YieldResult/stopProducing`` should be returned.
@@ -928,7 +964,7 @@ extension NIOThrowingAsyncSequenceProducer {
             /// Indicates that the yielded elements have been dropped.
             case returnDropped
 
-            @usableFromInline
+            @inlinable
             init(
                 shouldProduceMore: Bool,
                 continuationAndElement: (CheckedContinuation<Element?, Error>, Element)? = nil
@@ -1037,7 +1073,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `finish()`.
         @usableFromInline
-        enum FinishAction {
+        enum FinishAction: Sendable {
             /// Indicates that the continuation should be resumed with `nil` and
             /// that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
             case resumeContinuationWithFailureAndCallDidTerminate(CheckedContinuation<Element?, Error>, Failure?)
@@ -1089,7 +1125,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `cancelled()`.
         @usableFromInline
-        enum CancelledAction {
+        enum CancelledAction: Sendable {
             /// Indicates that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
             case callDidTerminate
             /// Indicates that the continuation should be resumed with a `CancellationError` and
@@ -1151,7 +1187,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `next()`.
         @usableFromInline
-        enum NextAction {
+        enum NextAction: Sendable {
             /// Indicates that the element should be returned to the caller.
             case returnElement(Element)
             /// Indicates that the element should be returned to the caller and
@@ -1164,14 +1200,25 @@ extension NIOThrowingAsyncSequenceProducer {
             case returnCancellationError
             /// Indicates that the `nil` should be returned to the caller.
             case returnNil
-            /// Indicates that the `Task` of the caller should be suspended.
-            case suspendTask
+
+            /// Indicates that the `Task` of the caller should be suspended. Only returned when
+            /// `next(continuation:)` is called with a non-nil continuation.
+            case suspendTask_withoutContinuationOnly
+
+            /// Indicates that caller should produce more values. Only returned when
+            /// `next(continuation:)` is called with `nil`.
+            case produceMore_withContinuationOnly
+            /// Indicates that caller shouldn't do anything. Only returned
+            /// when `next(continuation:)` is called with `nil`.
+            case doNothing_withContinuationOnly
         }
 
         @inlinable
-        mutating func next() -> NextAction {
+        mutating func next(continuation: CheckedContinuation<Element?, Error>?) -> NextAction {
             switch self._state {
             case .initial(let backPressureStrategy, let iteratorInitialized):
+                precondition(continuation == nil)
+
                 // We are not interacting with the back-pressure strategy here because
                 // we are doing this inside `next(:)`
                 self._state = .streaming(
@@ -1182,7 +1229,7 @@ extension NIOThrowingAsyncSequenceProducer {
                     iteratorInitialized: iteratorInitialized
                 )
 
-                return .suspendTask
+                return .suspendTask_withoutContinuationOnly
 
             case .streaming(_, _, .some, _, _):
                 // We have multiple AsyncIterators iterating the sequence
@@ -1199,7 +1246,6 @@ extension NIOThrowingAsyncSequenceProducer {
 
                 if let element = buffer.popFirst() {
                     // We have an element to fulfil the demand right away.
-
                     let shouldProduceMore = backPressureStrategy.didConsume(bufferDepth: buffer.count)
 
                     self._state = .streaming(
@@ -1217,10 +1263,27 @@ extension NIOThrowingAsyncSequenceProducer {
                         // We don't have any new demand, so we can just return the element.
                         return .returnElement(element)
                     }
+                } else if let continuation = continuation {
+                    let shouldProduceMore = backPressureStrategy.didConsume(bufferDepth: buffer.count)
+                    self._state = .streaming(
+                        backPressureStrategy: backPressureStrategy,
+                        buffer: buffer,
+                        continuation: continuation,
+                        hasOutstandingDemand: shouldProduceMore,
+                        iteratorInitialized: iteratorInitialized
+                    )
+
+                    if shouldProduceMore && !hasOutstandingDemand {
+                        return .produceMore_withContinuationOnly
+                    } else {
+                        return .doNothing_withContinuationOnly
+                    }
                 } else {
-                    // There is nothing in the buffer to fulfil the demand so we need to suspend.
-                    // We are not interacting with the back-pressure strategy here because
-                    // we are doing this inside `next(:)`
+                    // This function is first called without a continuation (i.e. this branch), if
+                    // the buffer is empty the caller needs to re-call this function with a
+                    // continuation (the branch above) so defer checking the backpressure strategy
+                    // until then to minimise unnecessary delegate calls.
+
                     self._state = .streaming(
                         backPressureStrategy: backPressureStrategy,
                         buffer: buffer,
@@ -1229,7 +1292,7 @@ extension NIOThrowingAsyncSequenceProducer {
                         iteratorInitialized: iteratorInitialized
                     )
 
-                    return .suspendTask
+                    return .suspendTask_withoutContinuationOnly
                 }
 
             case .sourceFinished(var buffer, let iteratorInitialized, let failure):
@@ -1257,56 +1320,6 @@ extension NIOThrowingAsyncSequenceProducer {
 
             case .finished:
                 return .returnNil
-
-            case .modifying:
-                preconditionFailure("Invalid state")
-            }
-        }
-
-        /// Actions returned by `next(for:)`.
-        @usableFromInline
-        enum NextForContinuationAction {
-            /// Indicates that ``NIOAsyncSequenceProducerDelegate/produceMore()`` should be called.
-            case callProduceMore
-            /// Indicates that nothing should be done.
-            case none
-        }
-
-        @inlinable
-        mutating func next(for continuation: CheckedContinuation<Element?, Error>) -> NextForContinuationAction {
-            switch self._state {
-            case .initial:
-                // We are transitioning away from the initial state in `next()`
-                preconditionFailure("Invalid state")
-
-            case .streaming(
-                var backPressureStrategy,
-                let buffer,
-                .none,
-                let hasOutstandingDemand,
-                let iteratorInitialized
-            ):
-                precondition(buffer.isEmpty, "Expected an empty buffer")
-
-                self._state = .modifying
-                let shouldProduceMore = backPressureStrategy.didConsume(bufferDepth: buffer.count)
-
-                self._state = .streaming(
-                    backPressureStrategy: backPressureStrategy,
-                    buffer: buffer,
-                    continuation: continuation,
-                    hasOutstandingDemand: shouldProduceMore,
-                    iteratorInitialized: iteratorInitialized
-                )
-
-                if shouldProduceMore && !hasOutstandingDemand {
-                    return .callProduceMore
-                } else {
-                    return .none
-                }
-
-            case .streaming(_, _, .some(_), _, _), .sourceFinished, .finished, .cancelled:
-                preconditionFailure("This should have already been handled by `next()`")
 
             case .modifying:
                 preconditionFailure("Invalid state")

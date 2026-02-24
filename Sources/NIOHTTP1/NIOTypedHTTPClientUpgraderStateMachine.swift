@@ -11,7 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if !canImport(Darwin) || swift(>=5.10)
 import DequeModule
 import NIOCore
 
@@ -92,7 +91,10 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
         case .finished:
             return nil
 
-        case .awaitingUpgradeResponseHead, .awaitingUpgradeResponseEnd, .unbuffering, .upgrading:
+        case .awaitingUpgradeResponseHead:
+            return nil
+
+        case .awaitingUpgradeResponseEnd, .unbuffering, .upgrading:
             fatalError("Internal inconsistency in HTTPClientUpgradeStateMachine")
 
         case .modifying:
@@ -334,4 +336,3 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
         }
     }
 }
-#endif

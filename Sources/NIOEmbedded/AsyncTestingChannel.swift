@@ -201,25 +201,23 @@ public final class NIOAsyncTestingChannel: Channel {
 
     // These two variables are only written once, from a single thread, and never written again, so they're _technically_ thread-safe. Most methods cannot safely
     // be used from multiple threads, but `isActive`, `isOpen`, `eventLoop`, and `closeFuture` can all safely be used from any thread. Just.
-    #if compiler(>=5.10)
+    // `EmbeddedChannelCore`'s localAddress and remoteAddress fields are protected by a lock so they are safe to access.
     @usableFromInline
     nonisolated(unsafe) var channelcore: EmbeddedChannelCore!
     nonisolated(unsafe) private var _pipeline: ChannelPipeline!
-    #else
-    @usableFromInline
-    var channelcore: EmbeddedChannelCore!
-    private var _pipeline: ChannelPipeline!
-    #endif
 
-    private struct State {
+    @usableFromInline
+    internal struct State: Sendable {
         var isWritable: Bool
-        var localAddress: SocketAddress?
-        var remoteAddress: SocketAddress?
+
+        @usableFromInline
+        var options: [(option: any ChannelOption, value: any Sendable)]
     }
 
     /// Guards any of the getters/setters that can be accessed from any thread.
-    private let stateLock = NIOLockedValueBox(
-        State(isWritable: true, localAddress: nil, remoteAddress: nil)
+    @usableFromInline
+    internal let _stateLock = NIOLockedValueBox(
+        State(isWritable: true, options: [])
     )
 
     /// - see: `Channel._channelCore`
@@ -235,10 +233,10 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.isWritable`
     public var isWritable: Bool {
         get {
-            self.stateLock.withLockedValue { $0.isWritable }
+            self._stateLock.withLockedValue { $0.isWritable }
         }
         set {
-            self.stateLock.withLockedValue {
+            self._stateLock.withLockedValue {
                 $0.isWritable = newValue
             }
         }
@@ -247,27 +245,28 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.localAddress`
     public var localAddress: SocketAddress? {
         get {
-            self.stateLock.withLockedValue { $0.localAddress }
+            self.channelcore.localAddress
         }
         set {
-            self.stateLock.withLockedValue {
-                $0.localAddress = newValue
-            }
+            self.channelcore.localAddress = newValue
         }
     }
 
     /// - see: `Channel.remoteAddress`
     public var remoteAddress: SocketAddress? {
         get {
-            self.stateLock.withLockedValue { $0.remoteAddress }
+            self.channelcore.remoteAddress
         }
         set {
-            self.stateLock.withLockedValue {
-                $0.remoteAddress = newValue
-            }
+            self.channelcore.remoteAddress = newValue
         }
     }
 
+    /// The `ChannelOption`s set on this channel.
+    /// - see: `NIOAsyncTestingChannel.setOption`
+    public var options: [(option: any ChannelOption, value: any Sendable)] {
+        self._stateLock.withLockedValue { $0.options }
+    }
     /// Create a new instance.
     ///
     /// During creation it will automatically also register itself on the ``NIOAsyncTestingEventLoop``.
@@ -405,8 +404,10 @@ public final class NIOAsyncTestingChannel: Channel {
 
     /// This method is similar to ``NIOAsyncTestingChannel/readOutbound(as:)`` but will wait if the outbound buffer is empty.
     /// If available, this method reads one element of type `T` out of the ``NIOAsyncTestingChannel``'s outbound buffer. If the
-    /// first element was of a different type than requested, ``WrongTypeError`` will be thrown, if there
-    /// are no elements in the outbound buffer, `nil` will be returned.
+    /// first element was of a different type than requested, ``WrongTypeError`` will be thrown. If the channel has
+    /// already closed or closes before the next pending outbound write, `ChannelError.ioOnClosedChannel` will be
+    /// thrown. If there are no elements in the outbound buffer, this method will wait until there is one, and return
+    /// that element.
     ///
     /// Data hits the ``NIOAsyncTestingChannel``'s outbound buffer when data was written using `write`, then `flush`ed, and
     /// then travelled the `ChannelPipeline` all the way to the front. For data to hit the outbound buffer, the very
@@ -424,12 +425,13 @@ public final class NIOAsyncTestingChannel: Channel {
                         continuation.resume(returning: element)
                         return
                     }
-                    self.channelcore.outboundBufferConsumer.append { element in
-                        continuation.resume(
-                            with: Result {
-                                try self._cast(element)
-                            }
-                        )
+                    self.channelcore._enqueueOutboundBufferConsumer { element in
+                        switch element {
+                        case .success(let data):
+                            continuation.resume(with: Result { try self._cast(data) })
+                        case .failure(let failure):
+                            continuation.resume(throwing: failure)
+                        }
                     }
                 } catch {
                     continuation.resume(throwing: error)
@@ -457,8 +459,10 @@ public final class NIOAsyncTestingChannel: Channel {
 
     /// This method is similar to ``NIOAsyncTestingChannel/readInbound(as:)`` but will wait if the inbound buffer is empty.
     /// If available, this method reads one element of type `T` out of the ``NIOAsyncTestingChannel``'s inbound buffer. If the
-    /// first element was of a different type than requested, ``WrongTypeError`` will be thrown, if there
-    /// are no elements in the outbound buffer, this method will wait until an element is in the inbound buffer.
+    /// first element was of a different type than requested, ``WrongTypeError`` will be thrown. If the channel has
+    /// already closed or closes before the next pending inbound write, `ChannelError.ioOnClosedChannel` will be thrown.
+    /// If there are no elements in the inbound buffer, this method will wait until there is one, and return that
+    /// element.
     ///
     /// Data hits the ``NIOAsyncTestingChannel``'s inbound buffer when data was send through the pipeline using `fireChannelRead`
     /// and then travelled the `ChannelPipeline` all the way to the back. For data to hit the inbound buffer, the
@@ -474,12 +478,13 @@ public final class NIOAsyncTestingChannel: Channel {
                         continuation.resume(returning: element)
                         return
                     }
-                    self.channelcore.inboundBufferConsumer.append { element in
-                        continuation.resume(
-                            with: Result {
-                                try self._cast(element)
-                            }
-                        )
+                    self.channelcore._enqueueInboundBufferConsumer { element in
+                        switch element {
+                        case .success(let data):
+                            continuation.resume(with: Result { try self._cast(data) })
+                        case .failure(let failure):
+                            continuation.resume(throwing: failure)
+                        }
                     }
                 } catch {
                     continuation.resume(throwing: error)
@@ -578,12 +583,12 @@ public final class NIOAsyncTestingChannel: Channel {
 
     @inlinable
     internal func setOptionSync<Option: ChannelOption>(_ option: Option, value: Option.Value) {
+        addOption(option, value: value)
+
         if option is ChannelOptions.Types.AllowRemoteHalfClosureOption {
             self.allowRemoteHalfClosure = value as! Bool
             return
         }
-        // No other options supported
-        fatalError("option not supported")
     }
 
     /// - see: `Channel.getOption`
@@ -612,7 +617,32 @@ public final class NIOAsyncTestingChannel: Channel {
 
             return result as! Option.Value
         }
-        fatalError("option \(option) not supported")
+
+        guard let value = self.optionValue(for: option) else {
+            fatalError("option \(option) not supported")
+        }
+
+        return value
+    }
+
+    @inlinable
+    internal func optionValue<Option: ChannelOption>(for option: Option) -> Option.Value? {
+        self.options.first(where: { $0.option is Option })?.value as? Option.Value
+    }
+
+    @inlinable
+    internal func addOption<Option: ChannelOption>(_ option: Option, value: Option.Value) {
+        // override the option if it exists
+        self._stateLock.withLockedValue { state in
+            var options = state.options
+            let optionIndex = options.firstIndex(where: { $0.option is Option })
+            if let optionIndex = optionIndex {
+                options[optionIndex] = (option, value)
+            } else {
+                options.append((option, value))
+            }
+            state.options = options
+        }
     }
 
     /// Fires the (outbound) `bind` event through the `ChannelPipeline`. If the event hits the ``NIOAsyncTestingChannel`` which
@@ -623,7 +653,8 @@ public final class NIOAsyncTestingChannel: Channel {
     ///   - address: The address to fake-bind to.
     ///   - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.futureResult.whenSuccess {
+        let promise = promise ?? self.testingEventLoop.makePromise()
+        promise.futureResult.whenSuccess {
             self.localAddress = address
         }
         if self.eventLoop.inEventLoop {
@@ -643,7 +674,8 @@ public final class NIOAsyncTestingChannel: Channel {
     ///   - address: The address to fake-bind to.
     ///   - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.futureResult.whenSuccess {
+        let promise = promise ?? self.testingEventLoop.makePromise()
+        promise.futureResult.whenSuccess {
             self.remoteAddress = address
         }
         if self.eventLoop.inEventLoop {
@@ -693,8 +725,9 @@ extension NIOAsyncTestingChannel.LeftOverState: @unchecked Sendable {}
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension NIOAsyncTestingChannel.BufferState: @unchecked Sendable {}
-#endif
 
 // Synchronous options are never Sendable.
 @available(*, unavailable)
 extension NIOAsyncTestingChannel.SynchronousOptions: Sendable {}
+
+#endif  // canImport(Dispatch)

@@ -346,7 +346,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
             XCTAssertFalse(pwm.isEmpty)
             XCTAssertFalse(pwm.isFlushPending)
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
 
             result = try assertExpectedWritability(
                 pendingWritesManager: pwm,
@@ -356,7 +356,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [],
                 promiseStates: [[true, false]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(Int64(buffer.readableBytes), pwm.bufferedBytes)
 
             pwm.markFlushCheckpoint()
@@ -369,7 +369,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [.success(.processed(0))],
                 promiseStates: [[true, true]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(Int64(buffer.readableBytes), pwm.bufferedBytes)
         }
     }
@@ -401,7 +401,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [.success(.processed(2))],
                 promiseStates: [[true, true, false]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
 
             pwm.markFlushCheckpoint()
@@ -414,7 +414,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [.success(.processed(0))],
                 promiseStates: [[true, true, true]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }
@@ -474,7 +474,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [.success(.processed(4))],
                 promiseStates: [[true, true, true, true]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }
@@ -527,7 +527,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [.success(.processed(12))],
                 promiseStates: [Array(repeating: true, count: ps.count - 1) + [true]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }
@@ -600,7 +600,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [.success(.processed(2)), .success(.processed(1))],
                 promiseStates: [[true, true, false], [true, true, true]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }
@@ -653,7 +653,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 promiseStates: [[true, false, false], [true, true, false], [true, true, true]]
             )
 
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
 
             XCTAssertNoThrow(try ps[1].futureResult.wait())
@@ -693,7 +693,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [.success(.processed(2))],
                 promiseStates: [[true, true, false]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
 
             pwm.markFlushCheckpoint()
@@ -706,7 +706,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [.success(.processed(0))],
                 promiseStates: [[true, true, true]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }
@@ -727,7 +727,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[2])
             XCTAssertEqual(Int64(buffer.readableBytes * 3), pwm.bufferedBytes)
 
-            ps[0].futureResult.whenComplete { (_: Result<Void, Error>) in
+            ps[0].futureResult.assumeIsolated().whenComplete { (res: Result<Void, Error>) in
                 pwm.failAll(error: ChannelError.inputClosed, close: true)
             }
 
@@ -739,7 +739,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [.success(.processed(1))],
                 promiseStates: [[true, true, true]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.closed(nil)), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
             XCTAssertNoThrow(try ps[0].futureResult.wait())
             XCTAssertThrowsError(try ps[1].futureResult.wait())
@@ -784,7 +784,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [.success(.processed(4))],
                 promiseStates: [Array(repeating: true, count: Socket.writevLimitIOVectors + 1)]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }
@@ -845,7 +845,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [.success(.processed(1))],
                 promiseStates: [Array(repeating: true, count: 5)]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }

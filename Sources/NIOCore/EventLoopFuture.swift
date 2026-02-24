@@ -23,12 +23,26 @@ import Dispatch
 /// Most of these are closures that pull a value from one future, call a user callback, push the
 /// result into another, then return a list of callbacks from the target future that are now ready to be invoked.
 ///
-/// In particular, note that _run() here continues to obtain and execute lists of callbacks until it completes.
+/// In particular, note that `_run()` here continues to obtain and execute lists of callbacks until it completes.
 /// This eliminates recursion when processing `flatMap()` chains.
 @usableFromInline
 internal struct CallbackList {
     @usableFromInline
-    internal typealias Element = () -> CallbackList
+    internal typealias Element = Wrapper
+
+    // The compiler is able to better optimize a struct holding a closure than just a raw closure
+    // when used as a generic parameter.
+    @usableFromInline
+    struct Wrapper {
+        @usableFromInline
+        var callback: () -> CallbackList
+
+        @inlinable
+        init(_ callback: @escaping () -> CallbackList) {
+            self.callback = callback
+        }
+    }
+
     @usableFromInline
     internal var firstCallback: Optional<Element>
     @usableFromInline
@@ -41,14 +55,14 @@ internal struct CallbackList {
     }
 
     @inlinable
-    internal mutating func append(_ callback: @escaping Element) {
+    internal mutating func append(_ callback: @escaping () -> CallbackList) {
         if self.firstCallback == nil {
-            self.firstCallback = callback
+            self.firstCallback = Wrapper(callback)
         } else {
             if self.furtherCallbacks != nil {
-                self.furtherCallbacks!.append(callback)
+                self.furtherCallbacks!.append(Wrapper(callback))
             } else {
-                self.furtherCallbacks = [callback]
+                self.furtherCallbacks = [Wrapper(callback)]
             }
         }
     }
@@ -89,7 +103,7 @@ internal struct CallbackList {
         case (.some(let onlyCallback), .none):
             var onlyCallback = onlyCallback
             loop: while true {
-                let cbl = onlyCallback()
+                let cbl = onlyCallback.callback()
                 switch (cbl.firstCallback, cbl.furtherCallbacks) {
                 case (.none, _):
                     break loop
@@ -99,7 +113,7 @@ internal struct CallbackList {
                 case (.some(_), .some(_)):
                     var pending = cbl._allCallbacks()
                     while let f = pending.popFirst() {
-                        let next = f()
+                        let next = f.callback()
                         next.appendAllCallbacks(&pending)
                     }
                     break loop
@@ -108,7 +122,7 @@ internal struct CallbackList {
         default:
             var pending = self._allCallbacks()
             while let f = pending.popFirst() {
-                let next = f()
+                let next = f.callback()
                 next.appendAllCallbacks(&pending)
             }
         }
@@ -117,6 +131,9 @@ internal struct CallbackList {
 
 @available(*, unavailable)
 extension CallbackList: Sendable {}
+
+@available(*, unavailable)
+extension CallbackList.Wrapper: Sendable {}
 
 /// Internal error for operations that return results that were not replaced
 @usableFromInline
@@ -738,9 +755,10 @@ extension EventLoopFuture {
     ) -> EventLoopFuture<NewValue> {
         self._flatMapResult(body)
     }
-    @usableFromInline typealias FlatMapResultCallback<NewValue, SomeError: Error> = @Sendable (Value) -> Result<
-        NewValue, SomeError
-    >
+    @usableFromInline typealias FlatMapResultCallback<NewValue, SomeError: Error> =
+        @Sendable (Value) -> Result<
+            NewValue, SomeError
+        >
 
     @inlinable
     func _flatMapResult<NewValue, SomeError: Error>(
@@ -899,7 +917,7 @@ extension EventLoopFuture {
 
     /// Internal: Set the value and return a list of callbacks that should be invoked as a result.
     ///
-    /// We need a seperate method for setting the error to avoid Sendable checking of `Value`
+    /// We need a separate method for setting the error to avoid Sendable checking of `Value`
     @inlinable
     internal func _setError(_ error: Error) -> CallbackList {
         self.eventLoop.assertInEventLoop()
@@ -1073,7 +1091,27 @@ extension EventLoopFuture {
     @preconcurrency
     @inlinable
     public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value where Value: Sendable {
+        #if os(WASI)
+        // NOTE: As of July 22, 2025 `wait()` calling wait() is not supported on WASI platforms.
+        //
+        // This may change down the road if and when true multi-threading evolves. But right now
+        // calling wait here results in the following runtime crash:
+        //
+        // ```
+        // SomeExecutable.wasm:0x123456 Uncaught (in promise) RuntimeError: Atomics.wait cannot be called in this context
+        // ```
+        //
+        // Using the following fatal error here gives wasm runtime users a much more clear error message
+        // to identify the issue.
+        //
+        // If you're running into this error on WASI, refactoring to `get()` instead of `wait()` will
+        // likely solve the issue.
+        fatalError(
+            "NIO's wait() function should not be called on WASI platforms. It will freeze or crash. Use get() instead."
+        )
+        #else
         try self._blockingWaitForFutureCompletion(file: file, line: line)
+        #endif
     }
 
     @inlinable

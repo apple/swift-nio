@@ -17,7 +17,9 @@ import NIOConcurrencyHelpers
 import NIOCore
 import NIOPosix
 
-final class NIOLockBenchmark: Benchmark {
+final class NIOLockBenchmark: Benchmark, @unchecked Sendable {
+    // mutable state is protected by the lock
+
     private let numberOfThreads: Int
     private let lockOperationsPerThread: Int
     private let threadPool: NIOThreadPool

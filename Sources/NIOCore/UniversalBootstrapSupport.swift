@@ -261,13 +261,16 @@ public struct NIOClientTCPBootstrap {
     }
 }
 
+@available(*, unavailable)
+extension NIOClientTCPBootstrap: Sendable {}
+
 public protocol NIOClientTLSProvider {
     associatedtype Bootstrap
 
     func enableTLS(_ bootstrap: Bootstrap) -> Bootstrap
 }
 
-public struct NIOInsecureNoTLS<Bootstrap: NIOClientTCPBootstrapProtocol>: NIOClientTLSProvider {
+public struct NIOInsecureNoTLS<Bootstrap: NIOClientTCPBootstrapProtocol>: NIOClientTLSProvider, Sendable {
     public init() {}
 
     public func enableTLS(_ bootstrap: Bootstrap) -> Bootstrap {

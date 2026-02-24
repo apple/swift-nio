@@ -20,7 +20,6 @@ final class SchedulingAndRunningBenchmark: Benchmark {
     private var group: MultiThreadedEventLoopGroup!
     private var loop: EventLoop!
     private var dg: DispatchGroup!
-    private var counter = 0
     private let numTasks: Int
 
     init(numTasks: Int) {
@@ -34,10 +33,10 @@ final class SchedulingAndRunningBenchmark: Benchmark {
 
         // We are preheating the EL to avoid growing the `ScheduledTask` `PriorityQueue`
         // during the actual test
-        try! self.loop.submit {
+        try! self.loop.submit { [loop, numTasks] in
             var counter: Int = 0
-            for _ in 0..<self.numTasks {
-                self.loop.scheduleTask(in: .nanoseconds(0)) {
+            for _ in 0..<numTasks {
+                loop!.assumeIsolatedUnsafeUnchecked().scheduleTask(in: .nanoseconds(0)) {
                     counter &+= 1
                 }
             }
@@ -47,15 +46,17 @@ final class SchedulingAndRunningBenchmark: Benchmark {
     func tearDown() {}
 
     func run() -> Int {
-        try! self.loop.submit {
-            for _ in 0..<self.numTasks {
-                self.dg.enter()
+        let counter = try! self.loop.submit { [dg, loop, numTasks] in
+            var counter: Int = 0
+            for _ in 0..<numTasks {
+                dg!.enter()
 
-                self.loop.scheduleTask(in: .nanoseconds(0)) {
-                    self.counter &+= 1
-                    self.dg.leave()
+                loop!.assumeIsolatedUnsafeUnchecked().scheduleTask(in: .nanoseconds(0)) {
+                    counter &+= 1
+                    dg!.leave()
                 }
             }
+            return counter
         }.wait()
         self.dg.wait()
 

@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-public enum NIOAsyncSequenceProducerBackPressureStrategies {
+public enum NIOAsyncSequenceProducerBackPressureStrategies: Sendable {
     /// A high-low watermarked back-pressure strategy for a ``NIOAsyncSequenceProducer``.
     ///
     /// This strategy does the following:

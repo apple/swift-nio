@@ -28,7 +28,7 @@ final class UDPBenchmark {
     private var group: EventLoopGroup!
     private var server: Channel!
     private var client: Channel!
-    private var clientHandler: EchoHandlerClient!
+    private var clientHandler: EchoHandlerClient.SendableView!
 
     init(data: ByteBuffer, numberOfRequests: Int, vectorReads: Int, vectorWrites: Int) {
         self.data = data
@@ -57,22 +57,25 @@ extension UDPBenchmark: Benchmark {
         self.client = try DatagramBootstrap(group: group)
             // zero is the same as not applying the option.
             .channelOption(.datagramVectorReadMessageCount, value: self.vectorReads)
-            .channelInitializer { channel in
-                let handler = EchoHandlerClient(
-                    eventLoop: channel.eventLoop,
-                    config: .init(
-                        remoteAddress: remoteAddress,
-                        request: self.data,
-                        requests: self.numberOfRequests,
-                        writesPerFlush: self.vectorWrites
+            .channelInitializer { [data, numberOfRequests, vectorWrites] channel in
+                channel.eventLoop.makeCompletedFuture {
+                    let handler = EchoHandlerClient(
+                        eventLoop: channel.eventLoop,
+                        config: .init(
+                            remoteAddress: remoteAddress,
+                            request: data,
+                            requests: numberOfRequests,
+                            writesPerFlush: vectorWrites
+                        )
                     )
-                )
-                return channel.pipeline.addHandler(handler)
+                    try channel.pipeline.syncOperations.addHandler(handler)
+                }
             }
             .bind(to: address)
             .wait()
 
-        self.clientHandler = try self.client.pipeline.handler(type: EchoHandlerClient.self).wait()
+        self.clientHandler = try self.client.pipeline.handler(type: EchoHandlerClient.self).map { $0.sendableView }
+            .wait()
     }
 
     func tearDown() {
@@ -87,7 +90,7 @@ extension UDPBenchmark: Benchmark {
 }
 
 extension UDPBenchmark {
-    final class EchoHandler: ChannelInboundHandler {
+    final class EchoHandler: ChannelInboundHandler, Sendable {
         typealias InboundIn = AddressedEnvelope<ByteBuffer>
         typealias OutboundOut = AddressedEnvelope<ByteBuffer>
 
@@ -124,7 +127,7 @@ extension UDPBenchmark {
                     /// Number of requests still to send.
                     var requestsToSend: Int
                     /// Number of responses still being waited for.
-                    var responsesToRecieve: Int
+                    var responsesToReceive: Int
                     /// Number of writes before the next flush, i.e. flush on zero.
                     var writesBeforeNextFlush: Int
                     /// Number of writes before each flush.
@@ -134,7 +137,7 @@ extension UDPBenchmark {
 
                     init(requests: Int, writesPerFlush: Int, promise: EventLoopPromise<Void>) {
                         self.requestsToSend = requests
-                        self.responsesToRecieve = requests
+                        self.responsesToReceive = requests
                         self.writesBeforeNextFlush = writesPerFlush
                         self.writesPerFlush = writesPerFlush
                         self.promise = promise
@@ -166,8 +169,8 @@ extension UDPBenchmark {
             mutating func receive() -> Receive {
                 switch self.state {
                 case .running(var running):
-                    running.responsesToRecieve &-= 1
-                    if running.responsesToRecieve == 0, running.requestsToSend == 0 {
+                    running.responsesToReceive &-= 1
+                    if running.responsesToReceive == 0, running.requestsToSend == 0 {
                         self.state = .stopped
                         return .finished(running.promise)
                     } else {
@@ -232,12 +235,26 @@ extension UDPBenchmark {
             self.context = nil
         }
 
-        func run() -> EventLoopFuture<Void> {
-            let p = self.eventLoop.makePromise(of: Void.self)
-            self.eventLoop.execute {
-                self._run(promise: p)
+        var sendableView: SendableView {
+            SendableView(handler: self, eventLoop: self.eventLoop)
+        }
+
+        struct SendableView: Sendable {
+            private let handler: NIOLoopBound<EchoHandlerClient>
+            private let eventLoop: EventLoop
+
+            init(handler: EchoHandlerClient, eventLoop: EventLoop) {
+                self.handler = NIOLoopBound(handler, eventLoop: eventLoop)
+                self.eventLoop = eventLoop
             }
-            return p.futureResult
+
+            func run() -> EventLoopFuture<Void> {
+                let p = self.eventLoop.makePromise(of: Void.self)
+                self.eventLoop.execute {
+                    self.handler.value._run(promise: p)
+                }
+                return p.futureResult
+            }
         }
 
         private func _run(promise: EventLoopPromise<Void>) {

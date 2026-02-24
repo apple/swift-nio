@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import NIOCore
 
 #if os(Windows)
@@ -23,6 +26,7 @@ import let WinSDK.IPV6_RECVTCLASS
 
 import let WinSDK.SOCK_DGRAM
 import let WinSDK.SOCK_STREAM
+import let WinSDK.SOCK_RAW
 
 import struct WinSDK.socklen_t
 #endif
@@ -40,9 +44,9 @@ internal enum Shutdown: _SocketShutdownProtocol, Sendable {
 
 extension NIOBSDSocket {
     #if os(Windows)
-    internal static let invalidHandle: Handle = INVALID_SOCKET
+    public static let invalidHandle: Handle = INVALID_SOCKET
     #else
-    internal static let invalidHandle: Handle = -1
+    public static let invalidHandle: Handle = -1
     #endif
 }
 
@@ -96,6 +100,7 @@ extension NIOBSDSocket.SocketType {
 }
 
 // IPv4 Options
+#if !os(OpenBSD)
 extension NIOBSDSocket.Option {
     /// Request that we are passed type of service details when receiving
     /// datagrams.
@@ -115,6 +120,7 @@ extension NIOBSDSocket.Option {
     static let ip_recv_pktinfo: NIOBSDSocket.Option =
         NIOBSDSocket.Option(rawValue: Posix.IP_RECVPKTINFO)
 }
+#endif
 
 // IPv6 Options
 extension NIOBSDSocket.Option {
@@ -127,6 +133,7 @@ extension NIOBSDSocket.Option {
     static let ipv6_recv_tclass: NIOBSDSocket.Option =
         NIOBSDSocket.Option(rawValue: IPV6_RECVTCLASS)
 
+    #if !os(OpenBSD)
     /// Request that we are passed destination address and the receiving interface index when
     /// receiving datagrams.
     ///
@@ -135,6 +142,7 @@ extension NIOBSDSocket.Option {
     /// IPv4 and IPv6.
     static let ipv6_recv_pktinfo: NIOBSDSocket.Option =
         NIOBSDSocket.Option(rawValue: Posix.IPV6_RECVPKTINFO)
+    #endif
 }
 
 extension NIOBSDSocket {
@@ -151,6 +159,7 @@ extension NIOBSDSocket {
         public var rawValue: RawValue
 
         /// Construct a protocol subtype from its underlying value.
+        @inlinable
         public init(rawValue: RawValue) {
             self.rawValue = rawValue
         }
@@ -159,11 +168,14 @@ extension NIOBSDSocket {
 
 extension NIOBSDSocket.ProtocolSubtype {
     /// Refers to the "default" protocol subtype for a given socket type.
-    public static let `default` = Self(rawValue: 0)
+    public static var `default`: NIOBSDSocket.ProtocolSubtype {
+        Self(rawValue: 0)
+    }
 
     /// The protocol subtype for MPTCP.
     ///
     /// - Returns: nil if MPTCP is not supported.
+    @inlinable
     public static var mptcp: Self? {
         #if os(Linux)
         // Defined by the linux kernel, this is IPPROTO_MPTCP.
@@ -176,6 +188,7 @@ extension NIOBSDSocket.ProtocolSubtype {
 
 extension NIOBSDSocket.ProtocolSubtype {
     /// Construct a protocol subtype from an IP protocol.
+    @inlinable
     public init(_ protocol: NIOIPProtocol) {
         self.rawValue = CInt(`protocol`.rawValue)
     }
@@ -381,3 +394,4 @@ enum NIOBSDSocketControlMessage: _BSDSocketControlMessageProtocol {}
 
 /// The requested UDS path exists and has wrong type (not a socket).
 public struct UnixDomainSocketPathWrongType: Error {}
+#endif  // !os(WASI)

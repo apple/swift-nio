@@ -18,18 +18,20 @@
 
 #include <stdlib.h>
 
-#pragma section(".CRT$XCU", read)
-
-static void __cdecl
-NIOWSAStartup(void) {
+void NIOWSAStartup(void) {
     WSADATA wsa;
     WORD wVersionRequested = MAKEWORD(2, 2);
-    if (!WSAStartup(wVersionRequested, &wsa)) {
+    int startup = WSAStartup(wVersionRequested, &wsa);
+    if (startup != 0) {
         _exit(EXIT_FAILURE);
     }
 }
 
-__declspec(allocate(".CRT$XCU"))
-static void (*pNIOWSAStartup)(void) = &NIOWSAStartup;
+// The function pointer type for C initializers
+typedef void (__cdecl *NIOWindowsStartup)(void);
+
+// Declare a function pointer to your function, and put it in the .CRT$XCU section
+#pragma section(".CRT$XCU", read)
+__declspec(allocate(".CRT$XCU")) NIOWindowsStartup NIOWSAStartup_ptr = NIOWSAStartup;
 
 #endif

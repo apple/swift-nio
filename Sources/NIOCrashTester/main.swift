@@ -76,7 +76,8 @@ func main() throws {
     }
 
     func allTestsForSuite(_ testSuite: String) -> [(String, CrashTest)] {
-        crashTestSuites[testSuite].map { testSuiteObject in
+        let crashTestSuites = makeCrashTestSuites()
+        return crashTestSuites[testSuite].map { testSuiteObject in
             Mirror(reflecting: testSuiteObject)
                 .children
                 .filter { $0.label?.starts(with: "test") ?? false }
@@ -136,7 +137,9 @@ func main() throws {
     defer {
         try! group.syncShutdownGracefully()
     }
-    signal(SIGPIPE, SIG_IGN)
+
+    // explicit return type needed due to https://github.com/apple/swift-nio/issues/3180
+    let _: ((Int32) -> Void)? = signal(SIGPIPE, SIG_IGN)
 
     func runCrashTest(_ name: String, suite: String, binary: String) throws -> InterpretedRunResult {
         guard let crashTest = findCrashTest(name, suite: suite) else {
@@ -199,6 +202,7 @@ func main() throws {
 
     switch CommandLine.arguments.dropFirst().first {
     case .some("run-all"):
+        let crashTestSuites = makeCrashTestSuites()
         for testSuite in crashTestSuites {
             for test in allTestsForSuite(testSuite.key) {
                 try runAndEval(test.0, suite: testSuite.key)

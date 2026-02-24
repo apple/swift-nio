@@ -14,12 +14,26 @@
 
 // swift-format-ignore: AmbiguousTrailingClosureOverload
 
+// swift-format-ignore: OrderedImports
+// Required due to https://github.com/swiftlang/swift/issues/76842
+
+#if canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#endif
+
 import Dispatch
 import NIOCore
 import NIOEmbedded
 import NIOFoundationCompat
 import NIOHTTP1
+#if os(Android)
+// workaround for error: reference to var 'stdout' is not concurrency-safe because it involves shared mutable state
+@preconcurrency import NIOPosix
+#else
 import NIOPosix
+#endif
 import NIOWebSocket
 
 // Use unbuffered stdout to help detect exactly which test was running in the event of a crash.
@@ -27,16 +41,21 @@ setbuf(stdout, nil)
 
 // MARK: Test Harness
 
-var warning: String = ""
-assert(
-    {
-        print("======================================================")
-        print("= YOU ARE RUNNING NIOPerformanceTester IN DEBUG MODE =")
-        print("======================================================")
-        warning = " <<< DEBUG MODE >>>"
-        return true
-    }()
-)
+func makeWarning() -> String {
+    var warning = ""
+    assert(
+        {
+            print("======================================================")
+            print("= YOU ARE RUNNING NIOPerformanceTester IN DEBUG MODE =")
+            print("======================================================")
+            warning = " <<< DEBUG MODE >>>"
+            return true
+        }()
+    )
+    return warning
+}
+
+let warning = makeWarning()
 
 public func measure(_ fn: () throws -> Int) rethrows -> [Double] {
     func measureOne(_ fn: () throws -> Int) rethrows -> Double {
@@ -162,8 +181,9 @@ defer {
 let serverChannel = try ServerBootstrap(group: group)
     .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
     .childChannelInitializer { channel in
-        channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
-            channel.pipeline.addHandler(SimpleHTTPServer())
+        channel.eventLoop.makeCompletedFuture {
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(withPipeliningAssistance: true)
+            try channel.pipeline.syncOperations.addHandler(SimpleHTTPServer())
         }
     }.bind(host: "127.0.0.1", port: 0).wait()
 
@@ -171,8 +191,7 @@ defer {
     try! serverChannel.close().wait()
 }
 
-var head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/perf-test-1")
-head.headers.add(name: "Host", value: "localhost")
+let head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/perf-test-1", headers: ["Host": "localhost"])
 
 final class RepeatedRequests: ChannelInboundHandler {
     typealias InboundIn = HTTPClientResponsePart
@@ -183,10 +202,10 @@ final class RepeatedRequests: ChannelInboundHandler {
     private var doneRequests = 0
     private let isDonePromise: EventLoopPromise<Int>
 
-    init(numberOfRequests: Int, eventLoop: EventLoop) {
+    init(numberOfRequests: Int, isDonePromise: EventLoopPromise<Int>) {
         self.remainingNumberOfRequests = numberOfRequests
         self.numberOfRequests = numberOfRequests
-        self.isDonePromise = eventLoop.makePromise()
+        self.isDonePromise = isDonePromise
     }
 
     func wait() throws -> Int {
@@ -204,7 +223,9 @@ final class RepeatedRequests: ChannelInboundHandler {
         let reqPart = Self.unwrapInboundIn(data)
         if case .end(nil) = reqPart {
             if self.remainingNumberOfRequests <= 0 {
-                context.channel.close().map { self.doneRequests }.cascade(to: self.isDonePromise)
+                context.channel.close().assumeIsolated().map {
+                    self.doneRequests
+                }.nonisolated().cascade(to: self.isDonePromise)
             } else {
                 self.doneRequests += 1
                 self.remainingNumberOfRequests -= 1
@@ -622,7 +643,7 @@ try measureAndPrint(desc: "no-net_http1_1k_reqs_1_conn") {
             let channel = context.channel
             self.remainingNumberOfRequests -= 1
             if self.remainingNumberOfRequests > 0 {
-                context.eventLoop.execute {
+                context.eventLoop.assumeIsolated().execute {
                     self.kickOff(channel: channel)
                 }
             } else {
@@ -644,14 +665,15 @@ try measureAndPrint(desc: "no-net_http1_1k_reqs_1_conn") {
         requestsDone = reqs
         done = true
     }
-    try channel.pipeline.configureHTTPServerPipeline(
+
+    let sync = channel.pipeline.syncOperations
+    try sync.configureHTTPServerPipeline(
         withPipeliningAssistance: true,
         withErrorHandling: true
-    ).flatMap {
-        channel.pipeline.addHandler(SimpleHTTPServer())
-    }.flatMap {
-        channel.pipeline.addHandler(measuringHandler, position: .first)
-    }.wait()
+    )
+
+    try sync.addHandler(SimpleHTTPServer())
+    try sync.addHandler(measuringHandler, position: .first)
 
     measuringHandler.kickOff(channel: channel)
 
@@ -664,12 +686,14 @@ try measureAndPrint(desc: "no-net_http1_1k_reqs_1_conn") {
 }
 
 measureAndPrint(desc: "http1_1k_reqs_1_conn") {
-    let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: 1_000, eventLoop: group.next())
-
+    let isDone = group.next().makePromise(of: Int.self)
     let clientChannel = try! ClientBootstrap(group: group)
         .channelInitializer { channel in
-            channel.pipeline.addHTTPClientHandlers().flatMap {
-                channel.pipeline.addHandler(repeatedRequestsHandler)
+            channel.eventLoop.makeCompletedFuture {
+                let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: 1_000, isDonePromise: isDone)
+                let sync = channel.pipeline.syncOperations
+                try sync.addHTTPClientHandlers()
+                try sync.addHandler(repeatedRequestsHandler)
             }
         }
         .connect(to: serverChannel.localAddress!)
@@ -681,7 +705,7 @@ measureAndPrint(desc: "http1_1k_reqs_1_conn") {
         clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: promise)
         return promise.futureResult
     }.wait()
-    return try! repeatedRequestsHandler.wait()
+    return try! isDone.futureResult.wait()
 }
 
 measureAndPrint(desc: "http1_1k_reqs_100_conns") {
@@ -691,12 +715,15 @@ measureAndPrint(desc: "http1_1k_reqs_100_conns") {
     let reqsPerConn = numReqs / numConns
     reqs.reserveCapacity(reqsPerConn)
     for _ in 0..<numConns {
-        let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: reqsPerConn, eventLoop: group.next())
+        let isDone = group.next().makePromise(of: Int.self)
 
         let clientChannel = try! ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers().flatMap {
-                    channel.pipeline.addHandler(repeatedRequestsHandler)
+                channel.eventLoop.makeCompletedFuture {
+                    let repeatedRequestsHandler = RepeatedRequests(numberOfRequests: reqsPerConn, isDonePromise: isDone)
+                    let sync = channel.pipeline.syncOperations
+                    try sync.addHTTPClientHandlers()
+                    try sync.addHandler(repeatedRequestsHandler)
                 }
             }
             .connect(to: serverChannel.localAddress!)
@@ -711,7 +738,7 @@ measureAndPrint(desc: "http1_1k_reqs_100_conns") {
             )
             return promise.futureResult
         }.wait()
-        reqs.append(try! repeatedRequestsHandler.wait())
+        reqs.append(try! isDone.futureResult.wait())
     }
     return reqs.reduce(0, +) / numConns
 }
@@ -806,7 +833,7 @@ measureAndPrint(desc: "future_reduce_10k_futures") {
     let el1 = group.next()
 
     let futures = (1...10_000).map { i in el1.makeSucceededFuture(i) }
-    return try! EventLoopFuture<Int>.reduce(0, futures, on: el1, +).wait()
+    return try! EventLoopFuture<Int>.reduce(0, futures, on: el1, { $0 + $1 }).wait()
 }
 
 measureAndPrint(desc: "future_reduce_into_10k_futures") {
@@ -814,6 +841,31 @@ measureAndPrint(desc: "future_reduce_into_10k_futures") {
 
     let futures = (1...10_000).map { i in el1.makeSucceededFuture(i) }
     return try! EventLoopFuture<Int>.reduce(into: 0, futures, on: el1, { $0 += $1 }).wait()
+}
+
+try measureAndPrint(desc: "el_in_eventloop_100M") {
+    let el1 = group.next()
+
+    let inEL = try el1.submit {
+        var inEL = 0
+        for _ in 0..<100_000_000 {
+            inEL = inEL &+ (el1.inEventLoop ? 1 : 0)
+        }
+        return inEL
+    }.wait()
+    precondition(inEL == 100_000_000)
+    return inEL
+}
+
+measureAndPrint(desc: "el_not_in_eventloop_100M") {
+    let el1 = group.next()
+
+    var inEL = 0
+    for _ in 0..<100_000_000 {
+        inEL = inEL &+ (el1.inEventLoop ? 1 : 0)
+    }
+    precondition(inEL == 0)
+    return inEL
 }
 
 try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark(runCount: 1_000_000))
@@ -1181,3 +1233,19 @@ if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) {
         benchmark: TCPThroughputBenchmark(messages: 100_000, messageSize: 500)
     )
 }
+
+try measureAndPrint(
+    desc: "thread_pool_serial_wakeup_4_threads_10k",
+    benchmark: NIOThreadPoolSerialWakeupBenchmark(
+        numberOfThreads: 4,
+        numberOfTasks: 10_000
+    )
+)
+
+try measureAndPrint(
+    desc: "thread_pool_serial_wakeup_16_threads_10k",
+    benchmark: NIOThreadPoolSerialWakeupBenchmark(
+        numberOfThreads: 16,
+        numberOfTasks: 10_000
+    )
+)

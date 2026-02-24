@@ -12,7 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
+import CNIOPosix
 import DequeModule
 import Dispatch
 import NIOConcurrencyHelpers
@@ -53,13 +56,25 @@ public struct NIOEventLoopTickInfo: Sendable, Hashable {
     public var eventLoopID: ObjectIdentifier
     /// The number of tasks which were executed in this tick
     public var numberOfTasks: Int
+    /// The time the event loop slept since the last tick
+    public var sleepTime: TimeAmount
     /// The time at which the tick began
     public var startTime: NIODeadline
+    /// The time at which the tick finished
+    public var endTime: NIODeadline
 
-    internal init(eventLoopID: ObjectIdentifier, numberOfTasks: Int, startTime: NIODeadline) {
+    internal init(
+        eventLoopID: ObjectIdentifier,
+        numberOfTasks: Int,
+        sleepTime: TimeAmount,
+        startTime: NIODeadline,
+        endTime: NIODeadline
+    ) {
         self.eventLoopID = eventLoopID
         self.numberOfTasks = numberOfTasks
+        self.sleepTime = sleepTime
         self.startTime = startTime
+        self.endTime = endTime
     }
 }
 
@@ -79,7 +94,12 @@ public protocol NIOEventLoopMetricsDelegate: Sendable {
 internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
 
     static let strictModeEnabled: Bool = {
-        switch getenv("SWIFTNIO_STRICT").map({ String.init(cString: $0).lowercased() }) {
+        #if os(Windows)
+        let env = Windows.getenv("SWIFTNIO_STRICT")
+        #else
+        let env = getenv("SWIFTNIO_STRICT").flatMap { String(cString: $0) }
+        #endif
+        switch env?.lowercased() {
         case "true", "y", "yes", "on", "1":
             return true
         default:
@@ -117,11 +137,13 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     // This may only be read/written while holding the _tasksLock.
     internal var _pendingTaskPop = false
     @usableFromInline
-    internal var scheduledTaskCounter = ManagedAtomic<UInt64>(0)
+    internal let scheduledTaskCounter = ManagedAtomic<UInt64>(0)
     @usableFromInline
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>()
     @usableFromInline
     internal var _immediateTasks = Deque<UnderlyingTask>()
+    @usableFromInline
+    internal let _uniqueID: SelectableEventLoopUniqueID
 
     // We only need the ScheduledTask's task closure. However, an `Array<() -> Void>` allocates
     // for every appended closure. https://bugs.swift.org/browse/SR-15872
@@ -167,7 +189,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     private let promiseCreationStoreLock = NIOLock()
     private var _promiseCreationStore: [_NIOEventLoopFutureIdentifier: (file: StaticString, line: UInt)] = [:]
 
-    private let metricsDelegate: (any NIOEventLoopMetricsDelegate)?
+    private var metricsDelegateState: MetricsDelegateState?
 
     @usableFromInline
     internal func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
@@ -233,12 +255,16 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
 
     internal init(
         thread: NIOThread,
+        uniqueID: SelectableEventLoopUniqueID,
         parentGroup: MultiThreadedEventLoopGroup?,  // nil iff thread take-over
         selector: NIOPosix.Selector<NIORegistration>,
         canBeShutdownIndividually: Bool,
         metricsDelegate: NIOEventLoopMetricsDelegate?
     ) {
-        self.metricsDelegate = metricsDelegate
+        self.metricsDelegateState = metricsDelegate.map { delegate in
+            MetricsDelegateState(metricsDelegate: delegate, lastTickEndime: .now())
+        }
+        self._uniqueID = uniqueID
         self._parentGroup = parentGroup
         self._selector = selector
         self.thread = thread
@@ -252,6 +278,8 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         let voidPromise = self.makePromise(of: Void.self)
         voidPromise.succeed(())
         self._succeededVoidFuture = voidPromise.futureResult
+        preconditionInEventLoop()
+        precondition(self._uniqueID.matchesCurrentThread)
     }
 
     deinit {
@@ -311,7 +339,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     /// - see: `EventLoop.inEventLoop`
     @usableFromInline
     internal var inEventLoop: Bool {
-        thread.isCurrent
+        self._uniqueID.matchesCurrentThread
     }
 
     /// - see: `EventLoop.now`
@@ -588,14 +616,12 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
             switch task {
             case .function(let function):
                 function()
-            #if compiler(>=5.9)
             case .unownedJob(let erasedUnownedJob):
                 if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
                     erasedUnownedJob.unownedJob.runSynchronously(on: self.asUnownedSerialExecutor())
                 } else {
                     fatalError("Tried to run an UnownedJob without runtime support")
                 }
-            #endif
             case .callback(let handler):
                 handler.handleScheduledCallback(eventLoop: self)
             }
@@ -722,16 +748,35 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         return nextDeadline
     }
 
-    private func runLoop(selfIdentifier: ObjectIdentifier) -> NIODeadline? {
-        let tickStartTime: NIODeadline = .now()
+    private func runOneLoopTick(selfIdentifier: ObjectIdentifier) -> NIODeadline? {
+        let tickStartInfo:
+            (
+                metricsDelegate: any NIOEventLoopMetricsDelegate,
+                tickStartTime: NIODeadline,
+                sleepTime: TimeAmount
+            )? = self.metricsDelegateState.map { metricsDelegateState in
+                let tickStartTime = NIODeadline.now()  // Potentially expensive, only if delegate set.
+                return (
+                    metricsDelegate: metricsDelegateState.metricsDelegate,
+                    tickStartTime: tickStartTime,
+                    sleepTime: tickStartTime - metricsDelegateState.lastTickEndime
+                )
+            }
+
         var tasksProcessedInTick = 0
         defer {
-            let tickInfo = NIOEventLoopTickInfo(
-                eventLoopID: selfIdentifier,
-                numberOfTasks: tasksProcessedInTick,
-                startTime: tickStartTime
-            )
-            self.metricsDelegate?.processedTick(info: tickInfo)
+            if let tickStartInfo = tickStartInfo {
+                let tickEndTime = NIODeadline.now()  // Potentially expensive, only if delegate set.
+                let tickInfo = NIOEventLoopTickInfo(
+                    eventLoopID: selfIdentifier,
+                    numberOfTasks: tasksProcessedInTick,
+                    sleepTime: tickStartInfo.sleepTime,
+                    startTime: tickStartInfo.tickStartTime,
+                    endTime: tickEndTime
+                )
+                tickStartInfo.metricsDelegate.processedTick(info: tickInfo)
+                self.metricsDelegateState?.lastTickEndime = tickEndTime
+            }
         }
         while true {
             let nextReadyDeadline = self._tasksLock.withLock { () -> NIODeadline? in
@@ -791,6 +836,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.
     internal func run() throws {
         self.preconditionInEventLoop()
+
         defer {
             var iterations = 0
             var drained = false
@@ -874,7 +920,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
                     }
                 }
             }
-            nextReadyDeadline = runLoop(selfIdentifier: selfIdentifier)
+            nextReadyDeadline = self.runOneLoopTick(selfIdentifier: selfIdentifier)
         }
 
         // This EventLoop was closed so also close the underlying selector.
@@ -1005,16 +1051,60 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     }
 }
 
+struct MetricsDelegateState {
+    var metricsDelegate: any NIOEventLoopMetricsDelegate
+    var lastTickEndime: NIODeadline
+}
+
 extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvertible {
     @usableFromInline
     var description: String {
-        "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread) }"
+        if self.inEventLoop {
+            return """
+                SelectableEventLoop { \
+                selector = \(self._selector), \
+                thread = \(self.thread), \
+                state = \(self.internalState) \
+                }
+                """
+        } else {
+            // We can't print the selector or the internal state here (getting the external state under the lock
+            // is a bit too dangerous in case somebody is holding that lock and then calling description).
+            return """
+                SelectableEventLoop { \
+                thread = \(self.thread) \
+                }
+                """
+        }
     }
 
     @usableFromInline
     var debugDescription: String {
-        self._tasksLock.withLock {
-            "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(self._scheduledTasks.description) }"
+        let scheduledTasks = self._tasksLock.withLock {
+            self._scheduledTasks.description
+        }
+
+        if self.inEventLoop {
+            return """
+                SelectableEventLoop { \
+                selector = \(self._selector), \
+                scheduledTasks = \(scheduledTasks), \
+                thread = \(self.thread), \
+                state = \(self.internalState) \
+                }
+                """
+        } else {
+            let externalState = self.externalStateLock.withLock {
+                self.externalState
+            }
+            return """
+                SelectableEventLoop { \
+                selector = \(self._selector), \
+                scheduledTasks = \(scheduledTasks), \
+                thread = \(self.thread), \
+                state = \(externalState) \
+                }
+                """
         }
     }
 }
@@ -1081,8 +1171,87 @@ extension SelectableEventLoop {
     }
 }
 
+@usableFromInline
+struct SelectableEventLoopUniqueID: Sendable {
+    @usableFromInline
+    static let _nextGroupID = ManagedAtomic<UInt64>(1)  // DO NOT MAKE THIS 0.
+
+    @usableFromInline
+    var _loopID: UInt32
+
+    @usableFromInline
+    let _groupID: UInt32
+
+    @inlinable
+    var groupID: Int {
+        Int(self._groupID)
+    }
+
+    @inlinable
+    var loopID: Int {
+        Int(self._loopID)
+    }
+
+    @inlinable
+    init(_loopID: UInt32, groupID: UInt32) {
+        self._loopID = _loopID
+        self._groupID = groupID
+    }
+
+    static func makeNextGroup() -> Self {
+        let groupID = Self._nextGroupID.loadThenWrappingIncrement(ordering: .relaxed)
+
+        // If we're crashing just below, we created more 2^32 ELGs -- unlikely.
+        return Self(_loopID: 1, groupID: UInt32(groupID))
+    }
+
+    mutating func nextLoop() {
+        self._loopID += 1
+    }
+
+    @inlinable
+    internal var matchesCurrentThread: Bool {
+        let threadUniqueID = c_nio_posix_get_el_id()
+        return threadUniqueID == self.packedEventLoopID
+    }
+
+    @inlinable
+    internal var packedEventLoopID: UInt {
+        #if arch(arm) || arch(i386) || arch(arm64_32) || arch(wasm32)
+        // 32 bit
+        // If we're crashing below, we created more than 2^16 (64ki) ELGs which is unsupported.
+        precondition(self._groupID < UInt32(UInt16.max), "too many event loops created")
+        precondition(self._loopID < UInt32(UInt16.max), "event loop group with too many event loops created")
+        let packedID = IntegerBitPacking.packUInt16UInt16(
+            UInt16(self._groupID),
+            UInt16(self._loopID)
+        )
+        #else
+        // 64 bit
+        let packedID = IntegerBitPacking.packUInt32UInt32(self._groupID, self._loopID)
+        #endif
+        assert(MemoryLayout<UInt>.size == MemoryLayout.size(ofValue: packedID))
+        return UInt(packedID)
+    }
+
+    internal func attachToCurrentThread() {
+        let existingPackedID = c_nio_posix_get_el_id()
+        precondition(existingPackedID == 0, "weird, current thread ID \(existingPackedID), expected 0")
+
+        let packedID = self.packedEventLoopID
+        c_nio_posix_set_el_id(UInt(packedID))
+    }
+
+    internal func detachFromCurrentThread() {
+        let existingPackedID = c_nio_posix_get_el_id()
+        precondition(existingPackedID == self.packedEventLoopID)
+
+        c_nio_posix_set_el_id(0)
+    }
+}
+
 // MARK: TaskExecutor conformance
-#if compiler(>=6.0)
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension SelectableEventLoop: NIOTaskEventLoopExecutor {}
-#endif
+
+#endif  // !os(WASI)

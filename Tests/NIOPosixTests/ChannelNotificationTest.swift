@@ -408,13 +408,19 @@ class ChannelNotificationTest: XCTestCase {
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .serverChannelInitializer { channel in
-                    channel.pipeline.addHandler(ServerSocketChannelLifecycleVerificationHandler())
+                    channel.eventLoop.makeCompletedFuture {
+                        try channel.pipeline.syncOperations.addHandler(
+                            ServerSocketChannelLifecycleVerificationHandler()
+                        )
+                    }
                 }
                 .childChannelOption(.autoRead, value: false)
                 .childChannelInitializer { channel in
-                    channel.pipeline.addHandler(
-                        AcceptedSocketChannelLifecycleVerificationHandler(acceptedChannelPromise)
-                    )
+                    channel.eventLoop.makeCompletedFuture {
+                        try channel.pipeline.syncOperations.addHandler(
+                            AcceptedSocketChannelLifecycleVerificationHandler(acceptedChannelPromise)
+                        )
+                    }
                 }
                 .bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -422,7 +428,11 @@ class ChannelNotificationTest: XCTestCase {
         let clientChannel = try assertNoThrowWithValue(
             ClientBootstrap(group: group)
                 .channelInitializer { channel in
-                    channel.pipeline.addHandler(SocketChannelLifecycleVerificationHandler())
+                    channel.eventLoop.makeCompletedFuture {
+                        try channel.pipeline.syncOperations.addHandler(
+                            SocketChannelLifecycleVerificationHandler()
+                        )
+                    }
                 }
                 .connect(to: serverChannel.localAddress!).wait()
         )
@@ -499,7 +509,9 @@ class ChannelNotificationTest: XCTestCase {
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelOption(.autoRead, value: true)
                 .childChannelInitializer { channel in
-                    channel.pipeline.addHandler(OrderVerificationHandler(promise))
+                    channel.eventLoop.makeCompletedFuture {
+                        try channel.pipeline.syncOperations.addHandler(OrderVerificationHandler(promise))
+                    }
                 }
                 .bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -521,5 +533,51 @@ class ChannelNotificationTest: XCTestCase {
         XCTAssertNoThrow(try clientChannel.closeFuture.wait())
         XCTAssertNoThrow(try serverChannel.close().wait())
         XCTAssertNoThrow(try serverChannel.closeFuture.wait())
+    }
+
+    func testNoActiveInactiveNotificationsWhenDirectlyClosed() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class OrderVerificationHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            init() {
+                // nop
+            }
+
+            public func channelActive(context: ChannelHandlerContext) {
+                XCTFail("There should be no events when the channel is closed directly.")
+            }
+
+            public func channelInactive(context: ChannelHandlerContext) {
+                XCTFail("There should be no events when the channel is closed directly.")
+            }
+        }
+
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
+
+        let connectFuture = ClientBootstrap(group: group)
+            .channelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(OrderVerificationHandler())
+                }
+            }
+            .connect(to: serverChannel.localAddress!)
+
+        // Close immediately in the promise callback. The channel must still become active before it becomes inactive!
+        let closeFuture = connectFuture.flatMap { channel in
+            channel.close()
+        }
+
+        XCTAssertNoThrow(try closeFuture.wait())
+
+        XCTAssertNoThrow(try serverChannel.close().wait())
     }
 }

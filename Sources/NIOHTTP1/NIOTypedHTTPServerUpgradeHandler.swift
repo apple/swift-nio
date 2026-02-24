@@ -11,7 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if !canImport(Darwin) || swift(>=5.10)
 import NIOCore
 
 /// An object that implements `NIOTypedHTTPServerProtocolUpgrader` knows how to handle HTTP upgrade to
@@ -144,7 +143,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         switch self.stateMachine.channelReadData(data) {
         case .unwrapData:
-            let requestPart = Self.unwrapInboundIn(data)
+            let requestPart = NIOTypedHTTPServerUpgradeHandler.unwrapInboundIn(data)
             self.channelRead(context: context, requestPart: requestPart)
 
         case .fireChannelRead:
@@ -455,5 +454,3 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
 
 @available(*, unavailable)
 extension NIOTypedHTTPServerUpgradeHandler: Sendable {}
-
-#endif

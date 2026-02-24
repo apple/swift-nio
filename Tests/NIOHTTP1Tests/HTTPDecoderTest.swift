@@ -202,7 +202,7 @@ class HTTPDecoderTest: XCTestCase {
                 name: "decoder"
             )
         )
-        XCTAssertNoThrow(try channel.pipeline.addHandler(Receiver()).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(Receiver()))
 
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeStaticString(
@@ -251,8 +251,9 @@ class HTTPDecoderTest: XCTestCase {
                 let part = Self.unwrapInboundIn(data)
                 switch part {
                 case .end:
-                    _ = context.pipeline.removeHandler(self).flatMap { [pipeline = context.pipeline] _ in
-                        pipeline.addHandler(self.collector)
+                    _ = context.pipeline.syncOperations.removeHandler(self).assumeIsolated().flatMapThrowing {
+                        [pipeline = context.pipeline] _ in
+                        try pipeline.syncOperations.addHandler(self.collector)
                     }
                 default:
                     // ignore
@@ -266,7 +267,7 @@ class HTTPDecoderTest: XCTestCase {
                 name: "decoder"
             )
         )
-        XCTAssertNoThrow(try channel.pipeline.addHandler(Receiver()).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(Receiver()))
 
         // This connect call is semantically wrong, but it's how you
         // active embedded channels properly right now.
@@ -324,8 +325,9 @@ class HTTPDecoderTest: XCTestCase {
                 let part = Self.unwrapInboundIn(data)
                 switch part {
                 case .end:
-                    _ = context.pipeline.removeHandler(self).flatMap { [pipeline = context.pipeline] _ in
-                        pipeline.addHandler(ByteCollector())
+                    _ = context.pipeline.syncOperations.removeHandler(self).assumeIsolated().flatMapThrowing {
+                        [pipeline = context.pipeline] _ in
+                        try pipeline.syncOperations.addHandler(ByteCollector())
                     }
                     break
                 default:
@@ -341,7 +343,7 @@ class HTTPDecoderTest: XCTestCase {
                 name: "decoder"
             )
         )
-        XCTAssertNoThrow(try channel.pipeline.addHandler(Receiver()).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(Receiver()))
 
         XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8888)).wait())
 
@@ -665,7 +667,7 @@ class HTTPDecoderTest: XCTestCase {
 
             let decoder = HTTPRequestDecoder(leftOverBytesStrategy: leftOverBytesStrategy)
             XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(decoder)))
-            XCTAssertNoThrow(try channel.pipeline.addHandler(Receiver()).wait())
+            XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(Receiver()))
             XCTAssertNoThrow(try channel.writeInbound(buffer))
             XCTAssertNoThrow(XCTAssert(try channel.finish().isClean))
         }
@@ -695,7 +697,7 @@ class HTTPDecoderTest: XCTestCase {
         let receiver = Receiver()
         let decoder = ByteToMessageHandler(HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes))
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(decoder))
-        XCTAssertNoThrow(try channel.pipeline.addHandler(receiver).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(receiver))
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         let removalFutures = [
             channel.pipeline.syncOperations.removeHandler(receiver),
@@ -1011,7 +1013,7 @@ class HTTPDecoderTest: XCTestCase {
         )
 
         XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
-            XCTAssertEqual(.unexpectedContentLength, error as? HTTPParserError)
+            XCTAssertEqual(.unknown, error as? HTTPParserError)
         }
 
         self.loop.run()

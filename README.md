@@ -32,7 +32,7 @@ Within this repository we have a number of products that provide different funct
 - `NIOHTTP1`. This provides a low-level HTTP/1.1 protocol implementation.
 - `NIOWebSocket`. This provides a low-level WebSocket protocol implementation.
 - `NIOTestUtils`. This provides a number of helpers for testing projects that use SwiftNIO.
-- `NIOFileSystem`. This provides `async` APIs for interacting with the file system.
+- `_NIOFileSystem`. This provides `async` APIs for interacting with the file system.
 
 ### Protocol Implementations
 
@@ -85,7 +85,9 @@ SwiftNIO            | Minimum Swift Version
 `2.51.0 ..< 2.60.0` | 5.6
 `2.60.0 ..< 2.65.0` | 5.7
 `2.65.0 ..< 2.76.0` | 5.8
-`2.76.0 ...`        | 5.9
+`2.76.0 ..< 2.83.0` | 5.9
+`2.83.0 ..< 2.87.0` | 5.10
+`2.87.0 ...       ` | 6.0
 
 ### SwiftNIO 1
 SwiftNIO 1 is considered end of life - it is strongly recommended that you move to a newer version.  The Core NIO team does not actively work on this version.  No new features will be added to this version but PRs which fix bugs or security vulnerabilities will be accepted until the end of May 2022.
@@ -100,6 +102,8 @@ SwiftNIO aims to support all of the platforms where Swift is supported. Currentl
 
 * Ubuntu 18.04+
 * macOS 10.9+, iOS 7+; (macOS 10.14+, iOS 12+, tvOS 12+ or watchOS 6+ with [swift-nio-transport-services][repo-nio-transport-services])
+
+SwiftNIO has experimental support on OpenBSD for all SwiftNIO libraries _except_ for `_NIOFileSystem`, which is not yet supported. You can use all other SwiftNIO libraries on OpenBSD by adding them as dependencies in `Package.swift`.
 
 ### Compatibility
 
@@ -217,7 +221,7 @@ The core SwiftNIO repository will contain a few extremely important protocol imp
 
 ## Documentation
 
- - [API documentation](https://swiftpackageindex.com/apple/swift-nio/main/documentation/nio)
+ - [API documentation](https://swiftpackageindex.com/apple/swift-nio/documentation/nio)
 
 ## Example Usage
 
@@ -294,31 +298,6 @@ If all goes well, you'll see the message echoed back to you.
 To work on SwiftNIO in Xcode, you can just open the `Package.swift`
 file in Xcode and use Xcode's support for SwiftPM Packages.
 
-### An alternative: using `docker-compose`
-
-Alternatively, you may want to develop or test with `docker-compose`.
-
-First make sure you have [Docker](https://www.docker.com/community-edition) installed, next run the following commands:
-
-- `docker-compose -f docker/docker-compose.yaml run test`
-
-  Will create a base image with Swift runtime and other build and test dependencies, compile SwiftNIO and run the unit and integration tests
-
-- `docker-compose -f docker/docker-compose.yaml up echo`
-
-  Will create a base image, compile SwiftNIO, and run a sample `NIOEchoServer` on
-  `localhost:9999`. Test it by `echo Hello SwiftNIO | nc localhost 9999`.
-
-- `docker-compose -f docker/docker-compose.yaml up http`
-
-  Will create a base image, compile SwiftNIO, and run a sample `NIOHTTP1Server` on
-  `localhost:8888`. Test it by `curl http://localhost:8888`
-
-- `docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.2204.57.yaml run test`
-
-  Will create a base image using Ubuntu 22.04 and Swift 5.7, compile SwiftNIO and run the unit and integration tests.  Files exist for other Ubuntu and swift versions in the docker directory.
-
-
 ## Developing SwiftNIO
 
 *Note*: This section is only relevant if you would like to develop SwiftNIO yourself. You can ignore the information here if you just want to use SwiftNIO as a SwiftPM package.
@@ -357,39 +336,26 @@ apt-get install -y git curl libatomic1 libxml2 netcat-openbsd lsof perl
 dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 ```
 
-### Benchmarks
-
-Benchmarks for `swift-nio` are in a separate Swift Package in the `Benchmarks` subfolder of this repository.
-They use the [`package-benchmark`](https://github.com/ordo-one/package-benchmark) plugin.
-Benchmarks depends on the [`jemalloc`](https://jemalloc.net) memory allocation library, which is used by `package-benchmark` to capture memory allocation statistics.
-An installation guide can be found in the [Getting Started article](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark/gettingstarted#Installing-Prerequisites-and-Platform-Support) of `package-benchmark`.
-Afterwards you can run the benchmarks from CLI by going to the `Benchmarks` subfolder (e.g. `cd Benchmarks`) and invoking:
-```
-swift package benchmark
-```
-
-For more information please refer to `swift package benchmark --help` or the [documentation of `package-benchmark`](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark).
-
-[ch]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channelhandler
-[c]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channel
-[chc]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channelhandlercontext
-[ec]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioembedded/embeddedchannel
-[el]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventloop
-[eel]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioembedded/embeddedeventloop
-[elg]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventloopgroup
-[bb]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/bytebuffer
-[elf]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventloopfuture
-[elp]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventlooppromise
-[cp]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channelpipeline
-[sbootstrap]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioposix/serverbootstrap
-[cbootstrap]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioposix/clientbootstrap
-[dbootstrap]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioposix/datagrambootstrap
-[mtelg]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioposix/multithreadedeventloopgroup
-[nioh1]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niohttp1
-[nioh2]: https://swiftpackageindex.com/apple/swift-nio-http2/main/documentation/niohttp2
-[niows]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niowebsocket
-[niossl]: https://swiftpackageindex.com/apple/swift-nio-ssl/main/documentation/niossl
-[niossh]: https://swiftpackageindex.com/apple/swift-nio-ssh/main/documentation/niossh
+[ch]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/channelhandler
+[c]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/channel
+[chc]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/channelhandlercontext
+[ec]: https://swiftpackageindex.com/apple/swift-nio/documentation/nioembedded/embeddedchannel
+[el]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/eventloop
+[eel]: https://swiftpackageindex.com/apple/swift-nio/documentation/nioembedded/embeddedeventloop
+[elg]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/eventloopgroup
+[bb]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/bytebuffer
+[elf]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/eventloopfuture
+[elp]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/eventlooppromise
+[cp]: https://swiftpackageindex.com/apple/swift-nio/documentation/niocore/channelpipeline
+[sbootstrap]: https://swiftpackageindex.com/apple/swift-nio/documentation/nioposix/serverbootstrap
+[cbootstrap]: https://swiftpackageindex.com/apple/swift-nio/documentation/nioposix/clientbootstrap
+[dbootstrap]: https://swiftpackageindex.com/apple/swift-nio/documentation/nioposix/datagrambootstrap
+[mtelg]: https://swiftpackageindex.com/apple/swift-nio/documentation/nioposix/multithreadedeventloopgroup
+[nioh1]: https://swiftpackageindex.com/apple/swift-nio/documentation/niohttp1
+[nioh2]: https://swiftpackageindex.com/apple/swift-nio-http2/documentation/niohttp2
+[niows]: https://swiftpackageindex.com/apple/swift-nio/documentation/niowebsocket
+[niossl]: https://swiftpackageindex.com/apple/swift-nio-ssl/documentation/niossl
+[niossh]: https://swiftpackageindex.com/apple/swift-nio-ssh/documentation/niossh
 [pthreads]: https://en.wikipedia.org/wiki/POSIX_Threads
 [kqueue]: https://en.wikipedia.org/wiki/Kqueue
 [epoll]: https://en.wikipedia.org/wiki/Epoll

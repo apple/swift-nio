@@ -61,9 +61,9 @@ EOF
     cat <<EOF
     ],
     dependencies: [
-        .package(url: "HookedFunctions/", branch: "main"),
-        .package(url: "AtomicCounter/", branch: "main"),
-        .package(url: "$swiftpm_pkg_name/", branch: "main"),
+        .package(path: "HookedFunctions"),
+        .package(path: "AtomicCounter"),
+        .package(path: "$swiftpm_pkg_name"),
 EOF
     if [[ -n "$extra_dependencies_file" ]]; then
         cat "$extra_dependencies_file"
@@ -167,13 +167,7 @@ function build_package() {
     make_git_commit_all
     cd ..
 
-    mkdir "$swiftpm_pkg_name"
-    cd "$swiftpm_pkg_name"
-    fake_package_swift "$swiftpm_pkg_name"
-    make_git_commit_all
-    cd ..
-
-    hooked_package_swift_start "$extra_dependencies_file" "$swiftpm_pkg_name" "$@" > Package.swift
+    hooked_package_swift_start "$extra_dependencies_file" "$swiftpm_pkg_root" "$@" > Package.swift
     for f in "$@"; do
         local module
         module=$(module_name_from_path "$f")
@@ -195,8 +189,6 @@ EOF
         done
     done
     hooked_package_swift_end >> Package.swift
-
-    swift package edit --path "$swiftpm_pkg_root" "$swiftpm_pkg_name"
     )
 }
 
@@ -270,6 +262,7 @@ for f in "${files[@]}"; do
 done
 
 working_dir=$(mktemp -d "$tmp_dir/.nio_alloc_counter_tests_XXXXXX")
+echo "Working directory: $working_dir"
 
 selected_hooked_functions="HookedFunctionsDoHook"
 selected_bootstrap="bootstrapDoHook"
@@ -282,7 +275,7 @@ fi
 build_package \
     "$working_dir" \
     "$here/template" \
-    "$pkg_root" \
+    "$(realpath "$pkg_root")" \
     "$(find_swiftpm_package_name "$pkg_root")" \
     "$selected_hooked_functions" \
     "$selected_bootstrap" \

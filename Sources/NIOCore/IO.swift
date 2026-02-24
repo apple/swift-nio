@@ -45,7 +45,7 @@ import Darwin
 /// An `Error` for an IO operation.
 public struct IOError: Swift.Error {
     @available(*, deprecated, message: "NIO no longer uses FailureDescription.")
-    public enum FailureDescription {
+    public enum FailureDescription: Sendable {
         case function(StaticString)
         case reason(String)
     }
@@ -125,8 +125,13 @@ public struct IOError: Swift.Error {
 ///   - reason: what failed
 /// - Returns: the constructed reason.
 private func reasonForError(errnoCode: CInt, reason: String) -> String {
-    if let errorDescC = strerror(errnoCode) {
-        return "\(reason): \(String(cString: errorDescC)) (errno: \(errnoCode))"
+    #if os(Windows)
+    let errorDesc = Windows.strerror(errnoCode)
+    #else
+    let errorDesc = strerror(errnoCode).flatMap { String(cString: $0) }
+    #endif
+    if let errorDesc {
+        return "\(reason): \(errorDesc)) (errno: \(errnoCode))"
     } else {
         return "\(reason): Broken strerror, unknown error: \(errnoCode)"
     }

@@ -110,7 +110,7 @@ private class BetterHTTPParser {
                 versionMinor: Int(opaque!.pointee.http_minor),
                 statusCode: Int(opaque!.pointee.status_code),
                 isUpgrade: opaque!.pointee.upgrade != 0,
-                method: llhttp_method(rawValue: CUnsignedInt(opaque!.pointee.method)),
+                method: llhttp_method(rawValue: numericCast(opaque!.pointee.method)),
                 keepAliveState: opaque!.keepAliveState
             ) {
             case .normal:
@@ -797,21 +797,31 @@ public enum RemoveAfterUpgradeStrategy: Sendable {
 
 /// Strategy to use when a HTTPDecoder receives an informational HTTP response (1xx except 101)
 public struct NIOInformationalResponseStrategy: Hashable, Sendable {
-    enum Base {
+    @usableFromInline
+    enum Base: Sendable {
         case drop
         case forward
     }
 
+    @usableFromInline
     var base: Base
-    private init(_ base: Base) {
+
+    @inlinable
+    init(_ base: Base) {
         self.base = base
     }
 
     /// Drop the informational response and only forward the "real" response
-    public static let drop = Self(.drop)
+    @inlinable
+    public static var drop: NIOInformationalResponseStrategy {
+        Self(.drop)
+    }
     /// Forward the informational response and then forward the "real" response. This will result in
     /// multiple `head` before an `end` is emitted.
-    public static let forward = Self(.forward)
+    @inlinable
+    public static var forward: NIOInformationalResponseStrategy {
+        Self(.forward)
+    }
 }
 
 extension HTTPParserError {

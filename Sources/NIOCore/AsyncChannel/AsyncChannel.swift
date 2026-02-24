@@ -323,7 +323,6 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
         return result
     }
 
-    #if compiler(>=6.0)
     /// Provides scoped access to the inbound and outbound side of the underlying ``Channel``.
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
@@ -370,7 +369,6 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
 
         return result
     }
-    #endif
 }
 
 // swift-format-ignore: AmbiguousTrailingClosureOverload
@@ -419,7 +417,6 @@ extension NIOAsyncChannel {
         return result
     }
 
-    #if compiler(>=6.0)
     /// Provides scoped access to the inbound side of the underlying ``Channel``.
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
@@ -465,7 +462,6 @@ extension NIOAsyncChannel {
 
         return result
     }
-    #endif
 }
 
 extension Channel {

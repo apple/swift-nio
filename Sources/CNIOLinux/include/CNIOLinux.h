@@ -25,11 +25,15 @@
 #include <sys/xattr.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/vfs.h>
 #include <sched.h>
 #include <stdbool.h>
 #include <errno.h>
 #include <pthread.h>
 #include <netinet/ip.h>
+#if __has_include(<linux/magic.h>)
+#include <linux/magic.h>
+#endif
 #if __has_include(<linux/udp.h>)
 #include <linux/udp.h>
 #else
@@ -148,6 +152,30 @@ extern const unsigned long CNIOLinux_UTIME_OMIT;
 extern const unsigned long CNIOLinux_UTIME_NOW;
 
 extern const long CNIOLinux_UDP_MAX_SEGMENTS;
+
+// Filesystem magic constants for cgroup detection
+#ifdef __ANDROID__
+#if defined(__LP64__)
+typedef uint64_t f_type_t;
+#else
+typedef uint32_t f_type_t;
+#endif
+#else
+#ifdef __FSWORD_T_TYPE
+typedef __fsword_t f_type_t;
+#else
+typedef unsigned long f_type_t;
+#endif
+#endif
+
+extern const f_type_t CNIOLinux_TMPFS_MAGIC;
+extern const f_type_t CNIOLinux_CGROUP2_SUPER_MAGIC;
+
+// Workaround for https://github.com/swiftlang/swift/issues/86149
+f_type_t CNIOLinux_statfs_ftype(const char *path);
+
+// A workaround for incorrect nullability annotations in the Android SDK.
+FTS *CNIOLinux_fts_open(char * const *path_argv, int options, int (*compar)(const FTSENT **, const FTSENT **));
 
 #endif
 #endif

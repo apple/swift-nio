@@ -22,7 +22,7 @@ import DequeModule
 @usableFromInline
 internal final class NIOAsyncChannelHandler<InboundIn: Sendable, ProducerElement: Sendable, OutboundOut: Sendable> {
     @usableFromInline
-    enum _ProducingState {
+    enum _ProducingState: Sendable {
         // Not .stopProducing
         case keepProducing
 
@@ -175,7 +175,7 @@ extension NIOAsyncChannelHandler: ChannelInboundHandler {
 
     @inlinable
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let unwrapped = Self.unwrapInboundIn(data)
+        let unwrapped = NIOAsyncChannelHandler.unwrapInboundIn(data)
 
         switch self.transformation {
         case .syncWrapping(let transformation):
@@ -477,7 +477,7 @@ extension NIOAsyncChannelHandler {
     @inlinable
     func _doOutboundWrites(context: ChannelHandlerContext, writes: Deque<OutboundOut>) {
         for write in writes {
-            context.write(Self.wrapOutboundOut(write), promise: nil)
+            context.write(NIOAsyncChannelHandler.wrapOutboundOut(write), promise: nil)
         }
 
         context.flush()
@@ -485,7 +485,7 @@ extension NIOAsyncChannelHandler {
 
     @inlinable
     func _doOutboundWrite(context: ChannelHandlerContext, write: OutboundOut) {
-        context.write(Self.wrapOutboundOut(write), promise: nil)
+        context.write(NIOAsyncChannelHandler.wrapOutboundOut(write), promise: nil)
         context.flush()
     }
 }
@@ -493,3 +493,6 @@ extension NIOAsyncChannelHandler {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOAsyncChannelHandler: Sendable {}
+
+@available(*, unavailable)
+extension NIOAsyncChannelHandler.Transformation: Sendable {}

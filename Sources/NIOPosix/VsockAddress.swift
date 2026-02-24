@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 #if canImport(Darwin)
@@ -24,7 +26,7 @@ import CNIODarwin
 #endif
 import CNIOLinux
 #endif
-private let vsockUnimplemented = "VSOCK support is not implemented for this platform"
+let vsockUnimplemented = "VSOCK support is not implemented for this platform"
 
 // MARK: - Public API that's available on all platforms.
 
@@ -58,14 +60,17 @@ public struct VsockAddress: Hashable, Sendable {
     public struct ContextID: RawRepresentable, ExpressibleByIntegerLiteral, Hashable, Sendable {
         public var rawValue: UInt32
 
+        @inlinable
         public init(rawValue: UInt32) {
             self.rawValue = rawValue
         }
 
+        @inlinable
         public init(integerLiteral value: UInt32) {
             self.init(rawValue: value)
         }
 
+        @inlinable
         public init(_ value: Int) {
             self.init(rawValue: UInt32(bitPattern: Int32(truncatingIfNeeded: value)))
         }
@@ -77,17 +82,20 @@ public struct VsockAddress: Hashable, Sendable {
         /// On Darwin platforms, the man page states this can be used with `connect(2)` to mean "this host".
         ///
         /// This is equal to `VMADDR_CID_ANY (-1U)`.
-        public static let any: Self = Self(rawValue: UInt32(bitPattern: -1))
+        @inlinable
+        public static var any: Self { Self(rawValue: UInt32(bitPattern: -1)) }
 
         /// The address of the hypervisor.
         ///
         /// This is equal to `VMADDR_CID_HYPERVISOR (0)`.
-        public static let hypervisor: Self = Self(rawValue: 0)
+        @inlinable
+        public static var hypervisor: Self { Self(rawValue: 0) }
 
         /// The address of the host.
         ///
         /// This is equal to `VMADDR_CID_HOST (2)`.
-        public static let host: Self = Self(rawValue: 2)
+        @inlinable
+        public static var host: Self { Self(rawValue: 2) }
 
         /// The address for local communication (loopback).
         ///
@@ -103,7 +111,8 @@ public struct VsockAddress: Hashable, Sendable {
         /// other platforms.
         ///
         /// - SeeAlso: https://man7.org/linux/man-pages/man7/vsock.7.html
-        public static let local: Self = Self(rawValue: 1)
+        @inlinable
+        public static var local: Self { Self(rawValue: 1) }
 
     }
 
@@ -113,14 +122,17 @@ public struct VsockAddress: Hashable, Sendable {
     public struct Port: RawRepresentable, ExpressibleByIntegerLiteral, Hashable, Sendable {
         public var rawValue: UInt32
 
+        @inlinable
         public init(rawValue: UInt32) {
             self.rawValue = rawValue
         }
 
+        @inlinable
         public init(integerLiteral value: UInt32) {
             self.init(rawValue: value)
         }
 
+        @inlinable
         public init(_ value: Int) {
             self.init(rawValue: UInt32(bitPattern: Int32(truncatingIfNeeded: value)))
         }
@@ -128,7 +140,8 @@ public struct VsockAddress: Hashable, Sendable {
         /// Used to bind to any port number.
         ///
         /// This is equal to `VMADDR_PORT_ANY (-1U)`.
-        public static let any: Self = Self(rawValue: UInt32(bitPattern: -1))
+        @inlinable
+        public static var any: Self { Self(rawValue: UInt32(bitPattern: -1)) }
     }
 }
 
@@ -281,3 +294,4 @@ extension BaseSocket {
 }
 
 #endif  // canImport(Darwin) || os(Linux) || os(Android)
+#endif  // !os(WASI)

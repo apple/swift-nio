@@ -32,6 +32,8 @@ import Darwin
 @preconcurrency import Android
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+#elseif canImport(WinSDK)
+@preconcurrency import WinSDK
 #else
 #error("Unknown C library.")
 #endif
@@ -41,7 +43,12 @@ private func printError(_ string: StaticString) {
         var buf = buf
         while buf.count > 0 {
             // 2 is stderr
+            #if canImport(WinSDK)
+            let rc = _write(2, buf.baseAddress, UInt32(truncatingIfNeeded: buf.count))
+            let errno = GetLastError()
+            #else
             let rc = write(2, buf.baseAddress, buf.count)
+            #endif
             if rc < 0 {
                 let err = errno
                 if err == EINTR { continue }
@@ -325,7 +332,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     }
 
     public func preconditionNotInEventLoop(file: StaticString, line: UInt) {
-        // As inEventLoop always returns true, this must always preconditon.
+        // As inEventLoop always returns true, this must always precondition.
         preconditionFailure("Always in EmbeddedEventLoop", file: file, line: line)
     }
 
@@ -399,7 +406,12 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
 
     static let strictModeEnabled: Bool = {
         for ciVar in ["SWIFTNIO_STRICT", "SWIFTNIO_CI", "SWIFTNIO_STRICT_EMBEDDED"] {
-            switch getenv(ciVar).map({ String.init(cString: $0).lowercased() }) {
+            #if os(Windows)
+            let env = Windows.getenv("SWIFTNIO_STRICT")
+            #else
+            let env = getenv("SWIFTNIO_STRICT").flatMap { String(cString: $0) }
+            #endif
+            switch env?.lowercased() {
             case "true", "y", "yes", "on", "1":
                 return true
             default:
@@ -453,9 +465,19 @@ class EmbeddedChannelCore: ChannelCore {
         }
     }
 
+    var allowOptionsWhenClosed: Bool {
+        get {
+            self._allowOptionsWhenClosed.load(ordering: .sequentiallyConsistent)
+        }
+        set {
+            self._allowOptionsWhenClosed.store(newValue, ordering: .sequentiallyConsistent)
+        }
+    }
+
     private let _isOpen = ManagedAtomic(true)
     private let _isActive = ManagedAtomic(false)
     private let _allowRemoteHalfClosure = ManagedAtomic(false)
+    private let _allowOptionsWhenClosed = ManagedAtomic(true)
 
     let eventLoop: EventLoop
     let closePromise: EventLoopPromise<Void>
@@ -484,8 +506,7 @@ class EmbeddedChannelCore: ChannelCore {
     var outboundBuffer: CircularBuffer<NIOAny> = CircularBuffer()
 
     /// Contains observers that want to consume the first element that would be appended to the `outboundBuffer`
-    @usableFromInline
-    var outboundBufferConsumer: Deque<(NIOAny) -> Void> = []
+    private var outboundBufferConsumer: Deque<(Result<NIOAny, Error>) -> Void> = []
 
     /// Contains the unflushed items that went into the `Channel`
     @usableFromInline
@@ -499,14 +520,38 @@ class EmbeddedChannelCore: ChannelCore {
     var inboundBuffer: CircularBuffer<NIOAny> = CircularBuffer()
 
     /// Contains observers that want to consume the first element that would be appended to the `inboundBuffer`
-    @usableFromInline
-    var inboundBufferConsumer: Deque<(NIOAny) -> Void> = []
+    private var inboundBufferConsumer: Deque<(Result<NIOAny, Error>) -> Void> = []
 
     @usableFromInline
-    var localAddress: SocketAddress?
+    internal struct Addresses {
+        var localAddress: SocketAddress?
+        var remoteAddress: SocketAddress?
+    }
 
     @usableFromInline
-    var remoteAddress: SocketAddress?
+    internal let _addresses: NIOLockedValueBox<Addresses> = NIOLockedValueBox(
+        .init(localAddress: nil, remoteAddress: nil)
+    )
+
+    @usableFromInline
+    var localAddress: SocketAddress? {
+        get {
+            self._addresses.withLockedValue { $0.localAddress }
+        }
+        set {
+            self._addresses.withLockedValue { $0.localAddress = newValue }
+        }
+    }
+
+    @usableFromInline
+    var remoteAddress: SocketAddress? {
+        get {
+            self._addresses.withLockedValue { $0.remoteAddress }
+        }
+        set {
+            self._addresses.withLockedValue { $0.remoteAddress = newValue }
+        }
+    }
 
     @usableFromInline
     func localAddress0() throws -> SocketAddress {
@@ -538,6 +583,14 @@ class EmbeddedChannelCore: ChannelCore {
         isOpen = false
         isActive = false
         promise?.succeed(())
+
+        // Return a `.failure` result containing an error to all pending inbound and outbound consumers.
+        while let consumer = self.inboundBufferConsumer.popFirst() {
+            consumer(.failure(ChannelError.ioOnClosedChannel))
+        }
+        while let consumer = self.outboundBufferConsumer.popFirst() {
+            consumer(.failure(ChannelError.ioOnClosedChannel))
+        }
 
         // As we called register() in the constructor of EmbeddedChannel we also need to ensure we call unregistered here.
         self.pipeline.syncOperations.fireChannelInactive()
@@ -633,15 +686,45 @@ class EmbeddedChannelCore: ChannelCore {
 
     private func addToBuffer(
         buffer: inout CircularBuffer<NIOAny>,
-        consumer: inout Deque<(NIOAny) -> Void>,
+        consumer: inout Deque<(Result<NIOAny, Error>) -> Void>,
         data: NIOAny
     ) {
         self.eventLoop.preconditionInEventLoop()
         if let consume = consumer.popFirst() {
-            consume(data)
+            consume(.success(data))
         } else {
             buffer.append(data)
         }
+    }
+
+    /// Enqueue a consumer closure that will be invoked upon the next pending inbound write.
+    /// - Parameter newElement: The consumer closure to enqueue. Returns a `.failure` result if the channel has already
+    ///   closed.
+    func _enqueueInboundBufferConsumer(_ newElement: @escaping (Result<NIOAny, Error>) -> Void) {
+        self.eventLoop.preconditionInEventLoop()
+
+        // The channel has already closed: there cannot be any further writes. Return a `.failure` result with an error.
+        guard self.isOpen else {
+            newElement(.failure(ChannelError.ioOnClosedChannel))
+            return
+        }
+
+        self.inboundBufferConsumer.append(newElement)
+    }
+
+    /// Enqueue a consumer closure that will be invoked upon the next pending outbound write.
+    /// - Parameter newElement: The consumer closure to enqueue. Returns a `.failure` result if the channel has already
+    ///   closed.
+    func _enqueueOutboundBufferConsumer(_ newElement: @escaping (Result<NIOAny, Error>) -> Void) {
+        self.eventLoop.preconditionInEventLoop()
+
+        // The channel has already closed: there cannot be any further writes. Return a `.failure` result with an error.
+        guard self.isOpen else {
+            newElement(.failure(ChannelError.ioOnClosedChannel))
+            return
+        }
+
+        self.outboundBufferConsumer.append(newElement)
     }
 }
 
@@ -761,6 +844,9 @@ public final class EmbeddedChannel: Channel {
     /// - Note: An `EmbeddedChannel` starts _inactive_ and can be activated, for example by calling `connect`.
     public var isActive: Bool { channelcore.isActive }
 
+    @usableFromInline
+    internal var isOpen: Bool { channelcore.isOpen }
+
     /// - see: `ChannelOptions.Types.AllowRemoteHalfClosureOption`
     public var allowRemoteHalfClosure: Bool {
         get {
@@ -770,6 +856,17 @@ public final class EmbeddedChannel: Channel {
         set {
             self.embeddedEventLoop.checkCorrectThread()
             channelcore.allowRemoteHalfClosure = newValue
+        }
+    }
+
+    public var allowOptionsWhenClosed: Bool {
+        get {
+            self.embeddedEventLoop.checkCorrectThread()
+            return channelcore.allowOptionsWhenClosed
+        }
+        set {
+            self.embeddedEventLoop.checkCorrectThread()
+            channelcore.allowOptionsWhenClosed = newValue
         }
     }
 
@@ -796,6 +893,13 @@ public final class EmbeddedChannel: Channel {
 
     /// - see: `Channel.isWritable`
     public var isWritable: Bool = true
+
+    @usableFromInline
+    internal var _options: [(option: any ChannelOption, value: any Sendable)] = []
+
+    /// The `ChannelOption`s set on this channel.
+    /// - see: `Embedded.setOption`
+    public var options: [(option: any ChannelOption, value: any Sendable)] { self._options }
 
     /// Synchronously closes the `EmbeddedChannel`.
     ///
@@ -1018,31 +1122,40 @@ public final class EmbeddedChannel: Channel {
     @inlinable
     public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
         self.embeddedEventLoop.checkCorrectThread()
-        self.setOptionSync(option, value: value)
-        return self.eventLoop.makeSucceededVoidFuture()
+        return self.eventLoop.makeCompletedFuture { try self.setOptionSync(option, value: value) }
     }
 
     @inlinable
-    internal func setOptionSync<Option: ChannelOption>(_ option: Option, value: Option.Value) {
+    internal func setOptionSync<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
         self.embeddedEventLoop.checkCorrectThread()
+
+        guard self.isOpen || self.allowOptionsWhenClosed else {
+            throw ChannelError.alreadyClosed
+        }
+
+        self.addOption(option, value: value)
+
         if option is ChannelOptions.Types.AllowRemoteHalfClosureOption {
             self.allowRemoteHalfClosure = value as! Bool
             return
         }
-        // No other options supported
-        fatalError("option not supported")
     }
 
     /// - see: `Channel.getOption`
     @inlinable
     public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
         self.embeddedEventLoop.checkCorrectThread()
-        return self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
+        return self.eventLoop.makeCompletedFuture { try self.getOptionSync(option) }
     }
 
     @inlinable
-    internal func getOptionSync<Option: ChannelOption>(_ option: Option) -> Option.Value {
+    internal func getOptionSync<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
         self.embeddedEventLoop.checkCorrectThread()
+
+        guard self.isOpen || self.allowOptionsWhenClosed else {
+            throw ChannelError.alreadyClosed
+        }
+
         if option is ChannelOptions.Types.AutoReadOption {
             return true as! Option.Value
         }
@@ -1057,7 +1170,26 @@ public final class EmbeddedChannel: Channel {
 
             return result as! Option.Value
         }
-        fatalError("option \(option) not supported")
+
+        guard let value = optionValue(for: option) else {
+            fatalError("option \(option) not supported")
+        }
+
+        return value
+    }
+
+    @inlinable
+    internal func addOption<Option: ChannelOption>(_ option: Option, value: Option.Value) {
+        if let optionIndex = self._options.firstIndex(where: { $0.option is Option }) {
+            self._options[optionIndex] = (option: option, value: value)
+        } else {
+            self._options.append((option: option, value: value))
+        }
+    }
+
+    @inlinable
+    internal func optionValue<Option: ChannelOption>(for option: Option) -> Option.Value? {
+        self.options.first(where: { $0.option is Option })?.value as? Option.Value
     }
 
     /// Fires the (outbound) `bind` event through the `ChannelPipeline`. If the event hits the `EmbeddedChannel` which
@@ -1069,7 +1201,8 @@ public final class EmbeddedChannel: Channel {
     ///   - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         self.embeddedEventLoop.checkCorrectThread()
-        promise?.futureResult.whenSuccess {
+        let promise = promise ?? self.embeddedEventLoop.makePromise()
+        promise.futureResult.whenSuccess {
             self.localAddress = address
         }
         self.pipeline.bind(to: address, promise: promise)
@@ -1084,7 +1217,8 @@ public final class EmbeddedChannel: Channel {
     ///   - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         self.embeddedEventLoop.checkCorrectThread()
-        promise?.futureResult.whenSuccess {
+        let promise = promise ?? self.embeddedEventLoop.makePromise()
+        promise.futureResult.whenSuccess {
             self.remoteAddress = address
         }
         self.pipeline.connect(to: address, promise: promise)
@@ -1138,12 +1272,12 @@ extension EmbeddedChannel {
 
         @inlinable
         public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
-            self.channel.setOptionSync(option, value: value)
+            try self.channel.setOptionSync(option, value: value)
         }
 
         @inlinable
         public func getOption<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
-            self.channel.getOptionSync(option)
+            try self.channel.getOptionSync(option)
         }
     }
 

@@ -122,6 +122,11 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker, _NIOPreconcurrencySe
     var localAddress: SocketAddress? { get }
 
     /// The remote peer's `SocketAddress`.
+    ///
+    /// If we end up accepting an already-closed connection, the kernel can end up in a place
+    /// where it has no remote address to give us. In this situation, `remoteAddress` will be
+    /// `nil`. It can also be `nil` in cases where it isn't representable in SocketAddress, e.g. if
+    /// we're talking over a vsock.
     var remoteAddress: SocketAddress? { get }
 
     /// `Channel`s are hierarchical and might have a parent `Channel`. `Channel` hierarchies are in use for certain
@@ -427,10 +432,53 @@ extension ChannelError {
 
 extension ChannelError: Equatable {}
 
+extension ChannelError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .connectPending:
+            "Connect pending"
+        case let .connectTimeout(value):
+            "Connect timeout (\(value))"
+        case .operationUnsupported:
+            "Operation unsupported"
+        case .ioOnClosedChannel:
+            "I/O on closed channel"
+        case .alreadyClosed:
+            "Already closed"
+        case .outputClosed:
+            "Output closed"
+        case .inputClosed:
+            "Input closed"
+        case .eof:
+            "End of file"
+        case .writeMessageTooLarge:
+            "Write message too large"
+        case .writeHostUnreachable:
+            "Write host unreachable"
+        case .unknownLocalAddress:
+            "Unknown local address"
+        case .badMulticastGroupAddressFamily:
+            "Bad multicast group address family"
+        case .badInterfaceAddressFamily:
+            "Bad interface address family"
+        case let .illegalMulticastAddress(address):
+            "Illegal multicast address \(address)"
+        #if !os(WASI)
+        case let .multicastNotSupported(interface):
+            "Multicast not supported on interface \(interface)"
+        #endif
+        case .inappropriateOperationForState:
+            "Inappropriate operation for state"
+        case .unremovableHandler:
+            "Unremovable handler"
+        }
+    }
+}
+
 /// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
 public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}
 
-public enum DatagramChannelError {
+public enum DatagramChannelError: Sendable {
     public struct WriteOnUnconnectedSocketWithoutAddress: Error {
         public init() {}
     }

@@ -18,6 +18,10 @@ import XCTest
 
 @testable import NIOEmbedded
 
+#if canImport(Android)
+import Android
+#endif
+
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 class AsyncTestingChannelTests: XCTestCase {
     func testSingleHandlerInit() async throws {
@@ -445,7 +449,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSetLocalAddressAfterSuccessfulBind() throws {
-
         let channel = NIOAsyncTestingChannel()
         let bindPromise = channel.eventLoop.makePromise(of: Void.self)
         let socketAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 0)
@@ -454,11 +457,19 @@ class AsyncTestingChannelTests: XCTestCase {
             XCTAssertEqual(channel.localAddress, socketAddress)
         }
         try bindPromise.futureResult.wait()
+    }
 
+    func testSetLocalAddressAfterSuccessfulBindWithoutPromise() throws {
+        let channel = NIOAsyncTestingChannel()
+        let socketAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 0)
+        // Call bind on-loop so we know when to expect the result
+        try channel.testingEventLoop.submit {
+            channel.bind(to: socketAddress, promise: nil)
+        }.wait()
+        XCTAssertEqual(channel.localAddress, socketAddress)
     }
 
     func testSetRemoteAddressAfterSuccessfulConnect() throws {
-
         let channel = NIOAsyncTestingChannel()
         let connectPromise = channel.eventLoop.makePromise(of: Void.self)
         let socketAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 0)
@@ -467,7 +478,16 @@ class AsyncTestingChannelTests: XCTestCase {
             XCTAssertEqual(channel.remoteAddress, socketAddress)
         }
         try connectPromise.futureResult.wait()
+    }
 
+    func testSetRemoteAddressAfterSuccessfulConnectWithoutPromise() throws {
+        let channel = NIOAsyncTestingChannel()
+        let socketAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 0)
+        // Call connect on-loop so we know when to expect the result
+        try channel.testingEventLoop.submit {
+            channel.connect(to: socketAddress, promise: nil)
+        }.wait()
+        XCTAssertEqual(channel.remoteAddress, socketAddress)
     }
 
     func testUnprocessedOutboundUserEventFailsOnEmbeddedChannel() throws {
@@ -664,6 +684,102 @@ class AsyncTestingChannelTests: XCTestCase {
 
         try await XCTAsyncAssertEqual(buf, try await channel.waitForOutboundWrite(as: ByteBuffer.self))
         try await XCTAsyncAssertTrue(try await channel.finish().isClean)
+    }
+
+    func testWaitingForWriteTerminatesAfterChannelClose() async throws {
+        let channel = NIOAsyncTestingChannel()
+
+        // Write some inbound and outbound data
+        for i in 1...3 {
+            try await channel.writeInbound(i)
+            try await channel.writeOutbound(i)
+        }
+
+        // We should successfully see the three inbound and outbound writes
+        for i in 1...3 {
+            try await XCTAsyncAssertEqual(try await channel.waitForInboundWrite(), i)
+            try await XCTAsyncAssertEqual(try await channel.waitForOutboundWrite(), i)
+        }
+
+        let task = Task {
+            // We close the channel after the third inbound/outbound write. Waiting again should result in a
+            // `ChannelError.ioOnClosedChannel` error.
+            await XCTAsyncAssertThrowsError(try await channel.waitForInboundWrite(as: Int.self)) {
+                XCTAssertEqual($0 as? ChannelError, ChannelError.ioOnClosedChannel)
+            }
+            await XCTAsyncAssertThrowsError(try await channel.waitForOutboundWrite(as: Int.self)) {
+                XCTAssertEqual($0 as? ChannelError, ChannelError.ioOnClosedChannel)
+            }
+        }
+
+        // Close the channel without performing any writes
+        try await channel.close()
+        try await task.value
+    }
+
+    func testEnqueueWriteConsumersBeforeChannelClosesWithoutAnyWrites() async throws {
+        let channel = NIOAsyncTestingChannel()
+
+        let task = Task {
+            // We don't write anything to the channel and simply just close it. Waiting for an inbound/outbound write
+            // should result in a `ChannelError.ioOnClosedChannel` when the channel closes.
+            await XCTAsyncAssertThrowsError(try await channel.waitForInboundWrite(as: Int.self)) {
+                XCTAssertEqual($0 as? ChannelError, ChannelError.ioOnClosedChannel)
+            }
+            await XCTAsyncAssertThrowsError(try await channel.waitForOutboundWrite(as: Int.self)) {
+                XCTAssertEqual($0 as? ChannelError, ChannelError.ioOnClosedChannel)
+            }
+        }
+
+        // Close the channel without performing any inbound or outbound writes
+        try await channel.close()
+        try await task.value
+    }
+
+    func testEnqueueWriteConsumersAfterChannelClosesWithoutAnyWrites() async throws {
+        let channel = NIOAsyncTestingChannel()
+        // Immediately close the channel without performing any inbound or outbound writes
+        try await channel.close()
+
+        // Now try to wait for an inbound/outbound write. This should result in a `ChannelError.ioOnClosedChannel`.
+        await XCTAsyncAssertThrowsError(try await channel.waitForInboundWrite(as: Int.self)) {
+            XCTAssertEqual($0 as? ChannelError, ChannelError.ioOnClosedChannel)
+        }
+        await XCTAsyncAssertThrowsError(try await channel.waitForOutboundWrite(as: Int.self)) {
+            XCTAssertEqual($0 as? ChannelError, ChannelError.ioOnClosedChannel)
+        }
+    }
+
+    func testGetSetOption() async throws {
+        let channel = NIOAsyncTestingChannel()
+        let option = ChannelOptions.socket(IPPROTO_IP, IP_TTL)
+        let _ = try await channel.setOption(option, value: 1).get()
+
+        let optionValue1 = try await channel.getOption(option).get()
+        XCTAssertEqual(1, optionValue1)
+
+        let _ = try await channel.setOption(option, value: 2).get()
+        let optionValue2 = try await channel.getOption(option).get()
+        XCTAssertEqual(2, optionValue2)
+    }
+
+    func testSocketAddressesOnContext() async throws {
+        final class Handler: ChannelInboundHandler, Sendable {
+            typealias InboundIn = Never
+
+            func handlerAdded(context: ChannelHandlerContext) {
+                XCTAssertNotNil(context.localAddress)
+                XCTAssertNotNil(context.remoteAddress)
+            }
+        }
+
+        let channel = NIOAsyncTestingChannel()
+        channel.localAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 8080)
+        channel.remoteAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 9090)
+
+        try await channel.pipeline.addHandler(Handler())
+
+        XCTAssertNoThrow(try channel.pipeline.handler(type: Handler.self).wait())
     }
 }
 

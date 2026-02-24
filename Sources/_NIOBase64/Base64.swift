@@ -153,8 +153,8 @@ internal enum Base64: Sendable {
         UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "+"), UInt8(ascii: "/"),
     ]
 
-    @usableFromInline
-    static let encodePaddingCharacter: UInt8 = UInt8(ascii: "=")
+    @inlinable
+    static var encodePaddingCharacter: UInt8 { UInt8(ascii: "=") }
 
     @usableFromInline
     static func encode(alphabet: [UInt8], firstByte: UInt8) -> UInt8 {

@@ -20,7 +20,11 @@ import CNIOLinux
 #elseif canImport(Android)
 @preconcurrency import Android
 #endif
+#elseif os(OpenBSD)
+import CNIOOpenBSD
+@preconcurrency import Glibc
 #elseif os(Windows)
+import ucrt
 import let WinSDK.RelationProcessorCore
 
 import let WinSDK.AF_UNSPEC
@@ -69,7 +73,7 @@ final class Box<T> {
 
 extension Box: Sendable where T: Sendable {}
 
-public enum System {
+public enum System: Sendable {
     /// A utility function that returns an estimate of the number of *logical* cores
     /// on the system available for use.
     ///
@@ -117,11 +121,26 @@ public enum System {
         .map { $0.ProcessorMask.nonzeroBitCount }
         .reduce(0, +)
         #elseif os(Linux) || os(Android)
-        if let quota2 = Linux.coreCountCgroup2Restriction() {
-            return quota2
-        } else if let quota = Linux.coreCountCgroup1Restriction() {
-            return quota
-        } else if let cpusetCount = Linux.coreCount(cpuset: Linux.cpuSetPath) {
+        var cpuSetPath: String?
+
+        switch Linux.cgroupVersion {
+        case .v1:
+            if let quota = Linux.coreCountCgroup1Restriction() {
+                return quota
+            }
+            cpuSetPath = Linux.cpuSetPathV1
+        case .v2:
+            if let quota = Linux.coreCountCgroup2Restriction() {
+                return quota
+            }
+            cpuSetPath = Linux.cpuSetPathV2
+        case .none:
+            break
+        }
+
+        if let cpuSetPath,
+            let cpusetCount = Linux.coreCount(cpuset: cpuSetPath)
+        {
             return cpusetCount
         } else {
             return sysconf(CInt(_SC_NPROCESSORS_ONLN))
@@ -269,3 +288,36 @@ extension System {
         return nil
     }
 }
+
+#if os(Windows)
+@usableFromInline
+package enum Windows {
+    @usableFromInline
+    package static func strerror(_ errnoCode: CInt) -> String? {
+        withUnsafeTemporaryAllocation(of: CChar.self, capacity: 256) { ptr in
+            if strerror_s(ptr.baseAddress, ptr.count, errnoCode) == 0 {
+                return String(cString: UnsafePointer(ptr.baseAddress!))
+            }
+            return nil
+        }
+    }
+
+    package static func getenv(_ env: String) -> String? {
+        var count = 0
+        var ptr: UnsafeMutablePointer<CChar>? = nil
+        withUnsafeMutablePointer(to: &ptr) { buffer in
+            // according to docs only EINVAL and ENOMEM are possible here.
+            _ = _dupenv_s(buffer, &count, env)
+        }
+        defer { if let ptr { free(ptr) } }
+        if count > 0, let ptr {
+            let buffer = UnsafeBufferPointer(start: ptr, count: count)
+            return buffer.withMemoryRebound(to: UInt8.self) {
+                String(decoding: $0, as: Unicode.UTF8.self)
+            }
+        } else {
+            return nil
+        }
+    }
+}
+#endif

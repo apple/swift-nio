@@ -13,12 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #if !canImport(Darwin) || os(macOS)
-let crashTestSuites: [String: Any] = [
-    "EventLoopCrashTests": EventLoopCrashTests(),
-    "ByteBufferCrashTests": ByteBufferCrashTests(),
-    "SystemCrashTests": SystemCrashTests(),
-    "HTTPCrashTests": HTTPCrashTests(),
-    "StrictCrashTests": StrictCrashTests(),
-    "LoopBoundTests": LoopBoundTests(),
-]
+func makeCrashTestSuites() -> [String: Any] {
+    [
+        "EventLoopCrashTests": EventLoopCrashTests(),
+        "ByteBufferCrashTests": ByteBufferCrashTests(),
+        "SystemCrashTests": SystemCrashTests(),
+        "HTTPCrashTests": HTTPCrashTests(),
+        "StrictCrashTests": StrictCrashTests(),
+        "LoopBoundTests": LoopBoundTests(),
+    ]
+}
 #endif

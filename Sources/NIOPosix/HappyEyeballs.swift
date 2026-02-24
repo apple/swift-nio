@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 // This module implements Happy Eyeballs 2 (RFC 8305). A few notes should be made about the design.
@@ -67,6 +69,24 @@ public struct NIOConnectionError: Error {
     fileprivate init(host: String, port: Int) {
         self.host = host
         self.port = port
+    }
+}
+
+extension NIOConnectionError: CustomStringConvertible {
+    public var description: String {
+        if let dnsError = (self.dnsAError ?? self.dnsAAAAError) {
+            return "DNS error: \(dnsError)"
+        }
+
+        if !self.connectionErrors.isEmpty {
+            let descriptions = self.connectionErrors.map {
+                String(describing: $0)
+            }
+
+            return "Connection errors: \(descriptions.joined(separator: ", "))"
+        }
+
+        return "NIOConnectionError: unknown"
     }
 }
 
@@ -189,9 +209,10 @@ internal struct HappyEyeballsConnector<ChannelBuilderResult: Sendable>: Sendable
         connectTimeout: TimeAmount,
         resolutionDelay: TimeAmount = .milliseconds(50),
         connectionDelay: TimeAmount = .milliseconds(250),
-        channelBuilderCallback: @escaping @Sendable (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<
-            (Channel, ChannelBuilderResult)
-        >
+        channelBuilderCallback:
+            @escaping @Sendable (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<
+                (Channel, ChannelBuilderResult)
+            >
     ) {
         self.resolver = resolver
         self.loop = loop
@@ -739,3 +760,4 @@ private final class HappyEyeballsConnectorRunner<ChannelBuilderResult: Sendable>
         processInput(.resolutionDelayElapsed)
     }
 }
+#endif  // !os(WASI)

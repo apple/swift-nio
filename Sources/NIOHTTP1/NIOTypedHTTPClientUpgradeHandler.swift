@@ -11,7 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if !canImport(Darwin) || swift(>=5.10)
 import NIOCore
 
 /// An object that implements `NIOTypedHTTPClientProtocolUpgrader` knows how to handle HTTP upgrade to
@@ -128,6 +127,14 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
 
     public func handlerAdded(context: ChannelHandlerContext) {
         self._upgradeResultPromise = context.eventLoop.makePromise(of: UpgradeResult.self)
+        if context.channel.isActive {
+            switch self.stateMachine.channelActive() {
+            case .writeUpgradeRequest:
+                self.writeUpgradeRequest(context: context)
+            case .none:
+                break
+            }
+        }
     }
 
     public func handlerRemoved(context: ChannelHandlerContext) {
@@ -142,10 +149,7 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
     public func channelActive(context: ChannelHandlerContext) {
         switch self.stateMachine.channelActive() {
         case .writeUpgradeRequest:
-            context.write(Self.wrapOutboundOut(.head(self.upgradeRequestHead)), promise: nil)
-            context.write(Self.wrapOutboundOut(.body(.byteBuffer(.init()))), promise: nil)
-            context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
-
+            self.writeUpgradeRequest(context: context)
         case .none:
             break
         }
@@ -180,7 +184,7 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         switch self.stateMachine.channelReadData(data) {
         case .unwrapData:
-            let responsePart = Self.unwrapInboundIn(data)
+            let responsePart = NIOTypedHTTPClientUpgradeHandler.unwrapInboundIn(data)
             self.channelRead(context: context, responsePart: responsePart)
 
         case .fireChannelRead:
@@ -189,6 +193,20 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
         case .none:
             break
         }
+    }
+
+    public func errorCaught(context: ChannelHandlerContext, error: any Error) {
+        self.upgradeResultPromise.fail(error)
+        context.fireErrorCaught(error)
+    }
+
+    private func writeUpgradeRequest(context: ChannelHandlerContext) {
+        context.write(
+            NIOTypedHTTPClientUpgradeHandler.wrapOutboundOut(.head(self.upgradeRequestHead)),
+            promise: nil
+        )
+        context.write(NIOTypedHTTPClientUpgradeHandler.wrapOutboundOut(.body(.byteBuffer(.init()))), promise: nil)
+        context.writeAndFlush(NIOTypedHTTPClientUpgradeHandler.wrapOutboundOut(.end(nil)), promise: nil)
     }
 
     private func channelRead(context: ChannelHandlerContext, responsePart: HTTPClientResponsePart) {
@@ -291,5 +309,3 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
 
 @available(*, unavailable)
 extension NIOTypedHTTPClientUpgradeHandler: Sendable {}
-
-#endif

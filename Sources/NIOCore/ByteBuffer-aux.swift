@@ -58,6 +58,43 @@ extension ByteBuffer {
         return result
     }
 
+    #if compiler(>=6.2)
+    @inlinable
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    public mutating func readInlineArray<
+        let count: Int,
+        IntegerType: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: InlineArray<count, IntegerType>.Type = InlineArray<count, IntegerType>.self
+    ) -> InlineArray<count, IntegerType>? {
+        // use stride to account for padding bytes
+        let stride = MemoryLayout<IntegerType>.stride
+        let bytesRequired = stride * count
+
+        guard self.readableBytes >= bytesRequired else {
+            return nil
+        }
+
+        let inlineArray = InlineArray<count, IntegerType> { (outputSpan: inout OutputSpan<IntegerType>) in
+            for index in 0..<count {
+                // already made sure of 'self.readableBytes >= bytesRequired' above,
+                // so this is safe to force-unwrap as it's guaranteed to exist
+                let integer = self.getInteger(
+                    // this is less than 'bytesRequired' so is safe to multiply
+                    at: stride &* index,
+                    endianness: endianness,
+                    as: IntegerType.self
+                )!
+                outputSpan.append(integer)
+            }
+        }
+        // already made sure of 'self.readableBytes >= bytesRequired' above
+        self._moveReaderIndex(forwardBy: bytesRequired)
+        return inlineArray
+    }
+    #endif
+
     /// Returns the Bytes at the current reader index without advancing it.
     ///
     /// This method is equivalent to calling `getBytes(at: readerIndex, ...)`
@@ -426,8 +463,12 @@ extension ByteBuffer {
     /// - Returns: The number of bytes read.
     @discardableResult
     @inlinable
-    public mutating func readWithUnsafeReadableBytes(_ body: (UnsafeRawBufferPointer) throws -> Int) rethrows -> Int {
-        let bytesRead = try self.withUnsafeReadableBytes({ try body($0) })
+    public mutating func readWithUnsafeReadableBytes<ErrorType: Error>(
+        _ body: (UnsafeRawBufferPointer) throws(ErrorType) -> Int
+    ) throws(ErrorType) -> Int {
+        let bytesRead = try self.withUnsafeReadableBytes({ (ptr: UnsafeRawBufferPointer) throws(ErrorType) -> Int in
+            try body(ptr)
+        })
         self._moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
     }
@@ -442,10 +483,12 @@ extension ByteBuffer {
     /// - Returns: The number of bytes read.
     @discardableResult
     @inlinable
-    public mutating func readWithUnsafeMutableReadableBytes(
-        _ body: (UnsafeMutableRawBufferPointer) throws -> Int
-    ) rethrows -> Int {
-        let bytesRead = try self.withUnsafeMutableReadableBytes({ try body($0) })
+    public mutating func readWithUnsafeMutableReadableBytes<ErrorType: Error>(
+        _ body: (UnsafeMutableRawBufferPointer) throws(ErrorType) -> Int
+    ) throws(ErrorType) -> Int {
+        let bytesRead = try self.withUnsafeMutableReadableBytes({
+            (ptr: UnsafeMutableRawBufferPointer) throws(ErrorType) -> Int in try body(ptr)
+        })
         self._moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
     }
@@ -516,6 +559,22 @@ extension ByteBuffer {
         self._moveWriterIndex(forwardBy: written)
         return written
     }
+
+    #if compiler(>=6.2)
+    /// Write `bytes` into this `ByteBuffer`. Moves the writer index forward by the number of bytes written.
+    ///
+    /// - Parameters:
+    ///   - bytes: A `RawSpan`
+    /// - Returns: The number of bytes written or `bytes.byteCount`.
+    @discardableResult
+    @inlinable
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    public mutating func writeBytes(_ bytes: RawSpan) -> Int {
+        let written = self.setBytes(bytes, at: self.writerIndex)
+        self._moveWriterIndex(forwardBy: written)
+        return written
+    }
+    #endif
 
     /// Writes `byte` `count` times. Moves the writer index forward by the number of bytes written.
     ///
@@ -603,10 +662,12 @@ extension ByteBuffer {
     ///   - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
     /// - Returns: The value `body` returned in the second tuple component.
     @inlinable
-    public mutating func readWithUnsafeMutableReadableBytes<T>(
-        _ body: (UnsafeMutableRawBufferPointer) throws -> (Int, T)
-    ) rethrows -> T {
-        let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes({ try body($0) })
+    public mutating func readWithUnsafeMutableReadableBytes<T, ErrorType: Error>(
+        _ body: (UnsafeMutableRawBufferPointer) throws(ErrorType) -> (Int, T)
+    ) throws(ErrorType) -> T {
+        let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes({
+            (ptr: UnsafeMutableRawBufferPointer) throws(ErrorType) -> (Int, T) in try body(ptr)
+        })
         self._moveReaderIndex(forwardBy: bytesRead)
         return ret
     }
@@ -620,10 +681,12 @@ extension ByteBuffer {
     ///   - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
     /// - Returns: The value `body` returned in the second tuple component.
     @inlinable
-    public mutating func readWithUnsafeReadableBytes<T>(
-        _ body: (UnsafeRawBufferPointer) throws -> (Int, T)
-    ) rethrows -> T {
-        let (bytesRead, ret) = try self.withUnsafeReadableBytes({ try body($0) })
+    public mutating func readWithUnsafeReadableBytes<T, ErrorType: Error>(
+        _ body: (UnsafeRawBufferPointer) throws(ErrorType) -> (Int, T)
+    ) throws(ErrorType) -> T {
+        let (bytesRead, ret) = try self.withUnsafeReadableBytes({
+            (ptr: UnsafeRawBufferPointer) throws(ErrorType) -> (Int, T) in try body(ptr)
+        })
         self._moveReaderIndex(forwardBy: bytesRead)
         return ret
     }
@@ -769,6 +832,36 @@ extension ByteBuffer {
         self = ByteBufferAllocator().buffer(dispatchData: dispatchData)
     }
     #endif
+
+    #if compiler(>=6.2)
+    /// Create a fresh ``ByteBuffer`` with a minimum size, and initializing it safely via an `OutputSpan`.
+    ///
+    /// This will allocate a new ``ByteBuffer`` with at least `capacity` bytes of storage, and then calls
+    /// `initializer` with an `OutputSpan` over the entire allocated storage. This is a convenient method
+    /// to initialize a buffer directly and safely in a single allocation, including from C code.
+    ///
+    /// Once this call returns, the buffer will have its ``ByteBuffer/writerIndex`` appropriately advanced to encompass
+    /// any memory initialized by the `initializer`. Uninitialized memory will be after the ``ByteBuffer/writerIndex``,
+    /// available for subsequent use.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` we
+    ///         recommend using `channel.allocator.buffer(capacity:initializingWith:)`. Or if you want to write multiple items into
+    ///         the buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
+    ///         size followed by a `write(minimumWritableBytes:initializingWith:)` instead of using this method. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    ///
+    /// - parameters:
+    ///     - capacity: The minimum initial space to allocate for the buffer.
+    ///     - initializer: The initializer that will be invoked to initialize the allocated memory.
+    @inlinable
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    public init<ErrorType: Error>(
+        initialCapacity capacity: Int,
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws(ErrorType) -> Void
+    ) throws(ErrorType) {
+        self = try ByteBufferAllocator().buffer(capacity: capacity, initializingWith: initializer)
+    }
+    #endif
 }
 
 extension ByteBuffer: Codable {
@@ -908,6 +1001,32 @@ extension ByteBufferAllocator {
         return buffer
     }
     #endif
+
+    #if compiler(>=6.2)
+    /// Create a fresh ``ByteBuffer`` with a minimum size, and initializing it safely via an `OutputSpan`.
+    ///
+    /// This will allocate a new ``ByteBuffer`` with at least `capacity` bytes of storage, and then calls
+    /// `initializer` with an `OutputSpan` over the entire allocated storage. This is a convenient method
+    /// to initialize a buffer directly and safely in a single allocation, including from C code.
+    ///
+    /// Once this call returns, the buffer will have its ``ByteBuffer/writerIndex`` appropriately advanced to encompass
+    /// any memory initialized by the `initializer`. Uninitialized memory will be after the ``ByteBuffer/writerIndex``,
+    /// available for subsequent use.
+    ///
+    /// - parameters:
+    ///     - capacity: The minimum initial space to allocate for the buffer.
+    ///     - initializer: The initializer that will be invoked to initialize the allocated memory.
+    @inlinable
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    public func buffer<ErrorType: Error>(
+        capacity: Int,
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws(ErrorType) -> Void
+    ) throws(ErrorType) -> ByteBuffer {
+        var buffer = self.buffer(capacity: capacity)
+        try buffer.writeWithOutputRawSpan(minimumWritableBytes: capacity, initializingWith: initializer)
+        return buffer
+    }
+    #endif
 }
 
 extension Optional where Wrapped == ByteBuffer {
@@ -950,7 +1069,6 @@ extension Optional where Wrapped == ByteBuffer {
     }
 }
 
-#if compiler(>=6)
 extension ByteBuffer {
     /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.
     /// The selected bytes must be readable or else `nil` will be returned.
@@ -964,7 +1082,7 @@ extension ByteBuffer {
     /// - Returns: A `String` value containing the UTF-8 decoded selected bytes from this `ByteBuffer` or `nil` if
     ///            the requested bytes are not readable.
     @inlinable
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     public func getUTF8ValidatedString(at index: Int, length: Int) throws -> String? {
         guard let slice = self.getSlice(at: index, length: length) else {
             return nil
@@ -990,7 +1108,7 @@ extension ByteBuffer {
     ///   - length: The number of bytes making up the string.
     /// - Returns: A `String` value deserialized from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
     @inlinable
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     public mutating func readUTF8ValidatedString(length: Int) throws -> String? {
         guard let result = try self.getUTF8ValidatedString(at: self.readerIndex, length: length) else {
             return nil
@@ -1019,9 +1137,8 @@ extension ByteBuffer {
     /// - Returns: A validated String, or `nil` if the requested bytes are not readable.
     /// - Throws: `ReadUTF8ValidationError.invalidUTF8` if the bytes are not valid UTF8.
     @inlinable
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     public func peekUTF8ValidatedString(length: Int) throws -> String? {
         try self.getUTF8ValidatedString(at: self.readerIndex, length: length)
     }
 }
-#endif  // compiler(>=6)

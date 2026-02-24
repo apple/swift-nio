@@ -35,6 +35,10 @@ import CNIOWindows
 #error("The system call helpers module was unable to identify your C library.")
 #endif
 
+#if os(Linux) || os(Android)
+import CNIOLinux
+#endif
+
 #if os(Windows)
 private let sysDup: @convention(c) (CInt) -> CInt = _dup
 private let sysClose: @convention(c) (CInt) -> CInt = _close
@@ -72,11 +76,18 @@ internal func isUnacceptableErrno(_ code: Int32) -> Bool {
 
 @inlinable
 internal func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) {
+    guard isUnacceptableErrno(err) else {
+        return
+    }
+
+    #if os(Windows)
+    let errorDesc = Windows.strerror(err)
+    #else
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
-    precondition(
-        !isUnacceptableErrno(err),
-        "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))"
-    )
+    let errorDesc = strerror(err).flatMap { String(cString: $0) }
+    #endif
+
+    preconditionFailure("unacceptable errno \(err) \(errorDesc ?? "Broken strerror, unknown error") in \(function))")
 }
 
 // Sorry, we really try hard to not use underscored attributes. In this case
@@ -225,5 +236,18 @@ enum SystemCalls {
         }
     }
     #endif
+
+    #if os(Linux) || os(Android)
+    @inline(never)
+    @usableFromInline
+    internal static func statfs_ftype(
+        _ path: UnsafePointer<CChar>
+    ) throws -> f_type_t {
+        try syscall(blocking: false) {
+            CNIOLinux_statfs_ftype(path)
+        }.result
+    }
+    #endif
+
     #endif  // !os(WASI)
 }

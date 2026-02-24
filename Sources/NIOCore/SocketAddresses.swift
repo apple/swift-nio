@@ -52,6 +52,9 @@ import Darwin
 @preconcurrency import Android
 #endif
 import CNIOLinux
+#elseif os(OpenBSD)
+@preconcurrency import Glibc
+import CNIOOpenBSD
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
 #else
@@ -474,7 +477,8 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
             try String(port).withCString(encodedAs: UTF16.self) { wszPort in
                 var pResult: UnsafeMutablePointer<ADDRINFOW>?
 
-                guard GetAddrInfoW(wszHost, wszPort, nil, &pResult) == 0 else {
+                let result = GetAddrInfoW(wszHost, wszPort, nil, &pResult)
+                guard result == 0 else {
                     throw SocketAddressError.unknown(host: host, port: port)
                 }
 

@@ -145,15 +145,23 @@ As explained before, you can change your working directory in the temporary dire
 
 Now you should have a full Instruments allocations trace of the test run. To make sense of what's going on, switch the allocation lifespan from "Created & Persisted" to "Created & Destroyed". After that you should be able to see the type of the allocation and how many times it got allocated. Clicking on the little arrow next to the type name will reveal each individual allocation of this type and the responsible stack trace.
 
-### Debugging with `malloc-aggregation.d` (macOS only)
+### Debugging with `malloc-aggregation.d` or `malloc-aggreation.bt`
 
-SwiftNIO ships a `dtrace` script called `dev/malloc-aggregation.d` which can give you an aggregation of all allocations by stack trace. This means that you will see the stack trace of each allocation that happened and how many times this particular stack trace allocated.
+SwiftNIO ships a `dtrace` script called `dev/malloc-aggregation.d` which can give you an aggregation of all allocations by stack trace, and an equivalent `bpftrace` script called `dev/malloc-aggregation.bt`. This means that you will see the stack trace of each allocation that happened and how many times this particular stack trace allocated.
 
-Here's an example of how to use this script:
+Here's an example of how to use the `dtrace` script:
 
 ```
 sudo ~/path/to/swift-nio/dev/malloc-aggregation.d -c .build/release/test_future_lots_of_callbacks
 ```
+
+The `bpftrace` script can be invoked very similarly:
+
+```
+sudo ~/path/to/swift-nio/dev/malloc-aggregation.bt -c .build/release/test_future_lots_of_callbacks
+```
+
+However, for `bpftrace` it tends to work better if pid-based tracing is used instead. This is because `bpftrace` has a [known limitation where symbolication fails if the process being traced has existed before `bpftrace` does](https://github.com/bpftrace/bpftrace/issues/2118#issuecomment-1008694821). This can still be resolved using tools like `llvm-symbolizer`, but it's trickier.
 
 The output will look something like
 
@@ -178,7 +186,9 @@ repeated many times. Each block means that the specific stack trace is responsib
 
 When you are looking at allocations in the setup of the test the numbers may be split into one allocation set of 10000 and another of 1000 - for measured code vs warm up run.
 
-The output from `malloc-aggreation.d` can also be diffed using the `stackdiff-dtrace.py` script. This can be helpful to track down where additional allocations were made. The `stdout` from `malloc-aggregation.d` for the two runs to compare should be written to files, and then passsed to `stackdiff-dtrace.py`:
+The output from `malloc-aggreation.d` can also be diffed using the `stackdiff-dtrace.py` script. This can be helpful to track down where additional allocations were made. Right now this strategy doesn't work for `bpftrace`, but a simple modification to the `stackdiff-dtrace` script should enable it.
+
+The `stdout` from `malloc-aggregation.d` for the two runs to compare should be written to files, and then passsed to `stackdiff-dtrace.py`:
 
 ```bash
 ~/path/to/swift-nio/dev/stackdiff-dtrace.py stack_aggregation.old stack_aggregation.new
@@ -312,9 +322,9 @@ before: 10000, after: 20000
 
 Now we see there's another stacktrace in the `AFTER` section which has no corresponding stacktrace in `BEFORE`. From the stack we can see it's originating from `doRequests(group:number:)`. In this instance we were working on options applied in this function so it appears we have added allocations.  We have also increased the number of allocations which are reported in the different numbers section where stack traces have been paired but with different numbers of allocations.
 
-### Debugging with 'heaptrack' (Linux)
+### Debugging with 'heaptrack'
 
-Unfortunately we don't have dtrace or Instruments on Linux, but there is the [heaptrack](https://github.com/KDE/heaptrack) tool which supports diff analysis of two versions.
+In some cases we don't have access to Linux kernel headers, which prevents us from using `bpftrace`, but there is the [heaptrack](https://github.com/KDE/heaptrack) tool which supports diff analysis of two versions.
 
 Tested on Ubuntu 20.04 (and likely working on other distributions) Install it with:
 

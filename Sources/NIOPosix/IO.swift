@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 extension IOResult where T: FixedWidthInteger {
     var result: T {
         switch self {
@@ -33,3 +35,17 @@ enum IOResult<T: Equatable>: Equatable {
     /// Signals that the IO operation was completed.
     case processed(T)
 }
+
+extension IOResult: Sendable where T: Sendable {}
+
+extension IOResult {
+    func map<NewT>(_ body: (T) -> NewT) -> IOResult<NewT> {
+        switch self {
+        case .processed(let t):
+            return .processed(body(t))
+        case .wouldBlock(let t):
+            return .wouldBlock(body(t))
+        }
+    }
+}
+#endif  // !os(WASI)

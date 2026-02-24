@@ -154,6 +154,7 @@ public final class ChannelPipeline: ChannelInvoker {
     private var _channel: Optional<Channel>
 
     /// The `Channel` that this `ChannelPipeline` belongs to.
+    @usableFromInline
     internal var channel: Channel {
         self.eventLoop.assertInEventLoop()
         assert(self._channel != nil || self.destroyed)
@@ -534,7 +535,10 @@ public final class ChannelPipeline: ChannelInvoker {
     ///   - handlerType: The type of the handler to search for.
     /// - Returns: the `EventLoopFuture` which will be notified once the the operation completes.
     @inlinable
-    public func context<Handler: ChannelHandler>(handlerType: Handler.Type) -> EventLoopFuture<ChannelHandlerContext> {
+    @preconcurrency
+    public func context<Handler: ChannelHandler & _NIOCoreSendableMetatype>(
+        handlerType: Handler.Type
+    ) -> EventLoopFuture<ChannelHandlerContext> {
         let promise = self.eventLoop.makePromise(of: ChannelHandlerContext.self)
 
         if self.eventLoop.inEventLoop {
@@ -555,7 +559,10 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - Returns: An ``EventLoopFuture`` that is succeeded if a handler of the given type is contained in the pipeline. Otherwise
     /// the future will be failed with an error.
     @inlinable
-    public func containsHandler<Handler: ChannelHandler>(type: Handler.Type) -> EventLoopFuture<Void> {
+    @preconcurrency
+    public func containsHandler<Handler: ChannelHandler & _NIOCoreSendableMetatype>(
+        type: Handler.Type
+    ) -> EventLoopFuture<Void> {
         self.handler(type: type).map { _ in () }
     }
 
@@ -1599,6 +1606,72 @@ extension ChannelPipeline {
             self.eventLoop.assertInEventLoop()
             self._pipeline.triggerUserOutboundEvent0(event, promise: promise)
         }
+
+        /// Provides scoped access to the underlying transport, if the channel supports it.
+        ///
+        /// This is an advanced API for reading or manipulating the underlying transport that backs a channel. Users
+        /// must not close the transport or invalidate any invariants that the channel relies upon for its operation.
+        ///
+        /// Not all channels support access to the underlying channel. If the channel does not support this API, the
+        /// closure is not called and this function immediately returns `nil`.
+        ///
+        /// Note that you must call this API with an appropriate closure, or otherwise explicitly specify the correct
+        /// transport type prarameter, in order for the closure to be run. Calling this function such that the compiler
+        /// infers a type for the transport closure parameter that differs from the channel implementation will result
+        /// in the closure not being run and this function will return `nil`.
+        ///
+        /// For example, for socket-based channels, that expose the underlying socket handle:
+        ///
+        /// ```swift
+        /// try channel.pipeline.syncOperations.withUnsafeTransportIfAvailable { transport in
+        ///     // This closure is called.
+        ///     transport == NIOBSDSocketHandle.invalid
+        /// }
+        ///
+        /// try channel.pipeline.syncOperations.withUnsafeTransportIfAvailable { (_: NIOBSDSocket.Handle) in
+        ///     // This closure is called.
+        ///     return
+        /// }
+        ///
+        /// try channel.pipeline.syncOperations.withUnsafeTransportIfAvailable(of: NIOBSDSocket.Handle.self) { _ in
+        ///     // This closure is called.
+        ///     return
+        /// }
+        ///
+        /// try channel.pipeline.syncOperations.withUnsafeTransportIfAvailable {
+        ///     // This closure is NOT called.
+        ///     return
+        /// }
+        ///
+        /// try channel.pipeline.syncOperations.withUnsafeTransportIfAvailable { (_: Any.self) in
+        ///     // This closure is NOT called.
+        ///     return
+        /// }
+        ///
+        /// try channel.pipeline.syncOperations.withUnsafeTransportIfAvailable(of: Any.self) { _ in
+        ///     // This closure is NOT called.
+        ///     return
+        /// }
+        /// ```
+        ///
+        /// - Parameters:
+        ///   - type: The expected transport type the channel makes available.
+        ///   - body: /// A closure that takes the underlying transport, if the channel supports this operation.
+        /// - Returns: The value returned by the closure, or `nil` if the channel does not expose its transport.
+        /// - Throws: If there was an error accessing the underlying transport, or an error was thrown by the closure.
+        @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+        @inlinable
+        public func withUnsafeTransportIfAvailable<Transport, Result>(
+            of type: Transport.Type = Transport.self,
+            _ body: (_ transport: Transport) throws -> Result
+        ) throws -> Result? {
+            self.eventLoop.assertInEventLoop()
+            guard let core = self._pipeline.channel._channelCore as? any NIOTransportAccessibleChannelCore<Transport>
+            else {
+                return nil
+            }
+            return try core.withUnsafeTransport(body)
+        }
     }
 
     /// Returns a view of operations which can be performed synchronously on this pipeline. All
@@ -2424,7 +2497,10 @@ extension ChannelPipeline: CustomDebugStringConvertible {
     /// - Parameters:
     ///   - type: the type of `ChannelHandler` to return.
     @inlinable
-    public func handler<Handler: ChannelHandler>(type _: Handler.Type) -> EventLoopFuture<Handler> {
+    @preconcurrency
+    public func handler<Handler: ChannelHandler & _NIOCoreSendableMetatype>(
+        type _: Handler.Type
+    ) -> EventLoopFuture<Handler> {
         self.context(handlerType: Handler.self).map { context in
             guard let typedContext = context.handler as? Handler else {
                 preconditionFailure(

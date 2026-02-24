@@ -215,9 +215,31 @@ const int CNIOLinux_AT_EMPTY_PATH = AT_EMPTY_PATH;
 const unsigned long CNIOLinux_UTIME_OMIT = UTIME_OMIT;
 const unsigned long CNIOLinux_UTIME_NOW = UTIME_NOW;
 
+#ifndef TMPFS_MAGIC
+#define TMPFS_MAGIC 0x01021994
+#endif
+#ifndef CGROUP2_SUPER_MAGIC
+#define CGROUP2_SUPER_MAGIC 0x63677270
+#endif
+
+const f_type_t CNIOLinux_TMPFS_MAGIC = TMPFS_MAGIC;
+const f_type_t CNIOLinux_CGROUP2_SUPER_MAGIC = CGROUP2_SUPER_MAGIC;
+
+f_type_t CNIOLinux_statfs_ftype(const char *path) {
+    struct statfs fs;
+    f_type_t f_type = 0;
+    if (statfs(path, &fs) == 0) {
+        f_type = fs.f_type;
+    }
+    return f_type;
+}
 
 #ifdef UDP_MAX_SEGMENTS
 const long CNIOLinux_UDP_MAX_SEGMENTS = UDP_MAX_SEGMENTS;
 #endif
 const long CNIOLinux_UDP_MAX_SEGMENTS = -1;
+
+FTS *CNIOLinux_fts_open(char * const *path_argv, int options, int (*compar)(const FTSENT **, const FTSENT **)) {
+    return fts_open(path_argv, options, compar);
+}
 #endif

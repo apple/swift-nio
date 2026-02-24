@@ -166,3 +166,6 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncChannelOutboundWriter.TestSink: Sendable {}
+
+@available(*, unavailable)
+extension NIOAsyncChannelOutboundWriter.TestSink.AsyncIterator: Sendable {}
