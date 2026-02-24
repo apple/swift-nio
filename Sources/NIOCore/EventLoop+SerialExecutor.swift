@@ -90,7 +90,6 @@ extension NIODefaultEventLoopExecutor: SerialExecutor {
     }
 }
 
-#if compiler(>=6.0)
 /// A helper protocol that can be mixed in to a NIO ``EventLoop`` to provide an
 /// automatic conformance to `TaskExecutor`.
 ///
@@ -119,4 +118,3 @@ extension NIODefaultEventLoopExecutor: TaskExecutor {
         UnownedTaskExecutor(ordinary: self)
     }
 }
-#endif
