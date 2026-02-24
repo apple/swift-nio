@@ -192,6 +192,15 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     private var metricsDelegateState: MetricsDelegateState?
 
     @usableFromInline
+    var _taskExecutor: SerialTaskEventLoopExecutor!
+
+    @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+    @inlinable
+    var taskExecutor: any TaskExecutor {
+        self._taskExecutor
+    }
+
+    @usableFromInline
     internal func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
         self.promiseCreationStoreLock.withLock {
@@ -280,6 +289,8 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         self._succeededVoidFuture = voidPromise.futureResult
         preconditionInEventLoop()
         precondition(self._uniqueID.matchesCurrentThread)
+
+        self._taskExecutor = SerialTaskEventLoopExecutor(self)
     }
 
     deinit {
@@ -468,7 +479,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     func enqueue(_ job: consuming ExecutorJob) {
         // nothing we can do if we fail enqueuing here.
         let erasedJob = ErasedUnownedJob(job: UnownedJob(job))
-        try? self._schedule0(.immediate(.unownedJob(erasedJob)))
+        try? self._schedule0(.immediate(.unownedSerialJob(erasedJob)))
     }
 
     /// Add the `ScheduledTask` to be executed.
@@ -616,7 +627,13 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
             switch task {
             case .function(let function):
                 function()
-            case .unownedJob(let erasedUnownedJob):
+            case .unownedTaskJob(let erasedUnownedJob):
+                if #available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *) {
+                    erasedUnownedJob.unownedJob.runSynchronously(on: self.taskExecutor.asUnownedTaskExecutor())
+                } else {
+                    fatalError("Tried to run an UnownedJob without runtime support")
+                }
+            case .unownedSerialJob(let erasedUnownedJob):
                 if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
                     erasedUnownedJob.unownedJob.runSynchronously(on: self.asUnownedSerialExecutor())
                 } else {
@@ -1113,10 +1130,14 @@ extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvert
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
 extension SelectableEventLoop: NIOSerialEventLoopExecutor {}
 
+//@available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+//extension SelectableEventLoop: NIOTaskEventLoopExecutor {}
+
 @usableFromInline
 enum UnderlyingTask {
     case function(() -> Void)
-    case unownedJob(ErasedUnownedJob)
+    case unownedSerialJob(ErasedUnownedJob)
+    case unownedTaskJob(ErasedUnownedJob)
     case callback(any NIOScheduledCallbackHandler)
 }
 
@@ -1250,8 +1271,34 @@ struct SelectableEventLoopUniqueID: Sendable {
     }
 }
 
-// MARK: TaskExecutor conformance
+@usableFromInline
+package final class SerialTaskEventLoopExecutor {
+    @usableFromInline
+    let loop: SelectableEventLoop
+
+    @inlinable
+    init(_ loop: SelectableEventLoop) {
+        self.loop = loop
+    }
+}
+
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-extension SelectableEventLoop: NIOTaskEventLoopExecutor {}
+extension SerialTaskEventLoopExecutor: TaskExecutor {
+    @inlinable
+    public func enqueue(_ job: consuming ExecutorJob) {
+        let erasedJob = ErasedUnownedJob(job: UnownedJob(job))
+        try? self.loop._schedule0(.immediate(.unownedTaskJob(erasedJob)))
+    }
+
+    @inlinable
+    public func asUnownedTaskExecutor() -> UnownedTaskExecutor {
+        UnownedTaskExecutor(ordinary: self)
+    }
+
+    @inlinable
+    public func isSameExclusiveExecutionContext(other: SerialTaskEventLoopExecutor) -> Bool {
+        self.loop === other.loop
+    }
+}
 
 #endif  // !os(WASI)

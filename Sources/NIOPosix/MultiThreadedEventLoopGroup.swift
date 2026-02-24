@@ -537,6 +537,7 @@ struct ErasedUnownedJob: Sendable {
     let erasedJob: any Sendable
 
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    @inlinable
     init(job: UnownedJob) {
         self.erasedJob = job
     }

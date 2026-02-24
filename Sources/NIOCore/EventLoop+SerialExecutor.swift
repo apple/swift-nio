@@ -62,7 +62,7 @@ extension NIOSerialEventLoopExecutor {
 /// This type is not recommended for use because it risks problems with unowned
 /// executors. Adopters are recommended to conform their own event loop
 /// types to `SerialExecutor`.
-package final class NIODefaultEventLoopExecutor {
+package final class NIODefaultSerialEventLoopExecutor {
     @usableFromInline
     let loop: EventLoop
 
@@ -73,19 +73,19 @@ package final class NIODefaultEventLoopExecutor {
 }
 
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
-extension NIODefaultEventLoopExecutor: SerialExecutor {
+extension NIODefaultSerialEventLoopExecutor: SerialExecutor {
     @inlinable
-    package func enqueue(_ job: consuming ExecutorJob) {
+    public func enqueue(_ job: consuming ExecutorJob) {
         self.loop.enqueue(job)
     }
 
     @inlinable
-    package func asUnownedSerialExecutor() -> UnownedSerialExecutor {
+    public func asUnownedSerialExecutor() -> UnownedSerialExecutor {
         UnownedSerialExecutor(complexEquality: self)
     }
 
     @inlinable
-    package func isSameExclusiveExecutionContext(other: NIODefaultEventLoopExecutor) -> Bool {
+    public func isSameExclusiveExecutionContext(other: NIODefaultSerialEventLoopExecutor) -> Bool {
         self.loop === other.loop
     }
 }
@@ -96,7 +96,7 @@ extension NIODefaultEventLoopExecutor: SerialExecutor {
 /// Implementers of `EventLoop` should consider conforming to this protocol as
 /// well on Swift 6.0 and later.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-public protocol NIOTaskEventLoopExecutor: NIOSerialEventLoopExecutor & TaskExecutor {}
+public protocol NIOTaskEventLoopExecutor: EventLoop & TaskExecutor {}
 
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension NIOTaskEventLoopExecutor {
@@ -111,10 +111,31 @@ extension NIOTaskEventLoopExecutor {
     }
 }
 
+@usableFromInline
+package final class NIODefaultTaskEventLoopExecutor {
+    @usableFromInline
+    let loop: EventLoop
+
+    @inlinable
+    package init(_ loop: EventLoop) {
+        self.loop = loop
+    }
+}
+
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-extension NIODefaultEventLoopExecutor: TaskExecutor {
+extension NIODefaultTaskEventLoopExecutor: TaskExecutor {
+    @inlinable
+    public func enqueue(_ job: consuming ExecutorJob) {
+        self.loop.enqueue(job)
+    }
+
     @inlinable
     public func asUnownedTaskExecutor() -> UnownedTaskExecutor {
         UnownedTaskExecutor(ordinary: self)
+    }
+
+    @inlinable
+    public func isSameExclusiveExecutionContext(other: NIODefaultTaskEventLoopExecutor) -> Bool {
+        self.loop === other.loop
     }
 }
