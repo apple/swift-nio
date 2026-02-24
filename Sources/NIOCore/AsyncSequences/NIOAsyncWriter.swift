@@ -573,8 +573,8 @@ extension NIOAsyncWriter {
                     //
                     // Within a thread there is no possibility of re-ordering as the call only
                     // returns once the write has been yielded.
-                    return try await withCheckedThrowingContinuation {
-                        (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
+                    return try await withNIOUnsafeThrowingContinuation {
+                        (continuation: NIOUnsafeContinuation<StateMachine.YieldResult, Error>) in
                         let (action, didSuspend) = self._state.withLockedValue {
                             state -> (NIOAsyncWriter.StateMachine.YieldAction, (@Sendable () -> Void)?) in
                             let yieldAction = state.stateMachine.yield(yieldID: yieldID)
@@ -679,8 +679,8 @@ extension NIOAsyncWriter {
                     //
                     // Within a thread there is no possibility of re-ordering as the call only
                     // returns once the write has been yielded.
-                    return try await withCheckedThrowingContinuation {
-                        (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
+                    return try await withNIOUnsafeThrowingContinuation {
+                        (continuation: NIOUnsafeContinuation<StateMachine.YieldResult, Error>) in
                         let (action, didSuspend) = self._state.withLockedValue {
                             state -> (NIOAsyncWriter.StateMachine.YieldAction, (@Sendable () -> Void)?) in
                             let yieldAction = state.stateMachine.yield(yieldID: yieldID)
@@ -808,10 +808,10 @@ extension NIOAsyncWriter {
             /// The yield's produced sequence of elements.
             /// The yield's continuation.
             @usableFromInline
-            var continuation: CheckedContinuation<YieldResult, Error>
+            var continuation: NIOUnsafeContinuation<YieldResult, Error>
 
             @inlinable
-            init(yieldID: YieldID, continuation: CheckedContinuation<YieldResult, Error>) {
+            init(yieldID: YieldID, continuation: NIOUnsafeContinuation<YieldResult, Error>) {
                 self.yieldID = yieldID
                 self.continuation = continuation
             }
@@ -1223,7 +1223,7 @@ extension NIOAsyncWriter {
         /// This method is called as a result of the above `yield` method if it decided that the task needs to get suspended.
         @inlinable
         internal mutating func yield(
-            continuation: CheckedContinuation<YieldResult, Error>,
+            continuation: NIOUnsafeContinuation<YieldResult, Error>,
             yieldID: YieldID
         ) -> YieldWithContinuationAction {
             switch self._state {
@@ -1325,7 +1325,7 @@ extension NIOAsyncWriter {
         @usableFromInline
         enum CancelAction: Sendable {
             /// Indicates that the continuation should be resumed with a `CancellationError`.
-            case resumeContinuationWithCancellationError(CheckedContinuation<YieldResult, Error>)
+            case resumeContinuationWithCancellationError(NIOUnsafeContinuation<YieldResult, Error>)
             /// Indicates that nothing should be done.
             case none
         }

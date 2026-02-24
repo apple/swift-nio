@@ -12,6 +12,36 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if DEBUG
+/// A Swift Continuation that behaves like a `CheckedContinuation` in Debug mode and like a `UnsafeContinuation` in release mode.
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@usableFromInline
+typealias NIOUnsafeContinuation<Success, Failure: Error> = CheckedContinuation<Success, Failure>
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@inlinable
+func withNIOUnsafeThrowingContinuation<T>(
+    isolation: isolated (any Actor)? = #isolation,
+    _ fn: (NIOUnsafeContinuation<T, any Error>) -> Void
+) async throws -> sending T {
+    try await withCheckedThrowingContinuation(isolation: isolation, fn)
+}
+#else
+/// A Swift Continuation that behaves like a `CheckedContinuation` in Debug mode and like a `UnsafeContinuation` in release mode.
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@usableFromInline
+typealias NIOUnsafeContinuation<Success, Failure: Error> = UnsafeContinuation<Success, Failure>
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@inlinable
+func withNIOUnsafeThrowingContinuation<T>(
+    isolation: isolated (any Actor)? = #isolation,
+    _ fn: (NIOUnsafeContinuation<T, any Error>) -> Void
+) async throws -> sending T {
+    try await withUnsafeThrowingContinuation(isolation: isolation, fn)
+}
+#endif
+
 extension EventLoopFuture {
     /// Get the value/error from an `EventLoopFuture` in an `async` context.
     ///
