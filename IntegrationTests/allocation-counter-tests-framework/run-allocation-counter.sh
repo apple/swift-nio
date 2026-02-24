@@ -289,8 +289,33 @@ build_package \
 set -eu
 cd "$working_dir"
 swift build "${build_opts[@]}"
-for f in "${files[@]}"; do
-    echo "- $f"
-    swift run "${build_opts[@]}" "$(module_name_from_path "$f")"
-done
+bin_path=$(swift build "${build_opts[@]}" --show-bin-path)
+if [[ "${NIO_ALLOC_COUNTER_TESTS_PARALLEL:-false}" == "true" ]]; then
+    out_dir=$(mktemp -d)
+    trap 'rm -rf "$out_dir"' EXIT
+    pids=()
+    for f in "${files[@]}"; do
+        module=$(module_name_from_path "$f")
+        "$bin_path/$module" > "$out_dir/$module" &
+        pids+=($!)
+    done
+    all_ok=true
+    for i in "${!pids[@]}"; do
+        module=$(module_name_from_path "${files[$i]}")
+        if wait "${pids[$i]}"; then
+            echo "- ${files[$i]}"
+            cat "$out_dir/$module"
+        else
+            all_ok=false
+            echo "- ${files[$i]} FAILED" >&2
+            cat "$out_dir/$module" >&2
+        fi
+    done
+    "$all_ok"
+else
+    for f in "${files[@]}"; do
+        echo "- $f"
+        "$bin_path/$(module_name_from_path "$f")"
+    done
+fi
 )
