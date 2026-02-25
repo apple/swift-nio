@@ -632,7 +632,7 @@ extension NIOThrowingAsyncSequenceProducer {
                     // See https://github.com/swiftlang/swift/issues/85668
                     //
                     // We switched to using NIOUnsafeContinuation after running with
-                    // CheckedContinuatuion for more than a year. Now we use NIOUnsafeContinuation
+                    // CheckedContinuation for more than a year. Now we use NIOUnsafeContinuation
                     // to reduce runtime costs.
                     return try await withNIOUnsafeThrowingContinuation {
                         (continuation: NIOUnsafeContinuation<Element?, any Error>) in

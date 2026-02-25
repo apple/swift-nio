@@ -575,7 +575,7 @@ extension NIOAsyncWriter {
                     // returns once the write has been yielded.
                     //
                     // We switched to using NIOUnsafeContinuation after running with
-                    // CheckedContinuatuion for more than a year. Now we use NIOUnsafeContinuation
+                    // CheckedContinuation for more than a year. Now we use NIOUnsafeContinuation
                     // to reduce runtime costs.
                     return try await withNIOUnsafeThrowingContinuation {
                         (continuation: NIOUnsafeContinuation<StateMachine.YieldResult, Error>) in
@@ -685,7 +685,7 @@ extension NIOAsyncWriter {
                     // returns once the write has been yielded.
                     //
                     // We switched to using NIOUnsafeContinuation after running with
-                    // CheckedContinuatuion for more than a year. Now we use NIOUnsafeContinuation
+                    // CheckedContinuation for more than a year. Now we use NIOUnsafeContinuation
                     // to reduce runtime costs.
                     return try await withNIOUnsafeThrowingContinuation {
                         (continuation: NIOUnsafeContinuation<StateMachine.YieldResult, Error>) in
