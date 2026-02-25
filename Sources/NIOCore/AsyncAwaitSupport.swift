@@ -13,7 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #if DEBUG
-/// A Swift Continuation that behaves like a `CheckedContinuation` in Debug mode and like a `UnsafeContinuation` in release mode.
+/// A Swift Continuation that behaves like a `CheckedContinuation` in Debug mode
+/// and like a `UnsafeContinuation` in release mode.
+///
+/// - Note: Only use this for code paths that have proven to be safe for at least one year.
+///         All usages must have a comment that states, why it is safe to use NIOUnsafeContinuation.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @usableFromInline
 typealias NIOUnsafeContinuation<Success, Failure: Error> = CheckedContinuation<Success, Failure>
@@ -38,7 +42,11 @@ func withNIOUnsafeThrowingContinuation<T: Sendable>(
 }
 #endif  // compiler 6.0
 #else
-/// A Swift Continuation that behaves like a `CheckedContinuation` in Debug mode and like a `UnsafeContinuation` in release mode.
+/// A Swift Continuation that behaves like a `CheckedContinuation` in Debug mode
+/// and like a `UnsafeContinuation` in release mode.
+///
+/// - Note: Only use this for code paths that have proven to be safe for at least one year.
+///         All usages must have a comment that states, why it is safe to use NIOUnsafeContinuation.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @usableFromInline
 typealias NIOUnsafeContinuation<Success, Failure: Error> = UnsafeContinuation<Success, Failure>

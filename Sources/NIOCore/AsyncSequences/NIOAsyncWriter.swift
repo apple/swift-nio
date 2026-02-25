@@ -573,6 +573,10 @@ extension NIOAsyncWriter {
                     //
                     // Within a thread there is no possibility of re-ordering as the call only
                     // returns once the write has been yielded.
+                    //
+                    // We switched to using NIOUnsafeContinuation after running with
+                    // CheckedContinuatuion for more than a year. Now we use NIOUnsafeContinuation
+                    // to reduce runtime costs.
                     return try await withNIOUnsafeThrowingContinuation {
                         (continuation: NIOUnsafeContinuation<StateMachine.YieldResult, Error>) in
                         let (action, didSuspend) = self._state.withLockedValue {
@@ -679,6 +683,10 @@ extension NIOAsyncWriter {
                     //
                     // Within a thread there is no possibility of re-ordering as the call only
                     // returns once the write has been yielded.
+                    //
+                    // We switched to using NIOUnsafeContinuation after running with
+                    // CheckedContinuatuion for more than a year. Now we use NIOUnsafeContinuation
+                    // to reduce runtime costs.
                     return try await withNIOUnsafeThrowingContinuation {
                         (continuation: NIOUnsafeContinuation<StateMachine.YieldResult, Error>) in
                         let (action, didSuspend) = self._state.withLockedValue {
