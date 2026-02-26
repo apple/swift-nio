@@ -18,6 +18,7 @@ import NIOPosix  // NOTE: Not @testable import here -- testing public API surfac
 import Testing
 
 @Suite struct NIOTransportAccessibleChannelCoreTests {
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test func testUnderlyingSocketAccessForSocketBasedChannel() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { #expect(throws: Never.self) { try group.syncShutdownGracefully() } }
@@ -64,6 +65,7 @@ import Testing
         }.wait()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test func testUnderlyingTransportForUnsupportedChannels() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { #expect(throws: Never.self) { try group.syncShutdownGracefully() } }
@@ -80,6 +82,7 @@ import Testing
         try #expect(syncOps.withUnsafeTransportIfAvailable(of: type(of: STDOUT_FILENO).self) { _ in 42 } == nil)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test func testUnderlyingTransportConformanceForExpectedChannels() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { #expect(throws: Never.self) { try group.syncShutdownGracefully() } }
