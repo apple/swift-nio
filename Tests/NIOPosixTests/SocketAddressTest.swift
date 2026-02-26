@@ -175,6 +175,7 @@ class SocketAddressTest: XCTestCase {
         if case .v6(let address) = sa {
             XCTAssertEqual(address.address.sin6_family, sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue))
             XCTAssertEqual(address.address.sin6_port, in_port_t(443).bigEndian)
+            XCTAssertEqual(address.address.sin6_flowinfo, 0)
             XCTAssertEqual(address.address.sin6_scope_id, expectedIndex)
             XCTAssertEqual(address.host, "fe80::1%\(loopback)")
         } else {
@@ -190,6 +191,7 @@ class SocketAddressTest: XCTestCase {
         // getaddrinfo accepts both interface names (%lo) and numeric indices (%1).
         let sa = try SocketAddress(ipAddress: "fe80::1%1", port: 80)
         if case .v6(let address) = sa {
+            XCTAssertEqual(address.address.sin6_flowinfo, 0)
             XCTAssertEqual(address.address.sin6_scope_id, 1)
             XCTAssertEqual(address.address.sin6_port, in_port_t(80).bigEndian)
         } else {
