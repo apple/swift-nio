@@ -410,7 +410,9 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         var result: UnsafeMutablePointer<addrinfo>?
         let status = getaddrinfo(ipAddress, String(port), &hints, &result)
         defer { if result != nil { freeaddrinfo(result) } }
-        guard status == 0, let addrInfo = result, let ai_addr = addrInfo.pointee.ai_addr else {
+        guard status == 0, let addrInfo = result, let ai_addr = addrInfo.pointee.ai_addr,
+            ai_addr.pointee.sa_family == sa_family_t(AF_INET6)
+        else {
             throw SocketAddressError.failedToParseIPString(ipAddress)
         }
         let sockaddr = ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee }
