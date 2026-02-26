@@ -293,21 +293,24 @@ bin_path=$(swift build "${build_opts[@]}" --show-bin-path)
 if [[ "${NIO_ALLOC_COUNTER_TESTS_PARALLEL:-false}" == "true" ]]; then
     out_dir=$(mktemp -d)
     trap 'rm -rf "$out_dir"' EXIT
-    pids=()
     for f in "${files[@]}"; do
         module=$(module_name_from_path "$f")
-        "$bin_path/$module" > "$out_dir/$module" &
-        pids+=($!)
+        (
+            rc=0
+            "$bin_path/$module" > "$out_dir/$module" || rc=$?
+            echo $rc > "$out_dir/$module.exit"
+        ) &
     done
+    wait
     all_ok=true
-    for i in "${!pids[@]}"; do
-        module=$(module_name_from_path "${files[$i]}")
-        if wait "${pids[$i]}"; then
-            echo "- ${files[$i]}"
+    for f in "${files[@]}"; do
+        module=$(module_name_from_path "$f")
+        if [[ "$(cat "$out_dir/$module.exit")" == "0" ]]; then
+            echo "- $f"
             cat "$out_dir/$module"
         else
             all_ok=false
-            echo "- ${files[$i]} FAILED" >&2
+            echo "- $f FAILED" >&2
             cat "$out_dir/$module" >&2
         fi
     done
