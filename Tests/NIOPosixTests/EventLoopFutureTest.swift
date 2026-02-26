@@ -25,8 +25,9 @@ enum EventLoopFutureTestError: Error {
     case example
 }
 
-@Suite("EventLoopFutureTest", .serialized, .timeLimit(.minutes(1)))
+@Suite("EventLoopFutureTest", .serialized)
 class EventLoopFutureTest {
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFutureFulfilledIfHasResult() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -34,6 +35,7 @@ class EventLoopFutureTest {
         #expect(f.isFulfilled)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFutureFulfilledIfHasError() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -41,6 +43,7 @@ class EventLoopFutureTest {
         #expect(f.isFulfilled)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFoldWithMultipleEventLoops() throws {
         let nThreads = 3
@@ -77,6 +80,7 @@ class EventLoopFutureTest {
         #expect(allValues == [0, 1, 2, 3, 4, 5, 6, 7, 8])
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFoldWithSuccessAndAllSuccesses() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -98,6 +102,7 @@ class EventLoopFutureTest {
         #expect(allValues == [0, 1, 2, 3, 4, 5])
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFoldWithSuccessAndOneFailure() throws {
         struct E: Error {}
@@ -124,6 +129,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFoldWithSuccessAndEmptyFutureList() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -141,6 +147,7 @@ class EventLoopFutureTest {
         #expect(summationResult == 0)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFoldWithFailureAndEmptyFutureList() throws {
         struct E: Error {}
@@ -160,6 +167,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFoldWithFailureAndAllSuccesses() throws {
         struct E: Error {}
@@ -184,6 +192,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFoldWithFailureAndAllUnfulfilled() throws {
         struct E: Error {}
@@ -207,6 +216,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFoldWithFailureAndAllFailures() throws {
         struct E: Error {}
@@ -229,6 +239,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAndAllWithEmptyFutureList() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -239,6 +250,7 @@ class EventLoopFutureTest {
         #expect(fN.isFulfilled)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAndAllWithAllSuccesses() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -250,6 +262,7 @@ class EventLoopFutureTest {
         () = try fN.wait()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAndAllWithAllFailures() throws {
         struct E: Error {}
@@ -264,6 +277,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAndAllWithOneFailure() throws {
         struct E: Error {}
@@ -282,6 +296,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testReduceWithAllSuccesses() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -299,6 +314,7 @@ class EventLoopFutureTest {
         #expect(fN.eventLoop === eventLoop)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testReduceWithOnlyInitialValue() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -313,6 +329,7 @@ class EventLoopFutureTest {
         #expect(fN.eventLoop === eventLoop)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testReduceWithAllFailures() throws {
         struct E: Error {}
@@ -330,6 +347,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testReduceWithOneFailure() throws {
         struct E: Error {}
@@ -351,6 +369,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testReduceWhichDoesFailFast() throws {
         struct E: Error {}
@@ -374,6 +393,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testReduceIntoWithAllSuccesses() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -399,6 +419,7 @@ class EventLoopFutureTest {
         #expect(fN.eventLoop === eventLoop)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testReduceIntoWithEmptyFutureList() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -422,6 +443,7 @@ class EventLoopFutureTest {
         #expect(fN.eventLoop === eventLoop)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testReduceIntoWithAllFailure() throws {
         struct E: Error {}
@@ -450,6 +472,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testReduceIntoWithMultipleEventLoops() throws {
         let nThreads = 3
@@ -486,6 +509,7 @@ class EventLoopFutureTest {
         #expect(allValues == [0: 1, 1: 2, 2: 2, 3: 2, 4: 1])
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testThenThrowingWhichDoesNotThrow() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -503,6 +527,7 @@ class EventLoopFutureTest {
         #expect(ran)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testThenThrowingWhichDoesThrow() throws {
         enum DummyError: Error, Equatable {
@@ -527,6 +552,7 @@ class EventLoopFutureTest {
         #expect(ran)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testflatMapErrorThrowingWhichDoesNotThrow() throws {
         enum DummyError: Error, Equatable {
@@ -551,6 +577,7 @@ class EventLoopFutureTest {
         #expect(ran)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testflatMapErrorThrowingWhichDoesThrow() throws {
         enum DummyError: Error, Equatable {
@@ -576,6 +603,7 @@ class EventLoopFutureTest {
         #expect(ran)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testOrderOfFutureCompletion() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -600,6 +628,7 @@ class EventLoopFutureTest {
         #expect(state == 3)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testEventLoopHoppingInThen() throws {
         let n = 20
@@ -621,6 +650,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try elg.syncShutdownGracefully() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testEventLoopHoppingInThenWithFailures() throws {
         enum DummyError: Error {
@@ -653,6 +683,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try elg.syncShutdownGracefully() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testEventLoopHoppingAndAll() throws {
         let n = 20
@@ -670,6 +701,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try elg.syncShutdownGracefully() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testEventLoopHoppingAndAllWithFailures() throws {
         enum DummyError: Error { case dummy }
@@ -696,6 +728,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try fireBackEl.syncShutdownGracefully() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFutureInVariousScenarios() throws {
         enum DummyError: Error {
@@ -793,6 +826,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try elg.syncShutdownGracefully() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testLoopHoppingHelperSuccess() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
@@ -813,6 +847,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try succeedingFuture.wait() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testLoopHoppingHelperFailure() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
@@ -838,6 +873,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try failingFuture.wait() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testLoopHoppingHelperNoHopping() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
@@ -854,6 +890,7 @@ class EventLoopFutureTest {
         noHoppingPromise.succeed(())
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFlatMapResultHappyPath() {
         let el = EmbeddedEventLoop()
@@ -872,6 +909,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFlatMapResultFailurePath() {
         struct DummyError: Error {}
@@ -888,6 +926,7 @@ class EventLoopFutureTest {
         #expect(throws: DummyError.self) { try f.wait() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testWhenAllSucceedFailsImmediately() {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
@@ -920,6 +959,7 @@ class EventLoopFutureTest {
         doTest(promise: group.next().makePromise())
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testWhenAllSucceedResolvesAfterFutures() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 6)
@@ -972,6 +1012,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try doTest(promise: group.next().makePromise()) }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testWhenAllSucceedIsIndependentOfFulfillmentOrder() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 6)
@@ -1017,6 +1058,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try doTest(promise: group.next().makePromise()) }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testWhenAllCompleteResultsWithFailuresStillSucceed() {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
@@ -1045,6 +1087,7 @@ class EventLoopFutureTest {
         doTest(promise: group.next().makePromise())
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testWhenAllCompleteResults() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
@@ -1082,6 +1125,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try doTest(promise: group.next().makePromise()) }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testWhenAllCompleteResolvesAfterFutures() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 6)
@@ -1156,6 +1200,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAlways() throws {
         let group = EmbeddedEventLoop()
@@ -1172,6 +1217,7 @@ class EventLoopFutureTest {
         #expect(db.closed)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAlwaysWithFailingPromise() throws {
         let group = EmbeddedEventLoop()
@@ -1189,6 +1235,7 @@ class EventLoopFutureTest {
         #expect(db.closed)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testPromiseCompletedWithSuccessfulFuture() throws {
         let group = EmbeddedEventLoop()
@@ -1201,6 +1248,7 @@ class EventLoopFutureTest {
         #expect(try promise.futureResult.wait() == "yay")
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFutureFulfilledIfHasNonSendableResult() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -1208,6 +1256,7 @@ class EventLoopFutureTest {
         #expect(f.isFulfilled)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testSucceededIsolatedFutureIsCompleted() throws {
         let group = EmbeddedEventLoop()
@@ -1227,6 +1276,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testPromiseCompletedWithFailedFuture() throws {
         let group = EmbeddedEventLoop()
@@ -1243,6 +1293,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testPromiseCompletedWithSuccessfulResult() throws {
         let group = EmbeddedEventLoop()
@@ -1255,6 +1306,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try promise.futureResult.wait() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testPromiseCompletedWithFailedResult() throws {
         let group = EmbeddedEventLoop()
@@ -1269,6 +1321,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAndAllCompleteWithZeroFutures() {
         let eventLoop = EmbeddedEventLoop()
@@ -1284,6 +1337,7 @@ class EventLoopFutureTest {
         done.wait()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAndAllSucceedWithZeroFutures() {
         let eventLoop = EmbeddedEventLoop()
@@ -1298,6 +1352,7 @@ class EventLoopFutureTest {
         done.wait()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAndAllCompleteWithPreSucceededFutures() {
         let eventLoop = EmbeddedEventLoop()
@@ -1313,6 +1368,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAndAllCompleteWithPreFailedFutures() {
         struct Dummy: Error {}
@@ -1329,6 +1385,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAndAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures() {
         struct Dummy: Error {}
@@ -1362,6 +1419,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try overall.wait() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testWhenAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures() {
         struct Dummy: Error {}
@@ -1418,6 +1476,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { assertIsEqual(expected, try overall.wait()) }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testRepeatedTaskOffEventLoopGroupFuture() throws {
         let elg1: EventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -1451,6 +1510,7 @@ class EventLoopFutureTest {
         try exitPromise.futureResult.wait()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testEventLoopFutureOrErrorNoThrow() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -1461,6 +1521,7 @@ class EventLoopFutureTest {
         #expect(try promise.futureResult.unwrap(orError: EventLoopFutureTestError.example).wait() == 42)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testEventLoopFutureOrThrows() {
         let eventLoop = EmbeddedEventLoop()
@@ -1473,6 +1534,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testEventLoopFutureOrNoReplacement() {
         let eventLoop = EmbeddedEventLoop()
@@ -1483,6 +1545,7 @@ class EventLoopFutureTest {
         #expect(try! promise.futureResult.unwrap(orReplace: 41).wait() == 42)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testEventLoopFutureOrReplacement() {
         let eventLoop = EmbeddedEventLoop()
@@ -1493,6 +1556,7 @@ class EventLoopFutureTest {
         #expect(try! promise.futureResult.unwrap(orReplace: 42).wait() == 42)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testEventLoopFutureOrNoElse() {
         let eventLoop = EmbeddedEventLoop()
@@ -1503,6 +1567,7 @@ class EventLoopFutureTest {
         #expect(try! promise.futureResult.unwrap(orElse: { 41 }).wait() == 42)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testEventLoopFutureOrElse() {
         let eventLoop = EmbeddedEventLoop()
@@ -1514,6 +1579,7 @@ class EventLoopFutureTest {
         #expect(try! promise.futureResult.unwrap(orElse: { x * 2 }).wait() == 4)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFlatBlockingMapOnto() {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -1550,6 +1616,7 @@ class EventLoopFutureTest {
         sem.signal()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testWhenSuccessBlocking() {
         let eventLoop = EmbeddedEventLoop()
@@ -1575,6 +1642,7 @@ class EventLoopFutureTest {
         sem.signal()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testWhenFailureBlocking() {
         let eventLoop = EmbeddedEventLoop()
@@ -1599,6 +1667,7 @@ class EventLoopFutureTest {
         sem.signal()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testWhenCompleteBlockingSuccess() {
         let eventLoop = EmbeddedEventLoop()
@@ -1622,6 +1691,7 @@ class EventLoopFutureTest {
         sem.signal()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testWhenCompleteBlockingFailure() {
         let eventLoop = EmbeddedEventLoop()
@@ -1645,6 +1715,7 @@ class EventLoopFutureTest {
         sem.signal()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFlatMapWithEL() throws {
         let el = EmbeddedEventLoop()
@@ -1656,6 +1727,7 @@ class EventLoopFutureTest {
         #expect(2 == result)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFlatMapErrorWithEL() throws {
         let el = EmbeddedEventLoop()
@@ -1668,6 +1740,7 @@ class EventLoopFutureTest {
         #expect(1 == result)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testFoldWithEL() throws {
         let el = EmbeddedEventLoop()
@@ -1687,6 +1760,7 @@ class EventLoopFutureTest {
         #expect(expectedResult == result)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAssertSuccess() {
         let eventLoop = EmbeddedEventLoop()
@@ -1698,6 +1772,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try assertedFuture.wait() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAssertFailure() {
         let eventLoop = EmbeddedEventLoop()
@@ -1711,6 +1786,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testPreconditionSuccess() {
         let eventLoop = EmbeddedEventLoop()
@@ -1722,6 +1798,7 @@ class EventLoopFutureTest {
         #expect(throws: Never.self) { try preconditionedFuture.wait() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testPreconditionFailure() {
         let eventLoop = EmbeddedEventLoop()
@@ -1735,6 +1812,7 @@ class EventLoopFutureTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testSetOrCascadeReplacesNil() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -1747,6 +1825,7 @@ class EventLoopFutureTest {
         try other.futureResult.wait()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testSetOrCascadeCascadesToExisting() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -1758,6 +1837,7 @@ class EventLoopFutureTest {
         try other.futureResult.wait()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testSetOrCascadeNoOpOnNil() throws {
         let eventLoop = EmbeddedEventLoop()
@@ -1768,6 +1848,7 @@ class EventLoopFutureTest {
         promise?.succeed()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testPromiseEquatable() {
         let eventLoop = EmbeddedEventLoop()
@@ -1783,6 +1864,7 @@ class EventLoopFutureTest {
         promise2.succeed()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testPromiseEquatable_WhenSucceeded() {
         let eventLoop = EmbeddedEventLoop()
@@ -1798,6 +1880,7 @@ class EventLoopFutureTest {
         #expect(promise3 != promise2)
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testPromiseEquatable_WhenFailed() {
         struct E: Error {}

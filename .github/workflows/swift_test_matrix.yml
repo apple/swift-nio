@@ -33,6 +33,22 @@ jobs:
         with:
           persist-credentials: false
           submodules: true
+      - name: Wait for Docker daemon (Windows)
+        if: ${{ matrix.config.platform == 'Windows' }}
+        run: |
+          $maxAttempts = 30
+          $attempt = 0
+          do {
+            $attempt++
+            docker info 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempt -ge $maxAttempts) {
+              Write-Error "Docker daemon did not become ready after $maxAttempts attempts"
+              exit 1
+            }
+            Start-Sleep -Seconds 2
+          } while ($true)
+        shell: pwsh
       - name: Pull Docker image
         run: docker pull ${{ matrix.config.image }}
       - name: Run matrix job
