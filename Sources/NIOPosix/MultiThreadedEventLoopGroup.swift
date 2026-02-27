@@ -84,7 +84,10 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static func storeLoopThreadLocalReference(to loop: SelectableEventLoop) {
         let existingRef = c_nio_posix_get_el_ptr()
-        precondition(existingRef == nil, "weird, current SEL reference \(String(describing: existingRef)), expected nil")
+        precondition(
+            existingRef == nil,
+            "weird, current SEL reference \(String(describing: existingRef)), expected nil"
+        )
 
         let newRef = Unmanaged.passRetained(loop).toOpaque()
         c_nio_posix_set_el_ptr(newRef)
