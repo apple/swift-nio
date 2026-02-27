@@ -203,7 +203,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket>, @unchecked Sendable 
 /// A `Channel` for a server socket.
 ///
 /// - Note: All operations on `ServerSocketChannel` are thread-safe.
-final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sendable {
+final class ServerSocketChannel: BaseSocketChannel<ServerSocket, Void>, @unchecked Sendable {
 
     private var backlog: Int32 = 128
     private let group: EventLoopGroup
@@ -429,8 +429,8 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
         false
     }
 
-    override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError._operationUnsupported)
+    override func bufferPendingWrite(data: Void, promise: EventLoopPromise<Void>?) {
+        promise?.fail(ChannelError.operationUnsupported)
     }
 
     override func markFlushPoint() {
@@ -466,12 +466,19 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
             promise?.fail(ChannelError._operationUnsupported)
         }
     }
+
+    override func unwrapAsWriteType(_ data: NIOAny) -> () {}
+}
+
+enum DatagramWriteType {
+    case addressed(AddressedEnvelope<ByteBuffer>)
+    case unaddressed(ByteBuffer)
 }
 
 /// A channel used with datagram sockets.
 ///
 /// Currently, it does not support connected mode which is well worth adding.
-final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
+final class DatagramChannel: BaseSocketChannel<Socket, DatagramWriteType>, @unchecked Sendable {
     private var reportExplicitCongestionNotifications = false
     private var receivePacketInfo = false
     private var receiveSegmentSize = false
@@ -930,6 +937,14 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
         }
     }
 
+    override func unwrapAsWriteType(_ data: NIOAny) -> DatagramWriteType {
+        if let envelope = self.tryUnwrapData(data, as: AddressedEnvelope<ByteBuffer>.self) {
+            return .addressed(envelope)
+        } else {
+            return .unaddressed(Self.unwrapData(data, as: ByteBuffer.self))
+        }
+    }
+
     /// Buffer a write in preparation for a flush.
     ///
     /// When the channel is unconnected, `data` _must_ be of type `AddressedEnvelope<ByteBuffer>`.
@@ -938,14 +953,13 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
     /// `AddressedEnvelope<ByteBuffer>` to allow users to provide protocol control messages via
     /// `AddressedEnvelope.metadata`. In this case, `AddressedEnvelope.remoteAddress` _must_ match
     /// the address of the connected peer.
-    override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        if let envelope = self.tryUnwrapData(data, as: AddressedEnvelope<ByteBuffer>.self) {
-            return bufferPendingAddressedWrite(envelope: envelope, promise: promise)
+    override func bufferPendingWrite(data: DatagramWriteType, promise: EventLoopPromise<Void>?) {
+        switch data {
+        case .addressed(let addressedBytes):
+            return self.bufferPendingAddressedWrite(envelope: addressedBytes, promise: promise)
+        case .unaddressed(let bytes):
+            return self.bufferPendingUnaddressedWrite(data: bytes, promise: promise)
         }
-        // If it's not an `AddressedEnvelope` then it must be a `ByteBuffer` so we let the common
-        // `unwrapData(_:as:)` throw the fatal error if it's some other type.
-        let data = self.unwrapData(data, as: ByteBuffer.self)
-        return bufferPendingUnaddressedWrite(data: data, promise: promise)
     }
 
     /// Buffer a write in preparation for a flush.
