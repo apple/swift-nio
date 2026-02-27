@@ -24,6 +24,7 @@ jobs:
   execute-matrix:
     name: ${{ matrix.config.platform }} (${{ matrix.config.name }})
     runs-on: ${{ matrix.config.runner }}
+    continue-on-error: ${{ !matrix.config.required }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_string) }}

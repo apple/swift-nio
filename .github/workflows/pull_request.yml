@@ -28,6 +28,23 @@ jobs:
       linux_nightly_6_1_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_nightly_main_arguments_override: "--explicit-target-dependency-import-check error"
 
+  unit-tests-required:
+    name: Unit tests (All Required)
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    if: always()
+    steps:
+      - name: Check required jobs
+        run: |
+          if [[ "${{ needs.unit-tests.result }}" != "success" && \
+                "${{ needs.unit-tests.result }}" != "skipped" ]]; then
+            echo "One or more required unit test matrix jobs failed."
+            echo "By default, stable versions are required and nightly versions are not."
+            echo "To diagnose, expand the 'Unit tests' job above and look for failing matrix entries."
+            echo "To change which versions are required, see the linux_*_required / windows_*_required inputs in .github/workflows/unit_tests.yml."
+            exit 1
+          fi
+
   benchmarks:
     name: Benchmarks
     # Workaround https://github.com/nektos/act/issues/1875
@@ -39,6 +56,23 @@ jobs:
     name: Cxx interop
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/cxx_interop.yml@main
+
+  cxx-interop-required:
+    name: Cxx interop (All Required)
+    runs-on: ubuntu-latest
+    needs: [cxx-interop]
+    if: always()
+    steps:
+      - name: Check required jobs
+        run: |
+          if [[ "${{ needs.cxx-interop.result }}" != "success" && \
+                "${{ needs.cxx-interop.result }}" != "skipped" ]]; then
+            echo "One or more required Cxx interop matrix jobs failed."
+            echo "By default, stable versions are required and nightly versions are not."
+            echo "To diagnose, expand the 'Cxx interop' job above and look for failing matrix entries."
+            echo "To change which versions are required, see the linux_*_required inputs in .github/workflows/cxx_interop.yml."
+            exit 1
+          fi
 
   construct-integration-test-matrix:
     name: Construct integration test matrix
@@ -94,6 +128,23 @@ jobs:
       xcode_16_2_build_arguments_override: "-Xswiftc -Xfrontend -Xswiftc -require-explicit-sendable"
       xcode_16_3_build_arguments_override: "-Xswiftc -Xfrontend -Xswiftc -require-explicit-sendable"
 
+  macos-tests-required:
+    name: macOS tests (All Required)
+    runs-on: ubuntu-latest
+    needs: [macos-tests]
+    if: always()
+    steps:
+      - name: Check required jobs
+        run: |
+          if [[ "${{ needs.macos-tests.result }}" != "success" && \
+                "${{ needs.macos-tests.result }}" != "skipped" ]]; then
+            echo "One or more required macOS test matrix jobs failed."
+            echo "By default, stable Xcode versions are required and beta versions are not."
+            echo "To diagnose, expand the 'macOS tests' job above and look for failing matrix entries."
+            echo "To change which versions are required, see the xcode_*_required inputs in .github/workflows/macos_tests.yml."
+            exit 1
+          fi
+
   static-sdk:
     name: Static Linux Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
@@ -114,3 +165,20 @@ jobs:
   release-builds:
     name: Release builds
     uses: apple/swift-nio/.github/workflows/release_builds.yml@main
+
+  release-builds-required:
+    name: Release builds (All Required)
+    runs-on: ubuntu-latest
+    needs: [release-builds]
+    if: always()
+    steps:
+      - name: Check required jobs
+        run: |
+          if [[ "${{ needs.release-builds.result }}" != "success" && \
+                "${{ needs.release-builds.result }}" != "skipped" ]]; then
+            echo "One or more required release build matrix jobs failed."
+            echo "By default, stable versions are required and nightly versions are not."
+            echo "To diagnose, expand the 'Release builds' job above and look for failing matrix entries."
+            echo "To change which versions are required, see the linux_*_required / windows_*_required inputs in .github/workflows/release_builds.yml."
+            exit 1
+          fi
