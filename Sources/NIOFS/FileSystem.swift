@@ -557,6 +557,10 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     /// Replaces the item at `destinationPath` with the item at `existingPath`.
     ///
+    /// This is similar to ``moveItem(at:to:)`` except that it will replace an existing item at
+    /// `destinationPath` if one exists. The item at `existingPath` will be removed after the
+    /// operation completes successfully.
+    ///
     /// Only regular files, symbolic links and directories may replace the item at the existing
     /// path. The file at the destination path isn't required to exist. If it does exist it does not
     /// have to match the type of the file it is being replaced with.
@@ -581,7 +585,6 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         do {
             try await self.removeItem(at: destinationPath, strategy: .platformDefault)
             try await self.moveItem(at: existingPath, to: destinationPath)
-            try await self.removeItem(at: existingPath, strategy: .platformDefault)
         } catch let error as FileSystemError {
             throw FileSystemError(
                 message: "Can't replace '\(destinationPath)' with '\(existingPath)'.",
