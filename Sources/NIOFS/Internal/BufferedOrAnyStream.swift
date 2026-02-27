@@ -46,6 +46,7 @@ internal enum BufferedOrAnyStream<Element: Sendable, Delegate: NIOAsyncSequenceP
         case bufferedStream(AsyncSequenceProducer.AsyncIterator)
         case anyAsyncSequence(AnyAsyncSequence<Element>.AsyncIterator)
 
+        @concurrent
         internal mutating func next() async throws -> Element? {
             let element: Element?
             switch self {
@@ -55,6 +56,20 @@ internal enum BufferedOrAnyStream<Element: Sendable, Delegate: NIOAsyncSequenceP
             case var .anyAsyncSequence(iterator):
                 defer { self = .anyAsyncSequence(iterator) }
                 element = try await iterator.next()
+            }
+            return element
+        }
+
+        @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
+        internal mutating func next(isolation actor: isolated (any Actor)?) async throws(any Error) -> Element? {
+            let element: Element?
+            switch self {
+            case var .bufferedStream(iterator):
+                defer { self = .bufferedStream(iterator) }
+                element = try await iterator.next(isolation: actor)
+            case var .anyAsyncSequence(iterator):
+                defer { self = .anyAsyncSequence(iterator) }
+                element = try await iterator.next(isolation: actor)
             }
             return element
         }
@@ -91,8 +106,14 @@ internal struct AnyAsyncSequence<Element>: AsyncSequence, Sendable {
             self.iterator = iterator
         }
 
+        @concurrent
         internal mutating func next() async throws -> Element? {
             try await self.iterator.next() as? Element
+        }
+
+        @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+        internal mutating func next(isolation actor: isolated (any Actor)?) async throws -> Element? {
+            try await self.iterator.next(isolation: actor) as? Element
         }
     }
 }
