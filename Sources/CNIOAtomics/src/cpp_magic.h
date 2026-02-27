@@ -219,7 +219,7 @@
  *
  * 1. The preprocessor expands the arguments to _IF casting the condition to '0'
  *    or '1'.
- * 2. The casted condition is concatencated with _IF_ giving _IF_0 or _IF_1.
+ * 2. The casted condition is concatenated with _IF giving _IF_0 or _IF_1.
  * 3. The _IF_0 and _IF_1 macros either returns the argument or doesn't (e.g.
  *    they implement the "choice selection" part of the macro).
  * 4. Note that the "true" clause is in the extra set of brackets; thus these
