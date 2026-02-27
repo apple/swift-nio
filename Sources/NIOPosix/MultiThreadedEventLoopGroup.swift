@@ -15,6 +15,7 @@
 #if !os(WASI)
 
 import Atomics
+import CNIOPosix
 import NIOConcurrencyHelpers
 import NIOCore
 
@@ -73,8 +74,6 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         case notByUser
     }
 
-    private static let threadSpecificEventLoop = ThreadSpecificVariable<SelectableEventLoop>()
-
     private let myGroupID: Int
     private let index = ManagedAtomic<Int>(0)
     private var eventLoops: [SelectableEventLoop]
@@ -82,6 +81,22 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     private let threadNamePrefix: String
     private var runState: RunState = .running
     private let canBeShutDown: _CanBeShutDown
+
+    private static func storeLoopThreadLocalReference(to loop: SelectableEventLoop) {
+        let existingRef = c_nio_posix_get_el_ptr()
+        precondition(existingRef == nil, "weird, current SEL reference \(String(describing: existingRef)), expected nil")
+
+        let newRef = Unmanaged.passRetained(loop).toOpaque()
+        c_nio_posix_set_el_ptr(newRef)
+    }
+
+    private static func clearLoopThreadLocalReference() {
+        let existingRef = c_nio_posix_get_el_ptr()
+        precondition(existingRef != nil, "weird, current SEL reference is unexpectedly nil")
+
+        Unmanaged<SelectableEventLoop>.fromOpaque(existingRef!).release()
+        c_nio_posix_set_el_ptr(nil)
+    }
 
     private static func runTheLoop(
         thread: NIOThread,
@@ -109,9 +124,9 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                 canBeShutdownIndividually: canEventLoopBeShutdownIndividually,
                 metricsDelegate: metricsDelegate
             )
-            Self.threadSpecificEventLoop.currentValue = loop
+            Self.storeLoopThreadLocalReference(to: loop)
             defer {
-                Self.threadSpecificEventLoop.currentValue = nil
+                Self.clearLoopThreadLocalReference()
             }
             callback(loop)
             try loop.run()
@@ -321,7 +336,11 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     }
 
     internal static var currentSelectableEventLoop: SelectableEventLoop? {
-        threadSpecificEventLoop.currentValue
+        guard let ref = c_nio_posix_get_el_ptr() else {
+            return nil
+        }
+
+        return Unmanaged<SelectableEventLoop>.fromOpaque(ref).takeUnretainedValue()
     }
 
     /// Returns an `EventLoopIterator` over the `EventLoop`s in this `MultiThreadedEventLoopGroup`.
