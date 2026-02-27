@@ -337,6 +337,10 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///
     /// - Returns: The next `EventLoop` to use.
     public func next() -> EventLoop {
+        self.nextSEL()
+    }
+
+    internal func nextSEL() -> SelectableEventLoop {
         eventLoops[abs(index.loadThenWrappingIncrement(ordering: .relaxed) % eventLoops.count)]
     }
 
@@ -344,6 +348,10 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///
     /// - Returns: The `EventLoop`.
     public func any() -> EventLoop {
+        self.anySEL()
+    }
+
+    internal func anySEL() -> SelectableEventLoop {
         if let loop = Self.currentSelectableEventLoop,
             // We are on `loop`'s thread, so we may ask for the its parent group.
             loop.parentGroupCallableFromThisEventLoopOnly() === self
@@ -353,7 +361,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             return loop
         } else {
             // Oh well, let's just vend the next one then.
-            return self.next()
+            return self.nextSEL()
         }
     }
 
