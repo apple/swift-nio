@@ -47,6 +47,7 @@ let package = Package(
         .library(name: "NIO", targets: ["NIO"]),
         .library(name: "NIOEmbedded", targets: ["NIOEmbedded"]),
         .library(name: "NIOPosix", targets: ["NIOPosix"]),
+        .library(name: "NIOAsyncRuntime", targets: ["NIOAsyncRuntime"]),
         .library(name: "_NIOConcurrency", targets: ["_NIOConcurrency"]),
         .library(name: "NIOTLS", targets: ["NIOTLS"]),
         .library(name: "NIOHTTP1", targets: ["NIOHTTP1"]),
@@ -110,6 +111,14 @@ let package = Package(
             ],
             exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
             resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
+            swiftSettings: swiftSettings
+        ),
+        .target(
+            name: "NIOAsyncRuntime",
+            dependencies: [
+                "NIOCore"
+            ],
+            exclude: ["README.md"],
             swiftSettings: swiftSettings
         ),
         .target(
