@@ -305,13 +305,13 @@ if [[ "${NIO_ALLOC_COUNTER_TESTS_PARALLEL:-false}" == "true" ]]; then
     all_ok=true
     for f in "${files[@]}"; do
         module=$(module_name_from_path "$f")
+        echo "- $f"
         if [[ "$(cat "$out_dir/$module.exit")" == "0" ]]; then
-            echo "- $f"
             cat "$out_dir/$module"
         else
             all_ok=false
-            echo "- $f FAILED" >&2
-            cat "$out_dir/$module" >&2
+            echo "FAILED: $f" >&2
+            cat "$out_dir/$module"
         fi
     done
     "$all_ok"
