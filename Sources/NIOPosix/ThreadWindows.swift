@@ -20,13 +20,15 @@ import WinSDK
 
 typealias ThreadOpsSystem = ThreadOpsWindows
 enum ThreadOpsWindows: ThreadOps {
-    typealias ThreadHandle = HANDLE
+    struct ThreadHandle: @unchecked Sendable {
+        let handle: HANDLE
+    }
     typealias ThreadSpecificKey = DWORD
     typealias ThreadSpecificKeyDestructor = @convention(c) (UnsafeMutableRawPointer?) -> Void
 
     static func threadName(_ thread: ThreadOpsSystem.ThreadHandle) -> String? {
         var pszBuffer: PWSTR?
-        GetThreadDescription(thread, &pszBuffer)
+        GetThreadDescription(thread.handle, &pszBuffer)
         guard let buffer = pszBuffer else { return nil }
         let string: String = String(decodingCString: buffer, as: UTF16.self)
         LocalFree(buffer)
@@ -43,11 +45,27 @@ enum ThreadOpsWindows: ThreadOps {
         let routine: @convention(c) (UnsafeMutableRawPointer?) -> CUnsignedInt = {
             let boxed = Unmanaged<NIOThread.ThreadBox>.fromOpaque($0!).takeRetainedValue()
             let (body, name) = (boxed.value.body, boxed.value.name)
-            let hThread: ThreadOpsSystem.ThreadHandle = GetCurrentThread()
+
+            // Get a real thread handle instead of pseudo-handle
+            var realHandle: HANDLE? = nil
+            let success = DuplicateHandle(
+                GetCurrentProcess(),  // Source process
+                GetCurrentThread(),  // Source handle (pseudo-handle)
+                GetCurrentProcess(),  // Target process
+                &realHandle,  // Target handle (real handle)
+                0,  // Desired access (0 = same as source)
+                false,  // Inherit handle
+                DWORD(DUPLICATE_SAME_ACCESS)  // Options
+            )
+
+            guard success, let realHandle else {
+                fatalError("DuplicateHandle failed: \(GetLastError())")
+            }
+            let hThread = ThreadOpsSystem.ThreadHandle(handle: realHandle)
 
             if let name = name {
                 _ = name.withCString(encodedAs: UTF16.self) {
-                    SetThreadDescription(hThread, $0)
+                    SetThreadDescription(hThread.handle, $0)
                 }
             }
 
@@ -60,15 +78,28 @@ enum ThreadOpsWindows: ThreadOps {
     }
 
     static func isCurrentThread(_ thread: ThreadOpsSystem.ThreadHandle) -> Bool {
-        CompareObjectHandles(thread, GetCurrentThread())
+        CompareObjectHandles(thread.handle, GetCurrentThread())
     }
 
     static var currentThread: ThreadOpsSystem.ThreadHandle {
-        GetCurrentThread()
+        var realHandle: HANDLE? = nil
+        let success = DuplicateHandle(
+            GetCurrentProcess(),
+            GetCurrentThread(),
+            GetCurrentProcess(),
+            &realHandle,
+            0,
+            false,
+            DWORD(DUPLICATE_SAME_ACCESS)
+        )
+        guard success, let realHandle else {
+            fatalError("DuplicateHandle failed: \(GetLastError())")
+        }
+        return ThreadHandle(handle: realHandle)
     }
 
     static func joinThread(_ thread: ThreadOpsSystem.ThreadHandle) {
-        let dwResult: DWORD = WaitForSingleObject(thread, INFINITE)
+        let dwResult: DWORD = WaitForSingleObject(thread.handle, INFINITE)
         assert(dwResult == WAIT_OBJECT_0, "WaitForSingleObject: \(GetLastError())")
     }
 
@@ -90,7 +121,7 @@ enum ThreadOpsWindows: ThreadOps {
     }
 
     static func compareThreads(_ lhs: ThreadOpsSystem.ThreadHandle, _ rhs: ThreadOpsSystem.ThreadHandle) -> Bool {
-        CompareObjectHandles(lhs, rhs)
+        CompareObjectHandles(lhs.handle, rhs.handle)
     }
 }
 

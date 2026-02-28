@@ -493,7 +493,8 @@ internal enum Posix: Sendable {
     #else
     @usableFromInline
     static var UIO_MAXIOV: Int {
-        fatalError("unsupported OS")
+        // TODO: This is a placeholder value. Find the correct one for Windows.
+        64
     }
     @usableFromInline
     static var SHUT_RD: Int {
@@ -569,7 +570,7 @@ internal enum Posix: Sendable {
     #elseif os(Linux) || os(FreeBSD) || os(Android) || os(OpenBSD)
     static let SOL_UDP: CInt = CInt(IPPROTO_UDP)
     #elseif os(Windows)
-    static let SOL_UDP: CInt = CInt(IPPROTO_UDP)
+    static let SOL_UDP: CInt = CInt(IPPROTO_UDP.rawValue)
     #endif
 
     #if !os(Windows)
