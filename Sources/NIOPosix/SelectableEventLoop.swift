@@ -1249,4 +1249,9 @@ struct SelectableEventLoopUniqueID: Sendable {
         c_nio_posix_set_el_id(0)
     }
 }
+
+// MARK: TaskExecutor conformance
+@available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+extension SelectableEventLoop: NIOTaskEventLoopExecutor {}
+
 #endif  // !os(WASI)
