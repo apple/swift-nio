@@ -48,10 +48,28 @@ case "$arch" in
     fatal "Unexpected architecture: $arch" ;;
 esac
 
+# Returns 0 if $1 >= $2 (dot-separated version strings)
+version_gte() {
+  local v1_major v1_minor v1_patch v2_major v2_minor v2_patch
+  IFS='.' read -r v1_major v1_minor v1_patch <<< "$1"
+  IFS='.' read -r v2_major v2_minor v2_patch <<< "$2"
+  v1_patch="${v1_patch:-0}"; v2_patch="${v2_patch:-0}"
+  if [[ "$v1_major" -gt "$v2_major" ]]; then return 0; fi
+  if [[ "$v1_major" -lt "$v2_major" ]]; then return 1; fi
+  if [[ "$v1_minor" -gt "$v2_minor" ]]; then return 0; fi
+  if [[ "$v1_minor" -lt "$v2_minor" ]]; then return 1; fi
+  if [[ "$v1_patch" -ge "$v2_patch" ]]; then return 0; fi
+  return 1
+}
+
 case "$sdk" in
   "static-sdk")
     sdk_dir="static-sdk"
-    sdk_suffix="_static-linux-0.0.1"
+    if [[ -n "$version" ]] && version_gte "$version" "6.2.4"; then
+      sdk_suffix="_static-linux-0.1.0"
+    else
+      sdk_suffix="_static-linux-0.0.1"
+    fi
     ;;
   "wasm-sdk")
     sdk_dir="wasm-sdk"
