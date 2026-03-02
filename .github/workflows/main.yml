@@ -49,6 +49,7 @@ jobs:
         env:
           MATRIX_LINUX_SETUP_COMMAND: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq"
           MATRIX_LINUX_COMMAND: "./scripts/integration_tests.sh"
+          MATRIX_LINUX_ENV_VARS_JSON: '{"NIO_ALLOC_COUNTER_TESTS_PARALLEL": "true"}'
 
   integration-tests:
     name: Integration tests

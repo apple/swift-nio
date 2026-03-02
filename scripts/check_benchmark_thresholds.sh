@@ -53,8 +53,8 @@ if [[ "$update_rc" != 0 ]]; then
 fi
 
 echo "=== BEGIN DIFF ==="  # use echo, not log for clean output to be scraped
-git add --intent-to-add .
-git diff HEAD
+git add --intent-to-add "${benchmark_package_path}/Thresholds/"
+git diff HEAD -- "${benchmark_package_path}/Thresholds/"
 exit 1
 
 
