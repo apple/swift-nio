@@ -1633,6 +1633,7 @@ extension FileSystem {
     ) -> Result<Void, FileSystemError> {
         Syscall.symlink(to: destinationPath, from: linkPath).mapError { errno in
             FileSystemError.symlink(
+                "symlink",
                 errno: errno,
                 link: linkPath,
                 target: destinationPath,
