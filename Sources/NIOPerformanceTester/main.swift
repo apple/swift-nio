@@ -870,10 +870,22 @@ measureAndPrint(desc: "el_not_in_eventloop_100M") {
 
 try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark(runCount: 1_000_000))
 
-try measureAndPrint(desc: "channel_pipeline_init_no_handlers_1m", benchmark: ChannelPipelineInstantiationBenchmark(runCount: 1_000_000, handlerCount: 0))
-try measureAndPrint(desc: "channel_pipeline_init_1_handler_1m", benchmark: ChannelPipelineInstantiationBenchmark(runCount: 1_000_000, handlerCount: 1))
-try measureAndPrint(desc: "channel_pipeline_init_3_handlers_1m", benchmark: ChannelPipelineInstantiationBenchmark(runCount: 1_000_000, handlerCount: 3))
-try measureAndPrint(desc: "channel_pipeline_init_10_handlers_1m", benchmark: ChannelPipelineInstantiationBenchmark(runCount: 1_000_000, handlerCount: 10))
+try measureAndPrint(
+    desc: "channel_pipeline_init_no_handlers_1m",
+    benchmark: ChannelPipelineInstantiationBenchmark(runCount: 1_000_000, handlerCount: 0)
+)
+try measureAndPrint(
+    desc: "channel_pipeline_init_1_handler_1m",
+    benchmark: ChannelPipelineInstantiationBenchmark(runCount: 1_000_000, handlerCount: 1)
+)
+try measureAndPrint(
+    desc: "channel_pipeline_init_3_handlers_1m",
+    benchmark: ChannelPipelineInstantiationBenchmark(runCount: 1_000_000, handlerCount: 3)
+)
+try measureAndPrint(
+    desc: "channel_pipeline_init_10_handlers_1m",
+    benchmark: ChannelPipelineInstantiationBenchmark(runCount: 1_000_000, handlerCount: 10)
+)
 
 try measureAndPrint(
     desc: "websocket_encode_50b_space_at_front_100k_frames_cow",
