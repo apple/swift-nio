@@ -404,6 +404,14 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     #if !os(Windows) && !os(WASI)
     /// Parse a scoped IPv6 address (containing `%scope`) using `getaddrinfo` with `AI_NUMERICHOST`.
     private static func _parseScopedIPv6(_ ipAddress: String, port: Int) throws -> SocketAddress {
+        // Reject empty scope (e.g. "fe80::1%") before calling getaddrinfo, because
+        // some platforms (macOS) silently accept it with scope_id == 0.
+        guard let percentIndex = ipAddress.firstIndex(of: "%"),
+            ipAddress[ipAddress.index(after: percentIndex)...].isEmpty == false
+        else {
+            throw SocketAddressError.failedToParseIPString(ipAddress)
+        }
+
         var hints = addrinfo()
         hints.ai_family = AF_INET6
         hints.ai_flags = AI_NUMERICHOST
@@ -416,6 +424,14 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
             throw SocketAddressError.failedToParseIPString(ipAddress)
         }
         let sockaddr = ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee }
+
+        // On macOS, getaddrinfo can succeed even for nonexistent interface names,
+        // silently returning scope_id == 0. A valid scoped address must have a
+        // nonzero scope_id.
+        guard sockaddr.sin6_scope_id != 0 else {
+            throw SocketAddressError.failedToParseIPString(ipAddress)
+        }
+
         return .v6(.init(address: sockaddr, host: ipAddress))
     }
     #endif

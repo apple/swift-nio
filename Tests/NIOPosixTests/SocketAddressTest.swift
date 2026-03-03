@@ -188,11 +188,22 @@ class SocketAddressTest: XCTestCase {
         #if os(Windows) || os(WASI)
         // Scoped IPv6 parsing uses getaddrinfo, not available on these platforms.
         #else
+        // Use the loopback interface index so the test isn't fragile on systems
+        // where index 1 might not exist.
+        let loopback: String
+        #if canImport(Darwin)
+        loopback = "lo0"
+        #else
+        loopback = "lo"
+        #endif
+        let expectedIndex = if_nametoindex(loopback)
+        guard expectedIndex != 0 else { return }
+
         // getaddrinfo accepts both interface names (%lo) and numeric indices (%1).
-        let sa = try SocketAddress(ipAddress: "fe80::1%1", port: 80)
+        let sa = try SocketAddress(ipAddress: "fe80::1%\(expectedIndex)", port: 80)
         if case .v6(let address) = sa {
             XCTAssertEqual(address.address.sin6_flowinfo, 0)
-            XCTAssertEqual(address.address.sin6_scope_id, 1)
+            XCTAssertEqual(address.address.sin6_scope_id, expectedIndex)
             XCTAssertEqual(address.address.sin6_port, in_port_t(80).bigEndian)
         } else {
             XCTFail("Invalid address: \(sa)")
@@ -203,7 +214,15 @@ class SocketAddressTest: XCTestCase {
     func testScopedAndNonScopedIPv6AreNotEqual() throws {
         #if os(Windows) || os(WASI)
         #else
-        let scoped = try SocketAddress(ipAddress: "fe80::1%1", port: 80)
+        let loopback: String
+        #if canImport(Darwin)
+        loopback = "lo0"
+        #else
+        loopback = "lo"
+        #endif
+        guard if_nametoindex(loopback) != 0 else { return }
+
+        let scoped = try SocketAddress(ipAddress: "fe80::1%\(loopback)", port: 80)
         let nonScoped = try SocketAddress(ipAddress: "fe80::1", port: 80)
         // sin6_scope_id differs, so these should not be equal.
         XCTAssertNotEqual(scoped, nonScoped)
