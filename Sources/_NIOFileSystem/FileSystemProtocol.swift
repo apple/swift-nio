@@ -522,7 +522,7 @@ extension FileSystemProtocol {
     ///
     /// #### Backward Compatibility details
     ///
-    /// This is implemented in terms of ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
+    /// This is implemented in terms of ``copyItem(at:to:strategy:replaceExisting:shouldProceedAfterError:shouldCopyItem:)``
     /// using ``CopyStrategy/sequential`` to avoid changing the concurrency semantics of the should callbacks
     ///
     /// - Parameters:
