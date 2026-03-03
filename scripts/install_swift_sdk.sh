@@ -26,6 +26,7 @@ arch="${INSTALL_SWIFT_ARCH:-"aarch64"}"
 os_image="${INSTALL_SWIFT_OS_IMAGE:-"ubuntu22.04"}"
 sdk="${INSTALL_SWIFT_SDK:-"static-sdk"}"
 swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"/tmp/swiftsdks"}"
+dry_run="${DRY_RUN:-""}"
 
 if [[ ! ( -n "$branch" && -z "$version" ) && ! ( -z "$branch" && -n "$version") ]]; then
   fatal "Exactly one of build or version must be defined."
@@ -87,6 +88,25 @@ extract_checksum() {
   fi
 }
 
+# Function to extract the SDK version from release info (for static-sdk)
+extract_static_sdk_version() {
+  local release_info="$1"
+  if [[ -z "$release_info" ]]; then
+    log "Warning: No release information available"
+    return
+  fi
+
+  local sdk_version
+  # shellcheck disable=SC2016  # Our use of JQ_BIN means that shellcheck can't tell this is a `jq` invocation
+  sdk_version=$(echo "$release_info" | "$JQ_BIN" -r '.platforms[] | select(.platform == "static-sdk") | .version // empty')
+  if [[ -n "$sdk_version" ]]; then
+    log "Found Static Linux Swift SDK version: $sdk_version"
+    echo "$sdk_version"
+  else
+    log "Warning: No version available for static-sdk platform"
+  fi
+}
+
 if [[ -n "$branch" ]]; then
   # Some snapshots may not have all the artefacts we require
   log "Discovering branch snapshot for branch $branch"
@@ -138,8 +158,24 @@ elif [[ -n "$version" ]]; then
   fi
 
   expected_checksum=$(extract_checksum "$release_info")
+  if [[ "$sdk" == "static-sdk" ]]; then
+    static_sdk_version=$(extract_static_sdk_version "$release_info")
+    if [[ -n "$static_sdk_version" ]]; then
+      sdk_suffix="_static-linux-${static_sdk_version}"
+    fi
+  fi
   snapshot_url="https://download.swift.org/swift-${version}-release/${os_image_sanitized}${arch_suffix}/swift-${version}-RELEASE/swift-${version}-RELEASE-${os_image}${arch_suffix}.tar.gz"
   sdk_url="https://download.swift.org/swift-${version}-release/${sdk_dir}/swift-${version}-RELEASE/swift-${version}-RELEASE${sdk_suffix}.artifactbundle.tar.gz"
+fi
+
+if [[ -n "$dry_run" ]]; then
+  log "Dry-run mode: no downloads or installations will be performed"
+  log "Snapshot URL: $snapshot_url"
+  log "Swift SDK URL: $sdk_url"
+  if [[ -n "${expected_checksum:-}" ]]; then
+    log "Expected Swift SDK checksum: $expected_checksum"
+  fi
+  exit 0
 fi
 
 log "Obtaining Swift toolchain"
