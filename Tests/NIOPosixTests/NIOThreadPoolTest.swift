@@ -21,8 +21,9 @@ import Testing
 
 @testable import NIOPosix
 
-@Suite("NIOThreadPoolTest", .timeLimit(.minutes(1)))
+@Suite("NIOThreadPoolTest")
 class NIOThreadPoolTest {
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testThreadNamesAreSetUp() {
         let numberOfThreads = 11
@@ -69,6 +70,7 @@ class NIOThreadPoolTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testThreadPoolStartsMultipleTimes() async throws {
         let numberOfThreads = 1
@@ -119,6 +121,7 @@ class NIOThreadPoolTest {
         await #expect(throws: Never.self) { try await pool.shutdownGracefully() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAsyncThreadPool() async throws {
         let numberOfThreads = 1
@@ -134,6 +137,7 @@ class NIOThreadPoolTest {
         try await pool.shutdownGracefully()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAsyncThreadPoolErrorPropagation() async throws {
         struct ThreadPoolError: Error {}
@@ -151,6 +155,7 @@ class NIOThreadPoolTest {
         try await pool.shutdownGracefully()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAsyncThreadPoolNotActiveError() async throws {
         struct ThreadPoolError: Error {}
@@ -170,6 +175,7 @@ class NIOThreadPoolTest {
         try await pool.shutdownGracefully()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAsyncThreadPoolCancellation() async throws {
         let pool = NIOThreadPool(numberOfThreads: 1)
@@ -194,6 +200,7 @@ class NIOThreadPoolTest {
         try await pool.shutdownGracefully()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAsyncShutdownWorks() async throws {
         let threadPool = NIOThreadPool(numberOfThreads: 17)

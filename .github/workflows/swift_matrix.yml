@@ -27,8 +27,8 @@ on:
         description: "The command of the 5.9 Swift version linux matrix job to execute."
       matrix_linux_5_10_enabled:
         type: boolean
-        description: "Boolean to enable the 5.10 Swift version matrix job. Defaults to true."
-        default: true
+        description: "Boolean to enable the 5.10 Swift version matrix job. Defaults to false."
+        default: false
       matrix_linux_5_10_container_image:
         type: string
         description: "Container image for the 5.10 Swift version matrix job. Defaults to matching Swift Ubuntu image."
@@ -182,6 +182,22 @@ jobs:
             swift_version: "6.0"
             enabled: ${{ inputs.matrix_windows_6_0_enabled }}
     steps:
+      - name: Wait for Docker daemon
+        if: ${{ matrix.swift.enabled }}
+        run: |
+          $maxAttempts = 30
+          $attempt = 0
+          do {
+            $attempt++
+            docker info 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempt -ge $maxAttempts) {
+              Write-Error "Docker daemon did not become ready after $maxAttempts attempts"
+              exit 1
+            }
+            Start-Sleep -Seconds 2
+          } while ($true)
+        shell: pwsh
       - name: Pull Docker image
         if: ${{ matrix.swift.enabled }}
         run: docker pull ${{ matrix.swift.image }}
@@ -213,6 +229,22 @@ jobs:
             swift_version: "nightly-main"
             enabled: ${{ inputs.matrix_windows_nightly_main_enabled }}
     steps:
+      - name: Wait for Docker daemon
+        if: ${{ matrix.swift.enabled }}
+        run: |
+          $maxAttempts = 30
+          $attempt = 0
+          do {
+            $attempt++
+            docker info 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempt -ge $maxAttempts) {
+              Write-Error "Docker daemon did not become ready after $maxAttempts attempts"
+              exit 1
+            }
+            Start-Sleep -Seconds 2
+          } while ($true)
+        shell: pwsh
       - name: Pull Docker image
         if: ${{ matrix.swift.enabled }}
         run: docker pull ${{ matrix.swift.image }}

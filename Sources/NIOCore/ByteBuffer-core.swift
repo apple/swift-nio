@@ -85,26 +85,62 @@ public struct ByteBufferAllocator: Sendable {
     /// Create a fresh `ByteBufferAllocator`. In the future the allocator might use for example allocation pools and
     /// therefore it's recommended to reuse `ByteBufferAllocators` where possible instead of creating fresh ones in
     /// many places.
-    @inlinable public init() {
-        self.init(
-            hookedMalloc: { sysMalloc($0) },
-            hookedRealloc: { sysRealloc($0, $1) },
-            hookedFree: { sysFree($0) },
-            hookedMemcpy: { $0.copyMemory(from: $1, byteCount: $2) }
-        )
+    public init() {
+        self.init {
+            sysMalloc($0)
+        } reallocate: { ptr, _, newSize in
+            sysRealloc(ptr, newSize)
+        } deallocate: {
+            sysFree($0)
+        } copy: {
+            $0.copyMemory(from: $1, byteCount: $2)
+        }
     }
 
+    /// Creates a `ByteBufferAllocator` with custom memory allocation functions.
+    ///
+    /// This allows `ByteBuffer` to work with memory from external allocation systems.
+    /// All memory operations on buffers created with this allocator will use the provided functions.
+    ///
+    /// ## Example: Integrating with External Buffer System
+    ///
+    /// ```swift
+    /// let allocator = ByteBufferAllocator { size in
+    ///     externalSystem.allocate(Int(size))
+    /// } reallocate: { ptr, oldSize, newSize in
+    ///     externalSystem.reallocate(ptr, Int(oldSize), Int(newSize))
+    /// } deallocate: { ptr in
+    ///     externalSystem.deallocate(ptr)
+    /// } copy: { dst, src, count in
+    ///     dst.copyMemory(from: src, byteCount: Int(count))
+    /// }
+    /// ```
+    ///
+    /// - Warning: This is an advanced API. The provided functions must:
+    ///   - Be thread-safe if the allocator will be used from multiple threads
+    ///   - Handle the same pointer across allocate/reallocate/deallocate calls
+    ///   - Not throw or trap (C calling convention)
+    ///
+    /// - Parameters:
+    ///   - allocate: Allocate new memory of given size. Must not return nil.
+    ///   - reallocate: Reallocate existing memory. Takes pointer, old capacity, and new capacity. Must not return nil.
+    ///   - deallocate: Deallocate memory previously allocated by allocate.
+    ///   - copy: Copy bytes between memory regions.
+    @_spi(CustomByteBufferAllocator)
     @inlinable
-    internal init(
-        hookedMalloc: @escaping @convention(c) (size_t) -> UnsafeMutableRawPointer?,
-        hookedRealloc: @escaping @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer?,
-        hookedFree: @escaping @convention(c) (UnsafeMutableRawPointer) -> Void,
-        hookedMemcpy: @escaping @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, size_t) -> Void
+    public init(
+        allocate: @escaping @convention(c) (_ size: size_t) -> UnsafeMutableRawPointer?,
+        reallocate:
+            @escaping @convention(c) (_ ptr: UnsafeMutableRawPointer?, _ oldSize: size_t, _ newSize: size_t) ->
+            UnsafeMutableRawPointer?,
+        deallocate: @escaping @convention(c) (_ ptr: UnsafeMutableRawPointer) -> Void,
+        copy:
+            @escaping @convention(c) (_ dst: UnsafeMutableRawPointer, _ src: UnsafeRawPointer, _ count: size_t) -> Void
     ) {
-        self.malloc = hookedMalloc
-        self.realloc = hookedRealloc
-        self.free = hookedFree
-        self.memcpy = hookedMemcpy
+        self.allocate = allocate
+        self.reallocate = reallocate
+        self.deallocate = deallocate
+        self.copy = copy
     }
 
     /// Request a freshly allocated `ByteBuffer` of size `capacity` or larger.
@@ -131,11 +167,11 @@ public struct ByteBufferAllocator: Sendable {
         startingCapacity: 0
     )
 
-    @usableFromInline internal let malloc: @convention(c) (size_t) -> UnsafeMutableRawPointer?
-    @usableFromInline internal let realloc:
-        @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer?
-    @usableFromInline internal let free: @convention(c) (UnsafeMutableRawPointer) -> Void
-    @usableFromInline internal let memcpy: @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, size_t) -> Void
+    @usableFromInline internal let allocate: @convention(c) (size_t) -> UnsafeMutableRawPointer?
+    @usableFromInline internal let reallocate:
+        @convention(c) (UnsafeMutableRawPointer?, size_t, size_t) -> UnsafeMutableRawPointer?
+    @usableFromInline internal let deallocate: @convention(c) (UnsafeMutableRawPointer) -> Void
+    @usableFromInline internal let copy: @convention(c) (UnsafeMutableRawPointer, UnsafeRawPointer, size_t) -> Void
 }
 
 @inlinable func _toCapacity(_ value: Int) -> ByteBuffer._Capacity {
@@ -300,7 +336,7 @@ public struct ByteBuffer {
 
         @inlinable
         static func _allocateAndPrepareRawMemory(bytes: _Capacity, allocator: Allocator) -> UnsafeMutableRawPointer {
-            let ptr = allocator.malloc(size_t(bytes))!
+            let ptr = allocator.allocate(size_t(bytes))!
             // bind the memory so we can assume it elsewhere to be bound to UInt8
             ptr.bindMemory(to: UInt8.self, capacity: Int(bytes))
             return ptr
@@ -325,14 +361,14 @@ public struct ByteBuffer {
         func reallocSlice(_ slice: Range<ByteBuffer._Index>, capacity: _Capacity) -> _Storage {
             assert(slice.count <= capacity)
             let new = self.allocateStorage(capacity: capacity)
-            self.allocator.memcpy(new.bytes, self.bytes.advanced(by: Int(slice.lowerBound)), size_t(slice.count))
+            self.allocator.copy(new.bytes, self.bytes.advanced(by: Int(slice.lowerBound)), size_t(slice.count))
             return new
         }
 
         @inlinable
         func reallocStorage(capacity minimumNeededCapacity: _Capacity) {
             let newCapacity = minimumNeededCapacity.nextPowerOf2ClampedToMax()
-            let ptr = self.allocator.realloc(self.bytes, size_t(newCapacity))!
+            let ptr = self.allocator.reallocate(self.bytes, size_t(self.capacity), size_t(newCapacity))!
             // bind the memory so we can assume it elsewhere to be bound to UInt8
             ptr.bindMemory(to: UInt8.self, capacity: Int(newCapacity))
             self.bytes = ptr
@@ -340,7 +376,7 @@ public struct ByteBuffer {
         }
 
         private func deallocate() {
-            self.allocator.free(self.bytes)
+            self.allocator.deallocate(self.bytes)
         }
 
         @inlinable
@@ -589,6 +625,78 @@ public struct ByteBuffer {
         self._writerIndex = 0
         self._storage = _Storage.reallocated(minimumCapacity: startingCapacity, allocator: allocator)
         self._slice = self._storage.fullSlice
+    }
+
+    /// Creates a `ByteBuffer` taking ownership of existing memory.
+    ///
+    /// The `ByteBuffer` takes ownership of the memory in `buffer` and will manage it
+    /// using the provided `allocator`. When the `ByteBuffer` needs to free, grow, or
+    /// copy the memory, it will use the allocator's functions.
+    ///
+    /// ## Example
+    ///
+    /// ```swift
+    /// // Get memory from external system
+    /// let buffer = externalSystem.extractBuffer()
+    ///
+    /// // Create allocator with external system's functions
+    /// let allocator = ByteBufferAllocator { size in
+    ///     externalSystem.allocate(Int(size))
+    /// } reallocate: { ptr, oldSize, newSize in
+    ///     externalSystem.reallocate(ptr, Int(oldSize), Int(newSize))
+    /// } deallocate: { ptr in
+    ///     externalSystem.deallocate(ptr)
+    /// } copy: { dst, src, count in
+    ///     dst.copyMemory(from: src, byteCount: Int(count))
+    /// }
+    ///
+    /// // Take ownership of the memory
+    /// let byteBuffer = ByteBuffer(
+    ///     takingOwnershipOf: buffer,
+    ///     allocator: allocator
+    /// )
+    /// ```
+    ///
+    /// - Warning: The caller must ensure:
+    ///   - The buffer was allocated in a manner compatible with `allocator.deallocate`
+    ///   - The buffer will not be accessed or freed by any other code after this call
+    ///   - The memory region is valid and accessible
+    ///
+    /// - Parameters:
+    ///   - buffer: The buffer whose memory to take ownership of. Must have a non-nil baseAddress.
+    ///   - allocator: The allocator to use for managing this memory
+    ///   - readerIndex: Initial reader index (default: 0)
+    ///   - writerIndex: Initial writer index (default: buffer.count, making all bytes readable)
+    @_spi(CustomByteBufferAllocator)
+    @inlinable
+    public init(
+        takingOwnershipOf buffer: UnsafeMutableRawBufferPointer,
+        allocator: ByteBufferAllocator,
+        readerIndex: Int = 0,
+        writerIndex: Int? = nil
+    ) {
+        precondition(buffer.baseAddress != nil, "Cannot take ownership of buffer with nil baseAddress")
+
+        let capacity = buffer.count
+        let writerIndex = writerIndex ?? capacity
+
+        precondition(capacity >= 0, "ByteBuffer capacity must be non-negative")
+        precondition(readerIndex >= 0 && readerIndex <= capacity, "readerIndex out of bounds")
+        precondition(writerIndex >= readerIndex && writerIndex <= capacity, "writerIndex out of bounds")
+
+        let bytes = buffer.baseAddress!
+        bytes.bindMemory(to: UInt8.self, capacity: capacity)
+
+        let storage = _Storage(
+            bytesNoCopy: bytes,
+            capacity: _toCapacity(capacity),
+            allocator: allocator
+        )
+
+        self._storage = storage
+        self._readerIndex = _toIndex(readerIndex)
+        self._writerIndex = _toIndex(writerIndex)
+        self._slice = storage.fullSlice
     }
 
     /// The number of bytes writable until `ByteBuffer` will need to grow its underlying storage which will likely
@@ -888,6 +996,31 @@ public struct ByteBuffer {
     public func withVeryUnsafeBytesWithStorageManagement<T, ErrorType: Error>(
         _ body: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws(ErrorType) -> T
     ) throws(ErrorType) -> T {
+        let storageReference: Unmanaged<AnyObject> = Unmanaged.passUnretained(self._storage)
+        return try body(.init(self._slicedStorageBuffer), storageReference)
+    }
+
+    /// Yields a mutable buffer pointer to this `ByteBuffer`'s storage along with a storage management handle.
+    /// It's marked as _very unsafe_ because it might contain uninitialised memory and it's undefined behaviour to read it.
+    ///
+    /// This method provides mutable access to the full buffer storage (not just readable bytes)
+    /// along with an `Unmanaged` reference to the storage owner for lifetime management.
+    /// If you don't require the pointer after the closure returns, use `withVeryUnsafeMutableBytes`.
+    ///
+    /// If you escape the pointer from the closure, you _must_ call `storageManagement.retain()` to get ownership to
+    /// the bytes and you also must call `storageManagement.release()` if you no longer require those bytes. Calls to
+    /// `retain` and `release` must be balanced.
+    ///
+    /// - Parameters:
+    ///   - body: The closure that will accept the mutable buffer pointer and storage management.
+    /// - Returns: The value returned by `body`.
+    @_spi(CustomByteBufferAllocator)
+    @inlinable
+    public mutating func withVeryUnsafeMutableBytesWithStorageManagement<T, ErrorType: Error>(
+        _ body: (_ bytes: UnsafeMutableRawBufferPointer, _ storageManagement: Unmanaged<AnyObject>) throws(ErrorType) ->
+            T
+    ) throws(ErrorType) -> T {
+        self._copyStorageAndRebaseIfNeeded()
         let storageReference: Unmanaged<AnyObject> = Unmanaged.passUnretained(self._storage)
         return try body(.init(self._slicedStorageBuffer), storageReference)
     }

@@ -578,7 +578,11 @@ final class FileSystemTests: XCTestCase {
     }
 
     #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android)
-    func testHomeDirectoryFromPasswd() {
+    func testHomeDirectoryFromPasswd() throws {
+        #if targetEnvironment(simulator)
+        // Simulators don't have a passwd database entry for the current user.
+        throw XCTSkip("getpwuid_r has no passwd entry in simulator environments")
+        #else
         // Should always succeed on Unix-like systems for the current user
         let result = Libc.homeDirectoryFromPasswd()
         switch result {
@@ -588,6 +592,7 @@ final class FileSystemTests: XCTestCase {
         case .failure(let errno):
             XCTFail("Expected success, got error: \(errno)")
         }
+        #endif
     }
     #endif
 

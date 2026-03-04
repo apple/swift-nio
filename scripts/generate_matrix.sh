@@ -32,7 +32,7 @@ linux_command="${MATRIX_LINUX_COMMAND:-}"  # required if any Linux pipeline is e
 linux_setup_command="${MATRIX_LINUX_SETUP_COMMAND:-}"
 linux_5_9_enabled="${MATRIX_LINUX_5_9_ENABLED:=false}"
 linux_5_9_command_arguments="${MATRIX_LINUX_5_9_COMMAND_ARGUMENTS:-}"
-linux_5_10_enabled="${MATRIX_LINUX_5_10_ENABLED:=true}"
+linux_5_10_enabled="${MATRIX_LINUX_5_10_ENABLED:=false}"
 linux_5_10_command_arguments="${MATRIX_LINUX_5_10_COMMAND_ARGUMENTS:-}"
 linux_6_0_enabled="${MATRIX_LINUX_6_0_ENABLED:=true}"
 linux_6_1_enabled="${MATRIX_LINUX_6_1_ENABLED:=true}"
