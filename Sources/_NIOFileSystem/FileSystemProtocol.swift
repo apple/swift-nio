@@ -499,7 +499,7 @@ extension FileSystemProtocol {
     public func info(forFileAt path: FilePath) async throws -> FileInfo? {
         try await self.info(forFileAt: path, infoAboutSymbolicLink: false)
     }
- 
+
     public func copyItem(
         at sourcePath: FilePath,
         to destinationPath: FilePath,
