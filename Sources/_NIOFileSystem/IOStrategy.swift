@@ -56,7 +56,7 @@ enum IOStrategy: Hashable, Sendable {
 }
 
 /// How to perform copies. Currently only relevant to directory level copies when using
-/// ``FileSystemProtocol/copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)`` or other
+/// ``FileSystemProtocol/copyItem(at:to:strategy:replaceExisting:shouldProceedAfterError:shouldCopyItem:)`` or other
 /// overloads that use the default behaviour.
 public struct CopyStrategy: Hashable, Sendable {
     internal let wrapped: IOStrategy

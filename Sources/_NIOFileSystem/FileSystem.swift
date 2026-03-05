@@ -306,50 +306,6 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     // MARK: - File copying, removal, and moving
 
-    /// See ``FileSystemProtocol/copyItem(at:to:shouldProceedAfterError:shouldCopyFile:)``
-    ///
-    /// The item to be copied must be a:
-    /// - regular file,
-    /// - symbolic link, or
-    /// - directory.
-    ///
-    /// `shouldCopyItem` can be used to ignore objects not part of this set.
-    ///
-    /// #### Errors
-    ///
-    /// In addition to the already documented errors these may be thrown
-    /// - ``FileSystemError/Code-swift.struct/unsupported`` if an item to be copied is not a regular
-    ///   file, symbolic link or directory.
-    ///
-    /// #### Implementation details
-    ///
-    /// This function is platform dependent. On Darwin the `copyfile(2)` system call is used and
-    /// items are cloned where possible. On Linux the `sendfile(2)` system call is used.
-    public func copyItem(
-        at sourcePath: FilePath,
-        to destinationPath: FilePath,
-        strategy copyStrategy: CopyStrategy,
-        shouldProceedAfterError:
-            @escaping @Sendable (
-                _ source: DirectoryEntry,
-                _ error: Error
-            ) async throws -> Void,
-        shouldCopyItem:
-            @escaping @Sendable (
-                _ source: DirectoryEntry,
-                _ destination: FilePath
-            ) async -> Bool
-    ) async throws {
-        try await self.copyItem(
-            at: sourcePath,
-            to: destinationPath,
-            strategy: copyStrategy,
-            replaceExisting: false,
-            shouldProceedAfterError: shouldProceedAfterError,
-            shouldCopyItem: shouldCopyItem
-        )
-    }
-
     /// See ``FileSystemProtocol/copyItem(at:to:strategy:replaceExisting:shouldProceedAfterError:shouldCopyItem:)``
     ///
     /// When `replaceExisting` is `true`, regular files are atomically replaced using `COPYFILE_UNLINK`
