@@ -308,6 +308,24 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     /// See ``FileSystemProtocol/copyItem(at:to:strategy:replaceExisting:shouldProceedAfterError:shouldCopyItem:)``
     ///
+    /// The item to be copied must be a:
+    /// - regular file,
+    /// - symbolic link, or
+    /// - directory.
+    ///
+    /// `shouldCopyItem` can be used to ignore objects not part of this set.
+    ///
+    /// #### Errors
+    ///
+    /// In addition to the already documented errors these may be thrown
+    /// - ``FileSystemError/Code-swift.struct/unsupported`` if an item to be copied is not a regular
+    ///   file, symbolic link or directory.
+    ///
+    /// #### Implementation details
+    ///
+    /// This function is platform dependent. On Darwin the `copyfile(2)` system call is used and
+    /// items are cloned where possible. On Linux the `sendfile(2)` system call is used.
+    ///
     /// When `replaceExisting` is `true`, regular files are atomically replaced using `COPYFILE_UNLINK`
     /// on Darwin or a temporary file followed by `renameat2(2)` on Linux. Symbolic links are
     /// atomically replaced using a temporary symlink followed by `renamex_np(2)` on Darwin or
