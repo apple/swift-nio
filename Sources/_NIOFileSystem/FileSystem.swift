@@ -325,6 +325,32 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///
     /// This function is platform dependent. On Darwin the `copyfile(2)` system call is used and
     /// items are cloned where possible. On Linux the `sendfile(2)` system call is used.
+    public func copyItem(
+        at sourcePath: FilePath,
+        to destinationPath: FilePath,
+        strategy copyStrategy: CopyStrategy,
+        shouldProceedAfterError:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ error: Error
+            ) async throws -> Void,
+        shouldCopyItem:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ destination: FilePath
+            ) async -> Bool
+    ) async throws {
+        try await self.copyItem(
+            at: sourcePath,
+            to: destinationPath,
+            strategy: copyStrategy,
+            replaceExisting: false,
+            shouldProceedAfterError: shouldProceedAfterError,
+            shouldCopyItem: shouldCopyItem
+        )
+    }
+
+    /// See ``FileSystemProtocol/copyItem(at:to:strategy:replaceExisting:shouldProceedAfterError:shouldCopyItem:)``
     ///
     /// When `replaceExisting` is `true`, regular files are atomically replaced using `COPYFILE_UNLINK`
     /// on Darwin or a temporary file followed by `renameat2(2)` on Linux. Symbolic links are
