@@ -83,10 +83,12 @@ extension NIOThread {
 extension MultiThreadedEventLoopGroup {
 
     /// Create a new `MultiThreadedEventLoopGroup` that create as many `NIOThread`s as `pinnedCPUIds`. Each `NIOThread` will be pinned to the CPU with the id.
+    /// 
+    /// Generally you should avoid using this API unless you have a concrete reason to need to pin threads to specific IDs.
     ///
     /// - arguments:
     ///   - pinnedCPUIds: The CPU ids to apply to the `NIOThread`s.
-    convenience init(pinnedCPUIds: [Int]) {
+    public convenience init(pinnedCPUIds: [Int]) {
         let initializers: [ThreadInitializer] = pinnedCPUIds.map { id in
             // This will also take care of validation of the provided id.
             let set = LinuxCPUSet(id)
