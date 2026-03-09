@@ -669,7 +669,7 @@ final class EventLoopTest: XCTestCase {
     func testEventLoopPinnedCPUIdsConstructor() throws {
         #if os(Linux) || os(Android)
         let target = NIOThread.currentAffinity.cpuIds.first!
-        let group = MultiThreadedEventLoopGroup(pinnedCPUIds: [target])
+        let group = MultiThreadedEventLoopGroup(pinnedCPUIDs: [target])
         let eventLoop = group.next()
         let set = try eventLoop.submit {
             NIOThread.currentAffinity
