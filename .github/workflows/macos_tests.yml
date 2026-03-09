@@ -228,6 +228,11 @@ on:
         description: "The runner pool which will be requested."
         default: "nightly"
 
+      debug_output_enabled:
+        type: boolean
+        description: "Boolean to enable debug output from xcodebuild by eliding -quiet. Defaults to false."
+        default: false
+
       env_vars:
         type: string
         description: "Environment variables for jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
@@ -502,49 +507,50 @@ jobs:
         # see `xcodebuild -list` for schemes, `simctl list` for destinations
       - name: macOS build
         if: '!cancelled() && inputs.macos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=macos,variant=macos" build
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "generic/platform=macos,variant=macos" build
       - name: macOS test
         if: '!cancelled() && inputs.macos_xcode_test_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=My Mac,variant=macos" test
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "name=My Mac,variant=macos" test
       - name: macOS Catalyst build
         if: '!cancelled() && inputs.macos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=macos,variant=Mac Catalyst" build
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "generic/platform=macos,variant=Mac Catalyst" build
       - name: macOS Catalyst test
         if: '!cancelled() && inputs.macos_xcode_test_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=My Mac,variant=Mac Catalyst" test
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "name=My Mac,variant=Mac Catalyst" test
       - name: iOS build
         if: '!cancelled() && inputs.ios_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=ios" build
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "generic/platform=ios" build
       - name: iOS test
         if: '!cancelled() && inputs.ios_xcode_test_enabled'
         run: |
           /usr/bin/xcrun simctl shutdown all
-          /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=iPhone Air" test
+          /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "name=iPhone Air" test
       - name: watchOS build
         if: '!cancelled() && inputs.watchos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=watchos" build
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "generic/platform=watchos" build
       - name: watchOS test
         if: '!cancelled() && inputs.watchos_xcode_test_enabled'
         run: |
           /usr/bin/xcrun simctl shutdown all
-          /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple Watch Ultra 3 (49mm)" test
+          /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "name=Apple Watch Ultra 3 (49mm)" test
       - name: tvOS build
         if: '!cancelled() && inputs.tvos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=tvos" build
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "generic/platform=tvos" build
       - name: tvOS test
         if: '!cancelled() && inputs.tvos_xcode_test_enabled'
         run: |
           /usr/bin/xcrun simctl shutdown all
-          /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple TV 4K (3rd generation)" test
+          /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "name=Apple TV 4K (3rd generation)" test
       - name: visionOS build  # arm only
         if: '!cancelled() && inputs.visionos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=visionos" build
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "generic/platform=visionos" build
       - name: visionOS test  # arm only
         if: '!cancelled() && inputs.visionos_xcode_test_enabled'
         run: |
           /usr/bin/xcrun simctl shutdown all
-          /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple Vision Pro" test
+          /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "name=Apple Vision Pro" test
     env:
       XCODE_VERSION: ${{ matrix.config.xcode_version }}
       DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
       BUILD_SCHEME: ${{ inputs.build_scheme }}
+      QUIET_ARG: ${{ inputs.debug_output_enabled && ' ' || '-quiet' }}
