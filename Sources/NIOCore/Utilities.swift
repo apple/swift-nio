@@ -280,7 +280,7 @@ extension System {
     /// Returns `nil`.
     @available(*, deprecated, message: "UDP_MAX_SEGMENTS isn't exposed by the Linux kernel")
     public static var udpMaxSegments: Int? {
-        return nil
+        nil
     }
 }
 
