@@ -46,7 +46,7 @@ jobs:
               Write-Error "Docker daemon did not become ready after $maxAttempts attempts"
               exit 1
             }
-            Start-Sleep -Seconds 2
+            Start-Sleep -Seconds 6
           } while ($true)
         shell: pwsh
       - name: Pull Docker image
