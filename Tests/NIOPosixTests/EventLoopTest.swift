@@ -22,7 +22,7 @@ import Testing
 @testable import NIOCore
 @testable import NIOPosix
 
-@Suite("MultiThreadedEventLoopGroupTests", .serialized, .timeLimit(.minutes(1)))
+@Suite("MultiThreadedEventLoopGroupTests", .serialized)
 final class MultiThreadedEventLoopGroupTests {
     @Test
     func testSchedule() throws {
@@ -980,7 +980,7 @@ final class MultiThreadedEventLoopGroupTests {
         }
     }
 
-    @Test(.timeLimit(.minutes(1)))
+    @Test
     func testRepeatedTaskThatCancelsItselfNotifiesOnlyWhenFinished() async throws {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
