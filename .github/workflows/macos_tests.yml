@@ -175,6 +175,55 @@ on:
         description: "The command(s) to be executed before all other work."
         default: ""
 
+      swift_6_1_enabled:
+        type: boolean
+        description: "Boolean to enable the Swift 6.1 jobs. Defaults to false."
+        default: false
+      swift_6_1_build_arguments_override:
+        type: string
+        description: "The arguments passed to swift build in the Swift 6.1 job."
+        default: ""
+      swift_6_1_test_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Swift 6.1 job."
+        default: ""
+      swift_6_1_setup_command:
+        type: string
+        description: "The command(s) to be executed before all other work."
+        default: ""
+      swift_6_2_enabled:
+        type: boolean
+        description: "Boolean to enable the Swift 6.2 jobs. Defaults to false."
+        default: false
+      swift_6_2_build_arguments_override:
+        type: string
+        description: "The arguments passed to swift build in the Swift 6.2 job."
+        default: ""
+      swift_6_2_test_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Swift 6.2 job."
+        default: ""
+      swift_6_2_setup_command:
+        type: string
+        description: "The command(s) to be executed before all other work."
+        default: ""
+      swift_6_3_enabled:
+        type: boolean
+        description: "Boolean to enable the Swift 6.3 jobs. Defaults to false."
+        default: false
+      swift_6_3_build_arguments_override:
+        type: string
+        description: "The arguments passed to swift build in the Swift 6.3 job."
+        default: ""
+      swift_6_3_test_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Swift 6.3 job."
+        default: ""
+      swift_6_3_setup_command:
+        type: string
+        description: "The command(s) to be executed before all other work."
+        default: ""
+
       build_scheme:
         type: string
         description: "The build scheme used in the Xcode builds."
@@ -307,6 +356,18 @@ jobs:
             xcode_latest_beta_build_arguments_override="${MATRIX_MACOS_LATEST_BETA_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_latest_beta_test_arguments_override="${MATRIX_MACOS_LATEST_BETA_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_latest_beta_setup_command="${MATRIX_MACOS_LATEST_BETA_SETUP_COMMAND:=""}"
+            swift_6_1_enabled="${MATRIX_SWIFT_6_1_ENABLED:=true}"
+            swift_6_1_build_arguments_override="${MATRIX_SWIFT_6_1_BUILD_ARGUMENTS_OVERRIDE:=""}"
+            swift_6_1_test_arguments_override="${MATRIX_SWIFT_6_1_TEST_ARGUMENTS_OVERRIDE:=""}"
+            swift_6_1_setup_command="${MATRIX_SWIFT_6_1_SETUP_COMMAND:=""}"
+            swift_6_2_enabled="${MATRIX_SWIFT_6_2_ENABLED:=true}"
+            swift_6_2_build_arguments_override="${MATRIX_SWIFT_6_2_BUILD_ARGUMENTS_OVERRIDE:=""}"
+            swift_6_2_test_arguments_override="${MATRIX_SWIFT_6_2_TEST_ARGUMENTS_OVERRIDE:=""}"
+            swift_6_2_setup_command="${MATRIX_SWIFT_6_2_SETUP_COMMAND:=""}"
+            swift_6_3_enabled="${MATRIX_SWIFT_6_3_ENABLED:=true}"
+            swift_6_3_build_arguments_override="${MATRIX_SWIFT_6_3_BUILD_ARGUMENTS_OVERRIDE:=""}"
+            swift_6_3_test_arguments_override="${MATRIX_SWIFT_6_3_TEST_ARGUMENTS_OVERRIDE:=""}"
+            swift_6_3_setup_command="${MATRIX_SWIFT_6_3_SETUP_COMMAND:=""}"
 
             # Create matrix from inputs
             matrix='{"config": []}'
@@ -411,6 +472,36 @@ jobs:
                 '.config[.config| length] |= . + { "name": "Xcode latest beta", "xcode_version": "latest beta", "xcode_app": "Xcode-latest.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
             fi
 
+            if [[ "$swift_6_1_enabled" == "true" ]]; then
+                matrix=$(echo "$matrix" | jq -c \
+                --arg setup_command "$swift_6_1_setup_command"  \
+                --arg build_arguments_override "$swift_6_1_build_arguments_override"  \
+                --arg test_arguments_override "$swift_6_1_test_arguments_override"  \
+                --arg runner_pool "$runner_pool"  \
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Swift 6.1", "xcode_version": "swift 6.1", "xcode_app": "Xcode_swift_6.1.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+            fi
+
+            if [[ "$swift_6_2_enabled" == "true" ]]; then
+                matrix=$(echo "$matrix" | jq -c \
+                --arg setup_command "$swift_6_2_setup_command"  \
+                --arg build_arguments_override "$swift_6_2_build_arguments_override"  \
+                --arg test_arguments_override "$swift_6_2_test_arguments_override"  \
+                --arg runner_pool "$runner_pool"  \
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Swift 6.2", "xcode_version": "swift 6.2", "xcode_app": "Xcode_swift_6.2.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+            fi
+
+            if [[ "$swift_6_3_enabled" == "true" ]]; then
+                matrix=$(echo "$matrix" | jq -c \
+                --arg setup_command "$swift_6_3_setup_command"  \
+                --arg build_arguments_override "$swift_6_3_build_arguments_override"  \
+                --arg test_arguments_override "$swift_6_3_test_arguments_override"  \
+                --arg runner_pool "$runner_pool"  \
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Swift 6.3", "xcode_version": "swift 6.3", "xcode_app": "Xcode_swift_6.3.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+            fi
+
             echo "$matrix" | jq -c
           )"
           EOM
@@ -460,6 +551,18 @@ jobs:
           MATRIX_MACOS_LATEST_BETA_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_latest_beta_build_arguments_override }}
           MATRIX_MACOS_LATEST_BETA_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_latest_beta_test_arguments_override }}
           MATRIX_MACOS_LATEST_BETA_SETUP_COMMAND: ${{ inputs.xcode_latest_beta_setup_command }}
+          MATRIX_SWIFT_6_1_ENABLED: ${{ inputs.swift_6_1_enabled }}
+          MATRIX_SWIFT_6_1_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.swift_6_1_build_arguments_override }}
+          MATRIX_SWIFT_6_1_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.swift_6_1_test_arguments_override }}
+          MATRIX_SWIFT_6_1_SETUP_COMMAND: ${{ inputs.swift_6_1_setup_command }}
+          MATRIX_SWIFT_6_2_ENABLED: ${{ inputs.swift_6_2_enabled }}
+          MATRIX_SWIFT_6_2_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.swift_6_2_build_arguments_override }}
+          MATRIX_SWIFT_6_2_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.swift_6_2_test_arguments_override }}
+          MATRIX_SWIFT_6_2_SETUP_COMMAND: ${{ inputs.swift_6_2_setup_command }}
+          MATRIX_SWIFT_6_3_ENABLED: ${{ inputs.swift_6_3_enabled }}
+          MATRIX_SWIFT_6_3_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.swift_6_3_build_arguments_override }}
+          MATRIX_SWIFT_6_3_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.swift_6_3_test_arguments_override }}
+          MATRIX_SWIFT_6_3_SETUP_COMMAND: ${{ inputs.swift_6_3_setup_command }}
 
   darwin-job:
     name: ${{ matrix.config.name }}
