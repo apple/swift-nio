@@ -39,6 +39,19 @@ on:
         description: "Boolean to enable the macOS Xcode latest beta benchmark job. Defaults to false."
         default: false
 
+      macos_swift_6_1_enabled:
+        type: boolean
+        description: "Boolean to enable the macOS Swift 6.1 benchmark job. Defaults to false."
+        default: false
+      macos_swift_6_2_enabled:
+        type: boolean
+        description: "Boolean to enable the macOS Swift 6.2 benchmark job. Defaults to false."
+        default: false
+      macos_swift_6_3_enabled:
+        type: boolean
+        description: "Boolean to enable the macOS Swift 6.3 benchmark job. Defaults to false."
+        default: false
+
       macos_runner_pool:
         type: string
         description: "The runner pool which will be requested for macOS jobs."
@@ -64,7 +77,10 @@ jobs:
       inputs.macos_xcode_26_0_enabled ||
       inputs.macos_xcode_26_1_enabled ||
       inputs.macos_xcode_26_2_enabled ||
-      inputs.macos_xcode_latest_beta_enabled
+      inputs.macos_xcode_latest_beta_enabled ||
+      inputs.macos_swift_6_1_enabled ||
+      inputs.macos_swift_6_2_enabled ||
+      inputs.macos_swift_6_3_enabled
     outputs:
       macos-matrix: '${{ steps.generate-matrix.outputs.macos-matrix }}'
     steps:
@@ -89,6 +105,9 @@ jobs:
           xcode_26_1_enabled="${MACOS_XCODE_26_1_ENABLED}"
           xcode_26_2_enabled="${MACOS_XCODE_26_2_ENABLED}"
           xcode_latest_beta_enabled="${MACOS_XCODE_LATEST_BETA_ENABLED}"
+          swift_6_1_enabled="${MACOS_SWIFT_6_1_ENABLED}"
+          swift_6_2_enabled="${MACOS_SWIFT_6_2_ENABLED}"
+          swift_6_3_enabled="${MACOS_SWIFT_6_3_ENABLED}"
 
           # Create matrix from inputs
           matrix='{"config": []}'
@@ -135,6 +154,27 @@ jobs:
               '.config[.config| length] |= . + { "name": "macOS (Xcode latest beta)", "xcode_version": "latest beta", "xcode_app": "Xcode-latest.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
           fi
 
+          if [[ "$swift_6_1_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+              --arg runner_pool "$runner_pool" \
+              --argjson env_vars "$macos_env_vars_json" \
+              '.config[.config| length] |= . + { "name": "macOS (Swift 6.1)", "xcode_version": "swift 6.1", "xcode_app": "Xcode_swift_6.1.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+          fi
+
+          if [[ "$swift_6_2_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+              --arg runner_pool "$runner_pool" \
+              --argjson env_vars "$macos_env_vars_json" \
+              '.config[.config| length] |= . + { "name": "macOS (Swift 6.2)", "xcode_version": "swift 6.2", "xcode_app": "Xcode_swift_6.2.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+          fi
+
+          if [[ "$swift_6_3_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+              --arg runner_pool "$runner_pool" \
+              --argjson env_vars "$macos_env_vars_json" \
+              '.config[.config| length] |= . + { "name": "macOS (Swift 6.3)", "xcode_version": "swift 6.3", "xcode_app": "Xcode_swift_6.3.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+          fi
+
           echo "macos-matrix=$matrix" >> "$GITHUB_OUTPUT"
         env:
           MACOS_RUNNER_POOL: ${{ inputs.macos_runner_pool }}
@@ -144,6 +184,9 @@ jobs:
           MACOS_XCODE_26_1_ENABLED: ${{ inputs.macos_xcode_26_1_enabled }}
           MACOS_XCODE_26_2_ENABLED: ${{ inputs.macos_xcode_26_2_enabled }}
           MACOS_XCODE_LATEST_BETA_ENABLED: ${{ inputs.macos_xcode_latest_beta_enabled }}
+          MACOS_SWIFT_6_1_ENABLED: ${{ inputs.macos_swift_6_1_enabled }}
+          MACOS_SWIFT_6_2_ENABLED: ${{ inputs.macos_swift_6_2_enabled }}
+          MACOS_SWIFT_6_3_ENABLED: ${{ inputs.macos_swift_6_3_enabled }}
 
   benchmarks-macos:
     name: ${{ matrix.config.name }}
