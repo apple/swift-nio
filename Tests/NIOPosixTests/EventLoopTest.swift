@@ -934,7 +934,7 @@ final class MultiThreadedEventLoopGroupTests {
                 task.cancel(promise: promise2)
             }
 
-            try await Task.sleep(for: .milliseconds(100))
+            try await Task.sleep(nanoseconds: 100_000_000)
         }
     }
 
@@ -968,7 +968,7 @@ final class MultiThreadedEventLoopGroupTests {
                     confirm()
                 }
             }
-            try await Task.sleep(for: .milliseconds(100))
+            try await Task.sleep(nanoseconds: 100_000_000)
         }
         let cancellationHandle = try #require(task)
 
@@ -976,7 +976,7 @@ final class MultiThreadedEventLoopGroupTests {
             promise1.futureResult.whenSuccess { confirmation() }
             promise2.futureResult.whenSuccess { confirmation() }
             cancellationHandle.cancel(promise: promise2)
-            try await Task.sleep(for: .seconds(1))
+            try await Task.sleep(nanoseconds: 1_000_000_000)
         }
     }
 
@@ -1013,7 +1013,7 @@ final class MultiThreadedEventLoopGroupTests {
             }
 
             // Allow 0.5 seconds for promises to incorrectly fulfill
-            try await Task.sleep(for: .milliseconds(500))
+            try await Task.sleep(nanoseconds: 500_000_000)
         }
 
         // Phase 2 — now allow completion and verify they DO complete
@@ -1029,7 +1029,7 @@ final class MultiThreadedEventLoopGroupTests {
             }
 
             // Allow 0.5 seconds for promises to correctly fulfill
-            try await Task.sleep(for: .milliseconds(500))
+            try await Task.sleep(nanoseconds: 500_000_000)
         }
     }
 
