@@ -19,7 +19,7 @@ jobs:
   unit-tests:
     name: Unit tests
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/unit_tests.yml@main
+    uses: apple/swift-nio/.github/workflows/unit_tests.yml@add_macos_swift_xcode_mappings
     with:
       linux_5_10_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_6_0_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
@@ -31,14 +31,14 @@ jobs:
   benchmarks:
     name: Benchmarks
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/benchmarks.yml@main
+    uses: apple/swift-nio/.github/workflows/benchmarks.yml@add_macos_swift_xcode_mappings
     with:
       benchmark_package_path: "Benchmarks"
 
   cxx-interop:
     name: Cxx interop
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/cxx_interop.yml@main
+    uses: apple/swift-nio/.github/workflows/cxx_interop.yml@add_macos_swift_xcode_mappings
 
   construct-integration-test-matrix:
     name: Construct integration test matrix
@@ -51,7 +51,7 @@ jobs:
         with:
           persist-credentials: false
       - id: generate-matrix
-        run: echo "integration-test-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        run: echo "integration-test-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/add_macos_swift_xcode_mappings/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_SETUP_COMMAND: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq"
           MATRIX_LINUX_COMMAND: "./scripts/integration_tests.sh"
@@ -61,7 +61,7 @@ jobs:
     name: Integration tests
     needs: construct-integration-test-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@add_macos_swift_xcode_mappings
     with:
       name: "Integration tests"
       matrix_string: '${{ needs.construct-integration-test-matrix.outputs.integration-test-matrix }}'
@@ -87,7 +87,7 @@ jobs:
   macos-tests:
     name: macOS tests
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/macos_tests.yml@main
+    uses: apple/swift-nio/.github/workflows/macos_tests.yml@add_macos_swift_xcode_mappings
     with:
       runner_pool: general
       build_scheme: swift-nio-Package
@@ -103,20 +103,20 @@ jobs:
   static-sdk:
     name: Static Linux Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/static_sdk.yml@main
+    uses: apple/swift-nio/.github/workflows/static_sdk.yml@add_macos_swift_xcode_mappings
 
   wasm-sdk:
     name: WebAssembly Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/wasm_swift_sdk.yml@main
+    uses: apple/swift-nio/.github/workflows/wasm_swift_sdk.yml@add_macos_swift_xcode_mappings
     with:
       additional_command_arguments: "--target NIOCore"
 
   android-sdk:
     name: Android Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/android_swift_sdk.yml@main
+    uses: apple/swift-nio/.github/workflows/android_swift_sdk.yml@add_macos_swift_xcode_mappings
 
   release-builds:
     name: Release builds
-    uses: apple/swift-nio/.github/workflows/release_builds.yml@main
+    uses: apple/swift-nio/.github/workflows/release_builds.yml@add_macos_swift_xcode_mappings
