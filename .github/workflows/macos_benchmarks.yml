@@ -91,7 +91,7 @@ jobs:
       - id: generate-matrix
         run: |
           # Validate JSON environment variables
-          macos_env_vars_json='${{ inputs.macos_env_vars }}'
+          macos_env_vars_json="$INPUT_MACOS_ENV_VARS"
 
           if ! echo "$macos_env_vars_json" | jq empty 2>/dev/null; then
             echo "Error: macos_env_vars is not valid JSON"
@@ -177,6 +177,7 @@ jobs:
 
           echo "macos-matrix=$matrix" >> "$GITHUB_OUTPUT"
         env:
+          INPUT_MACOS_ENV_VARS: ${{ inputs.macos_env_vars }}
           MACOS_RUNNER_POOL: ${{ inputs.macos_runner_pool }}
           MACOS_XCODE_16_3_ENABLED: ${{ inputs.macos_xcode_16_3_enabled }}
           MACOS_XCODE_16_4_ENABLED: ${{ inputs.macos_xcode_16_4_enabled }}
@@ -209,11 +210,14 @@ jobs:
         if: ${{ matrix.config.env != '' && matrix.config.env != '{}'}}
         run: |
           echo "Exporting environment variables from matrix configuration..."
-          echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "\(.key)=\(.value)"' >> $GITHUB_ENV
-          echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "exporting \(.key)=\(.value)"'
+          echo "$MATRIX_ENV_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"' >> $GITHUB_ENV
+          echo "$MATRIX_ENV_JSON" | jq -r 'to_entries[] | "exporting \(.key)=\(.value)"'
+        env:
+          MATRIX_ENV_JSON: ${{ toJSON(matrix.config.env) }}
       - name: Run benchmarks script
         run: |
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH=${{ inputs.benchmark_package_path }} bash -s -- --disable-sandbox --allow-writing-to-package-directory
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH="$INPUT_BENCHMARK_PACKAGE_PATH" bash -s -- --disable-sandbox --allow-writing-to-package-directory
         env:
+          INPUT_BENCHMARK_PACKAGE_PATH: ${{ inputs.benchmark_package_path }}
           DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
           SWIFT_VERSION: "Xcode ${{ matrix.config.xcode_version }}"
