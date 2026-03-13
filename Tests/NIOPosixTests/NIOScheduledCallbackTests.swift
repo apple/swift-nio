@@ -241,7 +241,9 @@ extension _BaseScheduledCallbackTests {
     func testScheduledCallbackNotExecutedBeforeDeadline() async throws {
         let handler = MockScheduledCallbackHandler()
 
-        _ = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        // Use a long deadline so that even if the short sleep overshoots on a loaded CI machine,
+        // it cannot reach the callback deadline.
+        _ = try self.loop.scheduleCallback(in: .hours(1), handler: handler)
         handler.assert(callbackCount: 0, cancelCount: 0)
 
         try await self.advanceTime(by: .microseconds(1))
