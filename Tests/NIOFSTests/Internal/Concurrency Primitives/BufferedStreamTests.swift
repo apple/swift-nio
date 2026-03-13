@@ -1081,7 +1081,7 @@ final class BufferedStreamTests: XCTestCase {
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension AsyncSequence {
     /// Collect all elements in the sequence into an array.
-    fileprivate func collect() async rethrows -> [Element] {
+    @concurrent fileprivate func collect() async rethrows -> [Element] {
         try await self.reduce(into: []) { accumulated, next in
             accumulated.append(next)
         }
