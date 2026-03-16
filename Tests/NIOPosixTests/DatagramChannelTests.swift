@@ -1549,7 +1549,9 @@ class DatagramChannelTests: XCTestCase {
     func testWriteBufferAtGSOSegmentCountLimit() throws {
         try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
 
-        let udpMaxSegments = System.udpMaxSegments ?? 64
+        // Newer kernels raised this; use the lower value to ensure the segment count is within the
+        // limit.
+        let udpMaxSegments = 64
 
         var segments = udpMaxSegments
 
@@ -1582,8 +1584,8 @@ class DatagramChannelTests: XCTestCase {
     func testWriteBufferAboveGSOSegmentCountLimitShouldError() throws {
         try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
 
-        // commonly 64 or 128 on systems which may or may not define UDP_MAX_SEGMENTS, pick the larger to ensure failure
-        let udpMaxSegments = System.udpMaxSegments ?? 128
+        // This is lower (64) in older kernels, but a too-high value is fine.
+        let udpMaxSegments = 128
 
         let segmentSize = 10
         let didSet = self.firstChannel.setOption(.datagramSegmentSize, value: CInt(segmentSize))

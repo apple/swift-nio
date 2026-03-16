@@ -195,7 +195,7 @@ jobs:
               Write-Error "Docker daemon did not become ready after $maxAttempts attempts"
               exit 1
             }
-            Start-Sleep -Seconds 2
+            Start-Sleep -Seconds 6
           } while ($true)
         shell: pwsh
       - name: Pull Docker image
@@ -212,7 +212,10 @@ jobs:
       - name: Run matrix job
         if: ${{ matrix.swift.enabled }}
         run: |
-          docker run --env SWIFT_VERSION="${{ matrix.swift.swift_version }}" --env COMMAND="${{ inputs.matrix_windows_command }}" --env COMMAND_OVERRIDE_6_0="${{ inputs.matrix_windows_6_0_command_override }}" -v ${{ github.workspace }}:C:\source ${{ matrix.swift.image }} cmd /s /c  "swift --version & cd C:\source\ & powershell -File __check-matrix-job.ps1"
+          docker run --env SWIFT_VERSION="${{ matrix.swift.swift_version }}" --env COMMAND="$env:INPUT_WINDOWS_COMMAND" --env COMMAND_OVERRIDE_6_0="$env:INPUT_WINDOWS_6_0_OVERRIDE" -v ${{ github.workspace }}:C:\source ${{ matrix.swift.image }} cmd /s /c  "swift --version & cd C:\source\ & powershell -File __check-matrix-job.ps1"
+        env:
+          INPUT_WINDOWS_COMMAND: ${{ inputs.matrix_windows_command }}
+          INPUT_WINDOWS_6_0_OVERRIDE: ${{ inputs.matrix_windows_6_0_command_override }}
 
   windows-nightly:
     name: Windows (${{ matrix.swift.swift_version }})
@@ -242,7 +245,7 @@ jobs:
               Write-Error "Docker daemon did not become ready after $maxAttempts attempts"
               exit 1
             }
-            Start-Sleep -Seconds 2
+            Start-Sleep -Seconds 6
           } while ($true)
         shell: pwsh
       - name: Pull Docker image
@@ -260,4 +263,8 @@ jobs:
       - name: Run matrix job
         if: ${{ matrix.swift.enabled }}
         run: |
-          docker run --env SWIFT_VERSION="${{ matrix.swift.swift_version }}" --env COMMAND="${{ inputs.matrix_windows_command }}" --env COMMAND_OVERRIDE_NIGHTLY_6_1="${{ inputs.matrix_windows_nightly_6_1_command_override }}" --env COMMAND_OVERRIDE_NIGHTLY_MAIN="${{ inputs.matrix_windows_nightly_main_command_override }}" -v ${{ github.workspace }}:C:\source ${{ matrix.swift.image }} cmd /s /c  "swift --version & cd C:\source\ & powershell -File __check-matrix-job.ps1"
+          docker run --env SWIFT_VERSION="${{ matrix.swift.swift_version }}" --env COMMAND="$env:INPUT_WINDOWS_COMMAND" --env COMMAND_OVERRIDE_NIGHTLY_6_1="$env:INPUT_WINDOWS_NIGHTLY_6_1_OVERRIDE" --env COMMAND_OVERRIDE_NIGHTLY_MAIN="$env:INPUT_WINDOWS_NIGHTLY_MAIN_OVERRIDE" -v ${{ github.workspace }}:C:\source ${{ matrix.swift.image }} cmd /s /c  "swift --version & cd C:\source\ & powershell -File __check-matrix-job.ps1"
+        env:
+          INPUT_WINDOWS_COMMAND: ${{ inputs.matrix_windows_command }}
+          INPUT_WINDOWS_NIGHTLY_6_1_OVERRIDE: ${{ inputs.matrix_windows_nightly_6_1_command_override }}
+          INPUT_WINDOWS_NIGHTLY_MAIN_OVERRIDE: ${{ inputs.matrix_windows_nightly_main_command_override }}

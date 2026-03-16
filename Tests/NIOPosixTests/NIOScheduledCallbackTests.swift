@@ -183,7 +183,7 @@ final class IsolatedEventLoopScheduledCallbackTests: XCTestCase {
     func testShutdownCancelsOutstandingScheduledCallbacks() throws {
         let handler = NonSendableMockScheduledCallbackHandler()
 
-        _ = try self.loop.assumeIsolated().scheduleCallback(in: .milliseconds(1), handler: handler)
+        _ = try self.loop.assumeIsolated().scheduleCallback(in: .hours(1), handler: handler)
         self.shutdownEventLoop()
         handler.assert(callbackCount: 0, cancelCount: 1)
     }
@@ -336,7 +336,7 @@ extension _BaseScheduledCallbackTests {
     func testShutdownCancelsOutstandingScheduledCallbacks() async throws {
         let handler = MockScheduledCallbackHandler()
 
-        _ = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        _ = try self.loop.scheduleCallback(in: .hours(1), handler: handler)
         try await self.shutdownEventLoop()
         handler.assert(callbackCount: 0, cancelCount: 1)
     }
