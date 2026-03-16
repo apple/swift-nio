@@ -34,6 +34,12 @@ private final class StringEnvelopeForwardingHandler: ChannelInboundHandler, Send
     }
 }
 
+// MARK: - Handlers for ChannelPipeline benchmarks
+
+private final class NoOpHandler: ChannelInboundHandler, Sendable {
+    typealias InboundIn = Any
+}
+
 // MARK: - Benchmarks
 
 let benchmarks = {
@@ -238,6 +244,106 @@ let benchmarks = {
             try! channel.writeInbound(envelope)
             let result: AddressedEnvelope<String>? = try! channel.readInbound()
             blackHole(result)
+        }
+    }
+
+    Benchmark(
+        "ChannelPipeline.init(0 handlers)",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 1000
+        )
+    ) { benchmark in
+        let channel = EmbeddedChannel()
+
+        benchmark.startMeasurement()
+        defer {
+            benchmark.stopMeasurement()
+        }
+
+        for _ in 0..<benchmark.scaledIterations.count {
+            let pipeline = ChannelPipeline(channel: channel)
+            blackHole(pipeline)
+        }
+    }
+
+    Benchmark(
+        "ChannelPipeline.init(1 handler)",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 1000
+        )
+    ) { benchmark in
+        let channel = EmbeddedChannel()
+
+        benchmark.startMeasurement()
+        defer {
+            benchmark.stopMeasurement()
+        }
+
+        for _ in 0..<benchmark.scaledIterations.count {
+            let pipeline = ChannelPipeline(channel: channel)
+            let syncOps = pipeline.syncOperations
+            for _ in 0..<1 {
+                try! syncOps.addHandler(NoOpHandler())
+            }
+            blackHole(pipeline)
+        }
+    }
+
+    Benchmark(
+        "ChannelPipeline.init(3 handlers)",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 1000
+        )
+    ) { benchmark in
+        let channel = EmbeddedChannel()
+
+        benchmark.startMeasurement()
+        defer {
+            benchmark.stopMeasurement()
+        }
+
+        for _ in 0..<benchmark.scaledIterations.count {
+            let pipeline = ChannelPipeline(channel: channel)
+            let syncOps = pipeline.syncOperations
+            for _ in 0..<3 {
+                try! syncOps.addHandler(NoOpHandler())
+            }
+            blackHole(pipeline)
+        }
+    }
+
+    Benchmark(
+        "ChannelPipeline.init(10 handlers)",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 1000
+        )
+    ) { benchmark in
+        let channel = EmbeddedChannel()
+
+        benchmark.startMeasurement()
+        defer {
+            benchmark.stopMeasurement()
+        }
+
+        for _ in 0..<benchmark.scaledIterations.count {
+            let pipeline = ChannelPipeline(channel: channel)
+            let syncOps = pipeline.syncOperations
+            for _ in 0..<10 {
+                try! syncOps.addHandler(NoOpHandler())
+            }
+            blackHole(pipeline)
         }
     }
 }
