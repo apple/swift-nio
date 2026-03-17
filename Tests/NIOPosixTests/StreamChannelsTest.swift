@@ -282,9 +282,16 @@ class StreamChannelTest: XCTestCase {
             // flush chan1's output
             chan1.flush()
 
-            // Attempt to write a byte from chan1 to chan2 which should be refused after the close
+            // Attempt to write a byte from chan1 to chan2 which should be refused after the close.
+            // We expect `.outputClosed` from the half-close, but if the remote peer processes
+            // the FIN and closes before this write is processed, the channel may fully close
+            // and we get `.ioOnClosedChannel` instead.
             XCTAssertThrowsError(try chan1.write(self.buffer).wait()) { error in
-                XCTAssertEqual(ChannelError.outputClosed, error as? ChannelError, "\(chan1)")
+                let channelError = error as? ChannelError
+                XCTAssertTrue(
+                    channelError == .outputClosed || channelError == .ioOnClosedChannel,
+                    "Unexpected error \(error) on \(chan1)"
+                )
             }
 
             // wait for the write to complete
