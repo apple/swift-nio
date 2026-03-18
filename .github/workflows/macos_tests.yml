@@ -570,7 +570,7 @@ jobs:
     needs: construct-matrix
     if: github.repository_owner == 'apple'
     runs-on: [self-hosted, macos, "${{ matrix.config.os }}", "${{ matrix.config.arch }}", "${{ matrix.config.pool }}"]
-    timeout-minutes: 30
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.construct-matrix.outputs.darwin-matrix) }}
