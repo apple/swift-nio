@@ -296,7 +296,7 @@ extension _BaseScheduledCallbackTests {
     func testCancelExecutesCancellationCallback() async throws {
         let handler = MockScheduledCallbackHandler()
 
-        let scheduledCallback = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        let scheduledCallback = try self.loop.scheduleCallback(in: .hours(1), handler: handler)
         scheduledCallback.cancel()
         try await self.requirements.waitForLoopTick()
         handler.assert(callbackCount: 0, cancelCount: 1)
@@ -316,7 +316,7 @@ extension _BaseScheduledCallbackTests {
     func testCancelAfterCancelDoesNotCallCancellationCallbackAgain() async throws {
         let handler = MockScheduledCallbackHandler()
 
-        let scheduledCallback = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        let scheduledCallback = try self.loop.scheduleCallback(in: .hours(1), handler: handler)
         scheduledCallback.cancel()
         try await self.requirements.waitForLoopTick()
         scheduledCallback.cancel()
@@ -327,7 +327,7 @@ extension _BaseScheduledCallbackTests {
     func testCancelAfterShutdownDoesNotCallCancellationCallbackAgain() async throws {
         let handler = MockScheduledCallbackHandler()
 
-        let scheduledCallback = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        let scheduledCallback = try self.loop.scheduleCallback(in: .hours(1), handler: handler)
         try await self.shutdownEventLoop()
         handler.assert(callbackCount: 0, cancelCount: 1)
 
@@ -346,7 +346,7 @@ extension _BaseScheduledCallbackTests {
     func testShutdownDoesNotCancelCancelledCallbacksAgain() async throws {
         let handler = MockScheduledCallbackHandler()
 
-        let handle = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        let handle = try self.loop.scheduleCallback(in: .hours(1), handler: handler)
         handle.cancel()
         try await self.requirements.waitForLoopTick()
         handler.assert(callbackCount: 0, cancelCount: 1)
