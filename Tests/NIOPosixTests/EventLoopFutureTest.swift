@@ -1581,7 +1581,7 @@ class EventLoopFutureTest {
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
-    func testFlatBlockingMapOnto() {
+    func testFlatBlockingMapOnto() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             #expect(throws: Never.self) { try group.syncShutdownGracefully() }
@@ -1592,18 +1592,12 @@ class EventLoopFutureTest {
         let sem = DispatchSemaphore(value: 0)
         let blockingRan = ManagedAtomic(false)
         let nonBlockingRan = ManagedAtomic(false)
-        p.futureResult.map {
+        let chainComplete = p.futureResult.map {
             $0.count
         }.flatMapBlocking(onto: DispatchQueue.global()) { value -> Int in
             sem.wait()  // Block in chained EventLoopFuture
             blockingRan.store(true, ordering: .sequentiallyConsistent)
             return 1 + value
-        }.whenSuccess {
-            #expect($0 == 6)
-            let blockingRanResult = blockingRan.load(ordering: .sequentiallyConsistent)
-            #expect(blockingRanResult)
-            let nonBlockingRanResult = nonBlockingRan.load(ordering: .sequentiallyConsistent)
-            #expect(nonBlockingRanResult)
         }
         p.succeed("hello")
 
@@ -1614,6 +1608,16 @@ class EventLoopFutureTest {
         p2.succeed(true)
 
         sem.signal()
+
+        // Wait for the flatMapBlocking chain to complete before shutdown. Without this,
+        // on slow environments (e.g. iOS simulator) the event loop can shut down before
+        // the GCD dispatch delivers its result back, causing a crash.
+        let result = try chainComplete.wait()
+        #expect(result == 6)
+        let blockingRanResult = blockingRan.load(ordering: .sequentiallyConsistent)
+        #expect(blockingRanResult)
+        let nonBlockingRanResult = nonBlockingRan.load(ordering: .sequentiallyConsistent)
+        #expect(nonBlockingRanResult)
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
