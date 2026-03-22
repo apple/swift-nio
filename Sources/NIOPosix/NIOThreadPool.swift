@@ -221,8 +221,8 @@ public final class NIOThreadPool {
         )
     }
 
-#if !os(WASI)
-#if os(Linux) || os(Android)
+    #if !os(WASI)
+    #if os(Linux) || os(Android)
     /// Initialize a `NIOThreadPool` thread pool with threads pinned to specific CPUs.
     ///
     /// - Parameters:
@@ -236,8 +236,8 @@ public final class NIOThreadPool {
         )
     }
 
-#endif
-#endif
+    #endif
+    #endif
     /// Create a ``NIOThreadPool`` that is already started, cannot be shut down and must not be `deinit`ed.
     ///
     /// This is only useful for global singletons.
@@ -358,14 +358,14 @@ public final class NIOThreadPool {
 
             // We should keep thread names under 16 characters because Linux doesn't allow more.
             NIOThread.spawnAndRun(name: "\(threadNamePrefix)\(id)") { thread in
-#if !os(WASI)
-#if os(Linux) || os(Android)
+                #if !os(WASI)
+                #if os(Linux) || os(Android)
                 if let pinnedCPUID {
                     precondition(thread.isCurrentSlow)
                     NIOThread.currentAffinity = LinuxCPUSet(pinnedCPUID)
                 }
-#endif
-#endif
+                #endif
+                #endif
                 readyThreads.withLock {
                     let threadCount = self._workAvailable.withLock {
                         self.threads!.append(thread)
