@@ -115,6 +115,7 @@ public final class NIOThreadPool {
 
     public let numberOfThreads: Int
     private let canBeStopped: Bool
+    private let pinnedCPUIDs: [Int]?
 
     /// Gracefully shutdown this `NIOThreadPool`. All tasks will be run before shutdown will take place.
     ///
@@ -213,20 +214,42 @@ public final class NIOThreadPool {
     /// - Parameters:
     ///   - numberOfThreads: The number of threads to use for the thread pool.
     public convenience init(numberOfThreads: Int) {
-        self.init(numberOfThreads: numberOfThreads, canBeStopped: true)
+        self.init(
+            numberOfThreads: numberOfThreads,
+            pinnedCPUIDs: nil,
+            canBeStopped: true
+        )
     }
 
+#if !os(WASI)
+#if os(Linux) || os(Android)
+    /// Initialize a `NIOThreadPool` thread pool with threads pinned to specific CPUs.
+    ///
+    /// - Parameters:
+    ///   - pinnedCPUIDs: The IDs of the CPUs to use for the thread pool. One thread will be
+    ///      created per entry in this array.
+    public convenience init(pinnedCPUIDs: [Int]) {
+        self.init(
+            numberOfThreads: pinnedCPUIDs.count,
+            pinnedCPUIDs: pinnedCPUIDs,
+            canBeStopped: true
+        )
+    }
+
+#endif
+#endif
     /// Create a ``NIOThreadPool`` that is already started, cannot be shut down and must not be `deinit`ed.
     ///
     /// This is only useful for global singletons.
     public static func _makePerpetualStartedPool(numberOfThreads: Int, threadNamePrefix: String) -> NIOThreadPool {
-        let pool = self.init(numberOfThreads: numberOfThreads, canBeStopped: false)
+        let pool = self.init(numberOfThreads: numberOfThreads, pinnedCPUIDs: nil, canBeStopped: false)
         pool._start(threadNamePrefix: threadNamePrefix)
         return pool
     }
 
-    private init(numberOfThreads: Int, canBeStopped: Bool) {
+    private init(numberOfThreads: Int, pinnedCPUIDs: [Int]?, canBeStopped: Bool) {
         self.numberOfThreads = numberOfThreads
+        self.pinnedCPUIDs = pinnedCPUIDs
         self.canBeStopped = canBeStopped
         self._workAvailable = NIOThreadPoolWorkAvailable()
     }
@@ -331,8 +354,18 @@ public final class NIOThreadPool {
         // that would otherwise be emitted.
         let readyThreads = ConditionLock(value: 0)
         for id in 0..<self.numberOfThreads {
+            let pinnedCPUID = self.pinnedCPUIDs?[id]
+
             // We should keep thread names under 16 characters because Linux doesn't allow more.
             NIOThread.spawnAndRun(name: "\(threadNamePrefix)\(id)") { thread in
+#if !os(WASI)
+#if os(Linux) || os(Android)
+                if let pinnedCPUID {
+                    precondition(thread.isCurrentSlow)
+                    NIOThread.currentAffinity = LinuxCPUSet(pinnedCPUID)
+                }
+#endif
+#endif
                 readyThreads.withLock {
                     let threadCount = self._workAvailable.withLock {
                         self.threads!.append(thread)
