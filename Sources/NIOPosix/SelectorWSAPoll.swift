@@ -111,13 +111,14 @@ extension Selector: _SelectorBackendProtocol {
             }
 
             // Bind the listener socket
-            try withUnsafeBytes(of: &addr) { addrPtr in
-                let socketPointer = addrPtr.baseAddress!.assumingMemoryBound(to: sockaddr.self)
-                try NIOBSDSocket.bind(
-                    socket: listenerSocket,
-                    address: socketPointer,
-                    address_len: socklen_t(MemoryLayout<sockaddr_un>.size)
-                )
+            try withUnsafePointer(to: &addr) { addrPtr in
+                try addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { socketPointer in
+                    try NIOBSDSocket.bind(
+                        socket: listenerSocket,
+                        address: socketPointer,
+                        address_len: socklen_t(MemoryLayout<sockaddr_un>.size)
+                    )
+                }
             }
 
             // Listen for connections (backlog of 1 is enough)
@@ -130,16 +131,17 @@ extension Selector: _SelectorBackendProtocol {
 
             do {
                 // Connect to the listener
-                try withUnsafeMutableBytes(of: &addr) { addrPtr in
-                    let sockaddrPtr = addrPtr.baseAddress!.assumingMemoryBound(to: sockaddr.self)
-                    guard
-                        try NIOBSDSocket.connect(
-                            socket: writeSocket,
-                            address: sockaddrPtr,
-                            address_len: socklen_t(MemoryLayout<sockaddr_un>.size)
-                        )
-                    else {
-                        throw IOError(winsock: WSAGetLastError(), reason: "connect")
+                try withUnsafePointer(to: &addr) { addrPtr in
+                    try addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPtr in
+                        guard
+                            try NIOBSDSocket.connect(
+                                socket: writeSocket,
+                                address: sockaddrPtr,
+                                address_len: socklen_t(MemoryLayout<sockaddr_un>.size)
+                            )
+                        else {
+                            throw IOError(winsock: WSAGetLastError(), reason: "connect")
+                        }
                     }
                 }
 
