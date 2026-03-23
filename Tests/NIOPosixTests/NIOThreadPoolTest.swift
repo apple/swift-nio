@@ -217,4 +217,53 @@ class NIOThreadPoolTest {
             try await future.get()
         }
     }
+
+    @Test
+    func testCanPinThreadsToCores() async throws {
+        #if os(Linux)
+        let numberOfThreads = min(1, System.coreCount / 2)
+        let pinnedCPUIDs = Array(0..<numberOfThreads)
+        let pool = NIOThreadPool(pinnedCPUIDs: pinnedCPUIDs)
+        pool.start()
+        defer {
+            #expect(throws: Never.self) {
+                try pool.syncShutdownGracefully()
+            }
+        }
+
+        let allThreadCPUAffinities = NIOLockedValueBox<[Int]>([])
+        let threadNameCollectionSem = DispatchSemaphore(value: 0)
+        let threadBlockingSem = DispatchSemaphore(value: 0)
+
+        // let's use up all the threads
+        for i in (0..<numberOfThreads) {
+            pool.submit { s in
+                switch s {
+                case .cancelled:
+                    Issue.record("work item \(i) cancelled")
+                case .active:
+                    let affinity = NIOThread.currentAffinity.cpuIds
+                    #expect(affinity.count == 1)
+                    allThreadCPUAffinities.withLockedValue {
+                        $0.append(affinity.first!)
+                    }
+                    threadNameCollectionSem.signal()
+                }
+                threadBlockingSem.wait()
+            }
+        }
+
+        // now, let's wait for all the threads to have done their work
+        for _ in (0..<numberOfThreads) {
+            threadNameCollectionSem.wait()
+        }
+        // and finally, let them exit
+        for _ in (0..<numberOfThreads) {
+            threadBlockingSem.signal()
+        }
+
+        let localAllThreads = allThreadCPUAffinities.withLockedValue { $0 }
+        #expect(localAllThreads.sorted() == pinnedCPUIDs)
+        #endif
+    }
 }
