@@ -34,6 +34,7 @@ closing it to avoid leaking resources.
 ### Managing files
 
 - ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
+- ``copyItem(at:to:strategy:replaceExisting:shouldProceedAfterError:shouldCopyItem:)``
 - ``removeItem(at:)``
 - ``moveItem(at:to:)``
 - ``replaceItem(at:withItemAt:)``

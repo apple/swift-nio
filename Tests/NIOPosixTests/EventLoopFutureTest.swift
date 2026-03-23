@@ -1581,7 +1581,7 @@ class EventLoopFutureTest {
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
-    func testFlatBlockingMapOnto() {
+    func testFlatBlockingMapOnto() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             #expect(throws: Never.self) { try group.syncShutdownGracefully() }
@@ -1614,6 +1614,11 @@ class EventLoopFutureTest {
         p2.succeed(true)
 
         sem.signal()
+
+        // Wait for the flatMapBlocking chain to complete before shutdown. Without this,
+        // on slow environments (e.g. iOS simulator) the event loop can shut down before
+        // the GCD dispatch delivers its result back, causing a crash.
+        _ = try p.futureResult.wait()
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)

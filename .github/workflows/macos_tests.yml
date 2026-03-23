@@ -175,6 +175,55 @@ on:
         description: "The command(s) to be executed before all other work."
         default: ""
 
+      swift_6_1_enabled:
+        type: boolean
+        description: "Boolean to enable the Swift 6.1 jobs. Defaults to false."
+        default: false
+      swift_6_1_build_arguments_override:
+        type: string
+        description: "The arguments passed to swift build in the Swift 6.1 job."
+        default: ""
+      swift_6_1_test_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Swift 6.1 job."
+        default: ""
+      swift_6_1_setup_command:
+        type: string
+        description: "The command(s) to be executed before all other work."
+        default: ""
+      swift_6_2_enabled:
+        type: boolean
+        description: "Boolean to enable the Swift 6.2 jobs. Defaults to false."
+        default: false
+      swift_6_2_build_arguments_override:
+        type: string
+        description: "The arguments passed to swift build in the Swift 6.2 job."
+        default: ""
+      swift_6_2_test_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Swift 6.2 job."
+        default: ""
+      swift_6_2_setup_command:
+        type: string
+        description: "The command(s) to be executed before all other work."
+        default: ""
+      swift_6_3_enabled:
+        type: boolean
+        description: "Boolean to enable the Swift 6.3 jobs. Defaults to false."
+        default: false
+      swift_6_3_build_arguments_override:
+        type: string
+        description: "The arguments passed to swift build in the Swift 6.3 job."
+        default: ""
+      swift_6_3_test_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Swift 6.3 job."
+        default: ""
+      swift_6_3_setup_command:
+        type: string
+        description: "The command(s) to be executed before all other work."
+        default: ""
+
       build_scheme:
         type: string
         description: "The build scheme used in the Xcode builds."
@@ -228,6 +277,11 @@ on:
         description: "The runner pool which will be requested."
         default: "nightly"
 
+      debug_output_enabled:
+        type: boolean
+        description: "Boolean to enable debug output from xcodebuild by eliding -quiet. Defaults to false."
+        default: false
+
       env_vars:
         type: string
         description: "Environment variables for jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
@@ -247,7 +301,7 @@ jobs:
       - id: generate-matrix
         run: |
           # Validate and use JSON environment variables directly
-          env_vars_json='${{ inputs.env_vars }}'
+          env_vars_json="$INPUT_ENV_VARS"
 
           # Validate JSON format
           if ! echo "$env_vars_json" | jq empty 2>/dev/null; then
@@ -302,6 +356,18 @@ jobs:
             xcode_latest_beta_build_arguments_override="${MATRIX_MACOS_LATEST_BETA_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_latest_beta_test_arguments_override="${MATRIX_MACOS_LATEST_BETA_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_latest_beta_setup_command="${MATRIX_MACOS_LATEST_BETA_SETUP_COMMAND:=""}"
+            swift_6_1_enabled="${MATRIX_SWIFT_6_1_ENABLED:=true}"
+            swift_6_1_build_arguments_override="${MATRIX_SWIFT_6_1_BUILD_ARGUMENTS_OVERRIDE:=""}"
+            swift_6_1_test_arguments_override="${MATRIX_SWIFT_6_1_TEST_ARGUMENTS_OVERRIDE:=""}"
+            swift_6_1_setup_command="${MATRIX_SWIFT_6_1_SETUP_COMMAND:=""}"
+            swift_6_2_enabled="${MATRIX_SWIFT_6_2_ENABLED:=true}"
+            swift_6_2_build_arguments_override="${MATRIX_SWIFT_6_2_BUILD_ARGUMENTS_OVERRIDE:=""}"
+            swift_6_2_test_arguments_override="${MATRIX_SWIFT_6_2_TEST_ARGUMENTS_OVERRIDE:=""}"
+            swift_6_2_setup_command="${MATRIX_SWIFT_6_2_SETUP_COMMAND:=""}"
+            swift_6_3_enabled="${MATRIX_SWIFT_6_3_ENABLED:=true}"
+            swift_6_3_build_arguments_override="${MATRIX_SWIFT_6_3_BUILD_ARGUMENTS_OVERRIDE:=""}"
+            swift_6_3_test_arguments_override="${MATRIX_SWIFT_6_3_TEST_ARGUMENTS_OVERRIDE:=""}"
+            swift_6_3_setup_command="${MATRIX_SWIFT_6_3_SETUP_COMMAND:=""}"
 
             # Create matrix from inputs
             matrix='{"config": []}'
@@ -406,10 +472,41 @@ jobs:
                 '.config[.config| length] |= . + { "name": "Xcode latest beta", "xcode_version": "latest beta", "xcode_app": "Xcode-latest.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
             fi
 
+            if [[ "$swift_6_1_enabled" == "true" ]]; then
+                matrix=$(echo "$matrix" | jq -c \
+                --arg setup_command "$swift_6_1_setup_command"  \
+                --arg build_arguments_override "$swift_6_1_build_arguments_override"  \
+                --arg test_arguments_override "$swift_6_1_test_arguments_override"  \
+                --arg runner_pool "$runner_pool"  \
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Swift 6.1", "xcode_version": "swift 6.1", "xcode_app": "Xcode_swift_6.1.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+            fi
+
+            if [[ "$swift_6_2_enabled" == "true" ]]; then
+                matrix=$(echo "$matrix" | jq -c \
+                --arg setup_command "$swift_6_2_setup_command"  \
+                --arg build_arguments_override "$swift_6_2_build_arguments_override"  \
+                --arg test_arguments_override "$swift_6_2_test_arguments_override"  \
+                --arg runner_pool "$runner_pool"  \
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Swift 6.2", "xcode_version": "swift 6.2", "xcode_app": "Xcode_swift_6.2.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+            fi
+
+            if [[ "$swift_6_3_enabled" == "true" ]]; then
+                matrix=$(echo "$matrix" | jq -c \
+                --arg setup_command "$swift_6_3_setup_command"  \
+                --arg build_arguments_override "$swift_6_3_build_arguments_override"  \
+                --arg test_arguments_override "$swift_6_3_test_arguments_override"  \
+                --arg runner_pool "$runner_pool"  \
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Swift 6.3", "xcode_version": "swift 6.3", "xcode_app": "Xcode_swift_6.3.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+            fi
+
             echo "$matrix" | jq -c
           )"
           EOM
         env:
+          INPUT_ENV_VARS: ${{ inputs.env_vars }}
           MATRIX_RUNNER_POOL: ${{ inputs.runner_pool }}
           MATRIX_MACOS_15_4_ENABLED: ${{ inputs.xcode_15_4_enabled }}
           MATRIX_MACOS_15_4_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_15_4_build_arguments_override }}
@@ -455,13 +552,25 @@ jobs:
           MATRIX_MACOS_LATEST_BETA_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_latest_beta_build_arguments_override }}
           MATRIX_MACOS_LATEST_BETA_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_latest_beta_test_arguments_override }}
           MATRIX_MACOS_LATEST_BETA_SETUP_COMMAND: ${{ inputs.xcode_latest_beta_setup_command }}
+          MATRIX_SWIFT_6_1_ENABLED: ${{ inputs.swift_6_1_enabled }}
+          MATRIX_SWIFT_6_1_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.swift_6_1_build_arguments_override }}
+          MATRIX_SWIFT_6_1_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.swift_6_1_test_arguments_override }}
+          MATRIX_SWIFT_6_1_SETUP_COMMAND: ${{ inputs.swift_6_1_setup_command }}
+          MATRIX_SWIFT_6_2_ENABLED: ${{ inputs.swift_6_2_enabled }}
+          MATRIX_SWIFT_6_2_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.swift_6_2_build_arguments_override }}
+          MATRIX_SWIFT_6_2_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.swift_6_2_test_arguments_override }}
+          MATRIX_SWIFT_6_2_SETUP_COMMAND: ${{ inputs.swift_6_2_setup_command }}
+          MATRIX_SWIFT_6_3_ENABLED: ${{ inputs.swift_6_3_enabled }}
+          MATRIX_SWIFT_6_3_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.swift_6_3_build_arguments_override }}
+          MATRIX_SWIFT_6_3_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.swift_6_3_test_arguments_override }}
+          MATRIX_SWIFT_6_3_SETUP_COMMAND: ${{ inputs.swift_6_3_setup_command }}
 
   darwin-job:
     name: ${{ matrix.config.name }}
     needs: construct-matrix
     if: github.repository_owner == 'apple'
     runs-on: [self-hosted, macos, "${{ matrix.config.os }}", "${{ matrix.config.arch }}", "${{ matrix.config.pool }}"]
-    timeout-minutes: 30
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.construct-matrix.outputs.darwin-matrix) }}
@@ -475,68 +584,85 @@ jobs:
         if: ${{ matrix.config.env != '' && matrix.config.env != '{}'}}
         run: |
           echo "Exporting environment variables from matrix configuration..."
-          echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "\(.key)=\(.value)"' >> $GITHUB_ENV
-          echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "exporting \(.key)=\(.value)"'
+          echo "$MATRIX_ENV_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"' >> $GITHUB_ENV
+          echo "$MATRIX_ENV_JSON" | jq -r 'to_entries[] | "exporting \(.key)=\(.value)"'
+        env:
+          MATRIX_ENV_JSON: ${{ toJSON(matrix.config.env) }}
       - name: Emit diagnostics
         run: |
           swift --version
           /usr/bin/xcodebuild -version
       - name: Setup command
         if: ${{ matrix.config.setup_command != '' }}
-        run: bash -c "${{ matrix.config.setup_command }}"
+        run: bash -c "$MATRIX_SETUP_COMMAND"
+        env:
+          MATRIX_SETUP_COMMAND: ${{ matrix.config.setup_command }}
       - name: Swift build
         run: |
-          if [ -n "${{ matrix.config.build_arguments_override }}" ]; then
-            swift build ${{ matrix.config.build_arguments_override }}
+          if [ -n "$MATRIX_BUILD_ARGUMENTS_OVERRIDE" ]; then
+            swift build $MATRIX_BUILD_ARGUMENTS_OVERRIDE
           else
             swift build --build-tests
           fi
+        env:
+          MATRIX_BUILD_ARGUMENTS_OVERRIDE: ${{ matrix.config.build_arguments_override }}
       - name: Swift test
         if: 'inputs.swift_test_enabled'
         run: |
-          if [ -n "${{ matrix.config.test_arguments_override }}" ]; then
-            swift test ${{ matrix.config.test_arguments_override }}
+          if [ -n "$MATRIX_TEST_ARGUMENTS_OVERRIDE" ]; then
+            swift test $MATRIX_TEST_ARGUMENTS_OVERRIDE
           else
             swift test
           fi
-        # see `xcodebuild -list` for schemes, `simctl list` for destinations
+        env:
+          MATRIX_TEST_ARGUMENTS_OVERRIDE: ${{ matrix.config.test_arguments_override }}
+      # see `xcodebuild -list` for schemes, `simctl list` for destinations
       - name: macOS build
         if: '!cancelled() && inputs.macos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=macos,variant=macos" build
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "generic/platform=macos,variant=macos" build
       - name: macOS test
         if: '!cancelled() && inputs.macos_xcode_test_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=My Mac,variant=macos" test
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "name=My Mac,variant=macos" test
       - name: macOS Catalyst build
         if: '!cancelled() && inputs.macos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=macos,variant=Mac Catalyst" build
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "generic/platform=macos,variant=Mac Catalyst" build
       - name: macOS Catalyst test
         if: '!cancelled() && inputs.macos_xcode_test_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=My Mac,variant=Mac Catalyst" test
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "name=My Mac,variant=Mac Catalyst" test
       - name: iOS build
         if: '!cancelled() && inputs.ios_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=ios" build
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "generic/platform=ios" build
       - name: iOS test
         if: '!cancelled() && inputs.ios_xcode_test_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=iPhone Air" test
+        run: |
+          /usr/bin/xcrun simctl shutdown all
+          /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "name=iPhone Air" test
       - name: watchOS build
         if: '!cancelled() && inputs.watchos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=watchos" build
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "generic/platform=watchos" build
       - name: watchOS test
         if: '!cancelled() && inputs.watchos_xcode_test_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple Watch Ultra 3 (49mm)" test
+        run: |
+          /usr/bin/xcrun simctl shutdown all
+          /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "name=Apple Watch Ultra 3 (49mm)" test
       - name: tvOS build
         if: '!cancelled() && inputs.tvos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=tvos" build
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "generic/platform=tvos" build
       - name: tvOS test
         if: '!cancelled() && inputs.tvos_xcode_test_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple TV 4K (3rd generation)" test
+        run: |
+          /usr/bin/xcrun simctl shutdown all
+          /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "name=Apple TV 4K (3rd generation)" test
       - name: visionOS build  # arm only
         if: '!cancelled() && inputs.visionos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=visionos" build
+        run: /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "generic/platform=visionos" build
       - name: visionOS test  # arm only
         if: '!cancelled() && inputs.visionos_xcode_test_enabled'
-        run: TARGET_OS=""; if [ "$XCODE_VERSION" = "16.2" ]; then TARGET_OS=",OS=2.3"; fi && /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple Vision Pro$TARGET_OS" test
+        run: |
+          /usr/bin/xcrun simctl shutdown all
+          /usr/bin/xcodebuild ${QUIET_ARG} -scheme ${BUILD_SCHEME} -destination "name=Apple Vision Pro" test
     env:
       XCODE_VERSION: ${{ matrix.config.xcode_version }}
       DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
       BUILD_SCHEME: ${{ inputs.build_scheme }}
+      QUIET_ARG: ${{ inputs.debug_output_enabled && ' ' || '-quiet' }}

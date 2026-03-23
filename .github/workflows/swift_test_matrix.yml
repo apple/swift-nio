@@ -46,7 +46,7 @@ jobs:
               Write-Error "Docker daemon did not become ready after $maxAttempts attempts"
               exit 1
             }
-            Start-Sleep -Seconds 2
+            Start-Sleep -Seconds 6
           } while ($true)
         shell: pwsh
       - name: Pull Docker image
@@ -54,56 +54,64 @@ jobs:
       - name: Run matrix job
         if: ${{ matrix.config.platform != 'Windows' }}
         run: |
-          if [[ -n '${{ matrix.config.setup_command }}' ]]; then
-            setup_command_expression='${{ matrix.config.setup_command }} &&'
+          if [[ -n "$MATRIX_SETUP_COMMAND" ]]; then
+            setup_command_expression="$MATRIX_SETUP_COMMAND &&"
           else
             setup_command_expression=""
           fi
-          workspace="/$(basename ${{ github.workspace }})"
+          workspace="/$(basename "$GITHUB_WORKSPACE")"
 
           docker_args=(
             "run"
-            "-v" "${{ github.workspace }}:$workspace"
+            "-v" "$GITHUB_WORKSPACE:$workspace"
             "-w" "$workspace"
             "-e" "CI=$CI"
             "-e" "GITHUB_ACTIONS=$GITHUB_ACTIONS"
-            "-e" "SWIFT_VERSION=${{ matrix.config.swift_version }}"
+            "-e" "SWIFT_VERSION=$MATRIX_SWIFT_VERSION"
             "-e" "workspace=$workspace"
           )
 
-          if [[ '${{ toJson(matrix.config.env) }}' != '{}' ]]; then
+          if [[ "$MATRIX_ENV_JSON" != '{}' ]]; then
             while IFS="=" read -r key value; do
               if [[ -n "$key" && -n "$value" ]]; then
                 docker_args+=("-e" "$key=$value")
               fi
-            done < <(echo '${{ toJson(matrix.config.env) }}' | jq -r 'to_entries[] | "\(.key)=\(.value)"')
+            done < <(echo "$MATRIX_ENV_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
           fi
 
-          docker_args+=("${{ matrix.config.image }}")
-          docker_args+=("bash" "-c" "$setup_command_expression ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}")
+          docker_args+=("$MATRIX_IMAGE")
+          docker_args+=("bash" "-c" "$setup_command_expression $MATRIX_COMMAND $MATRIX_COMMAND_ARGUMENTS")
 
           echo "Executing Docker command: docker ${docker_args[*]}"
           docker "${docker_args[@]}"
+        env:
+          MATRIX_SETUP_COMMAND: ${{ matrix.config.setup_command }}
+          MATRIX_SWIFT_VERSION: ${{ matrix.config.swift_version }}
+          MATRIX_IMAGE: ${{ matrix.config.image }}
+          MATRIX_COMMAND: ${{ matrix.config.command }}
+          MATRIX_COMMAND_ARGUMENTS: ${{ matrix.config.command_arguments }}
+          MATRIX_ENV_JSON: ${{ toJson(matrix.config.env) }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
       - name: Run matrix job (Windows)
         if: ${{ matrix.config.platform == 'Windows' }}
         run: |
-          if (-not [string]::IsNullOrEmpty("${{ matrix.config.setup_command }}")) {
-              $setup_command_expression = "${{ matrix.config.setup_command }} &"
+          if (-not [string]::IsNullOrEmpty("$env:MATRIX_SETUP_COMMAND")) {
+              $setup_command_expression = "$env:MATRIX_SETUP_COMMAND &"
           } else {
               $setup_command_expression = ""
           }
-          $workspace = "C:\" + (Split-Path ${{ github.workspace }} -Leaf)
+          $workspace = "C:\" + (Split-Path $env:GITHUB_WORKSPACE -Leaf)
 
           $docker_args = @(
-              "run", "-v", "${{ github.workspace }}:$($workspace)",
+              "run", "-v", "$env:GITHUB_WORKSPACE`:$($workspace)",
               "-w", $workspace,
               "-e", "CI=$env:CI",
               "-e", "GITHUB_ACTIONS=$env:GITHUB_ACTIONS",
-              "-e", "SWIFT_VERSION=${{ matrix.config.swift_version }}"
+              "-e", "SWIFT_VERSION=$env:MATRIX_SWIFT_VERSION"
           )
 
           $env_args = @()
-          $env_json = '${{ toJson(matrix.config.env) }}'
+          $env_json = $env:MATRIX_ENV_JSON
           if ($env_json -ne '{}') {
               $env_obj = $env_json | ConvertFrom-Json
               $env_obj.PSObject.Properties | ForEach-Object {
@@ -113,9 +121,17 @@ jobs:
           }
           $docker_args += $env_args
 
-          $docker_args += @("${{ matrix.config.image }}", "cmd", "/s", "/c", "swift --version & $($setup_command_expression) ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}")
+          $docker_args += @("$env:MATRIX_IMAGE", "cmd", "/s", "/c", "swift --version & $($setup_command_expression) $env:MATRIX_COMMAND $env:MATRIX_COMMAND_ARGUMENTS")
 
           Write-Host "Executing Docker command: docker $($docker_args -join ' ')"
           & docker @docker_args
+        env:
+          MATRIX_SETUP_COMMAND: ${{ matrix.config.setup_command }}
+          MATRIX_SWIFT_VERSION: ${{ matrix.config.swift_version }}
+          MATRIX_IMAGE: ${{ matrix.config.image }}
+          MATRIX_COMMAND: ${{ matrix.config.command }}
+          MATRIX_COMMAND_ARGUMENTS: ${{ matrix.config.command_arguments }}
+          MATRIX_ENV_JSON: ${{ toJson(matrix.config.env) }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
     env:
       SWIFT_VERSION: ${{ matrix.config.swift_version }}
