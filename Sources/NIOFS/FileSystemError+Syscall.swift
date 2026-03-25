@@ -587,7 +587,7 @@ extension FileSystemError {
             case .badFileDescriptor:
                 code = .closed
                 message = "Unable to open file at path '\(path)', the descriptor is closed."
-            case .permissionDenied:
+            case .permissionDenied, .notPermitted:
                 code = .permissionDenied
                 message = "Unable to open file at path '\(path)', permissions denied."
             case .fileExists:
