@@ -23,6 +23,7 @@ import let WinSDK.INET6_ADDRSTRLEN
 
 import func WinSDK.FreeAddrInfoW
 import func WinSDK.GetAddrInfoW
+import func WinSDK.gai_strerrorA
 
 import struct WinSDK.ADDRESS_FAMILY
 import struct WinSDK.ADDRINFOW
@@ -80,6 +81,27 @@ extension SocketAddressError {
 
         public init(address: ByteBuffer) {
             self.address = address
+        }
+    }
+
+    public struct UnknownHost: Error, Hashable, CustomStringConvertible {
+        public var host: String
+
+        public var port: Int
+
+        public var errorCode: CInt
+
+        public var errorDescription: String
+
+        public init(host: String, port: Int, errorCode: CInt, errorDescription: String) {
+            self.host = host
+            self.port = port
+            self.errorCode = errorCode
+            self.errorDescription = errorDescription
+        }
+
+        public var description: String {
+            "SocketAddressError.UnknownHost: \(self.errorDescription) (error \(self.errorCode)) for host \(self.host), port \(self.port)"
         }
     }
 }
@@ -529,7 +551,12 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
                 let result = GetAddrInfoW(wszHost, wszPort, nil, &pResult)
                 guard result == 0 else {
-                    throw SocketAddressError.unknown(host: host, port: port)
+                    throw SocketAddressError.UnknownHost(
+                        host: host,
+                        port: port,
+                        errorCode: result,
+                        errorDescription: String(cString: gai_strerrorA(result))
+                    )
                 }
 
                 defer {
@@ -554,8 +581,14 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         var info: UnsafeMutablePointer<addrinfo>?
 
         // FIXME: this is blocking!
-        if getaddrinfo(host, String(port), nil, &info) != 0 {
-            throw SocketAddressError.unknown(host: host, port: port)
+        let rc = getaddrinfo(host, String(port), nil, &info)
+        if rc != 0 {
+            throw SocketAddressError.UnknownHost(
+                host: host,
+                port: port,
+                errorCode: rc,
+                errorDescription: String(cString: gai_strerror(rc))
+            )
         }
 
         defer {
