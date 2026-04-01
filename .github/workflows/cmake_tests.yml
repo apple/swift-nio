@@ -43,7 +43,7 @@ jobs:
           which curl jq || apt -q update
           which curl || apt -yq install curl
           which jq || apt -yq install jq
-          curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/add_swift_6_3/scripts/update-cmake-lists.sh | CONFIG_JSON="$INPUT_UPDATE_CMAKE_LISTS_CONFIG" FAIL_ON_CHANGES=true bash
+          curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/update-cmake-lists.sh | CONFIG_JSON="$INPUT_UPDATE_CMAKE_LISTS_CONFIG" FAIL_ON_CHANGES=true bash
         env:
           INPUT_UPDATE_CMAKE_LISTS_CONFIG: ${{ inputs.update_cmake_lists_config }}
       - name: CMake build
@@ -52,7 +52,7 @@ jobs:
           which curl || apt -yq install curl
           which cmake || apt -yq install cmake
           which ninja || apt -yq install ninja-build
-          curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/add_swift_6_3/scripts/cmake-build.sh | TARGET_DIRECTORY="$INPUT_CMAKE_BUILD_TARGET_DIRECTORY" CMAKE_VERSION="$INPUT_CMAKE_VERSION" bash
+          curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/cmake-build.sh | TARGET_DIRECTORY="$INPUT_CMAKE_BUILD_TARGET_DIRECTORY" CMAKE_VERSION="$INPUT_CMAKE_VERSION" bash
         env:
           INPUT_CMAKE_BUILD_TARGET_DIRECTORY: ${{ inputs.cmake_build_target_directory }}
           INPUT_CMAKE_VERSION: ${{ inputs.cmake_version }}
