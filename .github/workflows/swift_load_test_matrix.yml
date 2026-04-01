@@ -40,7 +40,7 @@ jobs:
     name: Execute matrix
     needs: load-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@add_swift_6_3
     with:
       name: ${{ inputs.name }}
       matrix_string: '${{ needs.load-matrix.outputs.swift-matrix }}'
