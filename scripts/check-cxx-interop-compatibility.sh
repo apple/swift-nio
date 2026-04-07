@@ -37,6 +37,7 @@ swift package init
 } >> Package.swift
 
 echo "package.dependencies.append(.package(path: \"$source_dir\"))" >> Package.swift
+echo >> "$source_file" # Line break to account for template code in the file
 
 for product in $library_products; do
   echo "package.targets.first!.dependencies.append(.product(name: \"$product\", package: \"$package_name\"))" >> Package.swift
