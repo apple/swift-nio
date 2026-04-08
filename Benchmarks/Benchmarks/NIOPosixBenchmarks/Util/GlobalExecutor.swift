@@ -29,5 +29,5 @@ var swiftTaskEnqueueGlobalHook: EnqueueGlobalHook? {
     set { _swiftTaskEnqueueGlobalHook.pointee = newValue }
 }
 
-private let _swiftTaskEnqueueGlobalHook: UnsafeMutablePointer<EnqueueGlobalHook?> =
+private nonisolated(unsafe) let _swiftTaskEnqueueGlobalHook: UnsafeMutablePointer<EnqueueGlobalHook?> =
     dlsym(dlopen(nil, RTLD_LAZY), "swift_task_enqueueGlobal_hook").assumingMemoryBound(to: EnqueueGlobalHook?.self)
