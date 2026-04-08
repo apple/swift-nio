@@ -151,7 +151,7 @@ internal final class GetaddrinfoResolver: Resolver, Sendable {
                         SocketAddressError.UnknownHost(
                             host: host,
                             port: port,
-                            errorCode: iResult,
+                            errorCode: Int(iResult),
                             errorDescription: String(cString: gai_strerrorA(iResult))
                         )
                     )
@@ -178,7 +178,7 @@ internal final class GetaddrinfoResolver: Resolver, Sendable {
                 SocketAddressError.UnknownHost(
                     host: host,
                     port: port,
-                    errorCode: rc,
+                    errorCode: Int(rc),
                     errorDescription: String(cString: gai_strerror(rc))
                 )
             )

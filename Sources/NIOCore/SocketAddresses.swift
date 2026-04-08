@@ -65,6 +65,7 @@ import CNIOOpenBSD
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
 public enum SocketAddressError: Error, Equatable, Hashable {
     /// The host is unknown (could not be resolved).
+    @available(*, deprecated, message: "Use SocketAddressError.UnknownHost instead.")
     case unknown(host: String, port: Int)
     /// The requested `SocketAddress` is not supported.
     case unsupported
@@ -89,11 +90,11 @@ extension SocketAddressError {
 
         public var port: Int
 
-        public var errorCode: CInt
+        public var errorCode: Int
 
         public var errorDescription: String
 
-        public init(host: String, port: Int, errorCode: CInt, errorDescription: String) {
+        package init(host: String, port: Int, errorCode: Int, errorDescription: String) {
             self.host = host
             self.port = port
             self.errorCode = errorCode
@@ -538,7 +539,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     ///   - host: the hostname which should be resolved.
     ///   - port: the port itself
     /// - Returns: the `SocketAddress` for the host / port pair.
-    /// - Throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
+    /// - Throws: a `SocketAddressError.UnknownHost` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
     public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {
         #if os(WASI)
         throw SocketAddressError.unsupported
@@ -554,7 +555,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
                     throw SocketAddressError.UnknownHost(
                         host: host,
                         port: port,
-                        errorCode: result,
+                        errorCode: Int(result),
                         errorDescription: String(cString: gai_strerrorA(result))
                     )
                 }
@@ -582,11 +583,11 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
         // FIXME: this is blocking!
         let rc = getaddrinfo(host, String(port), nil, &info)
-        if rc != 0 {
+        guard rc == 0 else {
             throw SocketAddressError.UnknownHost(
                 host: host,
                 port: port,
-                errorCode: rc,
+                errorCode: Int(rc),
                 errorDescription: String(cString: gai_strerror(rc))
             )
         }
