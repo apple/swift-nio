@@ -20,6 +20,7 @@ let package = Package(
                 .product(name: "NIOPosix", package: "swift-nio"),
             ],
             path: "Benchmarks/NIOPosixBenchmarks",
+            swiftSettings: [.swiftLanguageMode(.v5)],
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]
@@ -32,6 +33,7 @@ let package = Package(
                 .product(name: "NIOEmbedded", package: "swift-nio"),
             ],
             path: "Benchmarks/NIOCoreBenchmarks",
+            swiftSettings: [.swiftLanguageMode(.v5)],
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]
