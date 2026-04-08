@@ -33,7 +33,6 @@ let package = Package(
                 .product(name: "NIOEmbedded", package: "swift-nio"),
             ],
             path: "Benchmarks/NIOCoreBenchmarks",
-            swiftSettings: [.swiftLanguageMode(.v5)],
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]
