@@ -40,6 +40,9 @@ jobs:
           $attempt = 0
           do {
             $attempt++
+            if ((Get-Service docker).Status -ne "Running") {
+              Start-Service docker
+            }
             docker info 2>&1 | Out-Null
             if ($LASTEXITCODE -eq 0) { break }
             if ($attempt -ge $maxAttempts) {
