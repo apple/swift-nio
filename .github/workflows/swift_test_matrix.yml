@@ -56,14 +56,16 @@ jobs:
         if: ${{ matrix.config.dockerfile == '' }}
         run: docker pull ${{ matrix.config.image }}
       - name: Build Docker image from Dockerfile
+        id: docker-build
         if: ${{ matrix.config.platform != 'Windows' && matrix.config.dockerfile != '' }}
         run: |
           local_tag="local-ci-image:$(echo "$MATRIX_SWIFT_VERSION" | tr ':/' '-')"
-          docker build \
+          docker buildx build \
             --build-arg SWIFT_IMAGE="$MATRIX_IMAGE" \
             -f "$MATRIX_DOCKERFILE" \
             -t "$local_tag" \
             .
+          echo "image=$local_tag" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_SWIFT_VERSION: ${{ matrix.config.swift_version }}
           MATRIX_IMAGE: ${{ matrix.config.image }}
@@ -77,12 +79,6 @@ jobs:
             setup_command_expression=""
           fi
           workspace="/$(basename "$GITHUB_WORKSPACE")"
-
-          # Use the locally built image if a Dockerfile was provided
-          image="$MATRIX_IMAGE"
-          if [[ -n "$MATRIX_DOCKERFILE" ]]; then
-            image="local-ci-image:$(echo "$MATRIX_SWIFT_VERSION" | tr ':/' '-')"
-          fi
 
           docker_args=(
             "run"
@@ -109,7 +105,7 @@ jobs:
             done < <(echo "$MATRIX_ENV_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
           fi
 
-          docker_args+=("$image")
+          docker_args+=("$MATRIX_IMAGE")
           docker_args+=("bash" "-c" "$setup_command_expression $MATRIX_COMMAND $MATRIX_COMMAND_ARGUMENTS")
 
           echo "Executing Docker command: docker ${docker_args[*]}"
@@ -117,11 +113,10 @@ jobs:
         env:
           MATRIX_SETUP_COMMAND: ${{ matrix.config.setup_command }}
           MATRIX_SWIFT_VERSION: ${{ matrix.config.swift_version }}
-          MATRIX_IMAGE: ${{ matrix.config.image }}
+          MATRIX_IMAGE: ${{ steps.docker-build.outputs.image || matrix.config.image }}
           MATRIX_COMMAND: ${{ matrix.config.command }}
           MATRIX_COMMAND_ARGUMENTS: ${{ matrix.config.command_arguments }}
           MATRIX_ENV_JSON: ${{ toJson(matrix.config.env) }}
-          MATRIX_DOCKERFILE: ${{ matrix.config.dockerfile }}
           MATRIX_DOCKER_CAPABILITIES: ${{ toJson(matrix.config.docker_capabilities) }}
           GITHUB_WORKSPACE: ${{ github.workspace }}
       - name: Run matrix job (Windows)
