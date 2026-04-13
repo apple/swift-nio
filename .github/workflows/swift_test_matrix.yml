@@ -53,7 +53,21 @@ jobs:
           } while ($true)
         shell: pwsh
       - name: Pull Docker image
+        if: ${{ matrix.config.dockerfile == '' }}
         run: docker pull ${{ matrix.config.image }}
+      - name: Build Docker image from Dockerfile
+        if: ${{ matrix.config.platform != 'Windows' && matrix.config.dockerfile != '' }}
+        run: |
+          local_tag="local-ci-image:$(echo "$MATRIX_SWIFT_VERSION" | tr ':/' '-')"
+          docker build \
+            --build-arg SWIFT_IMAGE="$MATRIX_IMAGE" \
+            -f "$MATRIX_DOCKERFILE" \
+            -t "$local_tag" \
+            .
+        env:
+          MATRIX_SWIFT_VERSION: ${{ matrix.config.swift_version }}
+          MATRIX_IMAGE: ${{ matrix.config.image }}
+          MATRIX_DOCKERFILE: ${{ matrix.config.dockerfile }}
       - name: Run matrix job
         if: ${{ matrix.config.platform != 'Windows' }}
         run: |
@@ -63,6 +77,12 @@ jobs:
             setup_command_expression=""
           fi
           workspace="/$(basename "$GITHUB_WORKSPACE")"
+
+          # Use the locally built image if a Dockerfile was provided
+          image="$MATRIX_IMAGE"
+          if [[ -n "$MATRIX_DOCKERFILE" ]]; then
+            image="local-ci-image:$(echo "$MATRIX_SWIFT_VERSION" | tr ':/' '-')"
+          fi
 
           docker_args=(
             "run"
@@ -74,6 +94,13 @@ jobs:
             "-e" "workspace=$workspace"
           )
 
+          # Add Docker capabilities if specified
+          if [[ "$MATRIX_DOCKER_CAPABILITIES" != '[]' ]]; then
+            while IFS= read -r cap; do
+              docker_args+=("--cap-add=$cap")
+            done < <(echo "$MATRIX_DOCKER_CAPABILITIES" | jq -r '.[]')
+          fi
+
           if [[ "$MATRIX_ENV_JSON" != '{}' ]]; then
             while IFS="=" read -r key value; do
               if [[ -n "$key" && -n "$value" ]]; then
@@ -82,7 +109,7 @@ jobs:
             done < <(echo "$MATRIX_ENV_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
           fi
 
-          docker_args+=("$MATRIX_IMAGE")
+          docker_args+=("$image")
           docker_args+=("bash" "-c" "$setup_command_expression $MATRIX_COMMAND $MATRIX_COMMAND_ARGUMENTS")
 
           echo "Executing Docker command: docker ${docker_args[*]}"
@@ -94,6 +121,8 @@ jobs:
           MATRIX_COMMAND: ${{ matrix.config.command }}
           MATRIX_COMMAND_ARGUMENTS: ${{ matrix.config.command_arguments }}
           MATRIX_ENV_JSON: ${{ toJson(matrix.config.env) }}
+          MATRIX_DOCKERFILE: ${{ matrix.config.dockerfile }}
+          MATRIX_DOCKER_CAPABILITIES: ${{ toJson(matrix.config.docker_capabilities) }}
           GITHUB_WORKSPACE: ${{ github.workspace }}
       - name: Run matrix job (Windows)
         if: ${{ matrix.config.platform == 'Windows' }}
