@@ -10,9 +10,9 @@ on:
         type: boolean
         description: "Boolean to enable the nightly-main WASM Swift SDK matrix job. Defaults to true."
         default: true
-      nightly_6_3_enabled:
+      nightly_next_enabled:
         type: boolean
-        description: "Boolean to enable the nightly-6.3 WASM Swift SDK matrix job. Defaults to true."
+        description: "Boolean to enable the nightly-next WASM Swift SDK matrix job. Defaults to true."
         default: true
       release_6_3_enabled:
         type: boolean
@@ -76,7 +76,7 @@ jobs:
             entries="${entries:+${entries},}${entry}"
           fi
 
-          if [[ "$INPUT_NIGHTLY_6_3_ENABLED" == "true" ]]; then
+          if [[ "$INPUT_NIGHTLY_NEXT_ENABLED" == "true" ]]; then
             entry=$(make_entry "nightly-6.3" "INSTALL_SWIFT_BRANCH=swift-6.3-branch")
             entries="${entries:+${entries},}${entry}"
           fi
@@ -94,7 +94,7 @@ jobs:
           echo "wasm-swift-sdk-matrix=$(echo "{\"config\":[${entries}]}" | jq -c)" >> "$GITHUB_OUTPUT"
         env:
           INPUT_NIGHTLY_MAIN_ENABLED: ${{ inputs.nightly_main_enabled }}
-          INPUT_NIGHTLY_6_3_ENABLED: ${{ inputs.nightly_6_3_enabled }}
+          INPUT_NIGHTLY_NEXT_ENABLED: ${{ inputs.nightly_next_enabled }}
           INPUT_RELEASE_6_3_ENABLED: ${{ inputs.release_6_3_enabled }}
           INPUT_ENV_VARS: ${{ inputs.env_vars }}
           INPUT_ADDITIONAL_COMMAND_ARGUMENTS: ${{ inputs.additional_command_arguments }}
