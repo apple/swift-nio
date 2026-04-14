@@ -6,10 +6,18 @@ permissions:
 on:
   workflow_call:
     inputs:
-      swift_versions:
-        type: string
-        description: "Swift version list (JSON). Use 'nightly-main', 'nightly-X.Y' for branch snapshots, or 'X.Y' for releases."
-        default: '["nightly-main", "nightly-6.3", "6.3"]'
+      nightly_main_enabled:
+        type: boolean
+        description: "Boolean to enable the nightly-main WASM Swift SDK matrix job. Defaults to true."
+        default: true
+      nightly_6_3_enabled:
+        type: boolean
+        description: "Boolean to enable the nightly-6.3 WASM Swift SDK matrix job. Defaults to true."
+        default: true
+      release_6_3_enabled:
+        type: boolean
+        description: "Boolean to enable the 6.3 release WASM Swift SDK matrix job. Defaults to true."
+        default: true
       env_vars:
         type: string
         description: "Environment variables for jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
@@ -37,36 +45,14 @@ jobs:
             echo "Error: env_vars is not valid JSON"
             exit 1
           fi
-          if ! echo "$INPUT_SWIFT_VERSIONS" | jq empty 2>/dev/null; then
-            echo "Error: swift_versions is not valid JSON"
-            exit 1
-          fi
-          if ! echo "$INPUT_SWIFT_VERSIONS" | jq -e 'type == "array" and (length > 0) and all(type == "string")' > /dev/null 2>&1; then
-            echo "Error: swift_versions must be a non-empty JSON array of strings"
-            exit 1
-          fi
-          invalid=$(echo "$INPUT_SWIFT_VERSIONS" | jq -r '.[] | select(test("^(nightly-[a-zA-Z0-9._-]+|[0-9]+\\.[0-9]+(\\.[0-9]+)?)$") | not)')
-          if [[ -n "$invalid" ]]; then
-            echo "Error: invalid swift_versions entries (expected 'nightly-X', 'nightly-X.Y', or 'X.Y'): $invalid"
-            exit 1
-          fi
 
           env_vars_json="$INPUT_ENV_VARS"
           entries=""
 
-          while IFS= read -r swift_version; do
-            if [[ "$swift_version" == nightly-* ]]; then
-              branch_suffix="${swift_version#nightly-}"
-              if [[ "$branch_suffix" == "main" ]]; then
-                install_env="INSTALL_SWIFT_BRANCH=main"
-              else
-                install_env="INSTALL_SWIFT_BRANCH=swift-${branch_suffix}-branch"
-              fi
-            else
-              install_env="INSTALL_SWIFT_VERSION=${swift_version}"
-            fi
-
-            entry=$(jq -n \
+          make_entry() {
+            local swift_version="$1"
+            local install_env="$2"
+            jq -n \
               --arg name "${swift_version} Jammy" \
               --arg swift_version "$swift_version" \
               --arg install_env "$install_env" \
@@ -82,18 +68,34 @@ jobs:
                 "command": "curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/swift-build-with-wasm-sdk.sh | bash -s --",
                 "command_arguments": $command_arguments,
                 "env": $env
-              }')
+              }'
+          }
 
-            if [[ -n "$entries" ]]; then
-              entries="${entries},${entry}"
-            else
-              entries="$entry"
-            fi
-          done < <(echo "$INPUT_SWIFT_VERSIONS" | jq -r '.[]')
+          if [[ "$INPUT_NIGHTLY_MAIN_ENABLED" == "true" ]]; then
+            entry=$(make_entry "nightly-main" "INSTALL_SWIFT_BRANCH=main")
+            entries="${entries:+${entries},}${entry}"
+          fi
+
+          if [[ "$INPUT_NIGHTLY_6_3_ENABLED" == "true" ]]; then
+            entry=$(make_entry "nightly-6.3" "INSTALL_SWIFT_BRANCH=swift-6.3-branch")
+            entries="${entries:+${entries},}${entry}"
+          fi
+
+          if [[ "$INPUT_RELEASE_6_3_ENABLED" == "true" ]]; then
+            entry=$(make_entry "6.3" "INSTALL_SWIFT_VERSION=6.3")
+            entries="${entries:+${entries},}${entry}"
+          fi
+
+          if [[ -z "$entries" ]]; then
+            echo "Error: No WASM Swift SDK matrix jobs enabled"
+            exit 1
+          fi
 
           echo "wasm-swift-sdk-matrix=$(echo "{\"config\":[${entries}]}" | jq -c)" >> "$GITHUB_OUTPUT"
         env:
-          INPUT_SWIFT_VERSIONS: ${{ inputs.swift_versions }}
+          INPUT_NIGHTLY_MAIN_ENABLED: ${{ inputs.nightly_main_enabled }}
+          INPUT_NIGHTLY_6_3_ENABLED: ${{ inputs.nightly_6_3_enabled }}
+          INPUT_RELEASE_6_3_ENABLED: ${{ inputs.release_6_3_enabled }}
           INPUT_ENV_VARS: ${{ inputs.env_vars }}
           INPUT_ADDITIONAL_COMMAND_ARGUMENTS: ${{ inputs.additional_command_arguments }}
 
