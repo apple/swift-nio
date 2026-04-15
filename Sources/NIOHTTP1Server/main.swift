@@ -630,13 +630,14 @@ default:
     bindTarget = BindTo.ip(host: defaultHost, port: defaultPort)
 }
 
+let fileIO = NonBlockingFileIO(threadPool: .singleton)
+
 func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
     channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMapThrowing {
         try channel.pipeline.syncOperations.addHandler(HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
     }
 }
 
-let fileIO = NonBlockingFileIO(threadPool: .singleton)
 let socketBootstrap = ServerBootstrap(group: MultiThreadedEventLoopGroup.singleton)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .serverChannelOption(.backlog, value: 256)
