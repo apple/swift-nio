@@ -191,6 +191,12 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
 
     private var metricsDelegateState: MetricsDelegateState?
 
+    /// The method to use when running a job. Allows us to switch between the various runSynchronously methods
+    ///
+    /// - Important: This is not protected by any lock and must be set before any job is enqueued.
+    @usableFromInline
+    internal var _customRunJob: ((ErasedUnownedJob) -> Void)?
+
     @usableFromInline
     internal func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
@@ -617,10 +623,14 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
             case .function(let function):
                 function()
             case .unownedJob(let erasedUnownedJob):
-                if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
-                    erasedUnownedJob.unownedJob.runSynchronously(on: self.asUnownedSerialExecutor())
+                if let runJob = self._customRunJob {
+                    runJob(erasedUnownedJob)
                 } else {
-                    fatalError("Tried to run an UnownedJob without runtime support")
+                    if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
+                        erasedUnownedJob.unownedJob.runSynchronously(on: self.asUnownedSerialExecutor())
+                    } else {
+                        fatalError("Tried to run an UnownedJob without runtime support")
+                    }
                 }
             case .callback(let handler):
                 handler.handleScheduledCallback(eventLoop: self)
