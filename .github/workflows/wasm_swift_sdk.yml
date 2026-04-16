@@ -77,7 +77,7 @@ jobs:
           fi
 
           if [[ "$INPUT_NIGHTLY_NEXT_ENABLED" == "true" ]]; then
-            entry=$(make_entry "nightly-6.3" "INSTALL_SWIFT_BRANCH=swift-6.3-branch")
+            entry=$(make_entry "$NIGHTLY_NEXT_VERSION" "INSTALL_SWIFT_BRANCH=$NIGHTLY_NEXT_BRANCH")
             entries="${entries:+${entries},}${entry}"
           fi
 
@@ -98,6 +98,8 @@ jobs:
           INPUT_RELEASE_6_3_ENABLED: ${{ inputs.release_6_3_enabled }}
           INPUT_ENV_VARS: ${{ inputs.env_vars }}
           INPUT_ADDITIONAL_COMMAND_ARGUMENTS: ${{ inputs.additional_command_arguments }}
+          NIGHTLY_NEXT_VERSION: nightly-6.3
+          NIGHTLY_NEXT_BRANCH: swift-6.3-branch
 
   wasm-swift-sdk:
     name: WebAssembly Swift SDK
