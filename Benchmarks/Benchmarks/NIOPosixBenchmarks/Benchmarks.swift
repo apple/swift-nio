@@ -18,7 +18,7 @@ import NIOPosix
 
 private let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
 
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     let defaultMetrics: [BenchmarkMetric] = [
         .mallocCountTotal,
         .contextSwitches,

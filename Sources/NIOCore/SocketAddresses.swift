@@ -23,6 +23,7 @@ import let WinSDK.INET6_ADDRSTRLEN
 
 import func WinSDK.FreeAddrInfoW
 import func WinSDK.GetAddrInfoW
+import func WinSDK.gai_strerrorA
 
 import struct WinSDK.ADDRESS_FAMILY
 import struct WinSDK.ADDRINFOW
@@ -64,6 +65,7 @@ import CNIOOpenBSD
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
 public enum SocketAddressError: Error, Equatable, Hashable {
     /// The host is unknown (could not be resolved).
+    @available(*, deprecated, message: "Use SocketAddressError.UnknownHost instead.")
     case unknown(host: String, port: Int)
     /// The requested `SocketAddress` is not supported.
     case unsupported
@@ -80,6 +82,27 @@ extension SocketAddressError {
 
         public init(address: ByteBuffer) {
             self.address = address
+        }
+    }
+
+    public struct UnknownHost: Error, Hashable, CustomStringConvertible {
+        public var host: String
+
+        public var port: Int
+
+        public var errorCode: Int
+
+        public var errorDescription: String
+
+        package init(host: String, port: Int, errorCode: Int, errorDescription: String) {
+            self.host = host
+            self.port = port
+            self.errorCode = errorCode
+            self.errorDescription = errorDescription
+        }
+
+        public var description: String {
+            "SocketAddressError.UnknownHost: \(self.errorDescription) (error \(self.errorCode)) for host \(self.host), port \(self.port)"
         }
     }
 }
@@ -516,7 +539,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     ///   - host: the hostname which should be resolved.
     ///   - port: the port itself
     /// - Returns: the `SocketAddress` for the host / port pair.
-    /// - Throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
+    /// - Throws: a `SocketAddressError.UnknownHost` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
     public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {
         #if os(WASI)
         throw SocketAddressError.unsupported
@@ -529,7 +552,12 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
                 let result = GetAddrInfoW(wszHost, wszPort, nil, &pResult)
                 guard result == 0 else {
-                    throw SocketAddressError.unknown(host: host, port: port)
+                    throw SocketAddressError.UnknownHost(
+                        host: host,
+                        port: port,
+                        errorCode: Int(result),
+                        errorDescription: String(cString: gai_strerrorA(result))
+                    )
                 }
 
                 defer {
@@ -554,8 +582,14 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         var info: UnsafeMutablePointer<addrinfo>?
 
         // FIXME: this is blocking!
-        if getaddrinfo(host, String(port), nil, &info) != 0 {
-            throw SocketAddressError.unknown(host: host, port: port)
+        let rc = getaddrinfo(host, String(port), nil, &info)
+        guard rc == 0 else {
+            throw SocketAddressError.UnknownHost(
+                host: host,
+                port: port,
+                errorCode: Int(rc),
+                errorDescription: String(cString: gai_strerror(rc))
+            )
         }
 
         defer {

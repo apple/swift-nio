@@ -221,8 +221,9 @@ class NIOThreadPoolTest {
     @Test
     func testCanPinThreadsToCores() async throws {
         #if os(Linux)
-        let numberOfThreads = min(1, System.coreCount / 2)
-        let pinnedCPUIDs = Array(0..<numberOfThreads)
+        let availableCPUIDs = NIOThread.currentAffinity.cpuIds.sorted()
+        let numberOfThreads = max(1, availableCPUIDs.count / 2)
+        let pinnedCPUIDs = Array(availableCPUIDs.prefix(numberOfThreads))
         let pool = NIOThreadPool(pinnedCPUIDs: pinnedCPUIDs)
         pool.start()
         defer {

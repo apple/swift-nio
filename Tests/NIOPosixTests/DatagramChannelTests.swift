@@ -761,14 +761,9 @@ class DatagramChannelTests: XCTestCase {
                     let channel2 = try buildChannel(group: self.group, host: "::1")
                     try channel2.setOption(.explicitCongestionNotification, value: false).wait()
                     XCTAssertFalse(try channel2.getOption(.explicitCongestionNotification).wait())
-                } catch let error as SocketAddressError {
-                    switch error {
-                    case .unknown:
-                        // IPv6 resolution can fail even if supported.
-                        return
-                    case .unsupported, .unixDomainSocketPathTooLong, .failedToParseIPString:
-                        throw error
-                    }
+                } catch is SocketAddressError.UnknownHost {
+                    // IPv6 resolution can fail even if supported.
+                    return
                 }
             }()
         )
@@ -969,14 +964,9 @@ class DatagramChannelTests: XCTestCase {
                     let channel2 = try buildChannel(group: self.group, host: "::1")
                     try channel2.setOption(.receivePacketInfo, value: false).wait()
                     XCTAssertFalse(try channel2.getOption(.receivePacketInfo).wait())
-                } catch let error as SocketAddressError {
-                    switch error {
-                    case .unknown:
-                        // IPv6 resolution can fail even if supported.
-                        return
-                    case .unsupported, .unixDomainSocketPathTooLong, .failedToParseIPString:
-                        throw error
-                    }
+                } catch is SocketAddressError.UnknownHost {
+                    // IPv6 resolution can fail even if supported.
+                    return
                 }
             }()
         )
