@@ -96,7 +96,9 @@ import Testing
         let goodTrailers = ByteBuffer(string: "0\r\n\(weirdAllowedFieldName): present\r\n\r\n")
 
         #expect(throws: Never.self) { try channel.writeOutbound(HTTPClientRequestPart.head(goodRequest)) }
-        #expect(throws: Never.self) { try channel.writeOutbound(HTTPClientRequestPart.end([weirdAllowedFieldName: "present"])) }
+        #expect(throws: Never.self) {
+            try channel.writeOutbound(HTTPClientRequestPart.end([weirdAllowedFieldName: "present"]))
+        }
 
         #expect(try channel.readOutbound(as: ByteBuffer.self) == goodRequestBytes)
         #expect(try channel.readOutbound(as: ByteBuffer.self) == goodTrailers)
@@ -195,7 +197,9 @@ import Testing
         let goodTrailers = ByteBuffer(string: "0\r\nWeird-Value: \(weirdAllowedFieldValue)\r\n\r\n")
 
         #expect(throws: Never.self) { try channel.writeOutbound(HTTPClientRequestPart.head(goodRequest)) }
-        #expect(throws: Never.self) { try channel.writeOutbound(HTTPClientRequestPart.end(["Weird-Value": weirdAllowedFieldValue])) }
+        #expect(throws: Never.self) {
+            try channel.writeOutbound(HTTPClientRequestPart.end(["Weird-Value": weirdAllowedFieldValue]))
+        }
 
         #expect(try channel.readOutbound(as: ByteBuffer.self) == goodRequestBytes)
         #expect(try channel.readOutbound(as: ByteBuffer.self) == goodTrailers)
@@ -318,7 +322,9 @@ import Testing
         let goodTrailers = ByteBuffer(string: "0\r\n\(weirdAllowedFieldName): present\r\n\r\n")
 
         #expect(throws: Never.self) { try channel.writeOutbound(HTTPServerResponsePart.head(goodResponse)) }
-        #expect(throws: Never.self) { try channel.writeOutbound(HTTPServerResponsePart.end([weirdAllowedFieldName: "present"])) }
+        #expect(throws: Never.self) {
+            try channel.writeOutbound(HTTPServerResponsePart.end([weirdAllowedFieldName: "present"]))
+        }
 
         #expect(try channel.readOutbound(as: ByteBuffer.self) == goodResponseBytes)
         #expect(try channel.readOutbound(as: ByteBuffer.self) == goodTrailers)
@@ -421,7 +427,9 @@ import Testing
         let goodTrailers = ByteBuffer(string: "0\r\nWeird-Value: \(weirdAllowedFieldValue)\r\n\r\n")
 
         #expect(throws: Never.self) { try channel.writeOutbound(HTTPServerResponsePart.head(goodResponse)) }
-        #expect(throws: Never.self) { try channel.writeOutbound(HTTPServerResponsePart.end(["Weird-Value": weirdAllowedFieldValue])) }
+        #expect(throws: Never.self) {
+            try channel.writeOutbound(HTTPServerResponsePart.end(["Weird-Value": weirdAllowedFieldValue]))
+        }
 
         #expect(try channel.readOutbound(as: ByteBuffer.self) == goodResponseBytes)
         #expect(try channel.readOutbound(as: ByteBuffer.self) == goodTrailers)
