@@ -42,7 +42,7 @@ private final class NoOpHandler: ChannelInboundHandler, Sendable {
 
 // MARK: - Benchmarks
 
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     #if LOCAL_TESTING
     let defaultMetrics: [BenchmarkMetric] = [
         .mallocCountTotal,

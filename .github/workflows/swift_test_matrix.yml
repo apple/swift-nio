@@ -40,6 +40,9 @@ jobs:
           $attempt = 0
           do {
             $attempt++
+            if ((Get-Service docker).Status -ne "Running") {
+              Start-Service docker
+            }
             docker info 2>&1 | Out-Null
             if ($LASTEXITCODE -eq 0) { break }
             if ($attempt -ge $maxAttempts) {
@@ -50,7 +53,23 @@ jobs:
           } while ($true)
         shell: pwsh
       - name: Pull Docker image
+        if: ${{ matrix.config.dockerfile == '' }}
         run: docker pull ${{ matrix.config.image }}
+      - name: Build Docker image from Dockerfile
+        id: docker-build
+        if: ${{ matrix.config.platform != 'Windows' && matrix.config.dockerfile != '' }}
+        run: |
+          local_tag="local-ci-image:$(echo "$MATRIX_SWIFT_VERSION" | tr ':/' '-')"
+          docker buildx build \
+            --build-arg SWIFT_IMAGE="$MATRIX_IMAGE" \
+            -f "$MATRIX_DOCKERFILE" \
+            -t "$local_tag" \
+            .
+          echo "image=$local_tag" >> "$GITHUB_OUTPUT"
+        env:
+          MATRIX_SWIFT_VERSION: ${{ matrix.config.swift_version }}
+          MATRIX_IMAGE: ${{ matrix.config.image }}
+          MATRIX_DOCKERFILE: ${{ matrix.config.dockerfile }}
       - name: Run matrix job
         if: ${{ matrix.config.platform != 'Windows' }}
         run: |
@@ -71,6 +90,20 @@ jobs:
             "-e" "workspace=$workspace"
           )
 
+          # Add Docker capabilities if specified
+          if [[ "$MATRIX_DOCKER_CAPABILITIES" != '[]' ]]; then
+            while IFS= read -r cap; do
+              docker_args+=("--cap-add=$cap")
+            done < <(echo "$MATRIX_DOCKER_CAPABILITIES" | jq -r '.[]')
+          fi
+
+          # Add Docker security options if specified
+          if [[ "$MATRIX_DOCKER_SECURITY_OPTS" != '[]' ]]; then
+            while IFS= read -r opt; do
+              docker_args+=("--security-opt" "$opt")
+            done < <(echo "$MATRIX_DOCKER_SECURITY_OPTS" | jq -r '.[]')
+          fi
+
           if [[ "$MATRIX_ENV_JSON" != '{}' ]]; then
             while IFS="=" read -r key value; do
               if [[ -n "$key" && -n "$value" ]]; then
@@ -87,10 +120,12 @@ jobs:
         env:
           MATRIX_SETUP_COMMAND: ${{ matrix.config.setup_command }}
           MATRIX_SWIFT_VERSION: ${{ matrix.config.swift_version }}
-          MATRIX_IMAGE: ${{ matrix.config.image }}
+          MATRIX_IMAGE: ${{ steps.docker-build.outputs.image || matrix.config.image }}
           MATRIX_COMMAND: ${{ matrix.config.command }}
           MATRIX_COMMAND_ARGUMENTS: ${{ matrix.config.command_arguments }}
           MATRIX_ENV_JSON: ${{ toJson(matrix.config.env) }}
+          MATRIX_DOCKER_CAPABILITIES: ${{ toJson(matrix.config.docker_capabilities) }}
+          MATRIX_DOCKER_SECURITY_OPTS: ${{ toJson(matrix.config.docker_security_opts) }}
           GITHUB_WORKSPACE: ${{ github.workspace }}
       - name: Run matrix job (Windows)
         if: ${{ matrix.config.platform == 'Windows' }}

@@ -699,4 +699,18 @@ class SocketAddressTest: XCTestCase {
             XCTAssertEqual(SocketAddress(ipv6MaskForPrefix: vector.0), vector.1)
         }
     }
+
+    func testGetaddrinfoErrorCodeIsPreserved() {
+        // .invalid TLD is guaranteed by RFC 6761 to never resolve.
+        XCTAssertThrowsError(try SocketAddress.makeAddressResolvingHost("somehost.invalid", port: 80)) { error in
+            guard let unknownHostError = error as? SocketAddressError.UnknownHost else {
+                XCTFail("Expected SocketAddressError.UnknownHost, got \(type(of: error)): \(error)")
+                return
+            }
+            XCTAssertEqual(unknownHostError.host, "somehost.invalid")
+            XCTAssertEqual(unknownHostError.port, 80)
+            XCTAssertNotEqual(unknownHostError.errorCode, 0, "Error code should be non-zero")
+            XCTAssertFalse(unknownHostError.errorDescription.isEmpty, "Error description should not be empty")
+        }
+    }
 }
