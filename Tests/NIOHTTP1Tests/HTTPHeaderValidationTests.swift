@@ -61,7 +61,10 @@ import Testing
             let headers = HTTPHeaders([("Host", "example.com"), (forbiddenFieldName, "present")])
             let badRequest = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/", headers: headers)
 
-            let error = #expect(throws: HTTPParserError.self) {
+            let error = #expect(
+                throws: HTTPParserError.self,
+                "Incorrectly tolerated character in header field name: \(String(decoding: [byte], as: UTF8.self))"
+            ) {
                 try channel.writeOutbound(HTTPClientRequestPart.head(badRequest))
             }
             #expect(error == .invalidHeaderToken)
@@ -116,7 +119,10 @@ import Testing
 
             #expect(throws: Never.self) { try channel.writeOutbound(HTTPClientRequestPart.head(goodRequest)) }
 
-            let error = #expect(throws: HTTPParserError.self) {
+            let error = #expect(
+                throws: HTTPParserError.self,
+                "Incorrectly tolerated character in trailer field name: \(String(decoding: [byte], as: UTF8.self))"
+            ) {
                 try channel.writeOutbound(HTTPClientRequestPart.end([forbiddenFieldName: "present"]))
             }
             #expect(error == .invalidHeaderToken)
@@ -155,7 +161,10 @@ import Testing
             let headers = HTTPHeaders([("Host", "example.com"), ("Weird-Value", forbiddenFieldValue)])
             let badRequest = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/", headers: headers)
 
-            let error = #expect(throws: HTTPParserError.self) {
+            let error = #expect(
+                throws: HTTPParserError.self,
+                "Incorrectly tolerated character in header field value: \(String(decoding: [byte], as: UTF8.self))"
+            ) {
                 try channel.writeOutbound(HTTPClientRequestPart.head(badRequest))
             }
             #expect(error == .invalidHeaderToken)
@@ -217,7 +226,10 @@ import Testing
 
             try channel.writeOutbound(HTTPClientRequestPart.head(goodRequest))
 
-            let error = #expect(throws: HTTPParserError.self) {
+            let error = #expect(
+                throws: HTTPParserError.self,
+                "Incorrectly tolerated character in trailer field value: \(String(decoding: [byte], as: UTF8.self))"
+            ) {
                 try channel.writeOutbound(HTTPClientRequestPart.end(["Weird-Value": forbiddenFieldValue]))
             }
             #expect(error == .invalidHeaderToken)
@@ -288,7 +300,10 @@ import Testing
             let headers = HTTPHeaders([("Content-Length", "0"), (forbiddenFieldName, "present")])
             let badResponse = HTTPResponseHead(version: .http1_1, status: .ok, headers: headers)
 
-            let error = #expect(throws: HTTPParserError.self) {
+            let error = #expect(
+                throws: HTTPParserError.self,
+                "Incorrectly tolerated character in header field name: \(String(decoding: [byte], as: UTF8.self))"
+            ) {
                 try channel.writeOutbound(HTTPServerResponsePart.head(badResponse))
             }
             #expect(error == .invalidHeaderToken)
@@ -343,7 +358,10 @@ import Testing
 
             try channel.writeOutbound(HTTPServerResponsePart.head(goodResponse))
 
-            let error = #expect(throws: HTTPParserError.self) {
+            let error = #expect(
+                throws: HTTPParserError.self,
+                "Incorrectly tolerated character in trailer field name: \(String(decoding: [byte], as: UTF8.self))"
+            ) {
                 try channel.writeOutbound(HTTPServerResponsePart.end([forbiddenFieldName: "present"]))
             }
             #expect(error == .invalidHeaderToken)
@@ -384,7 +402,10 @@ import Testing
             let headers = HTTPHeaders([("Content-Length", "0"), ("Weird-Value", forbiddenFieldValue)])
             let badResponse = HTTPResponseHead(version: .http1_1, status: .ok, headers: headers)
 
-            let error = #expect(throws: HTTPParserError.self) {
+            let error = #expect(
+                throws: HTTPParserError.self,
+                "Incorrectly tolerated character in header field value: \(String(decoding: [byte], as: UTF8.self))"
+            ) {
                 try channel.writeOutbound(HTTPServerResponsePart.head(badResponse))
             }
             #expect(error == .invalidHeaderToken)
@@ -448,7 +469,10 @@ import Testing
 
             try channel.writeOutbound(HTTPServerResponsePart.head(goodResponse))
 
-            let error = #expect(throws: HTTPParserError.self) {
+            let error = #expect(
+                throws: HTTPParserError.self,
+                "Incorrectly tolerated character in trailer field value: \(String(decoding: [byte], as: UTF8.self))"
+            ) {
                 try channel.writeOutbound(HTTPServerResponsePart.end(["Weird-Value": forbiddenFieldValue]))
             }
             #expect(error == .invalidHeaderToken)
