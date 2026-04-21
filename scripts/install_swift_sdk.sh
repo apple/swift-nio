@@ -111,12 +111,24 @@ if [[ -n "$branch" ]]; then
   # Some snapshots may not have all the artefacts we require
   log "Discovering branch snapshot for branch $branch"
 
-  # shellcheck disable=SC2016  # Our use of JQ_BIN means that shellcheck can't tell this is a `jq` invocation
-  snapshots="$("$CURL_BIN" -s "https://www.swift.org/api/v1/install/dev/main/${os_image_sanitized}.json" | "$JQ_BIN" -r --arg arch "$arch" '.[$arch] | unique | reverse | .[].dir')"
+  # Map branch name to download path: "main" uses "development", release branches use their branch name
+  if [[ "$branch" == "main" ]]; then
+    download_path="development"
+  else
+    download_path="$branch"
+  fi
 
+  # shellcheck disable=SC2016  # Our use of JQ_BIN means that shellcheck can't tell this is a `jq` invocation
+  snapshots="$("$CURL_BIN" -s "https://www.swift.org/api/v1/install/dev/${branch}/${os_image_sanitized}.json" | "$JQ_BIN" -r --arg arch "$arch" '.[$arch] | unique | reverse | .[].dir')"
+
+  if [[ -z "$snapshots" ]]; then
+    fatal "No snapshots found for branch '$branch' on ${os_image_sanitized}/${arch}. Check the branch name and that swift.org is reachable."
+  fi
+
+  snapshot=""
   for snapshot in $snapshots; do
-    snapshot_url="https://download.swift.org/development/${os_image_sanitized}${arch_suffix}/${snapshot}/${snapshot}-${os_image}${arch_suffix}.tar.gz"
-    sdk_url="https://download.swift.org/development/${sdk_dir}/${snapshot}/${snapshot}${sdk_suffix}.artifactbundle.tar.gz"
+    snapshot_url="https://download.swift.org/${download_path}/${os_image_sanitized}${arch_suffix}/${snapshot}/${snapshot}-${os_image}${arch_suffix}.tar.gz"
+    sdk_url="https://download.swift.org/${download_path}/${sdk_dir}/${snapshot}/${snapshot}${sdk_suffix}.artifactbundle.tar.gz"
 
     # check that the files exist
     "$CURL_BIN" -sILXGET --fail "$snapshot_url" > /dev/null; snapshot_return_code=$?
