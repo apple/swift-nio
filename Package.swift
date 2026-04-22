@@ -133,7 +133,6 @@ let package = Package(
         .target(
             name: "NIOFoundationEssentialsCompat",
             dependencies: [
-                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
             ],
             swiftSettings: swiftSettings
@@ -141,6 +140,7 @@ let package = Package(
         .target(
             name: "NIOFoundationCompat",
             dependencies: [
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOFoundationEssentialsCompat"
             ],
             swiftSettings: swiftSettings
