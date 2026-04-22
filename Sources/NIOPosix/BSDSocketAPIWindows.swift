@@ -197,7 +197,11 @@ extension NIOBSDSocket {
     ) throws -> NIOBSDSocket.Handle? {
         let socket: NIOBSDSocket.Handle = WinSDK.accept(s, addr, addrlen)
         if socket == WinSDK.INVALID_SOCKET {
-            throw IOError(winsock: WSAGetLastError(), reason: "accept")
+            let lastError = WSAGetLastError()
+            if lastError == WSAEWOULDBLOCK {
+                return nil
+            }
+            throw IOError(winsock: lastError, reason: "accept")
         }
         return socket
     }
@@ -228,7 +232,7 @@ extension NIOBSDSocket {
     ) throws -> Bool {
         if WinSDK.connect(s, name, namelen) == SOCKET_ERROR {
             let iResult = WSAGetLastError()
-            if iResult == WSAEWOULDBLOCK { return true }
+            if iResult == WSAEWOULDBLOCK { return false }
             throw IOError(winsock: WSAGetLastError(), reason: "connect")
         }
         return true
