@@ -257,9 +257,14 @@ extension HTTPResponseHead {
     }
 }
 
-extension UInt8 {
+extension String.UTF8View {
+    /// Determines if this `UTF8View` corresponds to an `String` which contains only ASCII characters.
     fileprivate var isASCII: Bool {
-        self <= 127
+        var result: UInt8 = 0
+        for byte in self {
+            result |= byte
+        }
+        return result <= 127
     }
 }
 
@@ -361,7 +366,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     ///     recommended.
     /// - Parameter value: The header field value to add for the given name.
     public mutating func add(name: String, value: String) {
-        precondition(!name.utf8.contains(where: { !$0.isASCII }), "name must be ASCII")
+        precondition(!name.utf8.isASCII, "name must be ASCII")
         self.headers.append((name, value))
         if self.isConnectionHeader(name) {
             self.keepAliveState = .unknown
