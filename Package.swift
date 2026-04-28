@@ -51,6 +51,7 @@ let package = Package(
         .library(name: "NIOTLS", targets: ["NIOTLS"]),
         .library(name: "NIOHTTP1", targets: ["NIOHTTP1"]),
         .library(name: "NIOConcurrencyHelpers", targets: ["NIOConcurrencyHelpers"]),
+        .library(name: "NIOFoundationEssentialsCompat", targets: ["NIOFoundationEssentialsCompat"]),
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
@@ -130,10 +131,17 @@ let package = Package(
             swiftSettings: swiftSettings
         ),
         .target(
+            name: "NIOFoundationEssentialsCompat",
+            dependencies: [
+                "NIOCore"
+            ],
+            swiftSettings: swiftSettings
+        ),
+        .target(
             name: "NIOFoundationCompat",
             dependencies: [
                 .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
-                "NIOCore",
+                "NIOFoundationEssentialsCompat",
             ],
             swiftSettings: swiftSettings
         ),
@@ -259,7 +267,7 @@ let package = Package(
             name: "NIOFSFoundationCompat",
             dependencies: [
                 "NIOFS",
-                "NIOFoundationCompat",
+                "NIOFoundationEssentialsCompat",
             ],
             path: "Sources/NIOFSFoundationCompat",
             swiftSettings: swiftSettings
@@ -287,7 +295,7 @@ let package = Package(
             name: "_NIOFileSystemFoundationCompat",
             dependencies: [
                 "_NIOFileSystem",
-                "NIOFoundationCompat",
+                "NIOFoundationEssentialsCompat",
             ],
             path: "Sources/_NIOFileSystemFoundationCompat",
             swiftSettings: swiftSettings
