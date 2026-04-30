@@ -133,6 +133,7 @@ private func correctlyFrameTransportHeaders(
         return .neither
     case .yes:
         if headers.contains(name: "content-length") {
+            headers.remove(name: "transfer-encoding")
             return .contentLength
         }
         if version.major == 1 && version.minor >= 1 {
@@ -143,6 +144,7 @@ private func correctlyFrameTransportHeaders(
         }
     case .unlikely:
         if headers.contains(name: "content-length") {
+            headers.remove(name: "transfer-encoding")
             return .contentLength
         }
         if version.major == 1 && version.minor >= 1 {
@@ -204,11 +206,6 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch HTTPRequestEncoder.unwrapOutboundIn(data) {
         case .head(var request):
-            assert(
-                !(request.headers.contains(name: "content-length")
-                    && request.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
-                "illegal HTTP sent: \(request) contains both a content-length and transfer-encoding:chunked"
-            )
             if self.configuration.automaticallySetFramingHeaders {
                 self.isChunked =
                     correctlyFrameTransportHeaders(
@@ -294,12 +291,6 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch HTTPResponseEncoder.unwrapOutboundIn(data) {
         case .head(var response):
-            assert(
-                !(response.headers.contains(name: "content-length")
-                    && response.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
-                "illegal HTTP sent: \(response) contains both a content-length and transfer-encoding:chunked"
-            )
-
             if self.configuration.automaticallySetFramingHeaders {
                 self.isChunked =
                     correctlyFrameTransportHeaders(
