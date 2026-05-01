@@ -23,6 +23,9 @@ import CNIOLinux
 #elseif canImport(Musl)
 @preconcurrency import Musl
 import CNIOLinux
+#elseif canImport(Android)
+@preconcurrency import Android
+import CNIOLinux
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
 import CNIOLinux
@@ -131,7 +134,7 @@ public enum Syscall: Sendable {
     }
     #endif
 
-    #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
     @_spi(Testing)
     public static func rename(
         from old: FilePath,
@@ -173,7 +176,7 @@ public enum Syscall: Sendable {
     }
     #endif
 
-    #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
     @_spi(Testing)
     public struct LinkAtFlags: OptionSet {
         @_spi(Testing)
@@ -306,7 +309,7 @@ public enum Syscall: Sendable {
         }
     }
 
-    #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
     @_spi(Testing)
     public static func sendfile(
         to output: FileDescriptor,
@@ -330,7 +333,7 @@ public enum Syscall: Sendable {
         }
     }
 
-    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
     @_spi(Testing)
     public static func getuid() -> uid_t {
         system_getuid()
@@ -509,7 +512,7 @@ public enum Libc: Sendable {
         return nil
     }
 
-    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
     @_spi(Testing)
     public static func homeDirectoryFromPasswd() -> Result<FilePath, Errno> {
         let uid = Syscall.getuid()

@@ -2080,7 +2080,7 @@ extension FileSystemTests {
         }
 
         // verify no temp files are left (Linux only - Darwin uses COPYFILE_UNLINK)
-        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
         let temporaryFiles = try await self.fs.withDirectoryHandle(atPath: testDirectory) { dir in
             var temporaryFiles: [String] = []
             for try await batch in dir.listContents().batched() {

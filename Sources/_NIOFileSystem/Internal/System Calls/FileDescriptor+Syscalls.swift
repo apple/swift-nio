@@ -23,6 +23,9 @@ import CNIOLinux
 #elseif canImport(Musl)
 @preconcurrency import Musl
 import CNIOLinux
+#elseif canImport(Android)
+@preconcurrency import Android
+import CNIOLinux
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
 import CNIOLinux
@@ -313,7 +316,7 @@ extension FileDescriptor {
     }
 }
 
-#if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+#if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
 extension FileDescriptor.OpenOptions {
     static var temporaryFile: Self {
         Self(rawValue: CNIOLinux_O_TMPFILE)
