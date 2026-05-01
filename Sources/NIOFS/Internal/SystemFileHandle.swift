@@ -25,6 +25,8 @@ import CNIOLinux
 #elseif canImport(Musl)
 @preconcurrency import Musl
 import CNIOLinux
+#elseif canImport(Android)
+@preconcurrency import Android
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
 #endif
@@ -56,7 +58,7 @@ public final class SystemFileHandle: Sendable {
         enum Mode {
             /// Rename the created file to become the desired file.
             case rename
-            #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+            #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
             /// Link the unnamed file to the desired file using 'linkat(2)'.
             case link
             #endif
@@ -290,7 +292,7 @@ extension SystemFileHandle: FileHandleProtocol {
                 }
 
                 switch materialization.mode {
-                #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+                #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
                 case .link:
                     let result = self.sendableView._materializeLink(
                         descriptor: descriptor,
@@ -696,7 +698,7 @@ extension SystemFileHandle.SendableView {
         }
     }
 
-    #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
     fileprivate func _materializeLink(
         descriptor: FileDescriptor,
         from createdPath: FilePath,
@@ -807,7 +809,7 @@ extension SystemFileHandle.SendableView {
 
         let result: Result<Void, FileSystemError>
         switch materialization.mode {
-        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
         case .link:
             if materialize {
                 result = self._materializeLink(
@@ -832,7 +834,7 @@ extension SystemFileHandle.SendableView {
                     to: desiredPath,
                     options: materialization.exclusive ? [.exclusive] : []
                 )
-                #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+                #elseif canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
                 // The created and desired paths are absolute, so the relative descriptors are
                 // ignored. However, they must still be provided to 'rename' in order to pass
                 // flags.
@@ -861,7 +863,7 @@ extension SystemFileHandle.SendableView {
                         // If 'renameat2' failed on Linux with EINVAL then in all likelihood the
                         // 'RENAME_NOREPLACE' option isn't supported. As we're doing an exclusive
                         // create, check the desired path doesn't exist then do a regular rename.
-                        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+                        #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
                         switch Syscall.stat(path: desiredPath) {
                         case .failure(.noSuchFileOrDirectory):
                             // File doesn't exist, do a 'regular' rename.
@@ -1451,7 +1453,7 @@ extension SystemFileHandle {
             }
 
             func makePath() -> FilePath {
-                #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+                #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
                 if useTemporaryFileIfPossible {
                     return currentWorkingDirectory.appending(path.components.dropLast())
                 }
@@ -1464,7 +1466,7 @@ extension SystemFileHandle {
             desiredPath = currentWorkingDirectory.appending(path.components)
         } else {
             func makePath() -> FilePath {
-                #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+                #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
                 if useTemporaryFileIfPossible {
                     return path.removingLastComponent()
                 }
@@ -1480,7 +1482,7 @@ extension SystemFileHandle {
         let materializationMode: Materialization.Mode
         let options: FileDescriptor.OpenOptions
 
-        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
         if useTemporaryFileIfPossible {
             options = [.temporaryFile]
             materializationMode = .link
@@ -1517,7 +1519,7 @@ extension SystemFileHandle {
 
             return .success(handle)
         } catch {
-            #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+            #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
             // 'O_TMPFILE' isn't supported for the current file system, try again but using
             // rename instead.
             if useTemporaryFileIfPossible, let errno = error as? Errno, errno == .notSupported {

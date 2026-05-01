@@ -21,6 +21,8 @@ import Darwin.C
 @preconcurrency import WASILibc
 #elseif os(Windows)
 import ucrt
+#elseif canImport(Android)
+@preconcurrency import Android
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
 #else

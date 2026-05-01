@@ -32,6 +32,8 @@ internal func MAKELANGID(_ p: WORD, _ s: WORD) -> DWORD {
 @preconcurrency import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
+#elseif canImport(Android)
+@preconcurrency import Android
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
 #elseif canImport(WASILibc)

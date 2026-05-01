@@ -23,6 +23,8 @@ import Darwin
 @preconcurrency import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
+#elseif canImport(Android)
+@preconcurrency import Android
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
 #endif
@@ -685,7 +687,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                 return NIOFilePath(path)
             }
 
-            #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+            #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
             return try await self.threadPool.runIfActive {
                 NIOFilePath(
                     try Libc.homeDirectoryFromPasswd().mapError { errno in
@@ -1307,7 +1309,7 @@ extension FileSystem {
             )
         }
 
-        #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        #elseif canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
         if replaceExisting {
             return self._copyRegularFileReplacing(
                 from: sourcePath,
@@ -1332,7 +1334,7 @@ extension FileSystem {
         #endif
     }
 
-    #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
     private func _copyRegularFileReplacing(
         from sourcePath: FilePath,
         to destinationPath: FilePath
@@ -1695,7 +1697,7 @@ extension FileSystem {
             )
             return .failure(error)
         }
-        #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        #elseif canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(Bionic)
         switch Syscall.rename(
             from: temporarySymlinkPath,
             relativeTo: destinationDirectoryFD,
