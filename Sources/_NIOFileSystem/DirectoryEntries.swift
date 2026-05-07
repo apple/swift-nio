@@ -382,8 +382,19 @@ private struct DirectoryEnumerator: Sendable {
         case symbolicLink
         case symbolicLinkToNonExistentTarget
 
+        // Compatibility function.
+        @_disfavoredOverload
         init?(rawValue: UInt16) {
-            switch Int32(rawValue) {
+            // This cast is safe on all platforms that matter, CInt it at least 32bits, so we can safely assign
+            // an unsigned 16bit integer
+            guard let value = FTSInfo(rawValue: CInt(rawValue)) else {
+                return nil
+            }
+            self = value
+        }
+
+        init?(rawValue: CInt) {
+            switch rawValue {
             case FTS_D:
                 self = .directoryPreOrder
             case FTS_DC:
