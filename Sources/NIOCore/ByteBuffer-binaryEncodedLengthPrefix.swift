@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 /// Describes a way to encode and decode an integer as bytes.
-/// For more information, see <doc:ByteBuffer-lengthPrefix>
 ///
+/// For more information, see <doc:ByteBuffer-lengthPrefix>
 public protocol NIOBinaryIntegerEncodingStrategy {
     /// Read an integer from a buffer.
     /// If there are not enough bytes to read an integer of this encoding, return nil, and do not move the reader index.
@@ -288,6 +288,7 @@ extension ByteBuffer {
 
 extension ByteBuffer {
     /// Reads a buffer which is prefixed with a length. The length will be read using `strategy`, and then that many bytes will be read to create a buffer.
+    /// - Parameter strategy: The encoding strategy to use.
     /// - Returns: The buffer, if there are enough bytes to read it fully. In this case, the readerIndex will move to after the buffer.
     /// If there are not enough bytes to read the full buffer, the readerIndex will stay unchanged.
     @inlinable
@@ -304,6 +305,7 @@ extension ByteBuffer {
     }
 
     /// Reads a string which is prefixed with a length. The length will be read using `strategy`, and then that many bytes will be read to create a string.
+    /// - Parameter strategy: The encoding strategy to use.
     /// - Returns: The string, if there are enough bytes to read it fully. In this case, the readerIndex will move to after the string.
     /// If there are not enough bytes to read the full string, the readerIndex will stay unchanged.
     @inlinable
@@ -320,6 +322,7 @@ extension ByteBuffer {
     }
 
     /// Reads bytes which are prefixed with a length. The length will be read using `strategy`, and then that many bytes will be read to create an array of bytes.
+    /// - Parameter strategy: The encoding strategy to use.
     /// - Returns: The array of bytes, if there are enough bytes to read it fully. In this case, the readerIndex will move to after the bytes.
     /// If there are not enough bytes to read the full array of bytes, the readerIndex will stay unchanged.
     @inlinable
