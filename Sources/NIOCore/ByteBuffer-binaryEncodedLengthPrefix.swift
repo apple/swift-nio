@@ -284,6 +284,58 @@ extension ByteBuffer {
     }
 }
 
+// MARK: - Helpers for reading length-prefixed things
+
+extension ByteBuffer {
+    /// Reads a buffer which is prefixed with a length. The length will be read using `strategy`, and then that many bytes will be read to create a buffer.
+    /// - Returns: The buffer, if there are enough bytes to read it fully. In this case, the readerIndex will move to after the buffer.
+    /// If there are not enough bytes to read the full buffer, the readerIndex will stay unchanged.
+    @inlinable
+    public mutating func readLengthPrefixedBuffer<Strategy: NIOBinaryIntegerEncodingStrategy>(
+        strategy: Strategy
+    ) -> ByteBuffer? {
+        let originalReaderIndex = self.readerIndex
+        guard let length = strategy.readInteger(as: Int.self, from: &self), let slice = self.readSlice(length: length)
+        else {
+            self.moveReaderIndex(to: originalReaderIndex)
+            return nil
+        }
+        return slice
+    }
+
+    /// Reads a string which is prefixed with a length. The length will be read using `strategy`, and then that many bytes will be read to create a string.
+    /// - Returns: The string, if there are enough bytes to read it fully. In this case, the readerIndex will move to after the string.
+    /// If there are not enough bytes to read the full string, the readerIndex will stay unchanged.
+    @inlinable
+    public mutating func readLengthPrefixedString<Strategy: NIOBinaryIntegerEncodingStrategy>(
+        strategy: Strategy
+    ) -> String? {
+        let originalReaderIndex = self.readerIndex
+        guard let length = strategy.readInteger(as: Int.self, from: &self), let string = self.readString(length: length)
+        else {
+            self.moveReaderIndex(to: originalReaderIndex)
+            return nil
+        }
+        return string
+    }
+
+    /// Reads bytes which are prefixed with a length. The length will be read using `strategy`, and then that many bytes will be read to create an array of bytes.
+    /// - Returns: The array of bytes, if there are enough bytes to read it fully. In this case, the readerIndex will move to after the bytes.
+    /// If there are not enough bytes to read the full array of bytes, the readerIndex will stay unchanged.
+    @inlinable
+    public mutating func readLengthPrefixedBytes<Strategy: NIOBinaryIntegerEncodingStrategy>(
+        strategy: Strategy
+    ) -> [UInt8]? {
+        let originalReaderIndex = self.readerIndex
+        guard let length = strategy.readInteger(as: Int.self, from: &self), let bytes = self.readBytes(length: length)
+        else {
+            self.moveReaderIndex(to: originalReaderIndex)
+            return nil
+        }
+        return bytes
+    }
+}
+
 extension ByteBuffer {
     /// Creates `requiredSpace` bytes of free space immediately before `index`.
     /// e.g. given [a, b, c, d, e, f, g, h, i, j] and calling this function with (before: 4, requiredSpace: 2) would result in
