@@ -191,6 +191,7 @@ extension ByteBuffer {
     }
 
     /// Reads a slice which is prefixed with a length. The length will be read using `strategy`, and then that many bytes will be read to create a slice.
+    /// - Parameter strategy: The encoding strategy to use.
     /// - Returns: The slice, if there are enough bytes to read it fully. In this case, the readerIndex will move to after the slice.
     /// If there are not enough bytes to read the full slice, the readerIndex will stay unchanged.
     @inlinable
