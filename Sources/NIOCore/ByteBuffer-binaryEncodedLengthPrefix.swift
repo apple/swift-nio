@@ -296,13 +296,7 @@ extension ByteBuffer {
     public mutating func readLengthPrefixedString<Strategy: NIOBinaryIntegerEncodingStrategy>(
         strategy: Strategy
     ) -> String? {
-        let originalReaderIndex = self.readerIndex
-        guard let length = strategy.readInteger(as: Int.self, from: &self), let string = self.readString(length: length)
-        else {
-            self.moveReaderIndex(to: originalReaderIndex)
-            return nil
-        }
-        return string
+        self.readLengthPrefixedSlice(strategy: strategy).map { String(buffer: $0) }
     }
 
     /// Reads bytes which are prefixed with a length. The length will be read using `strategy`, and then that many bytes will be read to create an array of bytes.
@@ -313,13 +307,7 @@ extension ByteBuffer {
     public mutating func readLengthPrefixedBytes<Strategy: NIOBinaryIntegerEncodingStrategy>(
         strategy: Strategy
     ) -> [UInt8]? {
-        let originalReaderIndex = self.readerIndex
-        guard let length = strategy.readInteger(as: Int.self, from: &self), let bytes = self.readBytes(length: length)
-        else {
-            self.moveReaderIndex(to: originalReaderIndex)
-            return nil
-        }
-        return bytes
+        self.readLengthPrefixedSlice(strategy: strategy).map { Array(buffer: $0) }
     }
 }
 
