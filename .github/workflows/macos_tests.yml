@@ -8,67 +8,67 @@ on:
     inputs:
       xcode_16_3_enabled:
         type: boolean
-        description: "⚠️ Jobs with this version of Xcode are deprecated."
+        description: "⚠️ Deprecated, has no effect. This Xcode version is no longer installed on the runners."
         default: false
       xcode_16_3_build_arguments_override:
         type: string
-        description: "⚠️ Deprecated."
+        description: "⚠️ Deprecated, has no effect."
         default: ""
       xcode_16_3_test_arguments_override:
         type: string
-        description: "⚠️ Deprecated."
+        description: "⚠️ Deprecated, has no effect."
         default: ""
       xcode_16_3_setup_command:
         type: string
-        description: "⚠️ Deprecated."
+        description: "⚠️ Deprecated, has no effect."
         default: ""
       xcode_16_4_enabled:
         type: boolean
-        description: "⚠️ Jobs with this version of Xcode are deprecated."
+        description: "⚠️ Deprecated, has no effect. This Xcode version is no longer installed on the runners."
         default: false
       xcode_16_4_build_arguments_override:
         type: string
-        description: "⚠️ Deprecated."
+        description: "⚠️ Deprecated, has no effect."
         default: ""
       xcode_16_4_test_arguments_override:
         type: string
-        description: "⚠️ Deprecated."
+        description: "⚠️ Deprecated, has no effect."
         default: ""
       xcode_16_4_setup_command:
         type: string
-        description: "⚠️ Deprecated."
+        description: "⚠️ Deprecated, has no effect."
         default: ""
       xcode_26_0_enabled:
         type: boolean
-        description: "⚠️ Jobs with this version of Xcode are deprecated."
+        description: "⚠️ Deprecated, has no effect. This Xcode version is no longer installed on the runners."
         default: false
       xcode_26_0_build_arguments_override:
         type: string
-        description: "⚠️ Deprecated."
+        description: "⚠️ Deprecated, has no effect."
         default: ""
       xcode_26_0_test_arguments_override:
         type: string
-        description: "⚠️ Deprecated."
+        description: "⚠️ Deprecated, has no effect."
         default: ""
       xcode_26_0_setup_command:
         type: string
-        description: "⚠️ Deprecated."
+        description: "⚠️ Deprecated, has no effect."
         default: ""
       xcode_26_1_enabled:
         type: boolean
-        description: "⚠️ Jobs with this version of Xcode are deprecated."
+        description: "⚠️ Deprecated, has no effect. This Xcode version is no longer installed on the runners."
         default: false
       xcode_26_1_build_arguments_override:
         type: string
-        description: "⚠️ Deprecated."
+        description: "⚠️ Deprecated, has no effect."
         default: ""
       xcode_26_1_test_arguments_override:
         type: string
-        description: "⚠️ Deprecated."
+        description: "⚠️ Deprecated, has no effect."
         default: ""
       xcode_26_1_setup_command:
         type: string
-        description: "⚠️ Deprecated."
+        description: "⚠️ Deprecated, has no effect."
         default: ""
       xcode_26_2_enabled:
         type: boolean
@@ -240,22 +240,6 @@ jobs:
           cat >> "$GITHUB_OUTPUT" << EOM
           darwin-matrix=$(
             runner_pool="${MATRIX_RUNNER_POOL:="nightly"}"
-            xcode_16_3_enabled="${MATRIX_MACOS_16_3_ENABLED:=true}"
-            xcode_16_3_build_arguments_override="${MATRIX_MACOS_16_3_BUILD_ARGUMENTS_OVERRIDE:=""}"
-            xcode_16_3_test_arguments_override="${MATRIX_MACOS_16_3_TEST_ARGUMENTS_OVERRIDE:=""}"
-            xcode_16_3_setup_command="${MATRIX_MACOS_16_3_SETUP_COMMAND:=""}"
-            xcode_16_4_enabled="${MATRIX_MACOS_16_4_ENABLED:=true}"
-            xcode_16_4_build_arguments_override="${MATRIX_MACOS_16_4_BUILD_ARGUMENTS_OVERRIDE:=""}"
-            xcode_16_4_test_arguments_override="${MATRIX_MACOS_16_4_TEST_ARGUMENTS_OVERRIDE:=""}"
-            xcode_16_4_setup_command="${MATRIX_MACOS_16_4_SETUP_COMMAND:=""}"
-            xcode_26_0_enabled="${MATRIX_MACOS_26_0_ENABLED:=true}"
-            xcode_26_0_build_arguments_override="${MATRIX_MACOS_26_0_BUILD_ARGUMENTS_OVERRIDE:=""}"
-            xcode_26_0_test_arguments_override="${MATRIX_MACOS_26_0_TEST_ARGUMENTS_OVERRIDE:=""}"
-            xcode_26_0_setup_command="${MATRIX_MACOS_26_0_SETUP_COMMAND:=""}"
-            xcode_26_1_enabled="${MATRIX_MACOS_26_1_ENABLED:=true}"
-            xcode_26_1_build_arguments_override="${MATRIX_MACOS_26_1_BUILD_ARGUMENTS_OVERRIDE:=""}"
-            xcode_26_1_test_arguments_override="${MATRIX_MACOS_26_1_TEST_ARGUMENTS_OVERRIDE:=""}"
-            xcode_26_1_setup_command="${MATRIX_MACOS_26_1_SETUP_COMMAND:=""}"
             xcode_26_2_enabled="${MATRIX_MACOS_26_2_ENABLED:=true}"
             xcode_26_2_build_arguments_override="${MATRIX_MACOS_26_2_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_26_2_test_arguments_override="${MATRIX_MACOS_26_2_TEST_ARGUMENTS_OVERRIDE:=""}"
@@ -279,46 +263,6 @@ jobs:
 
             # Create matrix from inputs
             matrix='{"config": []}'
-
-            if [[ "$xcode_16_3_enabled" == "true" ]]; then
-                matrix=$(echo "$matrix" | jq -c \
-                --arg setup_command "$xcode_16_3_setup_command"  \
-                --arg build_arguments_override "$xcode_16_3_build_arguments_override"  \
-                --arg test_arguments_override "$xcode_16_3_test_arguments_override"  \
-                --arg runner_pool "$runner_pool"  \
-                --argjson env_vars "$env_vars_json" \
-                '.config[.config| length] |= . + { "name": "Xcode 16.3", "xcode_version": "16.3", "xcode_app": "Xcode_16.3.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
-            fi
-
-            if [[ "$xcode_16_4_enabled" == "true" ]]; then
-                matrix=$(echo "$matrix" | jq -c \
-                --arg setup_command "$xcode_16_4_setup_command"  \
-                --arg build_arguments_override "$xcode_16_4_build_arguments_override"  \
-                --arg test_arguments_override "$xcode_16_4_test_arguments_override"  \
-                --arg runner_pool "$runner_pool"  \
-                --argjson env_vars "$env_vars_json" \
-                '.config[.config| length] |= . + { "name": "Xcode 16.4", "xcode_version": "16.4", "xcode_app": "Xcode_16.4.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
-            fi
-
-            if [[ "$xcode_26_0_enabled" == "true" ]]; then
-                matrix=$(echo "$matrix" | jq -c \
-                --arg setup_command "$xcode_26_0_setup_command"  \
-                --arg build_arguments_override "$xcode_26_0_build_arguments_override"  \
-                --arg test_arguments_override "$xcode_26_0_test_arguments_override"  \
-                --arg runner_pool "$runner_pool"  \
-                --argjson env_vars "$env_vars_json" \
-                '.config[.config| length] |= . + { "name": "Xcode 26.0", "xcode_version": "26.0", "xcode_app": "Xcode_26.0.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
-            fi
-
-            if [[ "$xcode_26_1_enabled" == "true" ]]; then
-                matrix=$(echo "$matrix" | jq -c \
-                --arg setup_command "$xcode_26_1_setup_command"  \
-                --arg build_arguments_override "$xcode_26_1_build_arguments_override"  \
-                --arg test_arguments_override "$xcode_26_1_test_arguments_override"  \
-                --arg runner_pool "$runner_pool"  \
-                --argjson env_vars "$env_vars_json" \
-                '.config[.config| length] |= . + { "name": "Xcode 26.1", "xcode_version": "26.1", "xcode_app": "Xcode_26.1.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
-            fi
 
             if [[ "$xcode_26_2_enabled" == "true" ]]; then
                 matrix=$(echo "$matrix" | jq -c \
@@ -376,22 +320,6 @@ jobs:
         env:
           INPUT_ENV_VARS: ${{ inputs.env_vars }}
           MATRIX_RUNNER_POOL: ${{ inputs.runner_pool }}
-          MATRIX_MACOS_16_3_ENABLED: ${{ inputs.xcode_16_3_enabled }}
-          MATRIX_MACOS_16_3_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_3_build_arguments_override }}
-          MATRIX_MACOS_16_3_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_3_test_arguments_override }}
-          MATRIX_MACOS_16_3_SETUP_COMMAND: ${{ inputs.xcode_16_3_setup_command }}
-          MATRIX_MACOS_16_4_ENABLED: ${{ inputs.xcode_16_4_enabled }}
-          MATRIX_MACOS_16_4_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_4_build_arguments_override }}
-          MATRIX_MACOS_16_4_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_4_test_arguments_override }}
-          MATRIX_MACOS_16_4_SETUP_COMMAND: ${{ inputs.xcode_16_4_setup_command }}
-          MATRIX_MACOS_26_0_ENABLED: ${{ inputs.xcode_26_0_enabled }}
-          MATRIX_MACOS_26_0_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_0_build_arguments_override }}
-          MATRIX_MACOS_26_0_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_0_test_arguments_override }}
-          MATRIX_MACOS_26_0_SETUP_COMMAND: ${{ inputs.xcode_26_0_setup_command }}
-          MATRIX_MACOS_26_1_ENABLED: ${{ inputs.xcode_26_1_enabled }}
-          MATRIX_MACOS_26_1_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_1_build_arguments_override }}
-          MATRIX_MACOS_26_1_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_1_test_arguments_override }}
-          MATRIX_MACOS_26_1_SETUP_COMMAND: ${{ inputs.xcode_26_1_setup_command }}
           MATRIX_MACOS_26_2_ENABLED: ${{ inputs.xcode_26_2_enabled }}
           MATRIX_MACOS_26_2_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_2_build_arguments_override }}
           MATRIX_MACOS_26_2_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_2_test_arguments_override }}
