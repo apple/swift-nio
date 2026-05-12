@@ -45,7 +45,7 @@ starting from after the integer.
 ```swift
 let bytes = myBuffer.readLengthPrefixedBytes(strategy: .quic)
 let string = myBuffer.readLengthPrefixedString(strategy: .quic)
-let buffer = myBuffer.readLengthPrefixedBuffer(strategy: .quic)
+let buffer = myBuffer.readLengthPrefixedSlice(strategy: .quic)
 ```
 
 Similarly, there are APIs which take data, write its length using the provided strategy, and then write the data itself.

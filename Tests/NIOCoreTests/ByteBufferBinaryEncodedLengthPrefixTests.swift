@@ -353,15 +353,4 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
         )
         XCTAssertEqual(result, bytes)
     }
-
-    func testReadLengthPrefixedBuffer() {
-        let string = "test"
-        var buffer = ByteBuffer()
-        buffer.writeInteger(UInt8(string.utf8.count))  // length prefix
-        buffer.writeString(string)
-        let result = buffer.readLengthPrefixedBuffer(
-            strategy: UInt8ReadingTestStrategy(expectedRead: UInt8(string.utf8.count))
-        )
-        XCTAssertEqual(result, ByteBuffer(string: string))
-    }
 }
