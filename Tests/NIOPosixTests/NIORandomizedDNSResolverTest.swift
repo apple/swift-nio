@@ -84,7 +84,7 @@ private final class CancelTrackingMockResolver: Resolver, @unchecked Sendable {
     }
 }
 
-@Suite("NIORandomizedDNSResolverTest")
+@Suite("NIORandomizedDNSResolverTest", .serialized)
 struct NIORandomizedDNSResolverTest {
 
     @Test
