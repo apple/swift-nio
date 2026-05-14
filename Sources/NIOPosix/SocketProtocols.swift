@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import NIOCore
 
 #if canImport(WinSDK)
@@ -127,3 +130,4 @@ extension BaseSocketProtocol {
         #endif
     }
 }
+#endif  // !os(WASI)

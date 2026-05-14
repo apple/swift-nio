@@ -14,11 +14,11 @@
 
 import Dispatch
 import NIOConcurrencyHelpers
+@_spi(CustomByteBufferAllocator) @testable import NIOCore
 import NIOEmbedded
 import NIOTestUtils
 import XCTest
 
-@testable import NIOCore
 @testable import NIOPosix
 
 #if os(Linux)
@@ -867,10 +867,10 @@ final class ChannelTests: XCTestCase {
     func testPendingWritesNoMoreThanWritevLimitIsWritten() throws {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator(
-            hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedFree: { _ in },
-            hookedMemcpy: { _, _, _ in }
+            allocate: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            reallocate: { _, _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            deallocate: { _ in },
+            copy: { _, _, _ in }
         )
         // each buffer is half the writev limit
         let halfTheWriteVLimit = Socket.writevLimitBytes / 2
@@ -909,10 +909,10 @@ final class ChannelTests: XCTestCase {
 
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator(
-            hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedFree: { _ in },
-            hookedMemcpy: { _, _, _ in }
+            allocate: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            reallocate: { _, _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            deallocate: { _ in },
+            copy: { _, _, _ in }
         )
 
         let biggerThanWriteV = Socket.writevLimitBytes + 23

@@ -25,3 +25,13 @@ static inline uintptr_t c_nio_posix_get_el_id(void) {
 static inline void c_nio_posix_set_el_id(uintptr_t id) {
     _c_nio_posix_thread_local_el_id = id;
 }
+
+extern _Thread_local void * _c_nio_posix_thread_local_el_ptr;
+
+static inline void * c_nio_posix_get_el_ptr(void) {
+    return _c_nio_posix_thread_local_el_ptr;
+}
+
+static inline void c_nio_posix_set_el_ptr(void *id) {
+    _c_nio_posix_thread_local_el_ptr = id;
+}

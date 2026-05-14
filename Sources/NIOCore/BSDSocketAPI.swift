@@ -83,6 +83,16 @@ private let sysInet_ntop:
         inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
 #endif
+#elseif os(FreeBSD)
+@preconcurrency import Glibc
+import CNIOFreeBSD
+
+private let sysInet_ntop:
+    @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? =
+        CNIOFreeBSD_inet_ntop
+private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt =
+    CNIOFreeBSD_inet_pton
+
 #elseif os(OpenBSD)
 @preconcurrency import Glibc
 import CNIOOpenBSD
@@ -129,6 +139,16 @@ public enum NIOBSDSocket: Sendable {
     #else
     public typealias Handle = CInt
     #endif
+    public struct PipeHandle {
+        public var input: Handle
+        public var output: Handle
+
+        @inlinable
+        public init(input: Handle, output: Handle) {
+            self.input = input
+            self.output = output
+        }
+    }
 }
 
 extension NIOBSDSocket {

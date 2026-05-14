@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 @usableFromInline
 enum _IntegerBitPacking: Sendable {}
 
@@ -129,3 +131,4 @@ extension IntegerBitPacking {
         return (unpacked.0, unpacked.1)
     }
 }
+#endif  // !os(WASI)

@@ -14,10 +14,10 @@
 
 import CNIODarwin
 import CNIOLinux
+@_spi(CustomByteBufferAllocator) @testable import NIOCore
 import NIOEmbedded
 import XCTest
 
-@testable import NIOCore
 @testable import NIOPosix
 
 extension SocketAddress {
@@ -570,10 +570,10 @@ class PendingDatagramWritesManagerTests: XCTestCase {
     func testPendingWritesNoMoreThanWritevLimitIsWritten() throws {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator(
-            hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedFree: { _ in },
-            hookedMemcpy: { _, _, _ in }
+            allocate: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            reallocate: { _, _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            deallocate: { _ in },
+            copy: { _, _, _ in }
         )
         // each buffer is half the writev limit
         let halfTheWriteVLimit = Socket.writevLimitBytes / 2
@@ -614,10 +614,10 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let el = EmbeddedEventLoop()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
         let alloc = ByteBufferAllocator(
-            hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedFree: { _ in },
-            hookedMemcpy: { _, _, _ in }
+            allocate: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            reallocate: { _, _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            deallocate: { _ in },
+            copy: { _, _, _ in }
         )
 
         let biggerThanWriteV = Socket.writevLimitBytes + 23

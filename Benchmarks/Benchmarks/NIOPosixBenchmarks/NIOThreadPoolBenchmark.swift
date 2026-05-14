@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2026 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,13 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-@usableFromInline
-struct UnsafeTransfer<Value>: @unchecked Sendable {
-    @usableFromInline
-    var wrappedValue: Value
+import Dispatch
+import NIOCore
+import NIOPosix
 
-    @inlinable
-    init(_ wrappedValue: Value) {
-        self.wrappedValue = wrappedValue
+func runNIOThreadPoolSerialWakeup(pool: NIOThreadPool, count: Int) {
+    let sem = DispatchSemaphore(value: 0)
+    for _ in 0..<count {
+        pool.submit { state in
+            precondition(state == .active)
+            sem.signal()
+        }
+        sem.wait()
     }
 }

@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOConcurrencyHelpers
 import NIOCore
 
@@ -533,3 +535,4 @@ enum SelectorStrategy: Sendable {
         hasher.combine(self._rawValue)
     }
 }
+#endif  // !os(WASI)

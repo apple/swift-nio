@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 #if SWIFTNIO_USE_IO_URING
 #if os(Linux)
 
@@ -631,3 +633,4 @@ extension Optional where Wrapped == UnsafeMutableRawPointer {
 #endif
 
 #endif
+#endif  // !os(WASI)

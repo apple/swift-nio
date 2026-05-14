@@ -12,8 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 #if compiler(>=6.2)
 public typealias _NIOPosixSendableMetatype = SendableMetatype
 #else
 public typealias _NIOPosixSendableMetatype = Any
 #endif
+#endif  // !os(WASI)

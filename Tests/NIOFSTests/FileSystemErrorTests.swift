@@ -237,11 +237,11 @@ final class FileSystemErrorTests: XCTestCase {
         }
 
         assertCauseIsSyscall("symlink", here) {
-            .symlink(errno: .badFileDescriptor, link: "link", target: "target", location: here)
+            .symlink("symlink", errno: .badFileDescriptor, link: "link", target: "target", location: here)
         }
 
         assertCauseIsSyscall("unlink", here) {
-            .unlink(errno: .badFileDescriptor, path: "unlink", location: here)
+            .unlink("unlink", errno: .badFileDescriptor, path: "unlink", location: here)
         }
 
         assertCauseIsSyscall("readlink", here) {
@@ -433,6 +433,7 @@ final class FileSystemErrorTests: XCTestCase {
             expected: [
                 .badFileDescriptor: .closed,
                 .permissionDenied: .permissionDenied,
+                .notPermitted: .permissionDenied,
                 .fileExists: .fileAlreadyExists,
                 .ioError: .io,
                 .tooManyOpenFiles: .unavailable,
@@ -496,7 +497,7 @@ final class FileSystemErrorTests: XCTestCase {
                 .ioError: .io,
             ]
         ) { errno in
-            .symlink(errno: errno, link: "link", target: "target", location: .fixed)
+            .symlink("symlink", errno: errno, link: "link", target: "target", location: .fixed)
         }
     }
 
@@ -509,7 +510,7 @@ final class FileSystemErrorTests: XCTestCase {
                 .ioError: .io,
             ]
         ) { errno in
-            .unlink(errno: errno, path: "path", location: .fixed)
+            .unlink("unlink", errno: errno, path: "path", location: .fixed)
         }
     }
 

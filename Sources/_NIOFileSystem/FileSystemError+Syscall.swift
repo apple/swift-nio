@@ -587,7 +587,7 @@ extension FileSystemError {
             case .badFileDescriptor:
                 code = .closed
                 message = "Unable to open file at path '\(path)', the descriptor is closed."
-            case .permissionDenied:
+            case .permissionDenied, .notPermitted:
                 code = .permissionDenied
                 message = "Unable to open file at path '\(path)', permissions denied."
             case .fileExists:
@@ -791,6 +791,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func symlink(
+        _ name: String,
         errno: Errno,
         link: FilePath,
         target: FilePath,
@@ -843,7 +844,7 @@ extension FileSystemError {
         return FileSystemError(
             code: code,
             message: message,
-            systemCall: "symlink",
+            systemCall: name,
             errno: errno,
             location: location
         )
@@ -926,6 +927,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func unlink(
+        _ name: String,
         errno: Errno,
         path: FilePath,
         location: SourceLocation
@@ -958,7 +960,7 @@ extension FileSystemError {
         return FileSystemError(
             code: code,
             message: message,
-            cause: SystemCallError(systemCall: "unlink", errno: errno),
+            cause: SystemCallError(systemCall: name, errno: errno),
             location: location
         )
     }

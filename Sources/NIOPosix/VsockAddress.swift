@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 #if canImport(Darwin)
@@ -292,3 +294,4 @@ extension BaseSocket {
 }
 
 #endif  // canImport(Darwin) || os(Linux) || os(Android)
+#endif  // !os(WASI)

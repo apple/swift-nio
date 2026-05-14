@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import NIOCore
 
 final class PipeChannel: BaseStreamSocketChannel<PipePair>, @unchecked Sendable {
@@ -152,3 +155,4 @@ extension PipeChannel: CustomStringConvertible {
         "PipeChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
     }
 }
+#endif  // !os(WASI)

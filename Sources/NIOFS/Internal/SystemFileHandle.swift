@@ -314,7 +314,7 @@ extension SystemFileHandle: FileHandleProtocol {
                         )
                     }.flatMap {
                         Syscall.unlink(path: materialization.created).mapError { errno in
-                            .unlink(errno: errno, path: materialization.created, location: .here())
+                            .unlink("unlink", errno: errno, path: materialization.created, location: .here())
                         }
                     }
 

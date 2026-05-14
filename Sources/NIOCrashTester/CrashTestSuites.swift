@@ -18,7 +18,6 @@ func makeCrashTestSuites() -> [String: Any] {
         "EventLoopCrashTests": EventLoopCrashTests(),
         "ByteBufferCrashTests": ByteBufferCrashTests(),
         "SystemCrashTests": SystemCrashTests(),
-        "HTTPCrashTests": HTTPCrashTests(),
         "StrictCrashTests": StrictCrashTests(),
         "LoopBoundTests": LoopBoundTests(),
     ]

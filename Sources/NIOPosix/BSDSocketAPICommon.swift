@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import NIOCore
 
 #if os(Windows)
@@ -41,9 +44,9 @@ internal enum Shutdown: _SocketShutdownProtocol, Sendable {
 
 extension NIOBSDSocket {
     #if os(Windows)
-    internal static let invalidHandle: Handle = INVALID_SOCKET
+    public static let invalidHandle: Handle = INVALID_SOCKET
     #else
-    internal static let invalidHandle: Handle = -1
+    public static let invalidHandle: Handle = -1
     #endif
 }
 
@@ -391,3 +394,4 @@ enum NIOBSDSocketControlMessage: _BSDSocketControlMessageProtocol {}
 
 /// The requested UDS path exists and has wrong type (not a socket).
 public struct UnixDomainSocketPathWrongType: Error {}
+#endif  // !os(WASI)

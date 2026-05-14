@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 #if !os(Windows)
 import NIOCore
 
@@ -31,3 +33,4 @@ extension FileDescriptor {
     }
 }
 #endif
+#endif  // !os(WASI)

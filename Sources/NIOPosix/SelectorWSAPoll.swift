@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 #if os(Windows)
 import CNIOWindows
 import NIOCore
@@ -193,3 +195,4 @@ private func wakeupTarget(_ ptr: UInt64) {
     // We don't really need to do anything here. We just need any target
 }
 #endif
+#endif  // !os(WASI)

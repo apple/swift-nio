@@ -15,6 +15,8 @@
 //  value before we were able to read it.
 //  It's important that all static methods are declared with `@inline(never)` so it's not possible any ARC traffic happens while we need to read errno.
 
+#if !os(WASI)
+
 import NIOCore
 
 #if canImport(Darwin)
@@ -1133,3 +1135,4 @@ internal enum KQueue: Sendable {
     }
 }
 #endif
+#endif  // !os(WASI)

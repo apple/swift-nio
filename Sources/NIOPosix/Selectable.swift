@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 /// Represents a selectable resource which can be registered to a `Selector` to
@@ -23,3 +25,4 @@ import NIOCore
 protocol Selectable {
     func withUnsafeHandle<T>(_: (NIOBSDSocket.Handle) throws -> T) throws -> T
 }
+#endif  // !os(WASI)

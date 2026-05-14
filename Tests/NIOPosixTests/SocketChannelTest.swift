@@ -1126,6 +1126,23 @@ final class SocketChannelTest: XCTestCase {
         #endif
     }
 
+    func testBaseSocketChannelWithUnderlyingTransport() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+        let socket = try Socket.SocketType(protocolFamily: .inet, type: .datagram)
+        let channel = try BaseSocketChannel(
+            socket: socket,
+            parent: nil,
+            eventLoop: group.next() as! SelectableEventLoop,
+            recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024),
+            supportReconnect: false
+        )
+
+        try channel.socket.withUnsafeHandle { fd in
+            XCTAssertNotEqual(fd, NIOBSDSocket.invalidHandle)
+            try channel.withUnsafeTransport { XCTAssertEqual($0, fd) }
+        }
+    }
 }
 
 final class DropAllReadsOnTheFloorHandler: ChannelDuplexHandler, Sendable {

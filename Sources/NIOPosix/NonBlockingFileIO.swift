@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import CNIOLinux
 import CNIOOpenBSD
 import CNIOWindows
@@ -1326,3 +1328,4 @@ extension NonBlockingFileIO {
     }
     #endif
 }
+#endif  // !os(WASI)

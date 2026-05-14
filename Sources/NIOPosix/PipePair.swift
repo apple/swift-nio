@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 #if canImport(WinSDK)
@@ -240,3 +242,4 @@ final class PipePair: SocketProtocol {
         throw ChannelError._operationUnsupported
     }
 }
+#endif  // !os(WASI)

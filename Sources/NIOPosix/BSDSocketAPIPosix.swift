@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import NIOCore
 
 #if os(Linux) || os(Android) || os(FreeBSD) || canImport(Darwin) || os(OpenBSD)
@@ -426,3 +429,4 @@ extension msghdr {
     }
 }
 #endif
+#endif  // !os(WASI)

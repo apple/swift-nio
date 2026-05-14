@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 extension IOResult where T: FixedWidthInteger {
     var result: T {
         switch self {
@@ -46,3 +48,4 @@ extension IOResult {
         }
     }
 }
+#endif  // !os(WASI)

@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import CNIODarwin
 import CNIOLinux
 import CNIOOpenBSD
@@ -296,3 +299,4 @@ extension UnsafeMutableBufferPointer {
         rawPointer.deallocate()
     }
 }
+#endif  // !os(WASI)

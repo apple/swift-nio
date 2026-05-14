@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 #if os(Linux) || os(Android) || os(FreeBSD) || canImport(Darwin) || os(OpenBSD)
 
 #if os(Linux) || os(Android)
@@ -235,3 +237,4 @@ enum ThreadOpsPosix: ThreadOps {
 }
 
 #endif
+#endif  // !os(WASI)
