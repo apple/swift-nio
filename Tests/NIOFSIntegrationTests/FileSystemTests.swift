@@ -480,6 +480,28 @@ final class FileSystemTests: XCTestCase {
         }
     }
 
+    func testCreateDirectoryWithIntermediatePathsConcurrently() async throws {
+        // Two paths sharing a common ancestor created concurrently; both should succeed
+        // even if one task races to create the shared ancestor first.
+        let base = try await self.fs.temporaryFilePath()
+        let path1 = NIOFilePath(base.underlying.appending("shared-ancestor").appending("child1"))
+        let path2 = NIOFilePath(base.underlying.appending("shared-ancestor").appending("child2"))
+
+        let fs = self.fs
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { try await fs.createDirectory(at: path1, withIntermediateDirectories: true) }
+            group.addTask { try await fs.createDirectory(at: path2, withIntermediateDirectories: true) }
+            try await group.waitForAll()
+        }
+
+        for path in [path1, path2] {
+            try await self.fs.withDirectoryHandle(atPath: path) { dir in
+                let info = try await dir.info()
+                XCTAssertEqual(info.type, .directory)
+            }
+        }
+    }
+
     func testCreateDirectoryAtPathWhichExists() async throws {
         let path = try await self.fs.temporaryFilePath()
         try await self.fs.withFileHandle(
