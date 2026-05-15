@@ -933,6 +933,23 @@ extension FileSystem {
             case .success:
                 continue
             case let .failure(errno):
+                // Gracefully handle concurrent _createDirectory() calls on file paths with shared
+                // ancestors like /foo/bar/dir1 and /foo/bar/dir2.
+                if errno == .fileExists {
+                    switch self._info(forFileAt: path, infoAboutSymbolicLink: false) {
+                    case let .success(maybeInfo):
+                        if let info = maybeInfo, info.type == .directory {
+                            // Another task beat us to creating this ancestor; that's fine.
+                            continue
+                        } else {
+                            // A non-directory exists at this path.
+                            return .failure(.mkdir(errno: errno, path: path, location: .here()))
+                        }
+                    case .failure:
+                        // Unable to determine what exists at this path.
+                        return .failure(.mkdir(errno: errno, path: path, location: .here()))
+                    }
+                }
                 return .failure(.mkdir(errno: errno, path: path, location: .here()))
             }
         }
