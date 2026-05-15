@@ -214,7 +214,7 @@ jobs:
           MATRIX_LINUX_6_2_COMMAND_ARGUMENTS: ${{ inputs.linux_6_2_arguments_override }}
           MATRIX_LINUX_6_3_ENABLED: ${{ inputs.linux_6_3_enabled }}
           MATRIX_LINUX_6_3_COMMAND_ARGUMENTS: ${{ inputs.linux_6_3_arguments_override }}
-          MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_6_1_enabled || inputs.linux_nightly_next_enabled }}
+          MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_next_enabled }}
           MATRIX_LINUX_NIGHTLY_NEXT_COMMAND_ARGUMENTS: ${{ inputs.linux_nightly_6_1_arguments_override }} ${{ inputs.linux_nightly_next_arguments_override }}
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
           MATRIX_LINUX_NIGHTLY_MAIN_COMMAND_ARGUMENTS: ${{ inputs.linux_nightly_main_arguments_override }}
