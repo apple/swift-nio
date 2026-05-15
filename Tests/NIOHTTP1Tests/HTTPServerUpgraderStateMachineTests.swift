@@ -18,7 +18,7 @@ import Testing
 @testable import NIOHTTP1
 
 struct HTTPServerUpgraderStateMachineTests {
-    struct TestUpgrader: NIOTypedHTTPServerProtocolUpgrader<Bool> {
+    struct TestUpgrader: NIOTypedHTTPServerProtocolUpgrader {
         var supportedProtocol: String { "bool" }
         var requiredUpgradeHeaders: [String] { [] }
         func buildUpgradeResponse(
@@ -31,7 +31,7 @@ struct HTTPServerUpgraderStateMachineTests {
         func upgrade(
             channel: Channel,
             upgradeRequest: HTTPRequestHead
-        ) -> EventLoopFuture<UpgradeResult> {
+        ) -> EventLoopFuture<Bool> {
             channel.eventLoop.makeSucceededFuture(true)
         }
     }
