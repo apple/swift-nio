@@ -44,9 +44,9 @@ internal enum Shutdown: _SocketShutdownProtocol, Sendable {
 
 extension NIOBSDSocket {
     #if os(Windows)
-    internal static let invalidHandle: Handle = INVALID_SOCKET
+    public static let invalidHandle: Handle = INVALID_SOCKET
     #else
-    internal static let invalidHandle: Handle = -1
+    public static let invalidHandle: Handle = -1
     #endif
 }
 

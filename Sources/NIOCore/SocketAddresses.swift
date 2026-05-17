@@ -23,6 +23,7 @@ import let WinSDK.INET6_ADDRSTRLEN
 
 import func WinSDK.FreeAddrInfoW
 import func WinSDK.GetAddrInfoW
+import func WinSDK.gai_strerrorA
 
 import struct WinSDK.ADDRESS_FAMILY
 import struct WinSDK.ADDRINFOW
@@ -43,7 +44,7 @@ private typealias in_port_t = WinSDK.u_short
 private typealias sa_family_t = WinSDK.ADDRESS_FAMILY
 #elseif canImport(Darwin)
 import Darwin
-#elseif os(Linux) || os(FreeBSD) || os(Android)
+#elseif os(Linux) || os(Android)
 #if canImport(Glibc)
 @preconcurrency import Glibc
 #elseif canImport(Musl)
@@ -52,6 +53,9 @@ import Darwin
 @preconcurrency import Android
 #endif
 import CNIOLinux
+#elseif os(FreeBSD)
+@preconcurrency import Glibc
+import CNIOFreeBSD
 #elseif os(OpenBSD)
 @preconcurrency import Glibc
 import CNIOOpenBSD
@@ -64,6 +68,7 @@ import CNIOOpenBSD
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
 public enum SocketAddressError: Error, Equatable, Hashable {
     /// The host is unknown (could not be resolved).
+    @available(*, deprecated, message: "Use SocketAddressError.UnknownHost instead.")
     case unknown(host: String, port: Int)
     /// The requested `SocketAddress` is not supported.
     case unsupported
@@ -80,6 +85,27 @@ extension SocketAddressError {
 
         public init(address: ByteBuffer) {
             self.address = address
+        }
+    }
+
+    public struct UnknownHost: Error, Hashable, CustomStringConvertible {
+        public var host: String
+
+        public var port: Int
+
+        public var errorCode: Int
+
+        public var errorDescription: String
+
+        package init(host: String, port: Int, errorCode: Int, errorDescription: String) {
+            self.host = host
+            self.port = port
+            self.errorCode = errorCode
+            self.errorDescription = errorDescription
+        }
+
+        public var description: String {
+            "SocketAddressError.UnknownHost: \(self.errorDescription) (error \(self.errorCode)) for host \(self.host), port \(self.port)"
         }
     }
 }
@@ -345,6 +371,10 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
     /// Create a new `SocketAddress` for an IP address in string form.
     ///
+    /// Supports both IPv4 and IPv6 addresses. IPv6 addresses may include a scope ID
+    /// suffix (e.g., `"fe80::1%eth0"`) for link-local addresses; the scope ID will be
+    /// preserved in the resulting `sockaddr_in6.sin6_scope_id`.
+    ///
     /// - Parameters:
     ///   - ipAddress: The IP address, in string form.
     ///   - port: The target port.
@@ -366,6 +396,17 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
                 // IPv6 address.
             }
 
+            // IPv6 addresses with scope IDs (e.g. "fe80::1%eth0") are not supported by
+            // inet_pton. Use getaddrinfo with AI_NUMERICHOST which handles %scope and
+            // properly sets sin6_scope_id.
+            if ipAddress.utf8.contains(UInt8(ascii: "%")) {
+                #if !os(Windows) && !os(WASI)
+                return try Self._parseScopedIPv6(ipAddress, port: port)
+                #else
+                throw SocketAddressError.failedToParseIPString(ipAddress)
+                #endif
+            }
+
             do {
                 var ipv6Addr = in6_addr()
                 try NIOBSDSocket.inet_pton(addressFamily: .inet6, addressDescription: $0, address: &ipv6Addr)
@@ -385,6 +426,41 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
             throw SocketAddressError.failedToParseIPString(ipAddress)
         }
     }
+
+    #if !os(Windows) && !os(WASI)
+    /// Parse a scoped IPv6 address (containing `%scope`) using `getaddrinfo` with `AI_NUMERICHOST`.
+    private static func _parseScopedIPv6(_ ipAddress: String, port: Int) throws -> SocketAddress {
+        // Reject empty scope (e.g. "fe80::1%") before calling getaddrinfo, because
+        // some platforms (macOS) silently accept it with scope_id == 0.
+        guard let percentIndex = ipAddress.firstIndex(of: "%"),
+            ipAddress[ipAddress.index(after: percentIndex)...].isEmpty == false
+        else {
+            throw SocketAddressError.failedToParseIPString(ipAddress)
+        }
+
+        var hints = addrinfo()
+        hints.ai_family = AF_INET6
+        hints.ai_flags = AI_NUMERICHOST
+        var result: UnsafeMutablePointer<addrinfo>?
+        let status = getaddrinfo(ipAddress, String(port), &hints, &result)
+        defer { if result != nil { freeaddrinfo(result) } }
+        guard status == 0, let addrInfo = result, let ai_addr = addrInfo.pointee.ai_addr,
+            ai_addr.pointee.sa_family == sa_family_t(AF_INET6)
+        else {
+            throw SocketAddressError.failedToParseIPString(ipAddress)
+        }
+        let sockaddr = ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee }
+
+        // On macOS, getaddrinfo can succeed even for nonexistent interface names,
+        // silently returning scope_id == 0. A valid scoped address must have a
+        // nonzero scope_id.
+        guard sockaddr.sin6_scope_id != 0 else {
+            throw SocketAddressError.failedToParseIPString(ipAddress)
+        }
+
+        return .v6(.init(address: sockaddr, host: ipAddress))
+    }
+    #endif
 
     /// Create a new `SocketAddress` for an IP address in ByteBuffer form.
     ///
@@ -466,7 +542,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     ///   - host: the hostname which should be resolved.
     ///   - port: the port itself
     /// - Returns: the `SocketAddress` for the host / port pair.
-    /// - Throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
+    /// - Throws: a `SocketAddressError.UnknownHost` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
     public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {
         #if os(WASI)
         throw SocketAddressError.unsupported
@@ -479,7 +555,12 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
                 let result = GetAddrInfoW(wszHost, wszPort, nil, &pResult)
                 guard result == 0 else {
-                    throw SocketAddressError.unknown(host: host, port: port)
+                    throw SocketAddressError.UnknownHost(
+                        host: host,
+                        port: port,
+                        errorCode: Int(result),
+                        errorDescription: String(cString: gai_strerrorA(result))
+                    )
                 }
 
                 defer {
@@ -504,8 +585,14 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         var info: UnsafeMutablePointer<addrinfo>?
 
         // FIXME: this is blocking!
-        if getaddrinfo(host, String(port), nil, &info) != 0 {
-            throw SocketAddressError.unknown(host: host, port: port)
+        let rc = getaddrinfo(host, String(port), nil, &info)
+        guard rc == 0 else {
+            throw SocketAddressError.UnknownHost(
+                host: host,
+                port: port,
+                errorCode: Int(rc),
+                errorDescription: String(cString: gai_strerror(rc))
+            )
         }
 
         defer {

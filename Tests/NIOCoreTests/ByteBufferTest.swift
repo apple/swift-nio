@@ -13,13 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
+@_spi(CustomByteBufferAllocator) @testable import NIOCore
 import NIOFoundationCompat
 import XCTest
 import _NIOBase64
 
 import struct Foundation.Data
-
-@testable import NIOCore
 
 class ByteBufferTest: XCTestCase {
     private let allocator = ByteBufferAllocator()
@@ -1403,10 +1402,10 @@ class ByteBufferTest: XCTestCase {
         return
         #endif
         let alloc = ByteBufferAllocator(
-            hookedMalloc: { testAllocationOfReallyBigByteBuffer_mallocHook($0) },
-            hookedRealloc: { testAllocationOfReallyBigByteBuffer_reallocHook($0, $1) },
-            hookedFree: { testAllocationOfReallyBigByteBuffer_freeHook($0) },
-            hookedMemcpy: { testAllocationOfReallyBigByteBuffer_memcpyHook($0, $1, $2) }
+            allocate: { testAllocationOfReallyBigByteBuffer_mallocHook($0) },
+            reallocate: { testAllocationOfReallyBigByteBuffer_reallocHook($0, $1, $2) },
+            deallocate: { testAllocationOfReallyBigByteBuffer_freeHook($0) },
+            copy: { testAllocationOfReallyBigByteBuffer_memcpyHook($0, $1, $2) }
         )
 
         let reallyBigSize = Int(Int32.max)
@@ -1830,10 +1829,10 @@ class ByteBufferTest: XCTestCase {
 
         // This allocator assumes that we'll never call realloc.
         let fakeAllocator = ByteBufferAllocator(
-            hookedMalloc: { _ in .init(bitPattern: 0xdedbeef) },
-            hookedRealloc: { _, _ in fatalError() },
-            hookedFree: { precondition($0 == .init(bitPattern: 0xdedbeef)!) },
-            hookedMemcpy: { _, _, _ in }
+            allocate: { _ in .init(bitPattern: 0xdedbeef) },
+            reallocate: { _, _, _ in fatalError() },
+            deallocate: { precondition($0 == .init(bitPattern: 0xdedbeef)!) },
+            copy: { _, _, _ in }
         )
 
         let targetSize = Int(UInt32.max)
@@ -2520,10 +2519,10 @@ class ByteBufferTest: XCTestCase {
         testReserveCapacityLarger_mallocCount.store(0, ordering: .sequentiallyConsistent)
 
         let alloc = ByteBufferAllocator(
-            hookedMalloc: testReserveCapacityLarger_mallocHook,
-            hookedRealloc: testReserveCapacityLarger_reallocHook,
-            hookedFree: testReserveCapacityLarger_freeHook,
-            hookedMemcpy: testReserveCapacityLarger_memcpyHook
+            allocate: testReserveCapacityLarger_mallocHook,
+            reallocate: testReserveCapacityLarger_reallocHook,
+            deallocate: testReserveCapacityLarger_freeHook,
+            copy: testReserveCapacityLarger_memcpyHook
         )
         var buf = alloc.buffer(capacity: 16)
 
@@ -2542,10 +2541,10 @@ class ByteBufferTest: XCTestCase {
         testReserveCapacityLarger_mallocCount.store(0, ordering: .sequentiallyConsistent)
 
         let alloc = ByteBufferAllocator(
-            hookedMalloc: testReserveCapacityLarger_mallocHook,
-            hookedRealloc: testReserveCapacityLarger_reallocHook,
-            hookedFree: testReserveCapacityLarger_freeHook,
-            hookedMemcpy: testReserveCapacityLarger_memcpyHook
+            allocate: testReserveCapacityLarger_mallocHook,
+            reallocate: testReserveCapacityLarger_reallocHook,
+            deallocate: testReserveCapacityLarger_freeHook,
+            copy: testReserveCapacityLarger_memcpyHook
         )
         var buf = alloc.buffer(capacity: 16)
         var bufCopy = buf
@@ -3455,7 +3454,8 @@ private func testAllocationOfReallyBigByteBuffer_mallocHook(_ size: Int) -> Unsa
 
 private func testAllocationOfReallyBigByteBuffer_reallocHook(
     _ ptr: UnsafeMutableRawPointer?,
-    _ count: Int
+    _ oldSize: Int,
+    _ newSize: Int
 ) -> UnsafeMutableRawPointer? {
     precondition(AllocationExpectationState.mallocDone == testAllocationOfReallyBigByteBuffer_state)
     testAllocationOfReallyBigByteBuffer_state = .reallocDone
@@ -3484,10 +3484,11 @@ private func testReserveCapacityLarger_mallocHook(_ size: Int) -> UnsafeMutableR
 
 private func testReserveCapacityLarger_reallocHook(
     _ ptr: UnsafeMutableRawPointer?,
-    _ count: Int
+    _ oldSize: Int,
+    _ newSize: Int
 ) -> UnsafeMutableRawPointer? {
     testReserveCapacityLarger_reallocCount.wrappingIncrement(ordering: .sequentiallyConsistent)
-    return realloc(ptr, count)
+    return realloc(ptr, newSize)
 }
 
 private func testReserveCapacityLarger_memcpyHook(_ dst: UnsafeMutableRawPointer, _ src: UnsafeRawPointer, _ count: Int)

@@ -52,7 +52,7 @@ package struct NIOThreadPoolWorkAvailable: @unchecked Sendable {
         @usableFromInline
         let cond: UnsafeMutablePointer<CONDITION_VARIABLE> =
             UnsafeMutablePointer.allocate(capacity: 1)
-        #elseif os(OpenBSD)
+        #elseif os(FreeBSD) || os(OpenBSD)
         @usableFromInline
         let cond: UnsafeMutablePointer<pthread_cond_t?> =
             UnsafeMutablePointer.allocate(capacity: 1)

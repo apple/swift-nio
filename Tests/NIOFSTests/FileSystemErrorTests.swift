@@ -433,6 +433,7 @@ final class FileSystemErrorTests: XCTestCase {
             expected: [
                 .badFileDescriptor: .closed,
                 .permissionDenied: .permissionDenied,
+                .notPermitted: .permissionDenied,
                 .fileExists: .fileAlreadyExists,
                 .ioError: .io,
                 .tooManyOpenFiles: .unavailable,

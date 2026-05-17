@@ -99,9 +99,9 @@ extension NIOSingletons {
                 // This formally picks a random EventLoop from the singleton group. However, `EventLoopGroup.any()`
                 // attempts to be sticky. So if we're already in an `EventLoop` that's part of the singleton
                 // `EventLoopGroup`, we'll get that one and be very fast (avoid a thread switch).
-                let targetEL = MultiThreadedEventLoopGroup.singleton.any()
+                let targetEL = MultiThreadedEventLoopGroup.singleton.anySEL()
 
-                (targetEL.executor as! any SilenceWarning).enqueue(job)
+                (targetEL as any SilenceWarning).enqueue(job)
             })
 
             // Unsafe 3: We mandate that the function pointer can be reinterpreted as `UnsafeRawPointer` which isn't

@@ -1,4 +1,4 @@
-// swift-tools-version:5.10
+// swift-tools-version:6.1
 
 import PackageDescription
 
@@ -9,7 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../"),
-        .package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.22.0"),
+        .package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.29.11"),
     ],
     targets: [
         .executableTarget(
@@ -20,6 +20,7 @@ let package = Package(
                 .product(name: "NIOPosix", package: "swift-nio"),
             ],
             path: "Benchmarks/NIOPosixBenchmarks",
+            swiftSettings: [.swiftLanguageMode(.v5)],
             plugins: [
                 .plugin(name: "BenchmarkPlugin", package: "package-benchmark")
             ]

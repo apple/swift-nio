@@ -147,7 +147,14 @@ internal final class GetaddrinfoResolver: Resolver, Sendable {
 
                 let iResult = GetAddrInfoW(wszHost, wszPort, &aiHints, &pResult)
                 guard iResult == 0 else {
-                    self.fail(SocketAddressError.unknown(host: host, port: port))
+                    self.fail(
+                        SocketAddressError.UnknownHost(
+                            host: host,
+                            port: port,
+                            errorCode: Int(iResult),
+                            errorDescription: String(cString: gai_strerrorA(iResult))
+                        )
+                    )
                     return
                 }
 
@@ -165,8 +172,16 @@ internal final class GetaddrinfoResolver: Resolver, Sendable {
         var hint = addrinfo()
         hint.ai_socktype = self.aiSocktype.rawValue
         hint.ai_protocol = self.aiProtocol.rawValue
-        guard getaddrinfo(host, String(port), &hint, &info) == 0 else {
-            self.fail(SocketAddressError.unknown(host: host, port: port))
+        let rc = getaddrinfo(host, String(port), &hint, &info)
+        guard rc == 0 else {
+            self.fail(
+                SocketAddressError.UnknownHost(
+                    host: host,
+                    port: port,
+                    errorCode: Int(rc),
+                    errorDescription: String(cString: gai_strerror(rc))
+                )
+            )
             return
         }
 
