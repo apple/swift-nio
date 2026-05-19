@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 /// Describes a way to encode and decode an integer as bytes.
-/// For more information, see <doc:ByteBuffer-lengthPrefix>
 ///
+/// For more information, see <doc:ByteBuffer-lengthPrefix>
 public protocol NIOBinaryIntegerEncodingStrategy {
     /// Read an integer from a buffer.
     /// If there are not enough bytes to read an integer of this encoding, return nil, and do not move the reader index.
@@ -191,6 +191,7 @@ extension ByteBuffer {
     }
 
     /// Reads a slice which is prefixed with a length. The length will be read using `strategy`, and then that many bytes will be read to create a slice.
+    /// - Parameter strategy: The encoding strategy to use.
     /// - Returns: The slice, if there are enough bytes to read it fully. In this case, the readerIndex will move to after the slice.
     /// If there are not enough bytes to read the full slice, the readerIndex will stay unchanged.
     @inlinable
@@ -281,6 +282,32 @@ extension ByteBuffer {
                 buffer.writeBytes(bytes)
             }
         }
+    }
+}
+
+// MARK: - Helpers for reading length-prefixed things
+
+extension ByteBuffer {
+    /// Reads a string which is prefixed with a length. The length will be read using `strategy`, and then that many bytes will be read to create a string.
+    /// - Parameter strategy: The encoding strategy to use.
+    /// - Returns: The string, if there are enough bytes to read it fully. In this case, the readerIndex will move to after the string.
+    /// If there are not enough bytes to read the full string, the readerIndex will stay unchanged.
+    @inlinable
+    public mutating func readLengthPrefixedString<Strategy: NIOBinaryIntegerEncodingStrategy>(
+        strategy: Strategy
+    ) -> String? {
+        self.readLengthPrefixedSlice(strategy: strategy).map { String(buffer: $0) }
+    }
+
+    /// Reads bytes which are prefixed with a length. The length will be read using `strategy`, and then that many bytes will be read to create an array of bytes.
+    /// - Parameter strategy: The encoding strategy to use.
+    /// - Returns: The array of bytes, if there are enough bytes to read it fully. In this case, the readerIndex will move to after the bytes.
+    /// If there are not enough bytes to read the full array of bytes, the readerIndex will stay unchanged.
+    @inlinable
+    public mutating func readLengthPrefixedBytes<Strategy: NIOBinaryIntegerEncodingStrategy>(
+        strategy: Strategy
+    ) -> [UInt8]? {
+        self.readLengthPrefixedSlice(strategy: strategy).map { Array(buffer: $0) }
     }
 }
 

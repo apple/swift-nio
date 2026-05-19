@@ -97,6 +97,13 @@ jobs:
             done < <(echo "$MATRIX_DOCKER_CAPABILITIES" | jq -r '.[]')
           fi
 
+          # Add Docker security options if specified
+          if [[ "$MATRIX_DOCKER_SECURITY_OPTS" != '[]' ]]; then
+            while IFS= read -r opt; do
+              docker_args+=("--security-opt" "$opt")
+            done < <(echo "$MATRIX_DOCKER_SECURITY_OPTS" | jq -r '.[]')
+          fi
+
           if [[ "$MATRIX_ENV_JSON" != '{}' ]]; then
             while IFS="=" read -r key value; do
               if [[ -n "$key" && -n "$value" ]]; then
@@ -118,6 +125,7 @@ jobs:
           MATRIX_COMMAND_ARGUMENTS: ${{ matrix.config.command_arguments }}
           MATRIX_ENV_JSON: ${{ toJson(matrix.config.env) }}
           MATRIX_DOCKER_CAPABILITIES: ${{ toJson(matrix.config.docker_capabilities) }}
+          MATRIX_DOCKER_SECURITY_OPTS: ${{ toJson(matrix.config.docker_security_opts) }}
           GITHUB_WORKSPACE: ${{ github.workspace }}
       - name: Run matrix job (Windows)
         if: ${{ matrix.config.platform == 'Windows' }}
