@@ -613,7 +613,12 @@ import Testing
         try channel.pipeline.syncOperations.addHTTPClientHandlers()
 
         let headers = HTTPHeaders([("Host", "example.com")])
-        let goodRequest = HTTPRequestHead(version: .http1_1, method: .RAW(value: weirdAllowedMethodName), uri: "/", headers: headers)
+        let goodRequest = HTTPRequestHead(
+            version: .http1_1,
+            method: .RAW(value: weirdAllowedMethodName),
+            uri: "/",
+            headers: headers
+        )
         let goodRequestBytes = ByteBuffer(
             string: "\(weirdAllowedMethodName) / HTTP/1.1\r\nHost: example.com\r\n\r\n"
         )
@@ -638,7 +643,12 @@ import Testing
             try channel.pipeline.syncOperations.addHTTPClientHandlers()
 
             let headers = HTTPHeaders([("Host", "example.com")])
-            let badRequest = HTTPRequestHead(version: .http1_1, method: .RAW(value: forbiddenFieldName), uri: "/", headers: headers)
+            let badRequest = HTTPRequestHead(
+                version: .http1_1,
+                method: .RAW(value: forbiddenFieldName),
+                uri: "/",
+                headers: headers
+            )
 
             let error = #expect(
                 throws: HTTPParserError.self,
@@ -662,9 +672,9 @@ import Testing
         // ```
 
         let allowedRanges: [ClosedRange<UInt8>] = [
-            9...9,      // HTAB
-            32...32,    // SP
-            33...126,   // VCHAR
+            9...9,  // HTAB
+            32...32,  // SP
+            33...126,  // VCHAR
             128...255,  // obs-text
         ]
 
@@ -693,7 +703,9 @@ import Testing
 
             switch allowed {
             case true:
-                let goodRequestBytes = ByteBuffer(string: "HTTP/1.1 600 \(testReason)\r\ntransfer-encoding: chunked\r\n\r\n")
+                let goodRequestBytes = ByteBuffer(
+                    string: "HTTP/1.1 600 \(testReason)\r\ntransfer-encoding: chunked\r\n\r\n"
+                )
                 let goodEnd = ByteBuffer(string: "0\r\n\r\n")
                 #expect(throws: Never.self, "Rejected reason phrase with byte: \(byte)") {
                     try channel.writeOutbound(HTTPServerResponsePart.head(response))
@@ -829,7 +841,7 @@ import Testing
             return String(Unicode.Scalar(byte))
 
         case 0xC0, 0xC1:
-            return nil   // forbidden in UTF-8
+            return nil  // forbidden in UTF-8
 
         case 0xC2...0xDF:
             // Lead of 2-byte seq. Smallest scalar with this lead:
@@ -844,7 +856,7 @@ import Testing
             let base = UInt32(byte & 0x0F) << 12
             let scalar = (byte == 0xE0) ? 0x0800 : base
             // Skip surrogates if we land in D800–DFFF (byte == 0xED)
-            if byte == 0xED { return String(Unicode.Scalar(0xD000 - 0x0800 + base)!) } // simple pick
+            if byte == 0xED { return String(Unicode.Scalar(0xD000 - 0x0800 + base)!) }  // simple pick
             return Unicode.Scalar(scalar).map { String($0) }
 
         case 0xF0...0xF4:
@@ -856,12 +868,12 @@ import Testing
             switch byte {
             case 0xF0: scalar = 0x10000
             case 0xF4: scalar = 0x100000
-            default:   scalar = UInt32(byte & 0x07) << 18
+            default: scalar = UInt32(byte & 0x07) << 18
             }
             return Unicode.Scalar(scalar).map { String($0) }
 
-        default: // 0xF5...0xFF
-            return nil   // forbidden in UTF-8
+        default:  // 0xF5...0xFF
+            return nil  // forbidden in UTF-8
         }
     }
 }
@@ -872,4 +884,3 @@ extension EmbeddedChannel {
         try self.writeInbound(request)
     }
 }
-
