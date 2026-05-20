@@ -100,7 +100,7 @@ public final class NIOHTTPRequestHeadersValidator: ChannelOutboundHandler, Remov
 
         uri.utf8.allSatisfy { byte in
             switch byte {
-            case // unreserved
+            case  // unreserved
             //   - ALPHA
             UInt8(ascii: "A")...UInt8(ascii: "Z"), UInt8(ascii: "a")...UInt8(ascii: "z"),
                 //   - DIGIT
@@ -242,7 +242,7 @@ extension HTTPMethod {
 
             value.utf8.allSatisfy { byte in
                 switch byte {
-                case // ALPHA
+                case  // ALPHA
                 UInt8(ascii: "A")...UInt8(ascii: "Z"), UInt8(ascii: "a")...UInt8(ascii: "z"),
                     // DIGIT
                     UInt8(ascii: "0")...UInt8(ascii: "9"),

@@ -14,10 +14,10 @@
 
 import CNIODarwin
 import CNIOLinux
+@_spi(CustomByteBufferAllocator) @testable import NIOCore
 import NIOEmbedded
 import XCTest
 
-@_spi(CustomByteBufferAllocator) @testable import NIOCore
 @testable import NIOPosix
 
 extension SocketAddress {
