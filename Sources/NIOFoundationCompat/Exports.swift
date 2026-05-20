@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2020 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2026 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,14 +12,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !canImport(Darwin) || os(macOS)
-func makeCrashTestSuites() -> [String: Any] {
-    [
-        "EventLoopCrashTests": EventLoopCrashTests(),
-        "ByteBufferCrashTests": ByteBufferCrashTests(),
-        "SystemCrashTests": SystemCrashTests(),
-        "StrictCrashTests": StrictCrashTests(),
-        "LoopBoundTests": LoopBoundTests(),
-    ]
-}
-#endif
+@_exported import NIOFoundationEssentialsCompat

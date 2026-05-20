@@ -175,11 +175,11 @@ public struct ByteBufferAllocator: Sendable {
 }
 
 @inlinable func _toCapacity(_ value: Int) -> ByteBuffer._Capacity {
-    ByteBuffer._Capacity(truncatingIfNeeded: value)
+    ByteBuffer._Capacity(value)
 }
 
 @inlinable func _toIndex(_ value: Int) -> ByteBuffer._Index {
-    ByteBuffer._Index(truncatingIfNeeded: value)
+    ByteBuffer._Index(value)
 }
 
 /// `ByteBuffer` stores contiguously allocated raw bytes. It is a random and sequential accessible sequence of zero or
@@ -1061,8 +1061,12 @@ public struct ByteBuffer {
         else {
             return nil
         }
-        let index = _toIndex(index)
-        let length = _toCapacity(length)
+        // Thanks to the above bounds checks, we can translate into `_Index` and `_Capacity` with
+        // fewer branches, using `truncatingIfNeeded` initializers.
+        //   - length <= self.writerIndex // this ensures length is in the UInt32 space.
+        //   - index <= self.writerIndex &- length. This ensures index is in the UInt32 space.
+        let index = ByteBuffer._Index(truncatingIfNeeded: index)
+        let length = ByteBuffer._Capacity(truncatingIfNeeded: length)
 
         // The arithmetic below is safe because:
         // 1. maximum `writerIndex` <= self._slice.count (see `_moveWriterIndex`)

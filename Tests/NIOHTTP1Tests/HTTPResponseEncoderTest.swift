@@ -357,4 +357,13 @@ class HTTPResponseEncoderTests: XCTestCase {
         }
         XCTAssertEqual(trailerBuffer, ByteBuffer(string: "0\r\n\r\n"))
     }
+
+    func testConflictingFramingHeadersStripsTransferEncoding() throws {
+        let headers = HTTPHeaders([
+            ("transfer-encoding", "chunked"),
+            ("content-length", "3"),
+        ])
+        let writtenData = sendResponse(withStatus: .ok, andHeaders: headers)
+        writtenData.assertContainsOnly("HTTP/1.1 200 OK\r\ncontent-length: 3\r\n\r\n")
+    }
 }
