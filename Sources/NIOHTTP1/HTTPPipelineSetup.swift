@@ -156,6 +156,7 @@ extension ChannelPipeline {
     ///   - enableOutboundHeaderValidation: Whether the pipeline should confirm that outbound headers are well-formed.
     ///         Defaults to `true`.
     ///   - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
+    ///   - decoderLimitConfiguration: The limit configuration for the ``HTTPDecoder``.
     ///   - upgrade: Add a ``NIOHTTPClientUpgradeHandler`` to the pipeline, configured for
     ///         HTTP upgrade. Should be a tuple of an array of ``NIOHTTPClientUpgradeHandler`` and
     ///         the upgrade completion handler. See the documentation on ``NIOHTTPClientUpgradeHandler``
@@ -388,7 +389,6 @@ extension ChannelPipeline {
             withDecoderLimitConfiguration: decoderLimitConfiguration
         )
     }
-
 
     private func _configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,

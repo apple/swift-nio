@@ -31,7 +31,9 @@ public final class NIOHTTPRequestHeadersValidator: ChannelOutboundHandler, Remov
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch NIOHTTPRequestHeadersValidator.unwrapOutboundIn(data) {
         case .head(let head):
-            guard Self.uriOnlyContainsAllowedCharacters(head.uri), head.method.isValidToSend, head.headers.areValidToSend else {
+            guard Self.uriOnlyContainsAllowedCharacters(head.uri), head.method.isValidToSend,
+                head.headers.areValidToSend
+            else {
                 promise?.fail(HTTPParserError.invalidHeaderToken)
                 context.fireErrorCaught(HTTPParserError.invalidHeaderToken)
                 return
@@ -98,10 +100,9 @@ public final class NIOHTTPRequestHeadersValidator: ChannelOutboundHandler, Remov
 
         uri.utf8.allSatisfy { byte in
             switch byte {
-            case
-                // unreserved
-                //   - ALPHA
-                UInt8(ascii: "A")...UInt8(ascii: "Z"), UInt8(ascii: "a")...UInt8(ascii: "z"),
+            case  // unreserved
+            //   - ALPHA
+            UInt8(ascii: "A")...UInt8(ascii: "Z"), UInt8(ascii: "a")...UInt8(ascii: "z"),
                 //   - DIGIT
                 UInt8(ascii: "0")...UInt8(ascii: "9"),
                 //   - extra characters
@@ -225,7 +226,7 @@ extension HTTPMethod {
             .SOURCE:
             true
 
-        case .RAW(value: let value):
+        case .RAW(let value):
             // The spec in [RFC 9110](https://httpwg.org/specs/rfc9110.html#method.overview) defines the valid
             // characters as the following:
             //
@@ -241,9 +242,8 @@ extension HTTPMethod {
 
             value.utf8.allSatisfy { byte in
                 switch byte {
-                case
-                    // ALPHA
-                    UInt8(ascii: "A")...UInt8(ascii: "Z"), UInt8(ascii: "a")...UInt8(ascii: "z"),
+                case  // ALPHA
+                UInt8(ascii: "A")...UInt8(ascii: "Z"), UInt8(ascii: "a")...UInt8(ascii: "z"),
                     // DIGIT
                     UInt8(ascii: "0")...UInt8(ascii: "9"),
                     // token
@@ -337,11 +337,10 @@ extension HTTPResponseStatus {
 
             reasonPhrase.utf8.allSatisfy { byte in
                 switch byte {
-                case
-                    9,         // HTAB
-                    32,        // SP
+                case 9,  // HTAB
+                    32,  // SP
                     33...126,  // VCHAR
-                    128...255: // obs-text
+                    128...255:  // obs-text
                     return true
                 default:
                     return false

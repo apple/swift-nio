@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Foundation
 @_spi(CustomByteBufferAllocator) import NIOCore
 import Testing
-import Foundation
 
 #if compiler(>=6.2)
 @Suite struct ByteBufferCrashTests {
@@ -91,7 +91,11 @@ import Foundation
         }
     }
 
-    @Test func setBytesWithoutContigiousStorageMoreThanUInt32maxBytes() async {
+    @Test(
+        .disabled(
+            "This test is taking too long, as it needs to allocate 4GB of memory. It doesn't work on 32bit machines."
+        )
+    ) func setBytesWithoutContigiousStorageMoreThanUInt32maxBytes() async {
         await #expect(processExitsWith: .failure) {
             let circularBuffer = CircularBuffer<UInt8>(repeating: 0, count: Int(UInt32.max) + 1)
             var bb = ByteBuffer()
@@ -137,12 +141,6 @@ import Foundation
         await #expect(processExitsWith: .failure) {
             let capacity = Int(UInt32.max) + 1
             let ptr = malloc(capacity)!
-
-            // Initialize some data in the external memory
-            let boundPtr = ptr.bindMemory(to: UInt8.self, capacity: capacity)
-            for i in 0..<capacity {
-                boundPtr[i] = 1
-            }
 
             let allocator = ByteBufferCustomAllocatorTest.makeTrackedAllocator()
 
