@@ -46,14 +46,20 @@ enum ThreadOpsWindows: ThreadOps {
             let boxed = Unmanaged<NIOThread.ThreadBox>.fromOpaque($0!).takeRetainedValue()
             let (body, name) = (boxed.value.body, boxed.value.name)
 
-            // Get a real thread handle instead of pseudo-handle
+            // GetCurrentThread() returns a pseudo-handle that is only valid in the
+            // current thread's context, so it can't be safely shared with — or used
+            // by — any other thread (e.g. for join, WaitForSingleObject, setting the
+            // thread description, comparing for equality, etc.). DuplicateHandle
+            // promotes the pseudo-handle to a real, owning HANDLE that other threads
+            // (and, later, `joinThread`) can use. The handle is closed by
+            // `joinThread` once the thread is collected.
             var realHandle: HANDLE? = nil
             let success = DuplicateHandle(
                 GetCurrentProcess(),  // Source process
                 GetCurrentThread(),  // Source handle (pseudo-handle)
                 GetCurrentProcess(),  // Target process
-                &realHandle,  // Target handle (real handle)
-                0,  // Desired access (0 = same as source)
+                &realHandle,  // Target handle (real, owning HANDLE)
+                0,  // Desired access (0 = same access as source)
                 false,  // Inherit handle
                 DWORD(DUPLICATE_SAME_ACCESS)  // Options
             )

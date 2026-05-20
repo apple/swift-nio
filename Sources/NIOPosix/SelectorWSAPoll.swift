@@ -72,14 +72,33 @@ extension Selector: _SelectorBackendProtocol {
         self.pollFDs.reserveCapacity(16)
         self.deregisteredFDs.reserveCapacity(16)
 
-        // Create a UNIX domain socket pair for wakeup signaling.
-        // Since Windows doesn't support socketpair(), we emulate it with
-        // listen/connect/accept on a temporary UNIX domain socket path.
+        // Wake-up mechanism.
+        //
+        // On Linux we use eventfd and on Darwin we use a kevent-only EVFILT_USER.
+        // Windows has no direct equivalent. The natural-looking choice would be
+        // QueueUserAPC against the event-loop thread, but APCs only fire while
+        // the target thread is in an alertable wait. WSAPoll is not alertable —
+        // there is no `WSAPollEx`/`SleepEx`-style waitable variant that both
+        // observes the registered sockets *and* picks up APCs in one call. That
+        // would force us to either spin or split the wait into two phases, both
+        // of which are unacceptable from a correctness/latency perspective.
+        //
+        // Instead, we mirror the eventfd pattern: create a connected socket pair
+        // ourselves and include the read end as the first entry in `pollFDs`.
+        // `wakeup0` writes a byte to the write end; the next WSAPoll returns and
+        // the read end gets drained at the top of `whenReady0`. We use a UNIX
+        // domain socket pair because Windows does not have `socketpair(2)` (so
+        // we emulate it via listen/connect/accept on a temporary AF_UNIX path),
+        // and AF_UNIX is loopback-only — no firewall prompts, no port collisions.
         let (readSocket, writeSocket) = try Self.createWakeupSocketPair()
         self.wakeupReadSocket = readSocket
         self.wakeupWriteSocket = writeSocket
 
-        // Add the read end to pollFDs so WSAPoll will wake up when data is written to the write end
+        // The read end of the wakeup pair is always the first entry in pollFDs;
+        // `whenReady0` relies on this invariant to drain wakeup bytes cheaply.
+        // We deliberately do *not* publish the wakeup socket in `pollFDIndexes`
+        // — user-facing register/reregister/deregister operations should never
+        // see or touch the wakeup slot.
         let wakeupPollFD = pollfd(fd: UInt64(readSocket), events: Int16(WinSDK.POLLRDNORM), revents: 0)
         self.pollFDs.append(wakeupPollFD)
 
@@ -110,13 +129,17 @@ extension Selector: _SelectorBackendProtocol {
                 }
             }
 
-            // Bind the listener socket
+            // Bind the listener socket. We rebind the typed `sockaddr_un`
+            // pointer to the generic `sockaddr` that bind(2) expects but pass
+            // the length of the original concrete struct (`addr`), which is
+            // what the OS uses to interpret the address family payload.
+            let addrLen = socklen_t(MemoryLayout.size(ofValue: addr))
             try withUnsafePointer(to: &addr) { addrPtr in
                 try addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { socketPointer in
                     try NIOBSDSocket.bind(
                         socket: listenerSocket,
                         address: socketPointer,
-                        address_len: socklen_t(MemoryLayout<sockaddr_un>.size)
+                        address_len: addrLen
                     )
                 }
             }
@@ -130,14 +153,14 @@ extension Selector: _SelectorBackendProtocol {
             let writeSocket = try NIOBSDSocket.socket(domain: .unix, type: .stream, protocolSubtype: .default)
 
             do {
-                // Connect to the listener
+                // Connect to the listener (same rebind+length pattern as above).
                 try withUnsafePointer(to: &addr) { addrPtr in
                     try addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPtr in
                         guard
                             try NIOBSDSocket.connect(
                                 socket: writeSocket,
                                 address: sockaddrPtr,
-                                address_len: socklen_t(MemoryLayout<sockaddr_un>.size)
+                                address_len: addrLen
                             )
                         else {
                             throw IOError(winsock: WSAGetLastError(), reason: "connect")
@@ -270,14 +293,28 @@ extension Selector: _SelectorBackendProtocol {
                 try body((SelectorEvent(io: selectorEvent, registration: registration)))
             }
 
-            // Clean up any deregistered fds. Process in descending order so that removing
-            // elements doesn't invalidate the indexes of elements we still need to remove.
-            for i in self.deregisteredFDs.sorted(by: >) {
-                let fd = self.pollFDs[i].fd
-                self.pollFDs.remove(at: i)
-                self.registrations.removeValue(forKey: Int(fd))
+            // Clean up any deregistered fds. Process in descending order so that
+            // removing elements doesn't invalidate the indexes of elements we
+            // still need to remove. Removing from `pollFDs` shifts every later
+            // entry's index down by one, so once we're done we rebuild
+            // `pollFDIndexes` in a single linear pass — still cheaper overall
+            // than the previous per-call `firstIndex(where:)` scans.
+            if !self.deregisteredFDs.isEmpty {
+                for i in self.deregisteredFDs.sorted(by: >) {
+                    let fd = self.pollFDs[i].fd
+                    self.pollFDs.remove(at: i)
+                    self.registrations.removeValue(forKey: Int(fd))
+                }
+                self.deregisteredFDs.removeAll(keepingCapacity: true)
+                // Index 0 is the wakeup socket and is intentionally not present
+                // in `pollFDIndexes`; rebuild from index 1 onwards.
+                self.pollFDIndexes.removeAll(keepingCapacity: true)
+                if self.pollFDs.count > 1 {
+                    for idx in 1..<self.pollFDs.count {
+                        self.pollFDIndexes[NIOBSDSocket.Handle(self.pollFDs[idx].fd)] = idx
+                    }
+                }
             }
-            self.deregisteredFDs.removeAll(keepingCapacity: true)
         } else if result == 0 {
             // nothing has happened
         } else if result == WinSDK.SOCKET_ERROR {
@@ -291,9 +328,8 @@ extension Selector: _SelectorBackendProtocol {
         interested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws {
-        // TODO (@fabian): We need to replace the pollFDs array with something
-        //                 that will allow O(1) access here.
         let poll = pollfd(fd: UInt64(fileDescriptor), events: interested.wsaPollEvent, revents: 0)
+        self.pollFDIndexes[fileDescriptor] = self.pollFDs.count
         self.pollFDs.append(poll)
     }
 
@@ -304,7 +340,7 @@ extension Selector: _SelectorBackendProtocol {
         newInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws {
-        if let index = self.pollFDs.firstIndex(where: { $0.fd == UInt64(fileDescriptor) }) {
+        if let index = self.pollFDIndexes[fileDescriptor] {
             self.pollFDs[index].events = newInterested.wsaPollEvent
         }
     }
@@ -315,7 +351,7 @@ extension Selector: _SelectorBackendProtocol {
         oldInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws {
-        if let index = self.pollFDs.firstIndex(where: { $0.fd == UInt64(fileDescriptor) }) {
+        if let index = self.pollFDIndexes.removeValue(forKey: fileDescriptor) {
             self.deregisteredFDs.insert(index)
         }
     }
@@ -348,6 +384,7 @@ extension Selector: _SelectorBackendProtocol {
             self.wakeupWriteSocket = NIOBSDSocket.invalidHandle
         }
         self.pollFDs.removeAll()
+        self.pollFDIndexes.removeAll()
         self.deregisteredFDs.removeAll()
     }
 }
