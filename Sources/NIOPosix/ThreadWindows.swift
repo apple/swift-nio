@@ -20,6 +20,20 @@ import WinSDK
 
 typealias ThreadOpsSystem = ThreadOpsWindows
 enum ThreadOpsWindows: ThreadOps {
+    /// A Windows kernel thread handle wrapped to make NIO's cross-thread plumbing happy.
+    ///
+    /// `HANDLE` is an opaque pointer (`LPVOID`) imported from WinSDK, so the compiler can't
+    /// auto-conform it to `Sendable`. We mark this wrapper `@unchecked Sendable` because:
+    ///
+    /// * The Windows kernel handle table is fully thread-safe — referencing, waiting on, and
+    ///   closing a HANDLE from any thread is documented as safe (the kernel ref-counts are
+    ///   atomic). That's the whole point of using a real, owning HANDLE produced by
+    ///   `DuplicateHandle` here, instead of the per-thread pseudo-handle returned by
+    ///   `GetCurrentThread`.
+    /// * The stored `handle` is `let`, so the wrapper itself has no mutable state for races
+    ///   to observe. Each handle is also owned by exactly one `NIOThread`; we hand the wrapper
+    ///   between threads (e.g. spawn → join, current-thread queries) but never share the same
+    ///   raw HANDLE between multiple owners.
     struct ThreadHandle: @unchecked Sendable {
         let handle: HANDLE
     }
@@ -51,8 +65,7 @@ enum ThreadOpsWindows: ThreadOps {
             // by — any other thread (e.g. for join, WaitForSingleObject, setting the
             // thread description, comparing for equality, etc.). DuplicateHandle
             // promotes the pseudo-handle to a real, owning HANDLE that other threads
-            // (and, later, `joinThread`) can use. The handle is closed by
-            // `joinThread` once the thread is collected.
+            // (and, later, `joinThread`) can use.
             var realHandle: HANDLE? = nil
             let success = DuplicateHandle(
                 GetCurrentProcess(),  // Source process

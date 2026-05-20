@@ -293,27 +293,33 @@ extension Selector: _SelectorBackendProtocol {
                 try body((SelectorEvent(io: selectorEvent, registration: registration)))
             }
 
-            // Clean up any deregistered fds. Process in descending order so that
-            // removing elements doesn't invalidate the indexes of elements we
-            // still need to remove. Removing from `pollFDs` shifts every later
-            // entry's index down by one, so once we're done we rebuild
-            // `pollFDIndexes` in a single linear pass — still cheaper overall
-            // than the previous per-call `firstIndex(where:)` scans.
+            // Clean up any deregistered fds in a single linear in-place compaction
+            // pass: walk `pollFDs` once with a read/write cursor, dropping entries
+            // whose index is in `deregisteredFDs` and updating `pollFDIndexes`
+            // for any surviving entry that shifted left. This is O(n) and avoids
+            // both the previous `sorted(by: >)` (O(k log k)) and per-call
+            // `pollFDs.remove(at:)` (O(n) each, O(k·n) total).
+            //
+            // The wakeup socket is always at `pollFDs[0]` and is never registered
+            // in `pollFDIndexes`, so we treat index 0 as a fixed survivor.
             if !self.deregisteredFDs.isEmpty {
-                for i in self.deregisteredFDs.sorted(by: >) {
-                    let fd = self.pollFDs[i].fd
-                    self.pollFDs.remove(at: i)
-                    self.registrations.removeValue(forKey: Int(fd))
-                }
-                self.deregisteredFDs.removeAll(keepingCapacity: true)
-                // Index 0 is the wakeup socket and is intentionally not present
-                // in `pollFDIndexes`; rebuild from index 1 onwards.
-                self.pollFDIndexes.removeAll(keepingCapacity: true)
-                if self.pollFDs.count > 1 {
-                    for idx in 1..<self.pollFDs.count {
-                        self.pollFDIndexes[NIOBSDSocket.Handle(self.pollFDs[idx].fd)] = idx
+                var write = 0
+                for read in 0..<self.pollFDs.count {
+                    if self.deregisteredFDs.contains(read) {
+                        let fd = self.pollFDs[read].fd
+                        self.registrations.removeValue(forKey: Int(fd))
+                        continue
                     }
+                    if write != read {
+                        self.pollFDs[write] = self.pollFDs[read]
+                        if write != 0 {
+                            self.pollFDIndexes[NIOBSDSocket.Handle(self.pollFDs[write].fd)] = write
+                        }
+                    }
+                    write += 1
                 }
+                self.pollFDs.removeLast(self.pollFDs.count - write)
+                self.deregisteredFDs.removeAll(keepingCapacity: true)
             }
         } else if result == 0 {
             // nothing has happened
