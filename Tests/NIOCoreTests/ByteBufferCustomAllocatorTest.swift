@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2026 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -95,7 +95,7 @@ class ByteBufferCustomAllocatorTest: XCTestCase {
         testTracker.reset()
     }
 
-    private func makeTrackedAllocator() -> ByteBufferAllocator {
+    static func makeTrackedAllocator() -> ByteBufferAllocator {
         ByteBufferAllocator(
             allocate: testMallocHook,
             reallocate: testReallocHook,
@@ -105,7 +105,7 @@ class ByteBufferCustomAllocatorTest: XCTestCase {
     }
 
     func testCustomAllocatorReceivesCorrectReallocSizes() {
-        let allocator = self.makeTrackedAllocator()
+        let allocator = Self.makeTrackedAllocator()
 
         var buffer = allocator.buffer(capacity: 64)
         XCTAssertEqual(testTracker.mallocCalls.count, 1)
@@ -125,7 +125,7 @@ class ByteBufferCustomAllocatorTest: XCTestCase {
     }
 
     func testCustomAllocatorReallocReceivesOldSizeOnMultipleGrows() {
-        let allocator = self.makeTrackedAllocator()
+        let allocator = Self.makeTrackedAllocator()
 
         var buffer = allocator.buffer(capacity: 16)
 
@@ -164,7 +164,7 @@ class ByteBufferCustomAllocatorTest: XCTestCase {
             boundPtr[i] = UInt8(i)
         }
 
-        let allocator = self.makeTrackedAllocator()
+        let allocator = Self.makeTrackedAllocator()
 
         var buffer = ByteBuffer(
             takingOwnershipOf: UnsafeMutableRawBufferPointer(start: ptr, count: capacity),
@@ -241,7 +241,7 @@ class ByteBufferCustomAllocatorTest: XCTestCase {
     }
 
     func testCustomAllocatorFreeCalled() {
-        let allocator = self.makeTrackedAllocator()
+        let allocator = Self.makeTrackedAllocator()
 
         do {
             var buffer = allocator.buffer(capacity: 64)

@@ -122,7 +122,7 @@ jobs:
           MATRIX_LINUX_6_1_ENABLED: ${{ inputs.linux_6_1_enabled }}
           MATRIX_LINUX_6_2_ENABLED: ${{ inputs.linux_6_2_enabled }}
           MATRIX_LINUX_6_3_ENABLED: ${{ inputs.linux_6_3_enabled }}
-          MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_6_1_enabled && inputs.linux_nightly_next_enabled  }}
+          MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_next_enabled  }}
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
 
   benchmarks-linux:
