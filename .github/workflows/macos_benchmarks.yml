@@ -8,8 +8,12 @@ on:
     inputs:
       benchmark_package_path:
         type: string
-        description: "Path to the directory containing the benchmarking package. Defaults to ."
+        description: "DEPRECATED: prefer `benchmark_package_paths`. Path to a single benchmarking package directory. Used only when `benchmark_package_paths` is empty. Defaults to ."
         default: "."
+      benchmark_package_paths:
+        type: string
+        description: "JSON array of benchmarking package paths to run sequentially on each runner, e.g. '[\"Benchmarks/A\", \"Benchmarks/B\"]'. When non-empty, takes precedence over `benchmark_package_path`. Defaults to []."
+        default: "[]"
       swift_package_arguments:
         type: string
         description: "Arguments to the switch package command invocation e.g. `--disable-sandbox`"
@@ -203,9 +207,9 @@ jobs:
         with:
           persist-credentials: false
           submodules: true
-      - name: Install jemalloc
+      - name: Install dependencies
         run: |
-          brew install jemalloc
+          brew install jemalloc jq
       - name: Export environment variables
         if: ${{ matrix.config.env != '' && matrix.config.env != '{}'}}
         run: |
@@ -216,8 +220,9 @@ jobs:
           MATRIX_ENV_JSON: ${{ toJSON(matrix.config.env) }}
       - name: Run benchmarks script
         run: |
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | BENCHMARK_PACKAGE_PATH="$INPUT_BENCHMARK_PACKAGE_PATH" bash -s -- --disable-sandbox --allow-writing-to-package-directory
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | bash -s -- --disable-sandbox --allow-writing-to-package-directory
         env:
-          INPUT_BENCHMARK_PACKAGE_PATH: ${{ inputs.benchmark_package_path }}
+          BENCHMARK_PACKAGE_PATH: ${{ inputs.benchmark_package_path }}
+          BENCHMARK_PACKAGE_PATHS: ${{ inputs.benchmark_package_paths }}
           DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
           SWIFT_VERSION: "Xcode ${{ matrix.config.xcode_version }}"
