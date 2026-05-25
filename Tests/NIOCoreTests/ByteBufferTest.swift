@@ -4553,5 +4553,31 @@ extension ByteBufferTest {
         XCTAssertEqual(written, self.buf.readableBytes)
         XCTAssertEqual(0, self.buf.readerIndex)
     }
+
+    func testReadInlineArrayWithNonZeroReaderIndex() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
+        // Write a prefix that we read off first so that the reader index is no
+        // longer zero before reading the `InlineArray`.
+        let prefix: [UInt8] = [0xaa, 0xbb, 0xcc]
+        let payload = (0..<10).map { _ in UInt8.random(in: .min ... .max) }
+        self.buf.writeBytes(prefix)
+        self.buf.writeBytes(payload)
+
+        XCTAssertEqual(prefix, self.buf.readBytes(length: prefix.count))
+        XCTAssertEqual(prefix.count, self.buf.readerIndex)
+        XCTAssertEqual(payload.count, self.buf.readableBytes)
+
+        let result = try XCTUnwrap(
+            self.buf.readInlineArray(as: InlineArray<10, UInt8>.self)
+        )
+        XCTAssertEqual(10, result.count)
+        for idx in result.indices {
+            XCTAssertEqual(payload[idx], result[idx])
+        }
+        XCTAssertEqual(0, self.buf.readableBytes)
+        XCTAssertEqual(prefix.count + payload.count, self.buf.readerIndex)
+    }
 }
 #endif

@@ -76,13 +76,16 @@ extension ByteBuffer {
             return nil
         }
 
+        let readerIndex = self.readerIndex
         let inlineArray = InlineArray<count, IntegerType> { (outputSpan: inout OutputSpan<IntegerType>) in
             for index in 0..<count {
-                // already made sure of 'self.readableBytes >= bytesRequired' above,
-                // so this is safe to force-unwrap as it's guaranteed to exist
+                // 'getInteger(at:)' takes an absolute index into the buffer, so we offset from
+                // the reader index. We already made sure of 'self.readableBytes >= bytesRequired'
+                // above, so this is safe to force-unwrap as it's guaranteed to exist.
                 let integer = self.getInteger(
-                    // this is less than 'bytesRequired' so is safe to multiply
-                    at: stride &* index,
+                    // 'stride &* index' is less than 'bytesRequired' so is safe to multiply, and
+                    // adding the reader index can't overflow because it stays within the writer index.
+                    at: readerIndex &+ (stride &* index),
                     endianness: endianness,
                     as: IntegerType.self
                 )!
