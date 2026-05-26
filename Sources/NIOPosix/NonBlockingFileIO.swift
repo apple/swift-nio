@@ -360,14 +360,24 @@ public struct NonBlockingFileIO: Sendable {
     private func read0(
         fileHandle: NIOFileHandle,
         fromOffset: Int64?,  // > 2 GB offset is reasonable on 32-bit systems
-        byteCount rawByteCount: Int,
+        byteCount: Int,
         allocator: ByteBufferAllocator,
         eventLoop: EventLoop
     ) -> EventLoopFuture<ByteBuffer> {
-        guard rawByteCount > 0 else {
+        guard byteCount > 0 else {
             return eventLoop.makeSucceededFuture(allocator.buffer(capacity: 0))
         }
-        let byteCount = rawByteCount < Int32.max ? rawByteCount : size_t(Int32.max)
+        // A `ByteBuffer` can hold at most `UInt32.max` bytes, so anything larger can never be returned. Rather than
+        // silently reading fewer bytes than requested we fail the read. On 32-bit platforms `Int.max` is smaller than
+        // `UInt32.max` so this guard is never true there.
+        guard byteCount <= UInt32.max else {
+            return eventLoop.makeFailedFuture(
+                IOError(
+                    errnoCode: EINVAL,
+                    reason: "byteCount (\(byteCount)) is larger than the maximum size a ByteBuffer can hold"
+                )
+            )
+        }
 
         return self.threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
             try self.readSync(
@@ -389,21 +399,26 @@ public struct NonBlockingFileIO: Sendable {
         var buf = allocator.buffer(capacity: byteCount)
 
         while bytesRead < byteCount {
-            let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr -> Int in
+            // The OS returns EINVAL if a single read/pread requests more than `Int32.max` bytes, so we cap the size of
+            // each individual syscall. The surrounding loop keeps reading until the whole `byteCount` is satisfied (or
+            // we hit end-of-file), so capping the per-syscall size does not limit the total number of bytes read.
+            let remaining = byteCount - bytesRead
+            let readSize = min(remaining, Int(Int32.max))
+            let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: readSize) { ptr -> Int in
                 let res = try fileHandle.withUnsafeFileDescriptor { descriptor -> IOResult<ssize_t> in
                     if let offset = fromOffset {
                         #if !os(Windows)
                         return try Posix.pread(
                             descriptor: descriptor,
                             pointer: ptr.baseAddress!,
-                            size: byteCount - bytesRead,
+                            size: readSize,
                             offset: off_t(offset) + off_t(bytesRead)
                         )
                         #else
                         return try Windows.pread(
                             descriptor: descriptor,
                             pointer: ptr.baseAddress!,
-                            size: byteCount - bytesRead,
+                            size: readSize,
                             offset: off_t(offset) + off_t(bytesRead)
                         )
                         #endif
@@ -412,7 +427,7 @@ public struct NonBlockingFileIO: Sendable {
                     return try Posix.read(
                         descriptor: descriptor,
                         pointer: ptr.baseAddress!,
-                        size: byteCount - bytesRead
+                        size: readSize
                     )
                 }
                 switch res {
@@ -990,13 +1005,21 @@ extension NonBlockingFileIO {
     private func read0(
         fileHandle: NIOFileHandle,
         fromOffset: Int64?,  // > 2 GB offset is reasonable on 32-bit systems
-        byteCount rawByteCount: Int,
+        byteCount: Int,
         allocator: ByteBufferAllocator
     ) async throws -> ByteBuffer {
-        guard rawByteCount > 0 else {
+        guard byteCount > 0 else {
             return allocator.buffer(capacity: 0)
         }
-        let byteCount = rawByteCount < Int32.max ? rawByteCount : size_t(Int32.max)
+        // A `ByteBuffer` can hold at most `UInt32.max` bytes, so anything larger can never be returned. Rather than
+        // silently reading fewer bytes than requested we fail the read. On 32-bit platforms `Int.max` is smaller than
+        // `UInt32.max` so this guard is never true there.
+        guard byteCount <= UInt32.max else {
+            throw IOError(
+                errnoCode: EINVAL,
+                reason: "byteCount (\(byteCount)) is larger than the maximum size a ByteBuffer can hold"
+            )
+        }
 
         return try await self.threadPool.runIfActive { () -> ByteBuffer in
             try self.readSync(
