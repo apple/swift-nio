@@ -65,6 +65,44 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger>(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2).Type = (T1, T2).self
+    ) -> (T1, T2)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (T1(bigEndian: v1), T2(bigEndian: v2))
+        case .little:
+            return (T1(littleEndian: v1), T2(littleEndian: v2))
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger>(
         _ value1: T1,
@@ -97,6 +135,36 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger>(
+        _ value1: T1,
+        _ value2: T2,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2).Type = (T1, T2).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -155,6 +223,50 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger>(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3).Type = (T1, T2, T3).self
+    ) -> (T1, T2, T3)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3))
+        case .little:
+            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3))
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger>(
         _ value1: T1,
@@ -194,6 +306,42 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger>(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3).Type = (T1, T2, T3).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -262,6 +410,61 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger
+    >(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4).Type = (T1, T2, T3, T4).self
+    ) -> (T1, T2, T3, T4)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+        bytesRequired &+= MemoryLayout<T4>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var v4: T4 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            withUnsafeMutableBytes(of: &v4) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T4>.size)
+            }
+            offset = offset &+ MemoryLayout<T4>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4))
+        case .little:
+            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4))
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<
         T1: FixedWidthInteger,
@@ -313,6 +516,53 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4).Type = (T1, T2, T3, T4).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        var v4: T4
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+            v4 = value4.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+            v4 = value4.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v4) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T4>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -394,6 +644,71 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger
+    >(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5).Type = (T1, T2, T3, T4, T5).self
+    ) -> (T1, T2, T3, T4, T5)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+        bytesRequired &+= MemoryLayout<T4>.size
+        bytesRequired &+= MemoryLayout<T5>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var v4: T4 = 0
+        var v5: T5 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            withUnsafeMutableBytes(of: &v4) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T4>.size)
+            }
+            offset = offset &+ MemoryLayout<T4>.size
+            withUnsafeMutableBytes(of: &v5) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T5>.size)
+            }
+            offset = offset &+ MemoryLayout<T5>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5))
+        case .little:
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5)
+            )
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<
         T1: FixedWidthInteger,
@@ -453,6 +768,60 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5).Type = (T1, T2, T3, T4, T5).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        var v4: T4
+        var v5: T5
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+            v4 = value4.bigEndian
+            v5 = value5.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+            v4 = value4.littleEndian
+            v5 = value5.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v4) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T4>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v5) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T5>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -549,6 +918,81 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger
+    >(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6).Type = (T1, T2, T3, T4, T5, T6).self
+    ) -> (T1, T2, T3, T4, T5, T6)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+        bytesRequired &+= MemoryLayout<T4>.size
+        bytesRequired &+= MemoryLayout<T5>.size
+        bytesRequired &+= MemoryLayout<T6>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var v4: T4 = 0
+        var v5: T5 = 0
+        var v6: T6 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            withUnsafeMutableBytes(of: &v4) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T4>.size)
+            }
+            offset = offset &+ MemoryLayout<T4>.size
+            withUnsafeMutableBytes(of: &v5) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T5>.size)
+            }
+            offset = offset &+ MemoryLayout<T5>.size
+            withUnsafeMutableBytes(of: &v6) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T6>.size)
+            }
+            offset = offset &+ MemoryLayout<T6>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6)
+            )
+        case .little:
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6)
+            )
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<
         T1: FixedWidthInteger,
@@ -616,6 +1060,67 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6).Type = (T1, T2, T3, T4, T5, T6).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        var v4: T4
+        var v5: T5
+        var v6: T6
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+            v4 = value4.bigEndian
+            v5 = value5.bigEndian
+            v6 = value6.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+            v4 = value4.littleEndian
+            v5 = value5.littleEndian
+            v6 = value6.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v4) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T4>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v5) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T5>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v6) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T6>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -720,6 +1225,88 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger
+    >(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7).Type = (T1, T2, T3, T4, T5, T6, T7).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+        bytesRequired &+= MemoryLayout<T4>.size
+        bytesRequired &+= MemoryLayout<T5>.size
+        bytesRequired &+= MemoryLayout<T6>.size
+        bytesRequired &+= MemoryLayout<T7>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var v4: T4 = 0
+        var v5: T5 = 0
+        var v6: T6 = 0
+        var v7: T7 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            withUnsafeMutableBytes(of: &v4) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T4>.size)
+            }
+            offset = offset &+ MemoryLayout<T4>.size
+            withUnsafeMutableBytes(of: &v5) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T5>.size)
+            }
+            offset = offset &+ MemoryLayout<T5>.size
+            withUnsafeMutableBytes(of: &v6) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T6>.size)
+            }
+            offset = offset &+ MemoryLayout<T6>.size
+            withUnsafeMutableBytes(of: &v7) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T7>.size)
+            }
+            offset = offset &+ MemoryLayout<T7>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7)
+            )
+        case .little:
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7)
+            )
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<
         T1: FixedWidthInteger,
@@ -795,6 +1382,74 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7).Type = (T1, T2, T3, T4, T5, T6, T7).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        var v4: T4
+        var v5: T5
+        var v6: T6
+        var v7: T7
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+            v4 = value4.bigEndian
+            v5 = value5.bigEndian
+            v6 = value6.bigEndian
+            v7 = value7.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+            v4 = value4.littleEndian
+            v5 = value5.littleEndian
+            v6 = value6.littleEndian
+            v7 = value7.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v4) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T4>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v5) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T5>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v6) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T6>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v7) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T7>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -907,6 +1562,95 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger
+    >(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8).Type = (T1, T2, T3, T4, T5, T6, T7, T8).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+        bytesRequired &+= MemoryLayout<T4>.size
+        bytesRequired &+= MemoryLayout<T5>.size
+        bytesRequired &+= MemoryLayout<T6>.size
+        bytesRequired &+= MemoryLayout<T7>.size
+        bytesRequired &+= MemoryLayout<T8>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var v4: T4 = 0
+        var v5: T5 = 0
+        var v6: T6 = 0
+        var v7: T7 = 0
+        var v8: T8 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            withUnsafeMutableBytes(of: &v4) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T4>.size)
+            }
+            offset = offset &+ MemoryLayout<T4>.size
+            withUnsafeMutableBytes(of: &v5) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T5>.size)
+            }
+            offset = offset &+ MemoryLayout<T5>.size
+            withUnsafeMutableBytes(of: &v6) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T6>.size)
+            }
+            offset = offset &+ MemoryLayout<T6>.size
+            withUnsafeMutableBytes(of: &v7) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T7>.size)
+            }
+            offset = offset &+ MemoryLayout<T7>.size
+            withUnsafeMutableBytes(of: &v8) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T8>.size)
+            }
+            offset = offset &+ MemoryLayout<T8>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8)
+            )
+        case .little:
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8)
+            )
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<
         T1: FixedWidthInteger,
@@ -990,6 +1734,81 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8).Type = (T1, T2, T3, T4, T5, T6, T7, T8).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        var v4: T4
+        var v5: T5
+        var v6: T6
+        var v7: T7
+        var v8: T8
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+            v4 = value4.bigEndian
+            v5 = value5.bigEndian
+            v6 = value6.bigEndian
+            v7 = value7.bigEndian
+            v8 = value8.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+            v4 = value4.littleEndian
+            v5 = value5.littleEndian
+            v6 = value6.littleEndian
+            v7 = value7.littleEndian
+            v8 = value8.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v4) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T4>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v5) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T5>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v6) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T6>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v7) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T7>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v8) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T8>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -1111,6 +1930,103 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger
+    >(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+        bytesRequired &+= MemoryLayout<T4>.size
+        bytesRequired &+= MemoryLayout<T5>.size
+        bytesRequired &+= MemoryLayout<T6>.size
+        bytesRequired &+= MemoryLayout<T7>.size
+        bytesRequired &+= MemoryLayout<T8>.size
+        bytesRequired &+= MemoryLayout<T9>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var v4: T4 = 0
+        var v5: T5 = 0
+        var v6: T6 = 0
+        var v7: T7 = 0
+        var v8: T8 = 0
+        var v9: T9 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            withUnsafeMutableBytes(of: &v4) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T4>.size)
+            }
+            offset = offset &+ MemoryLayout<T4>.size
+            withUnsafeMutableBytes(of: &v5) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T5>.size)
+            }
+            offset = offset &+ MemoryLayout<T5>.size
+            withUnsafeMutableBytes(of: &v6) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T6>.size)
+            }
+            offset = offset &+ MemoryLayout<T6>.size
+            withUnsafeMutableBytes(of: &v7) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T7>.size)
+            }
+            offset = offset &+ MemoryLayout<T7>.size
+            withUnsafeMutableBytes(of: &v8) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T8>.size)
+            }
+            offset = offset &+ MemoryLayout<T8>.size
+            withUnsafeMutableBytes(of: &v9) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T9>.size)
+            }
+            offset = offset &+ MemoryLayout<T9>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9)
+            )
+        case .little:
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9)
+            )
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<
         T1: FixedWidthInteger,
@@ -1202,6 +2118,88 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        var v4: T4
+        var v5: T5
+        var v6: T6
+        var v7: T7
+        var v8: T8
+        var v9: T9
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+            v4 = value4.bigEndian
+            v5 = value5.bigEndian
+            v6 = value6.bigEndian
+            v7 = value7.bigEndian
+            v8 = value8.bigEndian
+            v9 = value9.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+            v4 = value4.littleEndian
+            v5 = value5.littleEndian
+            v6 = value6.littleEndian
+            v7 = value7.littleEndian
+            v8 = value8.littleEndian
+            v9 = value9.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v4) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T4>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v5) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T5>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v6) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T6>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v7) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T7>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v8) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T8>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v9) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T9>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -1331,6 +2329,110 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger
+    >(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+        bytesRequired &+= MemoryLayout<T4>.size
+        bytesRequired &+= MemoryLayout<T5>.size
+        bytesRequired &+= MemoryLayout<T6>.size
+        bytesRequired &+= MemoryLayout<T7>.size
+        bytesRequired &+= MemoryLayout<T8>.size
+        bytesRequired &+= MemoryLayout<T9>.size
+        bytesRequired &+= MemoryLayout<T10>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var v4: T4 = 0
+        var v5: T5 = 0
+        var v6: T6 = 0
+        var v7: T7 = 0
+        var v8: T8 = 0
+        var v9: T9 = 0
+        var v10: T10 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            withUnsafeMutableBytes(of: &v4) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T4>.size)
+            }
+            offset = offset &+ MemoryLayout<T4>.size
+            withUnsafeMutableBytes(of: &v5) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T5>.size)
+            }
+            offset = offset &+ MemoryLayout<T5>.size
+            withUnsafeMutableBytes(of: &v6) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T6>.size)
+            }
+            offset = offset &+ MemoryLayout<T6>.size
+            withUnsafeMutableBytes(of: &v7) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T7>.size)
+            }
+            offset = offset &+ MemoryLayout<T7>.size
+            withUnsafeMutableBytes(of: &v8) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T8>.size)
+            }
+            offset = offset &+ MemoryLayout<T8>.size
+            withUnsafeMutableBytes(of: &v9) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T9>.size)
+            }
+            offset = offset &+ MemoryLayout<T9>.size
+            withUnsafeMutableBytes(of: &v10) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T10>.size)
+            }
+            offset = offset &+ MemoryLayout<T10>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10)
+            )
+        case .little:
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9), T10(littleEndian: v10)
+            )
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<
         T1: FixedWidthInteger,
@@ -1430,6 +2532,95 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        _ value10: T10,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        var v4: T4
+        var v5: T5
+        var v6: T6
+        var v7: T7
+        var v8: T8
+        var v9: T9
+        var v10: T10
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+            v4 = value4.bigEndian
+            v5 = value5.bigEndian
+            v6 = value6.bigEndian
+            v7 = value7.bigEndian
+            v8 = value8.bigEndian
+            v9 = value9.bigEndian
+            v10 = value10.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+            v4 = value4.littleEndian
+            v5 = value5.littleEndian
+            v6 = value6.littleEndian
+            v7 = value7.littleEndian
+            v8 = value8.littleEndian
+            v9 = value9.littleEndian
+            v10 = value10.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v4) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T4>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v5) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T5>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v6) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T6>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v7) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T7>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v8) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T8>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v9) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T9>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v10) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T10>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -1568,6 +2759,118 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger
+    >(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+        bytesRequired &+= MemoryLayout<T4>.size
+        bytesRequired &+= MemoryLayout<T5>.size
+        bytesRequired &+= MemoryLayout<T6>.size
+        bytesRequired &+= MemoryLayout<T7>.size
+        bytesRequired &+= MemoryLayout<T8>.size
+        bytesRequired &+= MemoryLayout<T9>.size
+        bytesRequired &+= MemoryLayout<T10>.size
+        bytesRequired &+= MemoryLayout<T11>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var v4: T4 = 0
+        var v5: T5 = 0
+        var v6: T6 = 0
+        var v7: T7 = 0
+        var v8: T8 = 0
+        var v9: T9 = 0
+        var v10: T10 = 0
+        var v11: T11 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            withUnsafeMutableBytes(of: &v4) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T4>.size)
+            }
+            offset = offset &+ MemoryLayout<T4>.size
+            withUnsafeMutableBytes(of: &v5) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T5>.size)
+            }
+            offset = offset &+ MemoryLayout<T5>.size
+            withUnsafeMutableBytes(of: &v6) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T6>.size)
+            }
+            offset = offset &+ MemoryLayout<T6>.size
+            withUnsafeMutableBytes(of: &v7) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T7>.size)
+            }
+            offset = offset &+ MemoryLayout<T7>.size
+            withUnsafeMutableBytes(of: &v8) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T8>.size)
+            }
+            offset = offset &+ MemoryLayout<T8>.size
+            withUnsafeMutableBytes(of: &v9) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T9>.size)
+            }
+            offset = offset &+ MemoryLayout<T9>.size
+            withUnsafeMutableBytes(of: &v10) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T10>.size)
+            }
+            offset = offset &+ MemoryLayout<T10>.size
+            withUnsafeMutableBytes(of: &v11) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T11>.size)
+            }
+            offset = offset &+ MemoryLayout<T11>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10),
+                T11(bigEndian: v11)
+            )
+        case .little:
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11)
+            )
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<
         T1: FixedWidthInteger,
@@ -1675,6 +2978,102 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        _ value10: T10,
+        _ value11: T11,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        var v4: T4
+        var v5: T5
+        var v6: T6
+        var v7: T7
+        var v8: T8
+        var v9: T9
+        var v10: T10
+        var v11: T11
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+            v4 = value4.bigEndian
+            v5 = value5.bigEndian
+            v6 = value6.bigEndian
+            v7 = value7.bigEndian
+            v8 = value8.bigEndian
+            v9 = value9.bigEndian
+            v10 = value10.bigEndian
+            v11 = value11.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+            v4 = value4.littleEndian
+            v5 = value5.littleEndian
+            v6 = value6.littleEndian
+            v7 = value7.littleEndian
+            v8 = value8.littleEndian
+            v9 = value9.littleEndian
+            v10 = value10.littleEndian
+            v11 = value11.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v4) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T4>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v5) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T5>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v6) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T6>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v7) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T7>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v8) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T8>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v9) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T9>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v10) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T10>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v11) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T11>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -1825,6 +3224,127 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger
+    >(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12
+        ).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+        bytesRequired &+= MemoryLayout<T4>.size
+        bytesRequired &+= MemoryLayout<T5>.size
+        bytesRequired &+= MemoryLayout<T6>.size
+        bytesRequired &+= MemoryLayout<T7>.size
+        bytesRequired &+= MemoryLayout<T8>.size
+        bytesRequired &+= MemoryLayout<T9>.size
+        bytesRequired &+= MemoryLayout<T10>.size
+        bytesRequired &+= MemoryLayout<T11>.size
+        bytesRequired &+= MemoryLayout<T12>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var v4: T4 = 0
+        var v5: T5 = 0
+        var v6: T6 = 0
+        var v7: T7 = 0
+        var v8: T8 = 0
+        var v9: T9 = 0
+        var v10: T10 = 0
+        var v11: T11 = 0
+        var v12: T12 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            withUnsafeMutableBytes(of: &v4) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T4>.size)
+            }
+            offset = offset &+ MemoryLayout<T4>.size
+            withUnsafeMutableBytes(of: &v5) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T5>.size)
+            }
+            offset = offset &+ MemoryLayout<T5>.size
+            withUnsafeMutableBytes(of: &v6) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T6>.size)
+            }
+            offset = offset &+ MemoryLayout<T6>.size
+            withUnsafeMutableBytes(of: &v7) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T7>.size)
+            }
+            offset = offset &+ MemoryLayout<T7>.size
+            withUnsafeMutableBytes(of: &v8) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T8>.size)
+            }
+            offset = offset &+ MemoryLayout<T8>.size
+            withUnsafeMutableBytes(of: &v9) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T9>.size)
+            }
+            offset = offset &+ MemoryLayout<T9>.size
+            withUnsafeMutableBytes(of: &v10) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T10>.size)
+            }
+            offset = offset &+ MemoryLayout<T10>.size
+            withUnsafeMutableBytes(of: &v11) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T11>.size)
+            }
+            offset = offset &+ MemoryLayout<T11>.size
+            withUnsafeMutableBytes(of: &v12) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T12>.size)
+            }
+            offset = offset &+ MemoryLayout<T12>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10),
+                T11(bigEndian: v11), T12(bigEndian: v12)
+            )
+        case .little:
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12)
+            )
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<
         T1: FixedWidthInteger,
@@ -1942,6 +3462,111 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        _ value10: T10,
+        _ value11: T11,
+        _ value12: T12,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12
+        ).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        var v4: T4
+        var v5: T5
+        var v6: T6
+        var v7: T7
+        var v8: T8
+        var v9: T9
+        var v10: T10
+        var v11: T11
+        var v12: T12
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+            v4 = value4.bigEndian
+            v5 = value5.bigEndian
+            v6 = value6.bigEndian
+            v7 = value7.bigEndian
+            v8 = value8.bigEndian
+            v9 = value9.bigEndian
+            v10 = value10.bigEndian
+            v11 = value11.bigEndian
+            v12 = value12.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+            v4 = value4.littleEndian
+            v5 = value5.littleEndian
+            v6 = value6.littleEndian
+            v7 = value7.littleEndian
+            v8 = value8.littleEndian
+            v9 = value9.littleEndian
+            v10 = value10.littleEndian
+            v11 = value11.littleEndian
+            v12 = value12.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v4) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T4>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v5) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T5>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v6) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T6>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v7) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T7>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v8) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T8>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v9) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T9>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v10) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T10>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v11) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T11>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v12) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T12>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -2101,6 +3726,135 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger
+    >(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
+        ).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+        bytesRequired &+= MemoryLayout<T4>.size
+        bytesRequired &+= MemoryLayout<T5>.size
+        bytesRequired &+= MemoryLayout<T6>.size
+        bytesRequired &+= MemoryLayout<T7>.size
+        bytesRequired &+= MemoryLayout<T8>.size
+        bytesRequired &+= MemoryLayout<T9>.size
+        bytesRequired &+= MemoryLayout<T10>.size
+        bytesRequired &+= MemoryLayout<T11>.size
+        bytesRequired &+= MemoryLayout<T12>.size
+        bytesRequired &+= MemoryLayout<T13>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var v4: T4 = 0
+        var v5: T5 = 0
+        var v6: T6 = 0
+        var v7: T7 = 0
+        var v8: T8 = 0
+        var v9: T9 = 0
+        var v10: T10 = 0
+        var v11: T11 = 0
+        var v12: T12 = 0
+        var v13: T13 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            withUnsafeMutableBytes(of: &v4) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T4>.size)
+            }
+            offset = offset &+ MemoryLayout<T4>.size
+            withUnsafeMutableBytes(of: &v5) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T5>.size)
+            }
+            offset = offset &+ MemoryLayout<T5>.size
+            withUnsafeMutableBytes(of: &v6) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T6>.size)
+            }
+            offset = offset &+ MemoryLayout<T6>.size
+            withUnsafeMutableBytes(of: &v7) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T7>.size)
+            }
+            offset = offset &+ MemoryLayout<T7>.size
+            withUnsafeMutableBytes(of: &v8) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T8>.size)
+            }
+            offset = offset &+ MemoryLayout<T8>.size
+            withUnsafeMutableBytes(of: &v9) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T9>.size)
+            }
+            offset = offset &+ MemoryLayout<T9>.size
+            withUnsafeMutableBytes(of: &v10) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T10>.size)
+            }
+            offset = offset &+ MemoryLayout<T10>.size
+            withUnsafeMutableBytes(of: &v11) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T11>.size)
+            }
+            offset = offset &+ MemoryLayout<T11>.size
+            withUnsafeMutableBytes(of: &v12) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T12>.size)
+            }
+            offset = offset &+ MemoryLayout<T12>.size
+            withUnsafeMutableBytes(of: &v13) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T13>.size)
+            }
+            offset = offset &+ MemoryLayout<T13>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10),
+                T11(bigEndian: v11), T12(bigEndian: v12), T13(bigEndian: v13)
+            )
+        case .little:
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12),
+                T13(littleEndian: v13)
+            )
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<
         T1: FixedWidthInteger,
@@ -2226,6 +3980,118 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        _ value10: T10,
+        _ value11: T11,
+        _ value12: T12,
+        _ value13: T13,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
+        ).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        var v4: T4
+        var v5: T5
+        var v6: T6
+        var v7: T7
+        var v8: T8
+        var v9: T9
+        var v10: T10
+        var v11: T11
+        var v12: T12
+        var v13: T13
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+            v4 = value4.bigEndian
+            v5 = value5.bigEndian
+            v6 = value6.bigEndian
+            v7 = value7.bigEndian
+            v8 = value8.bigEndian
+            v9 = value9.bigEndian
+            v10 = value10.bigEndian
+            v11 = value11.bigEndian
+            v12 = value12.bigEndian
+            v13 = value13.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+            v4 = value4.littleEndian
+            v5 = value5.littleEndian
+            v6 = value6.littleEndian
+            v7 = value7.littleEndian
+            v8 = value8.littleEndian
+            v9 = value9.littleEndian
+            v10 = value10.littleEndian
+            v11 = value11.littleEndian
+            v12 = value12.littleEndian
+            v13 = value13.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v4) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T4>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v5) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T5>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v6) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T6>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v7) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T7>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v8) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T8>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v9) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T9>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v10) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T10>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v11) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T11>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v12) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T12>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v13) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T13>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -2393,6 +4259,142 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger,
+        T14: FixedWidthInteger
+    >(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14
+        ).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+        bytesRequired &+= MemoryLayout<T4>.size
+        bytesRequired &+= MemoryLayout<T5>.size
+        bytesRequired &+= MemoryLayout<T6>.size
+        bytesRequired &+= MemoryLayout<T7>.size
+        bytesRequired &+= MemoryLayout<T8>.size
+        bytesRequired &+= MemoryLayout<T9>.size
+        bytesRequired &+= MemoryLayout<T10>.size
+        bytesRequired &+= MemoryLayout<T11>.size
+        bytesRequired &+= MemoryLayout<T12>.size
+        bytesRequired &+= MemoryLayout<T13>.size
+        bytesRequired &+= MemoryLayout<T14>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var v4: T4 = 0
+        var v5: T5 = 0
+        var v6: T6 = 0
+        var v7: T7 = 0
+        var v8: T8 = 0
+        var v9: T9 = 0
+        var v10: T10 = 0
+        var v11: T11 = 0
+        var v12: T12 = 0
+        var v13: T13 = 0
+        var v14: T14 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            withUnsafeMutableBytes(of: &v4) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T4>.size)
+            }
+            offset = offset &+ MemoryLayout<T4>.size
+            withUnsafeMutableBytes(of: &v5) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T5>.size)
+            }
+            offset = offset &+ MemoryLayout<T5>.size
+            withUnsafeMutableBytes(of: &v6) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T6>.size)
+            }
+            offset = offset &+ MemoryLayout<T6>.size
+            withUnsafeMutableBytes(of: &v7) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T7>.size)
+            }
+            offset = offset &+ MemoryLayout<T7>.size
+            withUnsafeMutableBytes(of: &v8) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T8>.size)
+            }
+            offset = offset &+ MemoryLayout<T8>.size
+            withUnsafeMutableBytes(of: &v9) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T9>.size)
+            }
+            offset = offset &+ MemoryLayout<T9>.size
+            withUnsafeMutableBytes(of: &v10) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T10>.size)
+            }
+            offset = offset &+ MemoryLayout<T10>.size
+            withUnsafeMutableBytes(of: &v11) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T11>.size)
+            }
+            offset = offset &+ MemoryLayout<T11>.size
+            withUnsafeMutableBytes(of: &v12) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T12>.size)
+            }
+            offset = offset &+ MemoryLayout<T12>.size
+            withUnsafeMutableBytes(of: &v13) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T13>.size)
+            }
+            offset = offset &+ MemoryLayout<T13>.size
+            withUnsafeMutableBytes(of: &v14) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T14>.size)
+            }
+            offset = offset &+ MemoryLayout<T14>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10),
+                T11(bigEndian: v11), T12(bigEndian: v12), T13(bigEndian: v13), T14(bigEndian: v14)
+            )
+        case .little:
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12),
+                T13(littleEndian: v13), T14(littleEndian: v14)
+            )
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<
         T1: FixedWidthInteger,
@@ -2526,6 +4528,125 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger,
+        T14: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        _ value10: T10,
+        _ value11: T11,
+        _ value12: T12,
+        _ value13: T13,
+        _ value14: T14,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14
+        ).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        var v4: T4
+        var v5: T5
+        var v6: T6
+        var v7: T7
+        var v8: T8
+        var v9: T9
+        var v10: T10
+        var v11: T11
+        var v12: T12
+        var v13: T13
+        var v14: T14
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+            v4 = value4.bigEndian
+            v5 = value5.bigEndian
+            v6 = value6.bigEndian
+            v7 = value7.bigEndian
+            v8 = value8.bigEndian
+            v9 = value9.bigEndian
+            v10 = value10.bigEndian
+            v11 = value11.bigEndian
+            v12 = value12.bigEndian
+            v13 = value13.bigEndian
+            v14 = value14.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+            v4 = value4.littleEndian
+            v5 = value5.littleEndian
+            v6 = value6.littleEndian
+            v7 = value7.littleEndian
+            v8 = value8.littleEndian
+            v9 = value9.littleEndian
+            v10 = value10.littleEndian
+            v11 = value11.littleEndian
+            v12 = value12.littleEndian
+            v13 = value13.littleEndian
+            v14 = value14.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v4) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T4>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v5) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T5>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v6) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T6>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v7) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T7>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v8) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T8>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v9) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T9>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v10) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T10>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v11) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T11>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v12) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T12>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v13) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T13>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v14) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T14>.size
+        return bytesWritten
     }
 
     @inlinable
@@ -2701,6 +4822,149 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func getMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger,
+        T14: FixedWidthInteger,
+        T15: FixedWidthInteger
+    >(
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15
+        ).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15)? {
+        var bytesRequired: Int = MemoryLayout<T1>.size
+        bytesRequired &+= MemoryLayout<T2>.size
+        bytesRequired &+= MemoryLayout<T3>.size
+        bytesRequired &+= MemoryLayout<T4>.size
+        bytesRequired &+= MemoryLayout<T5>.size
+        bytesRequired &+= MemoryLayout<T6>.size
+        bytesRequired &+= MemoryLayout<T7>.size
+        bytesRequired &+= MemoryLayout<T8>.size
+        bytesRequired &+= MemoryLayout<T9>.size
+        bytesRequired &+= MemoryLayout<T10>.size
+        bytesRequired &+= MemoryLayout<T11>.size
+        bytesRequired &+= MemoryLayout<T12>.size
+        bytesRequired &+= MemoryLayout<T13>.size
+        bytesRequired &+= MemoryLayout<T14>.size
+        bytesRequired &+= MemoryLayout<T15>.size
+
+        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {
+            return nil
+        }
+
+        var v1: T1 = 0
+        var v2: T2 = 0
+        var v3: T3 = 0
+        var v4: T4 = 0
+        var v5: T5 = 0
+        var v6: T6 = 0
+        var v7: T7 = 0
+        var v8: T8 = 0
+        var v9: T9 = 0
+        var v10: T10 = 0
+        var v11: T11 = 0
+        var v12: T12 = 0
+        var v13: T13 = 0
+        var v14: T14 = 0
+        var v15: T15 = 0
+        var offset = range.lowerBound
+        self.withUnsafeReadableBytes { ptr in
+            assert(ptr.count >= range.upperBound)
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
+            withUnsafeMutableBytes(of: &v1) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
+            }
+            offset = offset &+ MemoryLayout<T1>.size
+            withUnsafeMutableBytes(of: &v2) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T2>.size)
+            }
+            offset = offset &+ MemoryLayout<T2>.size
+            withUnsafeMutableBytes(of: &v3) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T3>.size)
+            }
+            offset = offset &+ MemoryLayout<T3>.size
+            withUnsafeMutableBytes(of: &v4) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T4>.size)
+            }
+            offset = offset &+ MemoryLayout<T4>.size
+            withUnsafeMutableBytes(of: &v5) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T5>.size)
+            }
+            offset = offset &+ MemoryLayout<T5>.size
+            withUnsafeMutableBytes(of: &v6) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T6>.size)
+            }
+            offset = offset &+ MemoryLayout<T6>.size
+            withUnsafeMutableBytes(of: &v7) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T7>.size)
+            }
+            offset = offset &+ MemoryLayout<T7>.size
+            withUnsafeMutableBytes(of: &v8) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T8>.size)
+            }
+            offset = offset &+ MemoryLayout<T8>.size
+            withUnsafeMutableBytes(of: &v9) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T9>.size)
+            }
+            offset = offset &+ MemoryLayout<T9>.size
+            withUnsafeMutableBytes(of: &v10) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T10>.size)
+            }
+            offset = offset &+ MemoryLayout<T10>.size
+            withUnsafeMutableBytes(of: &v11) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T11>.size)
+            }
+            offset = offset &+ MemoryLayout<T11>.size
+            withUnsafeMutableBytes(of: &v12) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T12>.size)
+            }
+            offset = offset &+ MemoryLayout<T12>.size
+            withUnsafeMutableBytes(of: &v13) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T13>.size)
+            }
+            offset = offset &+ MemoryLayout<T13>.size
+            withUnsafeMutableBytes(of: &v14) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T14>.size)
+            }
+            offset = offset &+ MemoryLayout<T14>.size
+            withUnsafeMutableBytes(of: &v15) { destPtr in
+                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T15>.size)
+            }
+            offset = offset &+ MemoryLayout<T15>.size
+            assert(offset == range.upperBound)
+        }
+        switch endianness {
+        case .big:
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10),
+                T11(bigEndian: v11), T12(bigEndian: v12), T13(bigEndian: v13), T14(bigEndian: v14), T15(bigEndian: v15)
+            )
+        case .little:
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12),
+                T13(littleEndian: v13), T14(littleEndian: v14), T15(littleEndian: v15)
+            )
+        }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<
         T1: FixedWidthInteger,
@@ -2842,6 +5106,132 @@ extension ByteBuffer {
             assert(offset == spaceNeeded)
             return offset
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    @discardableResult
+    public mutating func setMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger,
+        T14: FixedWidthInteger,
+        T15: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        _ value10: T10,
+        _ value11: T11,
+        _ value12: T12,
+        _ value13: T13,
+        _ value14: T14,
+        _ value15: T15,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15
+        ).self
+    ) -> Int {
+        var v1: T1
+        var v2: T2
+        var v3: T3
+        var v4: T4
+        var v5: T5
+        var v6: T6
+        var v7: T7
+        var v8: T8
+        var v9: T9
+        var v10: T10
+        var v11: T11
+        var v12: T12
+        var v13: T13
+        var v14: T14
+        var v15: T15
+        switch endianness {
+        case .big:
+            v1 = value1.bigEndian
+            v2 = value2.bigEndian
+            v3 = value3.bigEndian
+            v4 = value4.bigEndian
+            v5 = value5.bigEndian
+            v6 = value6.bigEndian
+            v7 = value7.bigEndian
+            v8 = value8.bigEndian
+            v9 = value9.bigEndian
+            v10 = value10.bigEndian
+            v11 = value11.bigEndian
+            v12 = value12.bigEndian
+            v13 = value13.bigEndian
+            v14 = value14.bigEndian
+            v15 = value15.bigEndian
+        case .little:
+            v1 = value1.littleEndian
+            v2 = value2.littleEndian
+            v3 = value3.littleEndian
+            v4 = value4.littleEndian
+            v5 = value5.littleEndian
+            v6 = value6.littleEndian
+            v7 = value7.littleEndian
+            v8 = value8.littleEndian
+            v9 = value9.littleEndian
+            v10 = value10.littleEndian
+            v11 = value11.littleEndian
+            v12 = value12.littleEndian
+            v13 = value13.littleEndian
+            v14 = value14.littleEndian
+            v15 = value15.littleEndian
+        }
+
+        var offset = index
+        var bytesWritten = 0
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v1) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T1>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v2) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T2>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v3) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T3>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v4) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T4>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v5) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T5>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v6) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T6>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v7) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T7>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v8) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T8>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v9) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T9>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v10) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T10>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v11) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T11>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v12) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T12>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v13) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T13>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v14) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T14>.size
+        bytesWritten &+= Swift.withUnsafeBytes(of: &v15) { self.setBytes($0, at: offset) }
+        offset = offset &+ MemoryLayout<T15>.size
+        return bytesWritten
     }
 
 }
