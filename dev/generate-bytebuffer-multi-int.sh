@@ -113,7 +113,7 @@ function gen() {
     done
     echo "        var offset = range.lowerBound"
     echo "        self.withUnsafeReadableBytes { ptr in"
-    echo "            assert(ptr.count >= range.upperBound)"
+    echo "            assert(ptr.count >= range.lowerBound + bytesRequired)"
     echo "            let basePtr = ptr.baseAddress! // safe, ptr is non-empty"
     for n in $(seq 1 "$how_many"); do
         echo "            withUnsafeMutableBytes(of: &v$n) { destPtr in"
