@@ -360,7 +360,14 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
                 }
             }
 
-        case .upgrading, .unbuffering, .finished:
+        case .finished:
+            // The channel was closed (e.g. the peer disconnected mid-upgrade) and the handler was
+            // removed from the pipeline while the future searching for an upgrader was still in flight.
+            // `handlerRemoved` already advanced us to `.finished` and failed the upgrade promise, so
+            // there is nothing left to do other than tolerate the late completion.
+            return nil
+
+        case .upgrading, .unbuffering:
             fatalError("Internal inconsistency in HTTPServerUpgradeStateMachine")
 
         case .modifying:

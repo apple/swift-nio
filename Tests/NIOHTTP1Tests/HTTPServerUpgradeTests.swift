@@ -2417,4 +2417,64 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
         try connectedServer.pipeline.waitForUpgraderToBeRemoved()
         XCTAssertEqual(errorCaught.wrappedValue, true)
     }
+
+    // Regression test for https://github.com/apple/swift-nio/issues/3596
+    //
+    // The handler can be removed from the pipeline (e.g. because the channel was closed by a peer
+    // disconnecting mid-upgrade) while the future searching for a suitable upgrader is still in
+    // flight. `handlerRemoved` advances the state machine to `.finished`, so when the search future
+    // later completes, `findingUpgraderCompleted` used to hit a `fatalError`. It must instead
+    // tolerate the late completion.
+    func testUpgraderSearchCompletingAfterHandlerRemovalDoesNotCrash() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            // The channel was force-closed below; tolerate whatever state it is in.
+            _ = try? channel.finish()
+        }
+
+        // An upgrader whose `buildUpgradeResponse` never completes until we say so. This keeps the
+        // state machine parked in `.awaitingUpgrader` with the search future outstanding.
+        let responsePromise = channel.eventLoop.makePromise(of: HTTPHeaders.self)
+        let upgrader = SuccessfulUpgrader(
+            forProtocol: "myproto",
+            requiringHeaders: [],
+            buildUpgradeResponseFuture: { _, _ in responsePromise.futureResult },
+            onUpgradeComplete: { _ in XCTFail("Upgrade must not complete after the channel was closed") }
+        )
+
+        let encoder = HTTPResponseEncoder()
+        let handler = NIOTypedHTTPServerUpgradeHandler<Bool>(
+            httpEncoder: encoder,
+            extraHTTPHandlers: [],
+            upgradeConfiguration: .init(
+                upgraders: [upgrader],
+                notUpgradingCompletionHandler: { $0.eventLoop.makeSucceededFuture(false) }
+            )
+        )
+
+        try channel.pipeline.syncOperations.addHandler(encoder)
+        try channel.pipeline.syncOperations.addHandler(handler)
+
+        // Drive the upgrade request in. This transitions the state machine into `.awaitingUpgrader`
+        // and kicks off the (now-stalled) search future.
+        var headers = HTTPHeaders()
+        headers.add(name: "Host", value: "localhost")
+        headers.add(name: "Upgrade", value: "myproto")
+        headers.add(name: "Connection", value: "upgrade")
+        let head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/", headers: headers)
+        try channel.writeInbound(HTTPServerRequestPart.head(head))
+        try channel.writeInbound(HTTPServerRequestPart.end(nil))
+
+        // Simulate the peer disconnecting mid-upgrade: closing the channel removes the handler from
+        // the pipeline, which advances the state machine to `.finished` and fails the upgrade promise.
+        channel.pipeline.fireChannelInactive()
+        try channel.close().wait()
+
+        // Now the in-flight upgrader search finally completes. Before the fix this hit a `fatalError`
+        // because the state machine was already `.finished`; it must now be tolerated silently.
+        responsePromise.succeed(headers)
+        channel.embeddedEventLoop.run()
+
+        XCTAssertFalse(channel.isActive)
+    }
 }
