@@ -3955,6 +3955,153 @@ extension ByteBufferTest {
         XCTAssertEqual(0, self.buf.readableBytes, "Buffer should be fully consumed after all reads.")
     }
 
+    func testGetAndSetMultipleIntegers() {
+        // This test mirrors 'testReadAndWriteMultipleIntegers' but uses set/getMultipleIntegers.
+        for endianness in [Endianness.little, .big] {
+            let v1: UInt8 = .random(in: .min ... .max)
+            let v2: UInt16 = .random(in: .min ... .max)
+            let v3: UInt32 = .random(in: .min ... .max)
+            let v4: UInt64 = .random(in: .min ... .max)
+            let v5: UInt64 = .random(in: .min ... .max)
+            let v6: UInt32 = .random(in: .min ... .max)
+            let v7: UInt16 = .random(in: .min ... .max)
+            let v8: UInt8 = .random(in: .min ... .max)
+            let v9: UInt16 = .random(in: .min ... .max)
+            let v10: UInt32 = .random(in: .min ... .max)
+
+            // Reserve some readable bytes in front so the integers don't start at the reader index.
+            self.buf.clear()
+            self.buf.writeRepeatingByte(0, count: 7)
+            let index = self.buf.writerIndex
+            self.buf.writeRepeatingByte(0, count: 256)
+
+            let startReaderIndex = self.buf.readerIndex
+            let startWriterIndex = self.buf.writerIndex
+            let written = self.buf.setMultipleIntegers(
+                v1,
+                v2,
+                v3,
+                v4,
+                v5,
+                v6,
+                v7,
+                v8,
+                v9,
+                v10,
+                at: index,
+                endianness: endianness,
+                as: (UInt8, UInt16, UInt32, UInt64, UInt64, UInt32, UInt16, UInt8, UInt16, UInt32).self
+            )
+            // set does not move either index.
+            XCTAssertEqual(startReaderIndex, self.buf.readerIndex, "endianness: \(endianness)")
+            XCTAssertEqual(startWriterIndex, self.buf.writerIndex, "endianness: \(endianness)")
+
+            let result = self.buf.getMultipleIntegers(
+                at: index,
+                endianness: endianness,
+                as: (UInt8, UInt16, UInt32, UInt64, UInt64, UInt32, UInt16, UInt8, UInt16, UInt32).self
+            )
+            // get does not move either index.
+            XCTAssertEqual(startReaderIndex, self.buf.readerIndex, "endianness: \(endianness)")
+            XCTAssertEqual(startWriterIndex, self.buf.writerIndex, "endianness: \(endianness)")
+            XCTAssertNotNil(result, "endianness: \(endianness)")
+
+            XCTAssertEqual(v1, result?.0, "endianness: \(endianness)")
+            XCTAssertEqual(v2, result?.1, "endianness: \(endianness)")
+            XCTAssertEqual(v3, result?.2, "endianness: \(endianness)")
+            XCTAssertEqual(v4, result?.3, "endianness: \(endianness)")
+            XCTAssertEqual(v5, result?.4, "endianness: \(endianness)")
+            XCTAssertEqual(v6, result?.5, "endianness: \(endianness)")
+            XCTAssertEqual(v7, result?.6, "endianness: \(endianness)")
+            XCTAssertEqual(v8, result?.7, "endianness: \(endianness)")
+            XCTAssertEqual(v9, result?.8, "endianness: \(endianness)")
+            XCTAssertEqual(v10, result?.9, "endianness: \(endianness)")
+
+            // The bytes we set must be byte-for-byte identical to those produced by writeMultipleIntegers.
+            var expected = ByteBufferAllocator().buffer(capacity: written)
+            expected.writeMultipleIntegers(
+                v1,
+                v2,
+                v3,
+                v4,
+                v5,
+                v6,
+                v7,
+                v8,
+                v9,
+                v10,
+                endianness: endianness,
+                as: (UInt8, UInt16, UInt32, UInt64, UInt64, UInt32, UInt16, UInt8, UInt16, UInt32).self
+            )
+            XCTAssertEqual(
+                self.buf.getSlice(at: index, length: written).map { Array($0.readableBytesView) },
+                Array(expected.readableBytesView),
+                "endianness: \(endianness)"
+            )
+        }
+    }
+
+    func testGetMultipleIntegersReturnsNilWhenOutOfBounds() {
+        self.buf.clear()
+        self.buf.writeRepeatingByte(0, count: 8)
+        // Move the reader index forward so we can also test indices that precede it.
+        self.buf.moveReaderIndex(forwardBy: 4)
+        let index = self.buf.readerIndex
+
+        // Asking for 4 bytes when only 4 are readable from `index` must return nil if we ask for more.
+        XCTAssertNil(self.buf.getMultipleIntegers(at: index, as: (UInt32, UInt8).self))
+        // Asking for an index before the reader index must return nil, even though those bytes exist.
+        XCTAssertNil(self.buf.getMultipleIntegers(at: index - 1, as: (UInt8, UInt8).self))
+        // A request that just fits must succeed.
+        XCTAssertNotNil(self.buf.getMultipleIntegers(at: index, as: (UInt16, UInt16).self))
+    }
+
+    func testAllByteBufferMultiByteVersionsGetSet() {
+        // This test mirrors 'testAllByteBufferMultiByteVersions' but using set/getMultipleIntegers.
+        let i = UInt8(86)
+        var index = self.buf.writerIndex
+
+        index += self.buf.setMultipleIntegers(i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, i, i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, i, i, i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, i, i, i, i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, i, i, i, i, i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, i, i, i, i, i, i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, i, i, at: index)
+        index += self.buf.setMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, i, i, i, at: index)
+
+        // setMultipleIntegers does not move the writer index (just like setInteger), so expose the
+        // bytes we just wrote before reading them back.
+        XCTAssertEqual(0, self.buf.writerIndex)
+        self.buf.moveWriterIndex(to: index)
+        XCTAssertEqual(Array(repeating: UInt8(86), count: 119), Array(self.buf.readableBytesView))
+
+        var readIndex = self.buf.readerIndex
+        var values2 = self.buf.getMultipleIntegers(at: readIndex, as: (UInt8, UInt8).self)!
+        readIndex += MemoryLayout<UInt8>.size * 2
+        var values3 = self.buf.getMultipleIntegers(at: readIndex, as: (UInt8, UInt8, UInt8).self)!
+        readIndex += MemoryLayout<UInt8>.size * 3
+        var values4 = self.buf.getMultipleIntegers(at: readIndex, as: (UInt8, UInt8, UInt8, UInt8).self)!
+        readIndex += MemoryLayout<UInt8>.size * 4
+        var values5 = self.buf.getMultipleIntegers(at: readIndex, as: (UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        readIndex += MemoryLayout<UInt8>.size * 5
+
+        XCTAssertEqual([i, i], withUnsafeBytes(of: &values2, { Array($0) }))
+        XCTAssertEqual([i, i, i], withUnsafeBytes(of: &values3, { Array($0) }))
+        XCTAssertEqual([i, i, i, i], withUnsafeBytes(of: &values4, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i], withUnsafeBytes(of: &values5, { Array($0) }))
+
+        // get must not have consumed anything.
+        XCTAssertEqual(self.buf.readerIndex, 0)
+        XCTAssertEqual(Array(repeating: UInt8(86), count: 119), Array(self.buf.readableBytesView))
+    }
+
     func testByteBufferEncode() throws {
         let encoder = JSONEncoder()
         let hello = "Hello, world!"
@@ -4552,6 +4699,32 @@ extension ByteBufferTest {
         XCTAssertNil(result)
         XCTAssertEqual(written, self.buf.readableBytes)
         XCTAssertEqual(0, self.buf.readerIndex)
+    }
+
+    func testReadInlineArrayWithNonZeroReaderIndex() throws {
+        guard #available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *) else {
+            throw XCTSkip("Span methods only available on 26 OSes")
+        }
+        // Write a prefix that we read off first so that the reader index is no
+        // longer zero before reading the `InlineArray`.
+        let prefix: [UInt8] = [0xaa, 0xbb, 0xcc]
+        let payload = (0..<10).map { _ in UInt8.random(in: .min ... .max) }
+        self.buf.writeBytes(prefix)
+        self.buf.writeBytes(payload)
+
+        XCTAssertEqual(prefix, self.buf.readBytes(length: prefix.count))
+        XCTAssertEqual(prefix.count, self.buf.readerIndex)
+        XCTAssertEqual(payload.count, self.buf.readableBytes)
+
+        let result = try XCTUnwrap(
+            self.buf.readInlineArray(as: InlineArray<10, UInt8>.self)
+        )
+        XCTAssertEqual(10, result.count)
+        for idx in result.indices {
+            XCTAssertEqual(payload[idx], result[idx])
+        }
+        XCTAssertEqual(0, self.buf.readableBytes)
+        XCTAssertEqual(prefix.count + payload.count, self.buf.readerIndex)
     }
 }
 #endif

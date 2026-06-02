@@ -359,6 +359,51 @@ class NonBlockingFileIOTest: XCTestCase {
         )
     }
 
+    func testReadMoreBytesThanAByteBufferCanHoldThrows() throws {
+        // A `ByteBuffer` can hold at most `UInt32.max` bytes. On 32-bit platforms `Int.max` is smaller than that so
+        // the request can never be expressed and there is nothing to test.
+        try XCTSkipIf(MemoryLayout<size_t>.size == MemoryLayout<UInt32>.size)
+        // The byte count is larger than a `ByteBuffer` can ever hold so the read must fail rather than silently
+        // returning fewer bytes than requested. The guard fires before any allocation, so this is cheap regardless of
+        // the requested size.
+        try withTemporaryFile(
+            content: "some-dummy-content",
+            { (filehandle, path) -> Void in
+                XCTAssertThrowsError(
+                    try self.fileIO.read(
+                        fileHandle: filehandle,
+                        // Use overflow addition so this compiles on 32-bit platforms where the test is skipped anyway.
+                        byteCount: Int(UInt32.max) &+ 1,
+                        allocator: .init(),
+                        eventLoop: self.eventLoop
+                    ).wait()
+                ) { error in
+                    guard let error = error as? IOError, error.errnoCode == EINVAL else {
+                        XCTFail("unexpected error: \(error)")
+                        return
+                    }
+                }
+            }
+        )
+    }
+
+    func testReadMoreBytesThanAByteBufferCanHoldThrowsAsync() async throws {
+        try XCTSkipIf(MemoryLayout<size_t>.size == MemoryLayout<UInt32>.size)
+        let fileIO = self.fileIO!
+        try await withTemporaryFile(content: "some-dummy-content") { filehandle, _ in
+            do {
+                _ = try await fileIO.read(
+                    fileHandle: filehandle,
+                    byteCount: Int(UInt32.max) &+ 1,
+                    allocator: .init()
+                )
+                XCTFail("expected read to throw")
+            } catch let error as IOError {
+                XCTAssertEqual(error.errnoCode, EINVAL)
+            }
+        }
+    }
+
     func testChunkedReadDoesNotReadShort() throws {
         var innerError: Error? = nil
         try withPipe { readFH, writeFH in
