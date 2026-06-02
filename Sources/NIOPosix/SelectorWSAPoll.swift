@@ -270,7 +270,7 @@ extension Selector: _SelectorBackendProtocol {
                 }
 
                 // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
-                guard let registration = registrations[Int(fd)] else {
+                guard let registration = self.registrations[Int(fd)] else {
                     continue
                 }
 
