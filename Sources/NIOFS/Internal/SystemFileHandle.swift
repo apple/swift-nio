@@ -665,7 +665,7 @@ extension SystemFileHandle.SendableView {
     }
 
     @_spi(Testing)
-    public func _close(materialize: Bool, failRenameat2WithEINVAL: Bool = false) -> Result<Void, FileSystemError> {
+    public func _close(materialize: Bool, simulatedRenameat2Errno: Errno? = nil) -> Result<Void, FileSystemError> {
         let descriptor: FileDescriptor? = self.lifecycle.withLockedValue { lifecycle in
             switch lifecycle {
             case let .open(descriptor):
@@ -684,7 +684,7 @@ extension SystemFileHandle.SendableView {
         let materializeResult = self._materialize(
             materialize,
             descriptor: descriptor,
-            failRenameat2WithEINVAL: failRenameat2WithEINVAL
+            simulatedRenameat2Errno: simulatedRenameat2Errno
         )
 
         return Result {
@@ -798,7 +798,7 @@ extension SystemFileHandle.SendableView {
     func _materialize(
         _ materialize: Bool,
         descriptor: FileDescriptor,
-        failRenameat2WithEINVAL: Bool
+        simulatedRenameat2Errno: Errno?
     ) -> Result<Void, FileSystemError> {
         guard let materialization = self.materialization else { return .success(()) }
 
@@ -837,8 +837,8 @@ extension SystemFileHandle.SendableView {
                 // ignored. However, they must still be provided to 'rename' in order to pass
                 // flags.
                 renameFunction = "renameat2"
-                if materialization.exclusive, failRenameat2WithEINVAL {
-                    renameResult = .failure(.invalidArgument)
+                if let simulatedRenameat2Errno {
+                    renameResult = .failure(simulatedRenameat2Errno)
                 } else {
                     renameResult = Syscall.rename(
                         from: createdPath,
@@ -857,10 +857,14 @@ extension SystemFileHandle.SendableView {
                         // creation, clear up by removing the file that we did create.
                         _ = Libc.remove(createdPath)
 
-                    case .failure(.invalidArgument):
-                        // If 'renameat2' failed on Linux with EINVAL then in all likelihood the
-                        // 'RENAME_NOREPLACE' option isn't supported. As we're doing an exclusive
-                        // create, check the desired path doesn't exist then do a regular rename.
+                    case let .failure(renameErrno)
+                    where renameErrno == .invalidArgument || renameErrno == .noFunction:
+                        // 'renameat2' isn't usable here. Either it failed on Linux with EINVAL, in
+                        // which case the 'RENAME_NOREPLACE' option in all likelihood isn't
+                        // supported, or it failed with ENOSYS, in which case the syscall isn't
+                        // implemented by the filesystem at all (seen on the FUSE-backed emulated
+                        // storage of some Android devices). As we're doing an exclusive create,
+                        // check the desired path doesn't exist then do a regular rename.
                         #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
                         switch Syscall.stat(path: desiredPath) {
                         case .failure(.noSuchFileOrDirectory):
@@ -891,7 +895,7 @@ extension SystemFileHandle.SendableView {
                                 message: "Couldn't open '\(desiredPath)'.",
                                 cause: FileSystemError.rename(
                                     "renameat2",
-                                    errno: .invalidArgument,
+                                    errno: renameErrno,
                                     oldName: createdPath,
                                     newName: desiredPath,
                                     location: .here()
@@ -907,6 +911,17 @@ extension SystemFileHandle.SendableView {
                     case .success, .failure:
                         ()
                     }
+                } else {
+                    // Non-exclusive materialization. On Linux 'renameat2' is called only to use the
+                    // '*at' form; with no flags it behaves exactly like 'rename'. If the syscall
+                    // isn't implemented by the filesystem it fails with ENOSYS (seen on the
+                    // FUSE-backed emulated storage of some Android devices); fall back to a plain
+                    // 'rename', which also atomically replaces any file at the destination.
+                    #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+                    if case .failure(.noFunction) = renameResult {
+                        renameResult = Syscall.rename(from: createdPath, to: desiredPath)
+                    }
+                    #endif
                 }
 
                 result = renameResult.mapError { errno in
