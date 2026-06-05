@@ -60,6 +60,15 @@ windows_6_0_command_arguments="${MATRIX_WINDOWS_6_0_COMMAND_ARGUMENTS:-}"
 windows_6_1_command_arguments="${MATRIX_WINDOWS_6_1_COMMAND_ARGUMENTS:-}"
 windows_6_2_command_arguments="${MATRIX_WINDOWS_6_2_COMMAND_ARGUMENTS:-}"
 windows_6_3_command_arguments="${MATRIX_WINDOWS_6_3_COMMAND_ARGUMENTS:-}"
+# BEGIN HACK -- TODO: Remove when 6.4 nightly Windows images exist -- https://github.com/apple/swift-nio/issues/3616
+# Hard-coding disabling Windows "nightly next" pipeline until swiftlang/swift:nightly-6.4.x-windows exist
+#       This is the lesser of evils since 6.3 shipped ages ago, we want to bump the "nightly next" pipelines to 6.4 and
+#       images do exist for Linux. Adopters will have been presuming "nightly next" is means 6.4 for some time now.
+#       However, only updating Linux "nightly next" job to 6.4 and leaving the Windows one on 6.3 seems even worse.
+#       Because it's a "nightly next" job, we can just silently stop generating it. It's the most "honest" -- anything
+#       else (insta-fail, insta-pass, stay on 6.3) wouldn't actually do what's advertised.
+MATRIX_WINDOWS_NIGHTLY_NEXT_ENABLED=false
+# END HACK
 windows_nightly_next_enabled="${MATRIX_WINDOWS_NIGHTLY_NEXT_ENABLED:=false}"
 windows_nightly_next_command_arguments="${MATRIX_WINDOWS_NIGHTLY_NEXT_COMMAND_ARGUMENTS:-}"
 windows_nightly_main_enabled="${MATRIX_WINDOWS_NIGHTLY_MAIN_ENABLED:=false}"
@@ -77,7 +86,7 @@ linux_6_0_container_image="swift:6.0-jammy"
 linux_6_1_container_image="swift:6.1-jammy"
 linux_6_2_container_image="swift:6.2-noble"
 linux_6_3_container_image="swift:6.3-noble"
-linux_nightly_next_container_image="swiftlang/swift:nightly-6.3-noble"
+linux_nightly_next_container_image="swiftlang/swift:nightly-6.4.x-noble"
 linux_nightly_main_container_image="swiftlang/swift:nightly-main-noble"
 
 windows_6_0_runner="windows-2022"
@@ -89,7 +98,7 @@ windows_6_2_container_image="swift:6.2-windowsservercore-ltsc2022"
 windows_6_3_runner="windows-2022"
 windows_6_3_container_image="swift:6.3-windowsservercore-ltsc2022"
 windows_nightly_next_runner="windows-2022"
-windows_nightly_next_container_image="swiftlang/swift:nightly-6.3-windowsservercore-ltsc2022"
+windows_nightly_next_container_image="swiftlang/swift:nightly-6.4.x-windowsservercore-ltsc2022"
 windows_nightly_main_runner="windows-2022"
 windows_nightly_main_container_image="swiftlang/swift:nightly-main-windowsservercore-ltsc2022"
 
