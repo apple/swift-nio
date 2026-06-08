@@ -98,8 +98,8 @@ jobs:
           INPUT_RELEASE_6_3_ENABLED: ${{ inputs.release_6_3_enabled }}
           INPUT_ENV_VARS: ${{ inputs.env_vars }}
           INPUT_ADDITIONAL_COMMAND_ARGUMENTS: ${{ inputs.additional_command_arguments }}
-          NIGHTLY_NEXT_VERSION: nightly-6.3
-          NIGHTLY_NEXT_BRANCH: swift-6.3-branch
+          NIGHTLY_NEXT_VERSION: nightly-6.4
+          NIGHTLY_NEXT_BRANCH: swift-6.4-branch
 
   wasm-swift-sdk:
     name: WebAssembly Swift SDK
