@@ -220,7 +220,7 @@ jobs:
           MATRIX_ENV_JSON: ${{ toJSON(matrix.config.env) }}
       - name: Run benchmarks script
         run: |
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/sb/bump-nightly-next/scripts/check_benchmark_thresholds.sh | bash -s -- --disable-sandbox --allow-writing-to-package-directory
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | bash -s -- --disable-sandbox --allow-writing-to-package-directory
         env:
           BENCHMARK_PACKAGE_PATH: ${{ inputs.benchmark_package_path }}
           BENCHMARK_PACKAGE_PATHS: ${{ inputs.benchmark_package_paths }}
