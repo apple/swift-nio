@@ -162,9 +162,9 @@ import Testing
         buffer.writeString("GET / HTTP/1.1\r\nHost: example.com\r\n")
         try channel.writeInbound(buffer)
 
-        // Default limit is UInt16.max fields. Sending UInt16.max+1 should fail.
+        // Default limit is UInt16.max - 1 fields. Sending UInt16.max should fail.
         var threwError = false
-        for i in 0..<(Int(UInt16.max) + 1) {
+        for i in 0..<Int(UInt16.max) {
             let headerBuffer = ByteBuffer(string: "X-H-\(i): v\r\n")
             do {
                 try channel.writeInbound(headerBuffer)
@@ -174,7 +174,7 @@ import Testing
             }
         }
 
-        #expect(threwError, "Expected default field count limit to reject request with UInt16.max+1 headers")
+        #expect(threwError, "Expected default field count limit to reject request with UInt16.max headers")
         _ = try? channel.finish()
     }
 
