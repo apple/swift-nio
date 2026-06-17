@@ -15,7 +15,6 @@
 import NIOConcurrencyHelpers
 import NIOCore
 @_spi(Testing) @testable import NIOFS
-import SystemPackage
 import XCTest
 
 extension NIOFilePath {
