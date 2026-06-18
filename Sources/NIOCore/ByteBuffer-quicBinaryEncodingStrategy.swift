@@ -72,13 +72,13 @@ extension ByteBuffer {
             // The second case cannot be represented at all in UInt8, because 16383 is too big
             // Swift will end up creating the 16383 literal as 0, and thus we will fall all the way through to the default
             switch UInt64(integer) {
-            case 0..<63:
+            case 0...63:
                 return 1
-            case 0..<16383:
+            case 0...16383:
                 return 2
-            case 0..<1_073_741_823:
+            case 0...1_073_741_823:
                 return 4
-            case 0..<4_611_686_018_427_387_903:
+            case 0...4_611_686_018_427_387_903:
                 return 8
             default:
                 fatalError("QUIC variable-length integer outside of valid range")
