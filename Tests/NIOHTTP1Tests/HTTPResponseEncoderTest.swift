@@ -37,6 +37,7 @@ class HTTPResponseEncoderTests: XCTestCase {
     private func sendResponse(
         withStatus status: HTTPResponseStatus,
         andHeaders headers: HTTPHeaders,
+        version: HTTPVersion = .http1_1,
         configuration: HTTPResponseEncoder.Configuration = .init()
     ) -> ByteBuffer {
         let channel = EmbeddedChannel()
@@ -47,7 +48,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         XCTAssertNoThrow(
             try channel.pipeline.syncOperations.addHandler(HTTPResponseEncoder(configuration: configuration))
         )
-        var switchingResponse = HTTPResponseHead(version: .http1_1, status: status)
+        var switchingResponse = HTTPResponseHead(version: version, status: status)
         switchingResponse.headers = headers
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(switchingResponse)))
         do {
@@ -61,6 +62,47 @@ class HTTPResponseEncoderTests: XCTestCase {
             var buf = channel.allocator.buffer(capacity: 16)
             buf.writeString("unexpected error: \(error)")
             return buf
+        }
+    }
+
+    /// The encoder writes hand-optimised status lines for the well-known statuses (rather than
+    /// going through the general `default` path that uses `HTTPResponseStatus.reasonPhrase`). Those
+    /// fast paths must stay in lockstep with `reasonPhrase` and must carry the correct HTTP version,
+    /// otherwise the bytes on the wire depend on whether a status happens to have a fast path.
+    func testStatusLineFastPathsMatchCanonicalReasonPhraseAndVersion() throws {
+        let statuses: [HTTPResponseStatus] = [
+            .continue, .switchingProtocols, .processing,
+            .ok, .created, .accepted, .nonAuthoritativeInformation, .noContent, .resetContent,
+            .partialContent, .multiStatus, .alreadyReported, .imUsed,
+            .multipleChoices, .movedPermanently, .found, .seeOther, .notModified, .useProxy,
+            .temporaryRedirect, .permanentRedirect,
+            .badRequest, .unauthorized, .paymentRequired, .forbidden, .notFound, .methodNotAllowed,
+            .notAcceptable, .proxyAuthenticationRequired, .requestTimeout, .conflict, .gone,
+            .lengthRequired, .preconditionFailed, .payloadTooLarge, .uriTooLong, .unsupportedMediaType,
+            .rangeNotSatisfiable, .expectationFailed, .imATeapot, .misdirectedRequest,
+            .unprocessableEntity, .locked, .failedDependency, .upgradeRequired, .preconditionRequired,
+            .tooManyRequests, .requestHeaderFieldsTooLarge, .unavailableForLegalReasons,
+            .internalServerError, .notImplemented, .badGateway, .serviceUnavailable, .gatewayTimeout,
+            .httpVersionNotSupported, .variantAlsoNegotiates, .insufficientStorage, .loopDetected,
+            .notExtended, .networkAuthenticationRequired,
+        ]
+
+        for version in [HTTPVersion.http1_0, .http1_1] {
+            for status in statuses {
+                let written = sendResponse(
+                    withStatus: status,
+                    andHeaders: HTTPHeaders(),
+                    version: version
+                )
+                let bytes = written.getString(at: written.readerIndex, length: written.readableBytes)!
+                let statusLine = bytes.components(separatedBy: "\r\n").first ?? ""
+                let expected = "HTTP/\(version.major).\(version.minor) \(status.code) \(status.reasonPhrase)"
+                XCTAssertEqual(
+                    statusLine,
+                    expected,
+                    "status line for \(status) on HTTP/\(version.major).\(version.minor) did not match canonical form"
+                )
+            }
         }
     }
 

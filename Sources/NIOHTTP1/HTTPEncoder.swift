@@ -387,7 +387,7 @@ extension ByteBuffer {
         case (1, 0, .useProxy):
             self.writeStaticString("HTTP/1.0 305 Use Proxy\r\n")
         case (1, 0, .temporaryRedirect):
-            self.writeStaticString("HTTP/1.0 307 Tempory Redirect\r\n")
+            self.writeStaticString("HTTP/1.0 307 Temporary Redirect\r\n")
         case (1, 0, .permanentRedirect):
             self.writeStaticString("HTTP/1.0 308 Permanent Redirect\r\n")
         case (1, 0, .badRequest):
@@ -465,7 +465,7 @@ extension ByteBuffer {
         case (1, 0, .notExtended):
             self.writeStaticString("HTTP/1.0 510 Not Extended\r\n")
         case (1, 0, .networkAuthenticationRequired):
-            self.writeStaticString("HTTP/1.1 511 Network Authentication Required\r\n")
+            self.writeStaticString("HTTP/1.0 511 Network Authentication Required\r\n")
 
         // Optimization for HTTP/1.1
         case (1, 1, .custom(_, _)):
@@ -511,7 +511,7 @@ extension ByteBuffer {
         case (1, 1, .useProxy):
             self.writeStaticString("HTTP/1.1 305 Use Proxy\r\n")
         case (1, 1, .temporaryRedirect):
-            self.writeStaticString("HTTP/1.1 307 Tempory Redirect\r\n")
+            self.writeStaticString("HTTP/1.1 307 Temporary Redirect\r\n")
         case (1, 1, .permanentRedirect):
             self.writeStaticString("HTTP/1.1 308 Permanent Redirect\r\n")
         case (1, 1, .badRequest):
@@ -547,7 +547,7 @@ extension ByteBuffer {
         case (1, 1, .unsupportedMediaType):
             self.writeStaticString("HTTP/1.1 415 Unsupported Media Type\r\n")
         case (1, 1, .rangeNotSatisfiable):
-            self.writeStaticString("HTTP/1.1 416 Request Range Not Satisified\r\n")
+            self.writeStaticString("HTTP/1.1 416 Range Not Satisfiable\r\n")
         case (1, 1, .expectationFailed):
             self.writeStaticString("HTTP/1.1 417 Expectation Failed\r\n")
         case (1, 1, .misdirectedRequest):
@@ -565,7 +565,7 @@ extension ByteBuffer {
         case (1, 1, .tooManyRequests):
             self.writeStaticString("HTTP/1.1 429 Too Many Requests\r\n")
         case (1, 1, .requestHeaderFieldsTooLarge):
-            self.writeStaticString("HTTP/1.1 431 Range Not Satisfiable\r\n")
+            self.writeStaticString("HTTP/1.1 431 Request Header Fields Too Large\r\n")
         case (1, 1, .unavailableForLegalReasons):
             self.writeStaticString("HTTP/1.1 451 Unavailable For Legal Reasons\r\n")
         case (1, 1, .internalServerError):
