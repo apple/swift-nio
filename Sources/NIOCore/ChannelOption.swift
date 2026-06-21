@@ -236,6 +236,12 @@ extension ChannelOptions {
             public init() {}
         }
 
+        /// When set to true timestamp information will be reported through `AddressedEnvelope.Metadata`
+        public struct TimestampOption: ChannelOption, Sendable {
+            public typealias Value = Bool
+            public init() {}
+        }
+
         /// The watermark used to detect when `Channel.isWritable` returns `true` or `false`.
         public struct WriteBufferWaterMark: Sendable {
             /// The low mark setting for a `Channel`.
@@ -379,6 +385,9 @@ public struct ChannelOptions: Sendable {
     /// - seealso: `ExplicitCongestionNotificationsOption`
     public static let explicitCongestionNotification = Types.ExplicitCongestionNotificationsOption()
 
+    /// - seealso: `TimestampOption`
+    public static let timestamp = Types.TimestampOption()
+
     /// - seealso: `ReceivePacketInfo`
     public static let receivePacketInfo = Types.ReceivePacketInfo()
 
@@ -475,6 +484,11 @@ extension ChannelOption where Self == ChannelOptions.Types.DatagramReceiveSegmen
 /// - seealso: `ExplicitCongestionNotificationsOption`.
 extension ChannelOption where Self == ChannelOptions.Types.ExplicitCongestionNotificationsOption {
     public static var explicitCongestionNotification: Self { .init() }
+}
+
+/// - seealso: `TimestampOption`.
+extension ChannelOption where Self == ChannelOptions.Types.TimestampOption {
+    public static var timestamp: Self { .init() }
 }
 
 /// - seealso: `ReceivePacketInfo`.
