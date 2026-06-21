@@ -42,6 +42,7 @@
 import XCTest
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+nonisolated(nonsending)
 internal func XCTAssertThrowsError<T>(
     _ expression: @autoclosure () async throws -> T,
     file: StaticString = #filePath,
@@ -57,6 +58,7 @@ internal func XCTAssertThrowsError<T>(
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+nonisolated(nonsending)
 internal func XCTAssertNoThrowWithResult<Result>(
     _ expression: @autoclosure () async throws -> Result,
     file: StaticString = #filePath,

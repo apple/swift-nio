@@ -88,7 +88,7 @@ public func measureAndPrint(desc: String, fn: () throws -> Int) rethrows {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public func measure(_ fn: () async throws -> Int) async rethrows -> [Double] {
-    func measureOne(_ fn: () async throws -> Int) async rethrows -> Double {
+    nonisolated(nonsending) func measureOne(_ fn: () async throws -> Int) async rethrows -> Double {
         let start = DispatchTime.now().uptimeNanoseconds
         _ = try await fn()
         let end = DispatchTime.now().uptimeNanoseconds
