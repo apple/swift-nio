@@ -878,7 +878,20 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
             } while !drained && iterations < 1000
             precondition(drained, "EventLoop \(self) didn't quiesce after 1000 ticks.")
 
+            // NOTE: On Darwin, vsock (virtual sockets) used by Apple's Containerization
+            // framework can cause the event loop to exit abnormally when the hypervisor
+            // closes connections. In this case, the state machine may not have transitioned
+            // to .noLongerRunning. We handle this gracefully instead of asserting.
+            // See: https://github.com/apple/swift-nio/issues/3500
+            //      https://github.com/apple/containerization/issues/503
+            #if canImport(Darwin)
+            if self.internalState != .noLongerRunning {
+                // Abnormal exit (likely vsock disconnection) - force state transition
+                self.internalState = .noLongerRunning
+            }
+            #else
             assert(self.internalState == .noLongerRunning, "illegal state: \(self.internalState)")
+            #endif
             self.internalState = .exitingThread
         }
         var nextReadyDeadline: NIODeadline? = nil
