@@ -94,7 +94,7 @@ class HTTPResponseEncoderTests: XCTestCase {
                     andHeaders: HTTPHeaders(),
                     version: version
                 )
-                let bytes = written.getString(at: written.readerIndex, length: written.readableBytes)!
+                let bytes = String(buffer: written)
                 let statusLine = bytes.components(separatedBy: "\r\n").first ?? ""
                 let expected = "HTTP/\(version.major).\(version.minor) \(status.code) \(status.reasonPhrase)"
                 XCTAssertEqual(
