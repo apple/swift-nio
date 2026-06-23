@@ -158,7 +158,7 @@ private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointe
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 #endif
 
-#if os(Linux) || os(Android) || canImport(Darwin) || os(OpenBSD)
+#if os(Linux) || os(Android) || os(FreeBSD) || canImport(Darwin) || os(OpenBSD)
 private let sysFstat = fstat
 private let sysStat = stat
 private let sysLstat = lstat
@@ -175,6 +175,8 @@ private let sysRemove = remove
 #if os(Linux) || os(Android)
 private let sysSendMmsg = CNIOLinux_sendmmsg
 private let sysRecvMmsg = CNIOLinux_recvmmsg
+#elseif os(FreeBSD)
+private let sysKevent = kevent
 #elseif os(OpenBSD)
 private let sysKevent = kevent
 private let sysSendMmsg = CNIOOpenBSD_sendmmsg
@@ -1092,11 +1094,13 @@ extension Posix {
 }
 #endif
 
-#if canImport(Darwin) || os(OpenBSD)
+#if canImport(Darwin) || os(OpenBSD) || os(FreeBSD)
 #if canImport(Darwin)
 internal typealias kevent_timespec = Darwin.timespec
 #elseif os(OpenBSD)
 internal typealias kevent_timespec = CNIOOpenBSD.timespec
+#elseif os(FreeBSD)
+internal typealias kevent_timespec = Glibc.timespec
 #else
 #error("implementation missing")
 #endif
@@ -1113,6 +1117,8 @@ internal enum KQueue: Sendable {
             Darwin.kqueue()
             #elseif os(OpenBSD)
             CNIOOpenBSD.kqueue()
+            #elseif os(FreeBSD)
+            Glibc.kqueue()
             #else
             #error("implementation missing")
             #endif

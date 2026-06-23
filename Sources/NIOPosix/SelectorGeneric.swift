@@ -110,7 +110,7 @@ struct SelectorEventSet: OptionSet, Equatable, Sendable {
 }
 
 internal let isEarlyEOFDeliveryWorkingOnThisOS: Bool = {
-    #if canImport(Darwin)
+    #if canImport(Darwin) || os(FreeBSD)
     return false  // rdar://53656794 , once fixed we need to do an OS version check here.
     #else
     return true
@@ -187,7 +187,7 @@ internal class Selector<R: Registration> {
     var selectorFD: CInt = -1  // -1 == we're closed
 
     // Here we add the stored properties that are used by the specific backends
-    #if canImport(Darwin) || os(OpenBSD)
+    #if canImport(Darwin) || os(OpenBSD) || os(FreeBSD)
     @usableFromInline
     typealias EventType = kevent
     #elseif os(Linux) || os(Android)
