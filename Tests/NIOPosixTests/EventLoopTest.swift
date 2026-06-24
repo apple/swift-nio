@@ -2567,7 +2567,7 @@ final class AutoreleaseOnDeiniter: Sendable {
     }
 }
 
-extension Optional<AutoreleaseOnDeiniter> {
+extension AutoreleaseOnDeiniter? {
     // This helper ensures that any reference is dropped by the time the
     // return value is produced.
     mutating func takeIntoClosure() -> @Sendable () -> Void {
