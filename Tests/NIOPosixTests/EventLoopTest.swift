@@ -2353,6 +2353,56 @@ final class MultiThreadedEventLoopGroupTests {
         let descriptionsCount = try descriptions.wait().count
         #expect(iterations == descriptionsCount)
     }
+
+    @Test
+    func testAutoreleasePoolOnTaskRun() async throws {
+        #if canImport(Darwin)
+        let value = NIOLockedValueBox(0)
+        try await MultiThreadedEventLoopGroup.withEventLoopGroup(
+            numberOfThreads: 1
+        ) { group in
+            try await group.any().submit {
+                let flipper = DeinitFlipper(value: value)
+
+                // `passRetained` does a +1, the subsequent autorelease will only
+                // actually deinit once the pool is emptied.
+                _ = Unmanaged.passRetained(flipper).autorelease()
+            }.get()
+
+            #expect(value.withLockedValue { $0 } == 1)
+        }
+        #endif
+    }
+
+    @Test
+    func testAutoreleasePoolOnTaskDeinit() async throws {
+        #if canImport(Darwin)
+        let value = NIOLockedValueBox(0)
+        var autoreleaser = Optional(AutoreleaseOnDeiniter(value: value))
+
+        try await MultiThreadedEventLoopGroup.withEventLoopGroup(
+            numberOfThreads: 1
+        ) { group in
+            // We just need to capture the autoreleaser, but we need to make sure the last reference
+            // is consumed _in this closure_. Hence, we do an optional `take` to nil out the
+            // value.
+            let future = {
+                let closure = autoreleaser.takeIntoClosure()
+                return group.any().scheduleTask(in: .milliseconds(50), closure).futureResult
+            }()
+
+            try await future.get()
+
+            // Now we need to force another tick to pass. We know the first tick finished because
+            // we completed the future, so let's do another. Otherwise we have a timing window
+            // here, as the future may have completed but the tick is still running.
+            try await group.any().submit {
+                ()
+            }.get()
+            #expect(value.withLockedValue { $0 } == 1)
+        }
+        #endif
+    }
 }
 
 private final class EventLoopWithPreSucceededFuture: EventLoop {
@@ -2487,3 +2537,46 @@ final class EventLoopGroupOf3WithoutAnAnyImplementation: EventLoopGroup {
         .init(self.eventloops)
     }
 }
+
+final class DeinitFlipper {
+    private let value: NIOLockedValueBox<Int>
+
+    init(value: NIOLockedValueBox<Int>) {
+        self.value = value
+    }
+
+    deinit {
+        self.value.withLockedValue { $0 += 1 }
+    }
+}
+
+#if canImport(Darwin)
+final class AutoreleaseOnDeiniter: Sendable {
+    let value: NIOLockedValueBox<Int>
+
+    init(value: NIOLockedValueBox<Int>) {
+        self.value = value
+    }
+
+    deinit {
+        let flipper = DeinitFlipper(value: self.value)
+
+        // `passRetained` does a +1, the subsequent autorelease will only
+        // actually deinit once the pool is emptied.
+        _ = Unmanaged.passRetained(flipper).autorelease()
+    }
+}
+
+extension Optional<AutoreleaseOnDeiniter> {
+    // This helper ensures that any reference is dropped by the time the
+    // return value is produced.
+    mutating func takeIntoClosure() -> @Sendable () -> Void {
+        let autoreleaser = self.take()
+
+        return { [autoreleaser] in
+            #expect(autoreleaser!.value.withLockedValue { $0 } == 0)
+        }
+    }
+}
+
+#endif
