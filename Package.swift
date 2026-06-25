@@ -47,6 +47,7 @@ let package = Package(
         .library(name: "NIO", targets: ["NIO"]),
         .library(name: "NIOEmbedded", targets: ["NIOEmbedded"]),
         .library(name: "NIOPosix", targets: ["NIOPosix"]),
+        .library(name: "NIOAsyncRuntime", targets: ["NIOAsyncRuntime"]),
         .library(name: "_NIOConcurrency", targets: ["_NIOConcurrency"]),
         .library(name: "NIOTLS", targets: ["NIOTLS"]),
         .library(name: "NIOHTTP1", targets: ["NIOHTTP1"]),
@@ -115,6 +116,14 @@ let package = Package(
             swiftSettings: swiftSettings
         ),
         .target(
+            name: "NIOAsyncRuntime",
+            dependencies: [
+                "NIOCore"
+            ],
+            exclude: ["README.md"],
+            swiftSettings: swiftSettings
+        ),
+        .target(
             name: "NIO",
             dependencies: [
                 "NIOCore",
@@ -128,6 +137,19 @@ let package = Package(
             dependencies: [
                 .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
+            ],
+            swiftSettings: swiftSettings
+        ),
+        // Sole purpose of this target is to check all modules
+        // currently expected to pass compilation for WASI platforms
+        .target(
+            name: "_NIOWASIPlatformCompilationChecks",
+            dependencies: [
+                .target(name: "NIOAsyncRuntime", condition: .when(platforms: [.wasi])),
+                "NIOCore",
+                "NIOEmbedded",  // This should be properly elided in source files for WASI platforms
+                "NIOPosix",  // This should be properly elided in source files for WASI platforms
+                swiftAtomics,
             ],
             swiftSettings: swiftSettings
         ),
@@ -511,6 +533,17 @@ let package = Package(
                 "CNIOLinux",
                 "CNIODarwin",
                 "NIOTLS",
+            ],
+            swiftSettings: swiftSettings
+        ),
+        .testTarget(
+            name: "NIOAsyncRuntimeTests",
+            dependencies: [
+                "NIOAsyncRuntime",
+                "NIOCore",
+                "NIOConcurrencyHelpers",
+                "NIOFoundationCompat",
+                "NIOTestUtils",
             ],
             swiftSettings: swiftSettings
         ),
