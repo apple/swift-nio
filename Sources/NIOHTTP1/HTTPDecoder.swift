@@ -546,16 +546,19 @@ public struct NIOHTTPDecoderLimitConfiguration: Sendable, Hashable {
     /// Maximum size (in bytes) of a single header field (name + value). Default: 81,920 (80 KB).
     public var maxHeaderFieldSize: Int
 
-    /// Maximum total size (in bytes) of all header field names and values combined in a single message. Default: 2,097,152 (2 MB).
+    /// Maximum total size (in bytes) of all header field names and values combined in a single message. Default: 81,920 (80 KB).
     public var maxHeaderListSize: Int
 
-    /// Maximum number of header fields allowed in a single message (including trailers). Default: 256.
+    /// Maximum number of header fields allowed in a single message (including trailers). Default: 65,534.
+    ///
+    /// The default is `UInt16.max - 1` for compatibility with `swift-http-types`, whose
+    /// `HTTPFields` representation supports up to that many fields.
     public var maxHeaderFieldCount: Int
 
     public init() {
         self.maxHeaderFieldSize = 80 * 1024
-        self.maxHeaderListSize = 16384 * 128
-        self.maxHeaderFieldCount = 256
+        self.maxHeaderListSize = 80 * 1024
+        self.maxHeaderFieldCount = Int(UInt16.max) - 1
     }
 }
 
