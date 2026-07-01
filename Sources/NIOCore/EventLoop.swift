@@ -1165,7 +1165,7 @@ extension EventLoop {
     /// - Returns: a succeeded `EventLoopFuture`.
     @preconcurrency
     @inlinable
-    public func makeSucceededFuture<Success: Sendable>(_ value: Success) -> EventLoopFuture<Success> {
+    public func makeSucceededFuture<Success>(_ value: sending Success) -> EventLoopFuture<Success> {
         if Success.self == Void.self {
             // The as! will always succeed because we previously checked that Success.self == Void.self.
             return self.makeSucceededVoidFuture() as! EventLoopFuture<Success>
@@ -1197,7 +1197,7 @@ extension EventLoop {
     /// - Returns: A completed `EventLoopFuture`.
     @preconcurrency
     @inlinable
-    public func makeCompletedFuture<Success: Sendable>(_ result: Result<Success, Error>) -> EventLoopFuture<Success> {
+    public func makeCompletedFuture<Success>(_ result: sending Result<Success, Error>) -> EventLoopFuture<Success> {
         switch result {
         case .success(let value):
             return self.makeSucceededFuture(value)
@@ -1218,6 +1218,23 @@ extension EventLoop {
     ) -> EventLoopFuture<Success> {
         let trans = Result(catching: body)
         return self.makeCompletedFuture(trans)
+    }
+
+    /// Creates and returns a new `EventLoopFuture` that is marked as succeeded or failed with the value returned by `body`.
+    ///
+    /// - Parameters:
+    ///   - body: The function that is used to complete the `EventLoopFuture`
+    /// - Returns: A completed `EventLoopFuture`.
+    @inlinable
+    public func makeCompletedFutureSending<Success>(
+        withResultOf body: () throws -> sending Success
+    ) -> EventLoopFuture<Success> {
+        do {
+            let success = try body()
+            return self.makeCompletedFuture(.success(success))
+        } catch {
+            return self.makeCompletedFuture(.failure(error))
+        }
     }
 
     /// An `EventLoop` forms a singular `EventLoopGroup`, returning itself as the 'next' `EventLoop`.

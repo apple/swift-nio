@@ -131,8 +131,31 @@ extension EventLoopPromise {
     @preconcurrency
     @inlinable
     public func completeWithTask(
-        _ body: @escaping @Sendable () async throws -> Value
+        _ body: sending @escaping () async throws -> Value
     ) -> Task<Void, Never> where Value: Sendable {
+        Task {
+            do {
+                let value = try await body()
+                self.succeed(value)
+            } catch {
+                self.fail(error)
+            }
+        }
+    }
+
+    /// Complete a future with the result (or error) of the `async` function `body`.
+    ///
+    /// This function can be used to bridge the `async` world into an `EventLoopPromise`.
+    ///
+    /// - Parameters:
+    ///   - body: The `async` function to run.
+    /// - Returns: A `Task` which was created to `await` the `body`.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @discardableResult
+    @inlinable
+    public func completeWithTaskSending(
+        _ body: sending @escaping () async throws -> sending Value
+    ) -> Task<Void, Never> {
         Task {
             do {
                 let value = try await body()
@@ -526,10 +549,20 @@ extension EventLoop {
     @preconcurrency
     @inlinable
     public func makeFutureWithTask<Return: Sendable>(
-        _ body: @Sendable @escaping () async throws -> Return
+        _ body: sending @escaping () async throws -> Return
     ) -> EventLoopFuture<Return> {
         let promise = self.makePromise(of: Return.self)
         promise.completeWithTask(body)
+        return promise.futureResult
+    }
+
+    @preconcurrency
+    @inlinable
+    public func makeFutureWithTaskSending<Return>(
+        _ body: sending @escaping () async throws -> sending Return
+    ) -> EventLoopFuture<Return> {
+        let promise = self.makePromise(of: Return.self)
+        promise.completeWithTaskSending(body)
         return promise.futureResult
     }
 }
