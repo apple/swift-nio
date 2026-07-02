@@ -809,7 +809,11 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
                 self.run(task)
             }
             // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
-            self.tasksCopy.removeAll(keepingCapacity: true)
+            //
+            // This needs an autorelease pool as we potentially run arbitrary user code here on deinit.
+            withAutoReleasePool {
+                self.tasksCopy.removeAll(keepingCapacity: true)
+            }
         }
     }
 

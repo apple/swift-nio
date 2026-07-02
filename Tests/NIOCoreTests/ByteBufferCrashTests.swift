@@ -16,7 +16,7 @@ import Foundation
 @_spi(CustomByteBufferAllocator) import NIOCore
 import Testing
 
-#if compiler(>=6.2)
+#if compiler(>=6.2) && !(canImport(Darwin) && !os(macOS))
 @Suite struct ByteBufferCrashTests {
 
     @Test func copyBytesToIndexExceedingUInt32Max() async {
