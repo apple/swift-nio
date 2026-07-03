@@ -19,6 +19,8 @@ Repository | NIO 2
 [https://github.com/apple/swift-nio-extras][repo-nio-extras] <br>useful additions around SwiftNIO | `from: "1.0.0"`
 [https://github.com/apple/swift-nio-transport-services][repo-nio-transport-services] <br> first-class support for macOS, iOS, tvOS, and watchOS | `from: "1.0.0"`
 [https://github.com/apple/swift-nio-ssh][repo-nio-ssh] <br> SSH support | `.upToNextMinor(from: "0.2.0")`
+[https://github.com/apple/swift-nio-quic][repo-nio-quic] <br> QUIC support (in active development) | `branch: "main"`
+[https://github.com/apple/swift-nio-http3][repo-nio-http3] <br> HTTP/3 support (in active development) | `branch: "main"`
 
 Within this repository we have a number of products that provide different functionality. This package contains the following products:
 
@@ -366,3 +368,5 @@ dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 [repo-nio-ssl]: https://github.com/apple/swift-nio-ssl
 [repo-nio-transport-services]: https://github.com/apple/swift-nio-transport-services
 [repo-nio-ssh]: https://github.com/apple/swift-nio-ssh
+[repo-nio-quic]: https://github.com/apple/swift-nio-quic
+[repo-nio-http3]: https://github.com/apple/swift-nio-http3

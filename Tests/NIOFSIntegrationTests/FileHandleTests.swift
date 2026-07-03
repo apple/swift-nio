@@ -1036,7 +1036,60 @@ final class FileHandleTests: XCTestCase {
 
         // Close, but take the path where 'renameat2' fails with EINVAL. This shouldn't throw and
         // the file should be available.
-        let result = handle.sendableView._close(materialize: true, failRenameat2WithEINVAL: true)
+        let result = handle.sendableView._close(materialize: true, simulatedRenameat2Errno: .invalidArgument)
+        try result.get()
+
+        let info = try await FileSystem.shared.info(forFileAt: NIOFilePath(path))
+        XCTAssertNotNil(info)
+        #else
+        throw XCTSkip("This test requires 'renameat2' which isn't supported on this platform")
+        #endif
+    }
+
+    func testOpenExclusiveCreateWithoutOTMPFILEOrRenameat2ENOSYS() async throws {
+        // As above, but takes the fallback path where 'renameat2' fails with ENOSYS (the syscall
+        // isn't implemented by the filesystem, as on some FUSE-backed Android storage). The
+        // exclusive create should still succeed via 'stat' + 'rename'. Only reachable on Linux.
+        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        let temporaryDirectory = FilePath(try await FileSystem.shared.temporaryDirectory)
+        let path = temporaryDirectory.appending(Self.temporaryFileName().components)
+        let handle = try SystemFileHandle.syncOpenWithMaterialization(
+            atPath: path,
+            mode: .writeOnly,
+            options: [.exclusiveCreate, .create],
+            permissions: .ownerReadWrite,
+            threadPool: .singleton,
+            useTemporaryFileIfPossible: false
+        ).get()
+
+        let result = handle.sendableView._close(materialize: true, simulatedRenameat2Errno: .noFunction)
+        try result.get()
+
+        let info = try await FileSystem.shared.info(forFileAt: NIOFilePath(path))
+        XCTAssertNotNil(info)
+        #else
+        throw XCTSkip("This test requires 'renameat2' which isn't supported on this platform")
+        #endif
+    }
+
+    func testOpenNonExclusiveWithoutOTMPFILEOrRenameat2ENOSYS() async throws {
+        // Takes the path where 'O_TMPFILE' doesn't exist so a temporary file is created and renamed
+        // into place, then the fallback path where the 'renameat2' syscall fails with ENOSYS (not
+        // implemented by the filesystem, as on some FUSE-backed Android storage). A non-exclusive
+        // materialization should fall back to a plain 'rename'. Only reachable on Linux.
+        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        let temporaryDirectory = FilePath(try await FileSystem.shared.temporaryDirectory)
+        let path = temporaryDirectory.appending(Self.temporaryFileName().components)
+        let handle = try SystemFileHandle.syncOpenWithMaterialization(
+            atPath: path,
+            mode: .writeOnly,
+            options: [.truncate, .create],
+            permissions: .ownerReadWrite,
+            threadPool: .singleton,
+            useTemporaryFileIfPossible: false
+        ).get()
+
+        let result = handle.sendableView._close(materialize: true, simulatedRenameat2Errno: .noFunction)
         try result.get()
 
         let info = try await FileSystem.shared.info(forFileAt: NIOFilePath(path))
