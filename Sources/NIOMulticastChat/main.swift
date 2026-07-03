@@ -15,6 +15,9 @@ import CNIOLinux
 import CNIOOpenBSD
 import NIOCore
 import NIOPosix
+#if canImport(WinSDK)
+import WinSDK
+#endif
 
 /// Implements a simple chat protocol.
 private final class ChatMessageDecoder: ChannelInboundHandler {
