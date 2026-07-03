@@ -20,6 +20,15 @@ import NIOConcurrencyHelpers
 import NIOCore
 import WinSDK
 
+/// Outcome of a single attempt to fill a wide-string buffer via a Win32 API.
+/// Declared at file scope because it is used from a method of a generic type,
+/// where a locally-nested type is not permitted.
+private enum _WideStringFillResult {
+    case filled(String)
+    case insufficient
+    case failed(DWORD)
+}
+
 extension SelectorEventSet {
     // Use this property to create pollfd's event field. Reset and errors are (hopefully) always included.
     // According to the docs we don't need to listen for them explicitly.
@@ -188,16 +197,17 @@ extension Selector: _SelectorBackendProtocol {
 
     /// Generates a unique socket path in the Windows temp directory.
     private static func generateUniqueSocketPath() throws -> String {
-        // Get the temp directory path
-        var tempPathBuffer = [CChar](repeating: 0, count: Int(MAX_PATH) + 1)
-        let tempPathLen = GetTempPathA(DWORD(tempPathBuffer.count), &tempPathBuffer)
-        guard tempPathLen > 0 && tempPathLen < MAX_PATH else {
-            throw IOError(errnoCode: ENOENT, reason: "GetTempPathA failed")
-        }
-        // Convert the C string to Swift String, truncating at the null terminator
-        let tempDir = tempPathBuffer.withUnsafeBufferPointer { buffer in
-            let utf8Bytes = buffer.prefix(Int(tempPathLen)).map { UInt8(bitPattern: $0) }
-            return String(decoding: utf8Bytes, as: UTF8.self)
+        // Retrieve the temp directory using the wide (`W`) API so that paths
+        // containing non-ASCII characters (e.g. a user profile whose name has
+        // Unicode in it) survive intact, and size the buffer up to the Windows
+        // maximum rather than the 260-char `MAX_PATH` soft limit. The returned
+        // path is terminated with a trailing backslash.
+        let tempDir = try Self.fillWideStringBuffer(
+            initialSize: DWORD(MAX_PATH) + 1,
+            maxSize: DWORD(Int16.max),
+            reason: "GetTempPath2W"
+        ) { buffer in
+            GetTempPath2W(DWORD(buffer.count), buffer.baseAddress)
         }
 
         // Generate a unique identifier using process ID, thread ID, and tick count
@@ -208,6 +218,51 @@ extension Selector: _SelectorBackendProtocol {
         let uniqueID = "\(processID)-\(threadID)-\(tickCount)"
 
         return "\(tempDir)nio-wakeup-\(uniqueID).sock"
+    }
+
+    /// Calls a Win32 API that fills a null-terminated wide-string (UTF-16)
+    /// buffer, growing the allocation until the value fits or `maxSize` is
+    /// reached. This avoids the ANSI (`A`) APIs, which cannot represent paths
+    /// outside the active code page, and the 260-char `MAX_PATH` soft limit.
+    ///
+    /// `body` receives the destination buffer and must return the Win32
+    /// convention for these APIs: `0` on failure (with the error retrievable
+    /// via `GetLastError`), the number of `WCHAR`s written excluding the null
+    /// terminator on success, or a value greater than or equal to the buffer's
+    /// capacity when the buffer was too small. Modeled on the equivalent helper
+    /// in swift-subprocess.
+    private static func fillWideStringBuffer(
+        initialSize: DWORD,
+        maxSize: DWORD,
+        reason: String,
+        _ body: (UnsafeMutableBufferPointer<WCHAR>) -> DWORD
+    ) throws -> String {
+        var bufferCount = max(1, min(initialSize, maxSize))
+        while bufferCount <= maxSize {
+            let result: _WideStringFillResult = withUnsafeTemporaryAllocation(
+                of: WCHAR.self,
+                capacity: Int(bufferCount)
+            ) { buffer in
+                let count = body(buffer)
+                switch count {
+                case 0:
+                    return .failed(GetLastError())
+                case 1..<DWORD(buffer.count):
+                    return .filled(String(decodingCString: buffer.baseAddress!, as: UTF16.self))
+                default:
+                    return .insufficient
+                }
+            }
+            switch result {
+            case .filled(let string):
+                return string
+            case .failed(let win32Error):
+                throw IOError(windows: win32Error, reason: reason)
+            case .insufficient:
+                bufferCount *= 2
+            }
+        }
+        throw IOError(windows: DWORD(ERROR_INSUFFICIENT_BUFFER), reason: reason)
     }
 
     func deinitAssertions0() {
