@@ -17,9 +17,6 @@
 import Atomics
 import NIOConcurrencyHelpers
 import NIOCore
-#if os(Windows)
-import WinSDK
-#endif
 
 private struct SocketChannelLifecycleManager {
     // MARK: Types

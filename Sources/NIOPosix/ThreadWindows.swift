@@ -92,8 +92,12 @@ enum ThreadOpsWindows: ThreadOps {
 
             return 0
         }
-        let hThread: HANDLE =
-            HANDLE(bitPattern: _beginthreadex(nil, 0, routine, argv0, 0, nil))!
+        // `_beginthreadex` hands back an owning handle to the new thread that we never use: the
+        // thread duplicates its own handle in `routine` (above) for the `NIOThread` to keep and
+        // later `join`. Close this bootstrap handle so we don't leak one per spawned thread; the
+        // running thread stays alive regardless of it, so this is safe.
+        let bootstrapHandle = HANDLE(bitPattern: _beginthreadex(nil, 0, routine, argv0, 0, nil))!
+        CloseHandle(bootstrapHandle)
     }
 
     static func isCurrentThread(_ thread: ThreadOpsSystem.ThreadHandle) -> Bool {

@@ -222,8 +222,9 @@ internal class Selector<R: Registration> {
     var pollFDs = [pollfd]()
     /// Reverse lookup map from file-descriptor handle to the entry's index in `pollFDs`. Maintained
     /// alongside `pollFDs` so that `reregister0`/`deregister0` can update the relevant `pollfd` in O(1)
-    /// instead of linearly scanning the array. The map is rebuilt after each `whenReady0` cycle that
-    /// performs deregistrations, because `pollFDs.remove(at:)` shifts later indexes down.
+    /// instead of linearly scanning the array. The indexes are kept in sync as entries are removed:
+    /// `whenReady0` compacts `pollFDs` in place after processing events and updates this map for every
+    /// surviving entry that shifts position.
     @usableFromInline
     var pollFDIndexes = [NIOBSDSocket.Handle: Int]()
     /// Tracks indexes of file descriptors pending removal from `pollFDs`. We defer removal until after
