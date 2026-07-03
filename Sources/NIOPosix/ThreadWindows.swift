@@ -120,6 +120,10 @@ enum ThreadOpsWindows: ThreadOps {
     static func joinThread(_ thread: ThreadOpsSystem.ThreadHandle) {
         let dwResult: DWORD = WaitForSingleObject(thread.handle, INFINITE)
         assert(dwResult == WAIT_OBJECT_0, "WaitForSingleObject: \(GetLastError())")
+        // `thread.handle` is a real, owning handle produced by `DuplicateHandle`
+        // (in `run`). The kernel keeps the thread object alive until every such
+        // handle is closed, so we must release ours now that the join is done.
+        CloseHandle(thread.handle)
     }
 
     static func allocateThreadSpecificValue(destructor: @escaping ThreadSpecificKeyDestructor) -> ThreadSpecificKey {

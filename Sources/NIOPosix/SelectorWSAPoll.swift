@@ -127,7 +127,9 @@ extension Selector: _SelectorBackendProtocol {
         let listenerSocket = try NIOBSDSocket.socket(domain: .unix, type: .stream, protocolSubtype: .default)
         defer {
             _ = try? NIOBSDSocket.close(socket: listenerSocket)
-            _ = socketPath.withCString { DeleteFileA($0) }
+            // Use the wide API to delete the on-disk path for the same
+            // Unicode/long-path safety reasons as the temp-directory lookup.
+            _ = socketPath.withCString(encodedAs: UTF16.self) { DeleteFileW($0) }
         }
 
         // Set up the sockaddr_un structure
@@ -427,18 +429,23 @@ extension Selector: _SelectorBackendProtocol {
     }
 
     func close0() throws {
-        // Close the wakeup sockets
-        if self.wakeupReadSocket != NIOBSDSocket.invalidHandle {
-            try? NIOBSDSocket.close(socket: self.wakeupReadSocket)
-            self.wakeupReadSocket = NIOBSDSocket.invalidHandle
+        // Like the epoll and kqueue selectors, serialize mutation of the wakeup
+        // sockets against `wakeup0` (which may run on another thread) by taking
+        // `externalSelectorFDLock`.
+        self.externalSelectorFDLock.withLock {
+            // Close the wakeup sockets
+            if self.wakeupReadSocket != NIOBSDSocket.invalidHandle {
+                try? NIOBSDSocket.close(socket: self.wakeupReadSocket)
+                self.wakeupReadSocket = NIOBSDSocket.invalidHandle
+            }
+            if self.wakeupWriteSocket != NIOBSDSocket.invalidHandle {
+                try? NIOBSDSocket.close(socket: self.wakeupWriteSocket)
+                self.wakeupWriteSocket = NIOBSDSocket.invalidHandle
+            }
+            self.pollFDs.removeAll()
+            self.pollFDIndexes.removeAll()
+            self.deregisteredFDs.removeAll()
         }
-        if self.wakeupWriteSocket != NIOBSDSocket.invalidHandle {
-            try? NIOBSDSocket.close(socket: self.wakeupWriteSocket)
-            self.wakeupWriteSocket = NIOBSDSocket.invalidHandle
-        }
-        self.pollFDs.removeAll()
-        self.pollFDIndexes.removeAll()
-        self.deregisteredFDs.removeAll()
     }
 }
 #endif
