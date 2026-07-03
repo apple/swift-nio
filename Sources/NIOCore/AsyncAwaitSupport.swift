@@ -131,7 +131,7 @@ extension EventLoopPromise {
     @preconcurrency
     @inlinable
     public func completeWithTask(
-        _ body: sending @escaping () async throws -> Value
+        _ body: @escaping @Sendable () async throws -> Value
     ) -> Task<Void, Never> where Value: Sendable {
         Task {
             do {
@@ -549,7 +549,7 @@ extension EventLoop {
     @preconcurrency
     @inlinable
     public func makeFutureWithTask<Return: Sendable>(
-        _ body: sending @escaping () async throws -> Return
+        _ body: @Sendable @escaping () async throws -> Return
     ) -> EventLoopFuture<Return> {
         let promise = self.makePromise(of: Return.self)
         promise.completeWithTask(body)

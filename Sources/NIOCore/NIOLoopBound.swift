@@ -44,7 +44,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
         self._value = value
     }
 
-    /// Initialise a ``NIOLoopBound`` to `value` with the precondition that the code is running on `eventLoop`.
+    /// Initialise a ``NIOLoopBound`` to `value` by sending value into `eventLoop`. Caller does not need to be on the EventLoop.
     @inlinable
     public init(sending value: sending Value, eventLoop: EventLoop) {
         self.eventLoop = eventLoop
