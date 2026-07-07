@@ -18,7 +18,7 @@ import NIOPosix
 private let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
 
 struct LoopBoundTests {
-    #if !canImport(Darwin) || os(macOS)
+    #if (!canImport(Darwin) || os(macOS)) && !os(Windows)
     let testInitChecksEventLoop = CrashTest(
         regex: "NIOCore/NIOLoopBound.swift:[0-9]+: Precondition failed"
     ) {

@@ -111,6 +111,12 @@ int NIO(errno)(void);
 
 DWORD NIO(FormatGetLastError)(DWORD errorCode, LPSTR errorMsg);
 
+// Disables buffering on the process's standard output stream. `stdout` is a
+// macro on the Windows CRT (currently `__acrt_iob_func(1)`) that Swift cannot
+// reference directly; wrapping it here lets the C compiler expand the macro, so
+// we remain correct if its definition ever changes.
+void NIO(setStdoutUnbuffered)(void);
+
 #undef NIO
 
 #endif

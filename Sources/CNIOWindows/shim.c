@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <stdio.h>
 #include <winbase.h>
 
 int CNIOWindows_sendmmsg(SOCKET s, CNIOWindows_mmsghdr *msgvec, unsigned int vlen,
@@ -71,6 +72,12 @@ DWORD CNIOWindows_FormatGetLastError(DWORD errorCode, LPSTR errorMsg) {
     0,
     NULL
   );
+}
+
+void CNIOWindows_setStdoutUnbuffered(void) {
+  // Equivalent to `setbuf(stdout, NULL)`, but `setbuf` is deprecated on the
+  // Windows CRT; `setvbuf(..., _IONBF, 0)` is the recommended replacement.
+  setvbuf(stdout, NULL, _IONBF, 0);
 }
 
 #endif
