@@ -91,6 +91,10 @@ public struct FileInfo: Hashable, Sendable {
         self.lastAccessTime = Timespec(platformSpecificStatus.st_atim)
         self.lastDataModificationTime = Timespec(platformSpecificStatus.st_mtim)
         self.lastStatusChangeTime = Timespec(platformSpecificStatus.st_ctim)
+        #elseif os(Windows)
+        self.lastAccessTime = Timespec(platformSpecificStatus.st_atim)
+        self.lastDataModificationTime = Timespec(platformSpecificStatus.st_mtim)
+        self.lastStatusChangeTime = Timespec(platformSpecificStatus.st_ctim)
         #endif
     }
 
@@ -155,6 +159,9 @@ extension FileInfo {
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
         private static let utimeOmit = Int(CNIOLinux_UTIME_OMIT)
         private static let utimeNow = Int(CNIOLinux_UTIME_NOW)
+        #elseif os(Windows)
+        private static let utimeOmit = Int(UTIME_OMIT)
+        private static let utimeNow = Int(UTIME_NOW)
         #endif
 
         /// A timespec where the seconds are set to zero and the nanoseconds set to `UTIME_OMIT`.
@@ -224,6 +231,10 @@ private struct Stat: Hashable {
         hasher.combine(FileInfo.Timespec(stat.st_atim))
         hasher.combine(FileInfo.Timespec(stat.st_mtim))
         hasher.combine(FileInfo.Timespec(stat.st_ctim))
+        #elseif os(Windows)
+        hasher.combine(FileInfo.Timespec(stat.st_atim))
+        hasher.combine(FileInfo.Timespec(stat.st_mtim))
+        hasher.combine(FileInfo.Timespec(stat.st_ctim))
         #endif
 
     }
@@ -262,6 +273,10 @@ private struct Stat: Hashable {
         isEqual = isEqual && lStat.st_flags == rStat.st_flags
         isEqual = isEqual && lStat.st_gen == rStat.st_gen
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
+        isEqual = isEqual && FileInfo.Timespec(lStat.st_atim) == FileInfo.Timespec(rStat.st_atim)
+        isEqual = isEqual && FileInfo.Timespec(lStat.st_mtim) == FileInfo.Timespec(rStat.st_mtim)
+        isEqual = isEqual && FileInfo.Timespec(lStat.st_ctim) == FileInfo.Timespec(rStat.st_ctim)
+        #elseif os(Windows)
         isEqual = isEqual && FileInfo.Timespec(lStat.st_atim) == FileInfo.Timespec(rStat.st_atim)
         isEqual = isEqual && FileInfo.Timespec(lStat.st_mtim) == FileInfo.Timespec(rStat.st_mtim)
         isEqual = isEqual && FileInfo.Timespec(lStat.st_ctim) == FileInfo.Timespec(rStat.st_ctim)

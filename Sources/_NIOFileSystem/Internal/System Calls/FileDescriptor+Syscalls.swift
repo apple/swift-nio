@@ -130,11 +130,15 @@ extension FileDescriptor {
         named name: String,
         buffer: UnsafeMutableRawBufferPointer?
     ) -> Result<Int, Errno> {
+        #if os(Windows)
+        fatalError("getExtendedAttribute is unavailable on Windows")
+        #else
         valueOrErrno(retryOnInterrupt: false) {
             name.withPlatformString {
                 system_fgetxattr(self.rawValue, $0, buffer?.baseAddress, buffer?.count ?? 0)
             }
         }
+        #endif
     }
 
     /// Set the value of the named extended attribute.
@@ -149,11 +153,15 @@ extension FileDescriptor {
         named name: String,
         to value: UnsafeRawBufferPointer?
     ) -> Result<Void, Errno> {
+        #if os(Windows)
+        fatalError("setExtendedAttribute is unavailable on Windows")
+        #else
         nothingOrErrno(retryOnInterrupt: false) {
             name.withPlatformString { namePointer in
                 system_fsetxattr(self.rawValue, namePointer, value?.baseAddress, value?.count ?? 0)
             }
         }
+        #endif
     }
 
     /// Remove the value for the named extended attribute.
@@ -164,11 +172,15 @@ extension FileDescriptor {
     ///   - name: The name of the extended attribute.
     @_spi(Testing)
     public func removeExtendedAttribute(_ name: String) -> Result<Void, Errno> {
+        #if os(Windows)
+        fatalError("removeExtendedAttribute is unavailable on Windows")
+        #else
         nothingOrErrno(retryOnInterrupt: false) {
             name.withPlatformString {
                 system_fremovexattr(self.rawValue, $0)
             }
         }
+        #endif
     }
 
     /// Synchronize modified data and metadata to a permanent storage device.

@@ -141,6 +141,8 @@ extension FileType {
         let value = Int32(direntType)
         #elseif canImport(Glibc)
         let value = Int(direntType)
+        #elseif os(Windows)
+        let value = Int32(direntType)
         #endif
 
         switch value {
