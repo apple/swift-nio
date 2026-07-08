@@ -12,7 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !canImport(Darwin) || os(macOS)
+// NIOCrashTester relies on POSIX subprocess + signal semantics and on pipe
+// channels (`NIOPipeBootstrap`) to capture the child's output; pipe channels
+// deliberately `fatalError` on Windows, so the crash-testing model cannot run
+// there. Exclude Windows alongside the non-macOS Darwin platforms.
+#if (!canImport(Darwin) || os(macOS)) && !os(Windows)
 import NIOCore
 import NIOPosix
 import class Foundation.Process

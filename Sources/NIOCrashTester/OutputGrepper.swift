@@ -11,6 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+// OutputGrepper captures a child process's output through a pipe channel
+// (`NIOPipeBootstrap`), which deliberately `fatalError`s on Windows, and relies
+// on `Foundation.Pipe` file-descriptor conversion that is unavailable there.
+// Exclude Windows to match the rest of NIOCrashTester.
+#if (!canImport(Darwin) || os(macOS)) && !os(Windows)
 import NIOCore
 import NIOFoundationCompat
 import NIOPosix
@@ -103,3 +108,4 @@ private struct NewlineFramer: ByteToMessageDecoder {
         }
     }
 }
+#endif

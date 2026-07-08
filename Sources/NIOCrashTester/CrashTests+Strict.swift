@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !canImport(Darwin) || os(macOS)
+#if (!canImport(Darwin) || os(macOS)) && !os(Windows)
 import NIOCore
 import NIOPosix
 

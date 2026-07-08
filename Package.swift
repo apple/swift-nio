@@ -462,6 +462,7 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOFoundationCompat",
                 "NIOWebSocket",
+                "CNIOWindows",
             ],
             swiftSettings: swiftSettings
         ),
