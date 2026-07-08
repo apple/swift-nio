@@ -109,6 +109,11 @@ size_t NIO(CMSG_SPACE)(size_t);
 
 int NIO(errno)(void);
 
+// Sets `errno`. `errno` is a macro on the Windows CRT (expanding to a
+// dereference of `_errno()`) that Swift cannot assign through directly, so we
+// wrap the write in C where the macro is expanded.
+void NIO(set_errno)(int value);
+
 DWORD NIO(FormatGetLastError)(DWORD errorCode, LPSTR errorMsg);
 
 // Disables buffering on the process's standard output stream. `stdout` is a

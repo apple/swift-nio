@@ -26,6 +26,7 @@
 // visibility, the rest of the target can use these types, constants and
 // free-functions without importing anything.
 
+import CNIOWindows
 import SystemPackage
 
 // MARK: - Scalar types
@@ -181,14 +182,13 @@ let UTIME_OMIT: CInt = (1 << 30) - 2
 
 // MARK: - errno access
 
-// Compile-only stand-in for thread-local errno. Every syscall in this shim
-// traps, so this value is never meaningfully consumed at runtime; it exists
-// purely so the errno-reading control flow type-checks.
-private nonisolated(unsafe) var _nio_fs_errno_storage: CInt = 0
-
+// `errno` is a macro on the Windows CRT that Swift cannot read or assign
+// directly, so bridge through the `CNIOWindows` C shim, which expands the macro
+// in C. This is the real thread-local `errno` backing the CRT calls the higher
+// level file-system code inspects.
 var _nio_fs_errno: CInt {
-    get { _nio_fs_errno_storage }
-    set { _nio_fs_errno_storage = newValue }
+    get { CNIOWindows_errno() }
+    set { CNIOWindows_set_errno(newValue) }
 }
 
 // MARK: - libc string helpers (stubs / trivial)

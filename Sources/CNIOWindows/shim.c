@@ -62,6 +62,10 @@ int CNIOWindows_errno(void) {
     return errno;
 }
 
+void CNIOWindows_set_errno(int value) {
+    errno = value;
+}
+
 DWORD CNIOWindows_FormatGetLastError(DWORD errorCode, LPSTR errorMsg) {
   return FormatMessage(
     FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,

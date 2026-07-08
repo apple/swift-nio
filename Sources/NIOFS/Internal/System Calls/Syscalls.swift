@@ -201,7 +201,7 @@ internal func system_flistxattr(
 /// fgetxattr(2): Get an extended attribute value
 internal func system_fgetxattr(
     _ fd: FileDescriptor.RawValue,
-    _ name: UnsafePointer<CChar>,
+    _ name: UnsafePointer<CInterop.PlatformChar>,
     _ value: UnsafeMutableRawPointer?,
     _ size: Int
 ) -> Int {
@@ -225,7 +225,7 @@ internal func system_fgetxattr(
 /// fsetxattr(2): Set an extended attribute value
 internal func system_fsetxattr(
     _ fd: FileDescriptor.RawValue,
-    _ name: UnsafePointer<CChar>,
+    _ name: UnsafePointer<CInterop.PlatformChar>,
     _ value: UnsafeRawPointer?,
     _ size: Int
 ) -> CInt {
@@ -249,7 +249,7 @@ internal func system_fsetxattr(
 /// fremovexattr(2): Remove an extended attribute value
 internal func system_fremovexattr(
     _ fd: FileDescriptor.RawValue,
-    _ name: UnsafePointer<CChar>
+    _ name: UnsafePointer<CInterop.PlatformChar>
 ) -> CInt {
     #if ENABLE_MOCKING
     if mockingEnabled {
