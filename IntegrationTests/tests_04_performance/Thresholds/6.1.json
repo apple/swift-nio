@@ -13,7 +13,7 @@
     "1000_getHandlers": 8050,
     "1000_getHandlers_sync": 37,
     "1000_reqs_1_conn": 27400,
-    "1000_rst_connections": 138050,
+    "1000_rst_connections": 132050,
     "1000_tcpbootstraps": 3050,
     "1000_tcpconnections": 146050,
     "1000_udp_reqs": 6050,
