@@ -408,4 +408,158 @@ class HTTPResponseEncoderTests: XCTestCase {
         let writtenData = sendResponse(withStatus: .ok, andHeaders: headers)
         writtenData.assertContainsOnly("HTTP/1.1 200 OK\r\ncontent-length: 3\r\n\r\n")
     }
+
+    // MARK: - HEAD/CONNECT response body suppression
+
+    /// Adds only the response encoder, lets it observe a request with `requestMethod`, then writes
+    /// the given response and returns all response bytes as a single string.
+    private func encodeResponse(
+        toRequestMethod requestMethod: HTTPMethod,
+        status: HTTPResponseStatus,
+        headers: HTTPHeaders = HTTPHeaders(),
+        body: ByteBuffer? = nil,
+        configuration: HTTPResponseEncoder.Configuration = .init()
+    ) throws -> String {
+        let channel = EmbeddedChannel()
+        defer { XCTAssertEqual(true, try? channel.finish().isClean) }
+
+        // Feed the encoder the request method, exactly as the paired request decoder would when the
+        // request was decoded.
+        let encoder = HTTPResponseEncoder(configuration: configuration)
+        try channel.pipeline.syncOperations.addHandler(encoder)
+        encoder.recordRequestMethod(requestMethod)
+
+        var responseHead = HTTPResponseHead(version: .http1_1, status: status)
+        responseHead.headers = headers
+        try channel.writeOutbound(HTTPServerResponsePart.head(responseHead))
+        if let body {
+            try channel.writeOutbound(HTTPServerResponsePart.body(.byteBuffer(body)))
+        }
+        try channel.writeOutbound(HTTPServerResponsePart.end(nil))
+
+        var all = channel.allocator.buffer(capacity: 128)
+        while var buffer = try channel.readOutbound(as: ByteBuffer.self) {
+            all.writeBuffer(&buffer)
+        }
+        return String(buffer: all)
+    }
+
+    func testHeadResponseOmitsChunkedTerminator() throws {
+        // A 200 with no Content-Length is chunked for a GET; for a HEAD the framing header is
+        // preserved but the terminator ("0\r\n\r\n") — an illegal body — must not be written.
+        XCTAssertEqual(
+            try self.encodeResponse(toRequestMethod: .HEAD, status: .ok),
+            "HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n"
+        )
+    }
+
+    func testHeadResponsePreservesExplicitContentLength() throws {
+        // An explicit Content-Length (what a GET would return) is preserved and no body is sent.
+        XCTAssertEqual(
+            try self.encodeResponse(toRequestMethod: .HEAD, status: .ok, headers: ["content-length": "1000"]),
+            "HTTP/1.1 200 OK\r\ncontent-length: 1000\r\n\r\n"
+        )
+    }
+
+    func testHeadResponseDropsBodyBytes() throws {
+        // Even if a handler mistakenly writes a body for a HEAD response, no body bytes (and no
+        // chunked terminator) may reach the wire.
+        XCTAssertEqual(
+            try self.encodeResponse(toRequestMethod: .HEAD, status: .ok, body: ByteBuffer(string: "hello")),
+            "HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n"
+        )
+    }
+
+    func testConnectResponseOmitsBody() throws {
+        // Responses to CONNECT must not carry a body either.
+        XCTAssertEqual(
+            try self.encodeResponse(toRequestMethod: .CONNECT, status: .ok, body: ByteBuffer(string: "hello")),
+            "HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n"
+        )
+    }
+
+    func testGetResponseStillEmitsChunkedTerminator() throws {
+        // Control: the identical response to a GET must still be chunked, terminator included.
+        XCTAssertEqual(
+            try self.encodeResponse(toRequestMethod: .GET, status: .ok),
+            "HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n0\r\n\r\n"
+        )
+    }
+
+    func testEncoderWithoutObservedRequestFallsBackToStatusFraming() throws {
+        // If the encoder never observes a request (e.g. placed before the decoder, or used
+        // standalone) it behaves exactly as before: status-only framing, terminator included.
+        let channel = EmbeddedChannel()
+        defer { XCTAssertEqual(true, try? channel.finish().isClean) }
+        try channel.pipeline.syncOperations.addHandler(HTTPResponseEncoder())
+        try channel.writeOutbound(HTTPServerResponsePart.head(HTTPResponseHead(version: .http1_1, status: .ok)))
+        try channel.writeOutbound(HTTPServerResponsePart.end(nil))
+        var all = channel.allocator.buffer(capacity: 128)
+        while var buffer = try channel.readOutbound(as: ByteBuffer.self) {
+            all.writeBuffer(&buffer)
+        }
+        XCTAssertEqual(String(buffer: all), "HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n0\r\n\r\n")
+    }
+
+    func testHeadThenGetOnConfiguredServerPipelineKeepsConnectionUsable() throws {
+        // End-to-end via configureHTTPServerPipeline: the HEAD response carries no body, and a
+        // subsequent GET on the same keep-alive connection is framed normally. This proves the
+        // request-method queue advances correctly and the response stream isn't corrupted.
+        let channel = EmbeddedChannel()
+        defer { XCTAssertNoThrow(try channel.finish()) }
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline()
+
+        func readAllOutbound() throws -> String {
+            var all = channel.allocator.buffer(capacity: 128)
+            while var buffer = try channel.readOutbound(as: ByteBuffer.self) {
+                all.writeBuffer(&buffer)
+            }
+            return String(buffer: all)
+        }
+        func drainInboundRequest() throws {
+            while try channel.readInbound(as: HTTPServerRequestPart.self) != nil {}
+        }
+
+        try channel.writeInbound(ByteBuffer(string: "HEAD /foo HTTP/1.1\r\nhost: example.com\r\n\r\n"))
+        try drainInboundRequest()
+        try channel.writeOutbound(HTTPServerResponsePart.head(HTTPResponseHead(version: .http1_1, status: .ok)))
+        try channel.writeOutbound(HTTPServerResponsePart.end(nil))
+        XCTAssertEqual(try readAllOutbound(), "HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n")
+
+        try channel.writeInbound(ByteBuffer(string: "GET /foo HTTP/1.1\r\nhost: example.com\r\n\r\n"))
+        try drainInboundRequest()
+        try channel.writeOutbound(HTTPServerResponsePart.head(HTTPResponseHead(version: .http1_1, status: .ok)))
+        try channel.writeOutbound(HTTPServerResponsePart.end(nil))
+        XCTAssertEqual(try readAllOutbound(), "HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n0\r\n\r\n")
+    }
+
+    func testRequestMethodQueuePreservesFIFOOrderThroughOverflow() {
+        // The single in-flight case is inline; more than one pending (as when a peer pipelines and
+        // the decoder reads ahead) spills to the overflow buffer. Either way, order must be FIFO.
+        var queue = HTTPServerRequestMethodQueue()
+        XCTAssertNil(queue.popFirst())
+
+        // Common case: append then pop, repeatedly, never using overflow.
+        queue.append(.GET)
+        XCTAssertEqual(queue.popFirst(), .GET)
+        XCTAssertNil(queue.popFirst())
+
+        // Several pending at once (pipelining) must come back oldest-first.
+        queue.append(.HEAD)
+        queue.append(.GET)
+        queue.append(.CONNECT)
+        XCTAssertEqual(queue.popFirst(), .HEAD)
+        XCTAssertEqual(queue.popFirst(), .GET)
+        XCTAssertEqual(queue.popFirst(), .CONNECT)
+        XCTAssertNil(queue.popFirst())
+
+        // Interleaving append/pop after overflow was used still preserves order.
+        queue.append(.HEAD)
+        queue.append(.GET)
+        XCTAssertEqual(queue.popFirst(), .HEAD)
+        queue.append(.CONNECT)
+        XCTAssertEqual(queue.popFirst(), .GET)
+        XCTAssertEqual(queue.popFirst(), .CONNECT)
+        XCTAssertNil(queue.popFirst())
+    }
 }

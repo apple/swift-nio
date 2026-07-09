@@ -278,6 +278,23 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
 
     private var isChunked = false
 
+    /// Set while writing a response to a `HEAD` or `CONNECT` request. While set, response body
+    /// bytes and the end-of-body marker (including the chunked terminator) are suppressed, while
+    /// the framing headers on the response head are preserved so the response still advertises
+    /// what an equivalent `GET` would have returned.
+    private var suppressResponseBody = false
+
+    /// Methods of requests still awaiting a response, fed by the paired ``HTTPRequestDecoder`` via
+    /// ``recordRequestMethod(_:)`` as it decodes each request head. The encoder consults this so
+    /// that responses to `HEAD`/`CONNECT` requests are encoded without a message body, which those
+    /// responses must not carry (RFC 9110 §9.3.2, RFC 9112 §6.3).
+    ///
+    /// Wired up by `configureHTTPServerPipeline`. When the encoder is used directly (its public
+    /// initializers), nothing feeds this, so it stays empty and the encoder behaves exactly as
+    /// before — framing purely from the response status. It is inline (no allocation) for the
+    /// common case of at most one request in flight.
+    private var requestMethods = HTTPServerRequestMethodQueue()
+
     private var configuration: Configuration
 
     public convenience init() {
@@ -288,9 +305,26 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
         self.configuration = configuration
     }
 
+    /// Records the method of a decoded request so the response to it can be framed without a body
+    /// if it was a `HEAD` or `CONNECT`. Called by the paired request decoder; see the note on
+    /// ``requestMethods``.
+    internal func recordRequestMethod(_ method: HTTPMethod) {
+        self.requestMethods.append(method)
+    }
+
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch HTTPResponseEncoder.unwrapOutboundIn(data) {
         case .head(var response):
+            // Correlate this response with the request it answers so that responses to HEAD and
+            // CONNECT are encoded without a body. Non-final informational (1xx, except 101)
+            // responses are followed by a further head, so we don't consume the pending request
+            // method for them (this mirrors HTTPResponseDecoder's handling on the client).
+            let statusCode = response.status.code
+            let isNonFinalInformational = (100..<200).contains(statusCode) && statusCode != 101
+            if !isNonFinalInformational, let method = self.requestMethods.popFirst() {
+                self.suppressResponseBody = method == .HEAD || method == .CONNECT
+            }
+
             if self.configuration.automaticallySetFramingHeaders {
                 self.isChunked =
                     correctlyFrameTransportHeaders(
@@ -312,6 +346,16 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
                 promise: promise
             )
         case .body(let bodyPart):
+            if self.suppressResponseBody {
+                // A response to a HEAD/CONNECT request must not carry a body. Drop the bytes, but
+                // pass the promise to a zero-length downstream write so it still completes in
+                // order — satisfying it synchronously here would fire out of order and break
+                // handlers that act on the write completion (see the matching note in
+                // `writeTrailers`).
+                let empty = context.channel.allocator.buffer(capacity: 0)
+                context.write(HTTPResponseEncoder.wrapOutboundOut(.byteBuffer(empty)), promise: promise)
+                break
+            }
             writeChunk(
                 wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
                 context: context,
@@ -320,6 +364,21 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
                 promise: promise
             )
         case .end(let trailers):
+            if self.suppressResponseBody {
+                // Suppress the end-of-body marker (e.g. the chunked terminator "0\r\n\r\n") for a
+                // HEAD/CONNECT response, and reset for the next response on this connection.
+                // Route through writeTrailers with isChunked == false so the promise still
+                // completes in order via a zero-length write rather than out of order.
+                self.suppressResponseBody = false
+                writeTrailers(
+                    wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
+                    context: context,
+                    isChunked: false,
+                    trailers: nil,
+                    promise: promise
+                )
+                break
+            }
             writeTrailers(
                 wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
                 context: context,

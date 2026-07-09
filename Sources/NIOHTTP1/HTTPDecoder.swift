@@ -591,6 +591,12 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     private var stopParsing = false  // set on upgrade or HTTP version error
     private var lastResponseHeaderWasInformational = false
 
+    /// The paired response encoder, if any, that this (server request) decoder feeds decoded
+    /// request methods to so it can omit the body from responses to `HEAD`/`CONNECT` requests.
+    /// Set via the internal initializer used by `configureHTTPServerPipeline`; `nil` otherwise
+    /// (client decoding, or direct use), in which case decoding is unaffected.
+    private var responseEncoder: HTTPResponseEncoder? = nil
+
     /// Creates a new instance of `HTTPDecoder`.
     ///
     /// - Parameters:
@@ -642,6 +648,23 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
         self.parser = BetterHTTPParser(kind: kind, configuration: limitConfiguration)
         self.leftOverBytesStrategy = leftOverBytesStrategy
         self.informationalResponseStrategy = informationalResponseStrategy
+    }
+
+    /// Creates a request decoder that feeds each decoded request's method to `responseEncoder`, so
+    /// it can omit the body from responses to `HEAD`/`CONNECT` requests. Used by
+    /// `configureHTTPServerPipeline`.
+    internal convenience init(
+        leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
+        informationalResponseStrategy: NIOInformationalResponseStrategy = .drop,
+        limitConfiguration: NIOHTTPDecoderLimitConfiguration = .init(),
+        responseEncoder: HTTPResponseEncoder
+    ) {
+        self.init(
+            leftOverBytesStrategy: leftOverBytesStrategy,
+            informationalResponseStrategy: informationalResponseStrategy,
+            limitConfiguration: limitConfiguration
+        )
+        self.responseEncoder = responseEncoder
     }
 
     func didReceiveBody(_ bytes: UnsafeRawBufferPointer) {
@@ -730,6 +753,9 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
                     keepAliveState: keepAliveState
                 )
             )
+            // Record the method so the paired response encoder can omit the body from responses to
+            // HEAD/CONNECT requests. No-op unless an encoder was wired up (server pipeline).
+            self.responseEncoder?.recordRequestMethod(reqHead.method)
             message = NIOAny(HTTPServerRequestPart.head(reqHead))
 
         case .response where (100..<200).contains(statusCode) && statusCode != 101:
