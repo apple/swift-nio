@@ -651,6 +651,8 @@ extension ByteBuffer {
             self.writeStaticString("LINK")
         case .PATCH:
             self.writeStaticString("PATCH")
+        case .QUERY:
+            self.writeStaticString("QUERY")
         case .TRACE:
             self.writeStaticString("TRACE")
         case .MKCOL:

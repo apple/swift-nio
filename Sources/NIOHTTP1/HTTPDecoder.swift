@@ -1016,6 +1016,8 @@ extension HTTPMethod {
             return .UNSUBSCRIBE
         case HTTP_PATCH:
             return .PATCH
+        case HTTP_QUERY:
+            return .QUERY
         case HTTP_PURGE:
             return .PURGE
         case HTTP_MKCALENDAR:
