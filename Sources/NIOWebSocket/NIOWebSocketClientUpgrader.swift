@@ -33,6 +33,7 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader, Se
     private let requestKey: String
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
+    private let enforceMaskingRules: Bool
     private let upgradePipelineHandler: @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
 
     /// - Parameters:
@@ -40,10 +41,32 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader, Se
     ///   - maxFrameSize: largest incoming `WebSocketFrame` size in bytes. Default is 16,384 bytes.
     ///   - automaticErrorHandling: If true, adds `WebSocketProtocolErrorHandler` to the channel pipeline to catch and respond to WebSocket protocol errors. Default is true.
     ///   - upgradePipelineHandler: called once the upgrade was successful
+    public convenience init(
+        requestKey: String = randomRequestKey(),
+        maxFrameSize: Int = 1 << 14,
+        automaticErrorHandling: Bool = true,
+        upgradePipelineHandler: @escaping @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
+    ) {
+        self.init(
+            requestKey: requestKey,
+            maxFrameSize: maxFrameSize,
+            automaticErrorHandling: automaticErrorHandling,
+            enforceMaskingRules: true,
+            upgradePipelineHandler: upgradePipelineHandler
+        )
+    }
+
+    /// - Parameters:
+    ///   - requestKey: sent to the server in the `Sec-WebSocket-Key` HTTP header. Default is random request key.
+    ///   - maxFrameSize: largest incoming `WebSocketFrame` size in bytes. Default is 16,384 bytes.
+    ///   - automaticErrorHandling: If true, adds `WebSocketProtocolErrorHandler` to the channel pipeline to catch and respond to WebSocket protocol errors. Default is true.
+    ///   - enforceMaskingRules: Whether the decoder should reject masked frames from the server, as required by RFC 6455 (§5.1). Set to false to tolerate non-compliant servers that send masked frames.
+    ///   - upgradePipelineHandler: called once the upgrade was successful
     public init(
         requestKey: String = randomRequestKey(),
         maxFrameSize: Int = 1 << 14,
         automaticErrorHandling: Bool = true,
+        enforceMaskingRules: Bool,
         upgradePipelineHandler: @escaping @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
     ) {
         precondition(requestKey != "", "The request key must contain a valid Sec-WebSocket-Key")
@@ -52,6 +75,7 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader, Se
         self.upgradePipelineHandler = upgradePipelineHandler
         self.maxFrameSize = maxFrameSize
         self.automaticErrorHandling = automaticErrorHandling
+        self.enforceMaskingRules = enforceMaskingRules
     }
 
     /// Add additional headers that are needed for a WebSocket upgrade request.
@@ -69,6 +93,7 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader, Se
             upgradeResponse: upgradeResponse,
             maxFrameSize: self.maxFrameSize,
             enableAutomaticErrorHandling: self.automaticErrorHandling,
+            maskingVerification: self.enforceMaskingRules ? .clientExpectsUnmaskedFrames : .disabled,
             upgradePipelineHandler: self.upgradePipelineHandler
         )
     }
@@ -89,6 +114,7 @@ public final class NIOTypedWebSocketClientUpgrader<UpgradeResult: Sendable>: NIO
     private let requestKey: String
     private let maxFrameSize: Int
     private let enableAutomaticErrorHandling: Bool
+    private let enforceMaskingRules: Bool
     private let upgradePipelineHandler: @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<UpgradeResult>
 
     /// - Parameters:
@@ -96,10 +122,32 @@ public final class NIOTypedWebSocketClientUpgrader<UpgradeResult: Sendable>: NIO
     ///   - maxFrameSize: Largest incoming `WebSocketFrame` size in bytes. Default is 16,384 bytes.
     ///   - enableAutomaticErrorHandling: If true, adds `WebSocketProtocolErrorHandler` to the channel pipeline to catch and respond to WebSocket protocol errors. Default is true.
     ///   - upgradePipelineHandler: Called once the upgrade was successful.
+    public convenience init(
+        requestKey: String = NIOWebSocketClientUpgrader.randomRequestKey(),
+        maxFrameSize: Int = 1 << 14,
+        enableAutomaticErrorHandling: Bool = true,
+        upgradePipelineHandler: @escaping @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<UpgradeResult>
+    ) {
+        self.init(
+            requestKey: requestKey,
+            maxFrameSize: maxFrameSize,
+            enableAutomaticErrorHandling: enableAutomaticErrorHandling,
+            enforceMaskingRules: true,
+            upgradePipelineHandler: upgradePipelineHandler
+        )
+    }
+
+    /// - Parameters:
+    ///   - requestKey: Sent to the server in the `Sec-WebSocket-Key` HTTP header. Default is random request key.
+    ///   - maxFrameSize: Largest incoming `WebSocketFrame` size in bytes. Default is 16,384 bytes.
+    ///   - enableAutomaticErrorHandling: If true, adds `WebSocketProtocolErrorHandler` to the channel pipeline to catch and respond to WebSocket protocol errors. Default is true.
+    ///   - enforceMaskingRules: Whether the decoder should reject masked frames from the server, as required by RFC 6455 (§5.1). Set to false to tolerate non-compliant servers that send masked frames.
+    ///   - upgradePipelineHandler: Called once the upgrade was successful.
     public init(
         requestKey: String = NIOWebSocketClientUpgrader.randomRequestKey(),
         maxFrameSize: Int = 1 << 14,
         enableAutomaticErrorHandling: Bool = true,
+        enforceMaskingRules: Bool,
         upgradePipelineHandler: @escaping @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<UpgradeResult>
     ) {
         precondition(requestKey != "", "The request key must contain a valid Sec-WebSocket-Key")
@@ -108,6 +156,7 @@ public final class NIOTypedWebSocketClientUpgrader<UpgradeResult: Sendable>: NIO
         self.upgradePipelineHandler = upgradePipelineHandler
         self.maxFrameSize = maxFrameSize
         self.enableAutomaticErrorHandling = enableAutomaticErrorHandling
+        self.enforceMaskingRules = enforceMaskingRules
     }
 
     public func addCustom(upgradeRequestHeaders: inout NIOHTTP1.HTTPHeaders) {
@@ -124,6 +173,7 @@ public final class NIOTypedWebSocketClientUpgrader<UpgradeResult: Sendable>: NIO
             upgradeResponse: upgradeResponse,
             maxFrameSize: self.maxFrameSize,
             enableAutomaticErrorHandling: self.enableAutomaticErrorHandling,
+            maskingVerification: self.enforceMaskingRules ? .clientExpectsUnmaskedFrames : .disabled,
             upgradePipelineHandler: self.upgradePipelineHandler
         )
     }
@@ -186,12 +236,15 @@ private func _upgrade<UpgradeResult: Sendable>(
     upgradeResponse: HTTPResponseHead,
     maxFrameSize: Int,
     enableAutomaticErrorHandling: Bool,
+    maskingVerification: WebSocketMaskingVerification,
     upgradePipelineHandler: @escaping @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<UpgradeResult>
 ) -> EventLoopFuture<UpgradeResult> {
     channel.eventLoop.makeCompletedFuture {
         try channel.pipeline.syncOperations.addHandler(WebSocketFrameEncoder())
         try channel.pipeline.syncOperations.addHandler(
-            ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: maxFrameSize))
+            ByteToMessageHandler(
+                WebSocketFrameDecoder(maxFrameSize: maxFrameSize, maskingVerification: maskingVerification)
+            )
         )
         if enableAutomaticErrorHandling {
             try channel.pipeline.syncOperations.addHandler(WebSocketProtocolErrorHandler(isServer: false))
