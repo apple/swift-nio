@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2026 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2020-2026 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -16,19 +16,21 @@ import Foundation
 @_spi(CustomByteBufferAllocator) import NIOCore
 import Testing
 
-#if compiler(>=6.2) && !(canImport(Darwin) && !os(macOS))
+// Exit tests are available on macOS, Linux, FreeBSD, OpenBSD, and Windows; see
+// https://github.com/swiftlang/swift-testing/blob/main/Sources/Testing/Testing.docc/exit-testing.md
+#if compiler(>=6.2) && (os(macOS) || os(Linux) || os(FreeBSD) || os(OpenBSD) || os(Windows))
 @Suite struct ByteBufferCrashTests {
 
     @Test func copyBytesToIndexExceedingUInt32Max() async {
         await #expect(processExitsWith: .failure) {
             var buf = ByteBufferAllocator().buffer(capacity: 256)
-            buf.writeBytes([UInt8](repeating: 0x41, count: 64))
+            buf.writeBytes(Array(repeating: UInt8(0x41), count: 64))
             let toIndex = Int(UInt32.max) + 1
             try buf.copyBytes(at: 0, to: toIndex, length: 64)
         }
     }
 
-    @Test func writeWithUnsafeMutableBytesCrashesWhenWritingMoreThanUInt32maxBytes() async {
+    @Test func writeWithUnsafeMutableBytesCrashesWhenWritingMoreThanUInt32MaxBytes() async {
         await #expect(processExitsWith: .failure) {
             var buf = ByteBufferAllocator().buffer(capacity: 0)
             // ask for more capacity then ByteBuffer can provide.
@@ -74,16 +76,16 @@ import Testing
         }
     }
 
-    @Test func setBytesWithMoreThanUInt32maxBytes() async {
+    @Test func setBytesWithMoreThanUInt32MaxBytes() async {
         await #expect(processExitsWith: .failure) {
-            let sequence = [UInt8](repeating: 0, count: Int(UInt32.max) + 1)
+            let sequence = Array(repeating: UInt8(0), count: Int(UInt32.max) + 1)
             var bb = ByteBuffer()
             bb.reserveCapacity(64)
             bb.setBytes(sequence, at: bb.writerIndex)
         }
     }
 
-    @Test func setBytesAtIndexAfterUInt32max() async {
+    @Test func setBytesAtIndexAfterUInt32Max() async {
         await #expect(processExitsWith: .failure) {
             var bb = ByteBuffer()
             bb.reserveCapacity(64)
@@ -92,10 +94,14 @@ import Testing
     }
 
     @Test(
+        // Allocating ~4GB is slow, so this test is opt-in via a truthy SWIFTNIO_RUN_SLOW_TESTS.
         .disabled(
-            "This test is taking too long, as it needs to allocate 4GB of memory. It doesn't work on 32bit machines."
-        )
-    ) func setBytesWithoutContigiousStorageMoreThanUInt32maxBytes() async {
+            if: !slowTestsEnabled(),
+            "Set SWIFTNIO_RUN_SLOW_TESTS to run this slow (~4GB of memory written) test"
+        ),
+        .disabled(if: MemoryLayout<Int>.size < 8, "Doesn't work on 32-bit machines")
+    )
+    func setBytesWithoutContigiousStorageMoreThanUInt32MaxBytes() async {
         await #expect(processExitsWith: .failure) {
             let circularBuffer = CircularBuffer<UInt8>(repeating: 0, count: Int(UInt32.max) + 1)
             var bb = ByteBuffer()
@@ -104,7 +110,7 @@ import Testing
         }
     }
 
-    @Test func setBytesWithoutContigiousStorageAfterUInt32max() async {
+    @Test func setBytesWithoutContigiousStorageAfterUInt32Max() async {
         await #expect(processExitsWith: .failure) {
             let circularBuffer = CircularBuffer<UInt8>(repeating: 0, count: 4)
             var bb = ByteBuffer()
@@ -114,10 +120,10 @@ import Testing
     }
 
     @available(macOS 26.0, iOS 26.0, watchOS 26.0, tvOS 26.0, *)
-    @Test func setRawSpanWithMoreThanUInt32maxBytes() async {
+    @Test func setRawSpanWithMoreThanUInt32MaxBytes() async {
         await #expect(processExitsWith: .failure) {
             let count = Int(UInt32.max) + 1
-            let sequence = [UInt8](repeating: 0, count: count)
+            let sequence = Array(repeating: UInt8(0), count: count)
             var bb = ByteBuffer()
             bb.reserveCapacity(64)
             let rawSpan = sequence.span.bytes
@@ -127,9 +133,9 @@ import Testing
     }
 
     @available(macOS 26.0, iOS 26.0, watchOS 26.0, tvOS 26.0, *)
-    @Test func setRawSpanAfterUInt32max() async {
+    @Test func setRawSpanAfterUInt32Max() async {
         await #expect(processExitsWith: .failure) {
-            let sequence = [UInt8](repeating: 0, count: 4)
+            let sequence = Array(repeating: UInt8(0), count: 4)
             var bb = ByteBuffer()
             bb.reserveCapacity(64)
             let rawSpan = sequence.span.bytes
@@ -152,6 +158,69 @@ import Testing
 
             _ = buffer
         }
+    }
+
+    @Test func movingReaderIndexPastWriterIndex() async {
+        let result = await #expect(processExitsWith: .failure, observing: [\.standardErrorContent]) {
+            var buffer = ByteBufferAllocator().buffer(capacity: 16)
+            buffer.moveReaderIndex(forwardBy: 1)
+        }
+        expectCrashOutput(result, matches: #"Precondition failed: new readerIndex: 1, expected: range\(0, 0\)"#)
+    }
+
+    @Test func allocatingNegativeSize() async {
+        let result = await #expect(processExitsWith: .failure, observing: [\.standardErrorContent]) {
+            _ = ByteBufferAllocator().buffer(capacity: -1)
+        }
+        expectCrashOutput(result, matches: #"Precondition failed: ByteBuffer capacity must be positive."#)
+    }
+}
+
+/// Assert that a completed exit test crashed with a message on its standard
+/// error stream matching `regex`. This preserves the crash-message checks the
+/// old NIOCrashTester performed, ensuring the process crashed for the *expected*
+/// reason rather than any reason.
+private func expectCrashOutput(
+    _ result: ExitTest.Result?,
+    matches regex: String,
+    sourceLocation: SourceLocation = #_sourceLocation
+) {
+    guard let result else { return }
+    // `precondition` failure messages are only written to stderr in debug
+    // builds, so only check the message there; the exit test already asserted
+    // that the process crashed.
+    if isDebugAssertConfiguration() {
+        let output = String(decoding: result.standardErrorContent, as: UTF8.self)
+        #expect(
+            output.range(of: regex, options: .regularExpression) != nil,
+            "crash output \(output.debugDescription) did not match regex \(regex.debugDescription)",
+            sourceLocation: sourceLocation
+        )
+    }
+}
+
+/// Whether the test binary is built with assertions enabled (i.e. a debug
+/// build). `precondition` failure messages are only written to stderr in this
+/// configuration, so crash tests that assert on them must be skipped in release.
+private func isDebugAssertConfiguration() -> Bool {
+    var isDebugAssert = false
+    assert(
+        {
+            isDebugAssert = true
+            return true
+        }()
+    )
+    return isDebugAssert
+}
+
+/// Whether opt-in slow tests should run, gated on a truthy `SWIFTNIO_RUN_SLOW_TESTS`
+/// environment variable. Unset (the default) means slow tests do not run.
+private func slowTestsEnabled() -> Bool {
+    switch ProcessInfo.processInfo.environment["SWIFTNIO_RUN_SLOW_TESTS"]?.lowercased() {
+    case "true", "y", "yes", "on", "1":
+        return true
+    default:
+        return false
     }
 }
 #endif
