@@ -26,6 +26,7 @@ jobs:
       linux_6_3_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_nightly_next_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_nightly_main_arguments_override: "--explicit-target-dependency-import-check error"
+      linux_env_vars: '{"SWIFTNIO_RUN_SLOW_TESTS": "1", "SWIFTNIO_CI": "1"}'
 
   benchmarks:
     name: Benchmarks
@@ -85,7 +86,7 @@ jobs:
           MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: false
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: false
           MATRIX_WINDOWS_6_3_ENABLED: true
-          MATRIX_WINDOWS_COMMAND: "swift build --target _NIOBase64 && swift build --target _NIOConcurrency && swift build --target _NIODataStructures && swift build --target NIO && swift build --target NIOAsyncAwaitDemo && swift build --target NIOChatClient && swift build --target NIOChatServer && swift build --target NIOConcurrencyHelpers && swift build --target NIOCore && swift build --target NIOCrashTester && swift build --target NIOEchoClient && swift build --target NIOEchoServer && swift build --target NIOEmbedded && swift build --target NIOFoundationCompat && swift build --target NIOFoundationEssentialsCompat && swift build --target NIOHTTP1 && swift build --target NIOHTTP1Client && swift build --target NIOHTTP1Server && swift build --target NIOMulticastChat && swift build --target NIOPerformanceTester && swift build --target NIOPosix && swift build --target NIOTCPEchoClient && swift build --target NIOTCPEchoServer && swift build --target NIOTLS && swift build --target NIOTestUtils && swift build --target NIOUDPEchoClient && swift build --target NIOUDPEchoServer && swift build --target NIOWebSocket && swift build --target NIOWebSocketClient && swift build --target NIOWebSocketServer"
+          MATRIX_WINDOWS_COMMAND: "swift build --target _NIOBase64 && swift build --target _NIOConcurrency && swift build --target _NIODataStructures && swift build --target NIO && swift build --target NIOAsyncAwaitDemo && swift build --target NIOChatClient && swift build --target NIOChatServer && swift build --target NIOConcurrencyHelpers && swift build --target NIOCore && swift build --target NIOEchoClient && swift build --target NIOEchoServer && swift build --target NIOEmbedded && swift build --target NIOFoundationCompat && swift build --target NIOFoundationEssentialsCompat && swift build --target NIOHTTP1 && swift build --target NIOHTTP1Client && swift build --target NIOHTTP1Server && swift build --target NIOMulticastChat && swift build --target NIOPerformanceTester && swift build --target NIOPosix && swift build --target NIOTCPEchoClient && swift build --target NIOTCPEchoServer && swift build --target NIOTLS && swift build --target NIOTestUtils && swift build --target NIOUDPEchoClient && swift build --target NIOUDPEchoServer && swift build --target NIOWebSocket && swift build --target NIOWebSocketClient && swift build --target NIOWebSocketServer"
 
   windows-build:
     name: Windows build (currently-supported targets)
@@ -121,6 +122,7 @@ jobs:
     with:
       runner_pool: general
       build_scheme: swift-nio-Package
+      env_vars: '{"SWIFTNIO_RUN_SLOW_TESTS": "1", "SWIFTNIO_CI": "1"}'
 
   static-sdk:
     name: Static Linux Swift SDK

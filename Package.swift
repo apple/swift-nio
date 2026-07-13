@@ -466,18 +466,6 @@ let package = Package(
             ],
             swiftSettings: swiftSettings
         ),
-        .executableTarget(
-            name: "NIOCrashTester",
-            dependencies: [
-                "NIOPosix",
-                "NIOCore",
-                "NIOEmbedded",
-                "NIOHTTP1",
-                "NIOWebSocket",
-                "NIOFoundationCompat",
-            ],
-            swiftSettings: swiftSettings
-        ),
         .testTarget(
             name: "NIOCoreTests",
             dependencies: [
