@@ -470,10 +470,36 @@ class HTTPResponseEncoderTests: XCTestCase {
         )
     }
 
-    func testConnectResponseOmitsBody() throws {
-        // Responses to CONNECT must not carry a body either.
+    func testConnectResponseOmitsBodyAndFramingHeaders() throws {
+        // A CONNECT response carries no body, and a 2xx CONNECT response must not include
+        // Transfer-Encoding or Content-Length (it switches to a tunnel). So no framing header is
+        // emitted and no body is written, even if a handler mistakenly provides one.
         XCTAssertEqual(
             try self.encodeResponse(toRequestMethod: .CONNECT, status: .ok, body: ByteBuffer(string: "hello")),
+            "HTTP/1.1 200 OK\r\n\r\n"
+        )
+    }
+
+    func testConnectResponseStripsExplicitContentLength() throws {
+        // A 2xx CONNECT response must not carry Content-Length either; it's stripped.
+        XCTAssertEqual(
+            try self.encodeResponse(toRequestMethod: .CONNECT, status: .ok, headers: ["content-length": "1000"]),
+            "HTTP/1.1 200 OK\r\n\r\n"
+        )
+    }
+
+    func testManualFramingModeStillOmitsHeadResponseBody() throws {
+        // With automaticallySetFramingHeaders = false the caller owns the framing headers (here a
+        // chunked Transfer-Encoding is left untouched), but the body and end-of-body marker are
+        // still suppressed for a HEAD response.
+        XCTAssertEqual(
+            try self.encodeResponse(
+                toRequestMethod: .HEAD,
+                status: .ok,
+                headers: ["transfer-encoding": "chunked"],
+                body: ByteBuffer(string: "hello"),
+                configuration: .noFramingTransformation
+            ),
             "HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n"
         )
     }

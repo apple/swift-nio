@@ -315,20 +315,28 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch HTTPResponseEncoder.unwrapOutboundIn(data) {
         case .head(var response):
-            // Correlate this response with the request it answers so that responses to HEAD and
-            // CONNECT are encoded without a body. Non-final informational (1xx, except 101)
-            // responses are followed by a further head, so we don't consume the pending request
-            // method for them (this mirrors HTTPResponseDecoder's handling on the client).
+            // Correlate this response with the request it answers. Responses to HEAD and CONNECT
+            // must not carry a body. A non-final 1xx (except 101) response is followed by a further
+            // head, so we don't consume the pending request method for it (mirrors
+            // HTTPResponseDecoder).
             let statusCode = response.status.code
             let isNonFinalInformational = (100..<200).contains(statusCode) && statusCode != 101
+            var respondingToConnect = false
             if !isNonFinalInformational, let method = self.requestMethods.popFirst() {
                 self.suppressResponseBody = method == .HEAD || method == .CONNECT
+                respondingToConnect = method == .CONNECT
             }
 
             if self.configuration.automaticallySetFramingHeaders {
+                // A CONNECT response has no body, so frame it as such — this also strips any
+                // Transfer-Encoding/Content-Length, which a 2xx CONNECT response (a switch to tunnel
+                // mode) must not include (RFC 9110 §9.3.6, RFC 9112 §6.1). A HEAD response keeps
+                // status-based framing so it still advertises what an equivalent GET would return.
+                let hasBody: HTTPMethod.HasBody =
+                    respondingToConnect ? .no : (response.status.mayHaveResponseBody ? .yes : .no)
                 self.isChunked =
                     correctlyFrameTransportHeaders(
-                        hasBody: response.status.mayHaveResponseBody ? .yes : .no,
+                        hasBody: hasBody,
                         headers: &response.headers,
                         version: response.version
                     ) == .chunked
