@@ -332,8 +332,12 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
                 // Transfer-Encoding/Content-Length, which a 2xx CONNECT response (a switch to tunnel
                 // mode) must not include (RFC 9110 §9.3.6, RFC 9112 §6.1). A HEAD response keeps
                 // status-based framing so it still advertises what an equivalent GET would return.
-                let hasBody: HTTPMethod.HasBody =
-                    respondingToConnect ? .no : (response.status.mayHaveResponseBody ? .yes : .no)
+                let hasBody: HTTPMethod.HasBody
+                if respondingToConnect || !response.status.mayHaveResponseBody {
+                    hasBody = .no
+                } else {
+                    hasBody = .yes
+                }
                 self.isChunked =
                     correctlyFrameTransportHeaders(
                         hasBody: hasBody,
@@ -362,15 +366,15 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
                 // `writeTrailers`).
                 let empty = context.channel.allocator.buffer(capacity: 0)
                 context.write(HTTPResponseEncoder.wrapOutboundOut(.byteBuffer(empty)), promise: promise)
-                break
+            } else {
+                writeChunk(
+                    wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
+                    context: context,
+                    isChunked: self.isChunked,
+                    chunk: bodyPart,
+                    promise: promise
+                )
             }
-            writeChunk(
-                wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
-                context: context,
-                isChunked: self.isChunked,
-                chunk: bodyPart,
-                promise: promise
-            )
         case .end(let trailers):
             if self.suppressResponseBody {
                 // Suppress the end-of-body marker (e.g. the chunked terminator "0\r\n\r\n") for a
