@@ -16,11 +16,13 @@
 
 // Windows-only compatibility shim for the NIOFileSystem family.
 //
-// This port is *compile-only*: it exists so the file-system targets build on
-// Windows. Every POSIX primitive that has no trivial Win32 equivalent is
-// stubbed with `fatalError(...)` (or a trivial value). Real Win32
-// implementations are a follow-up, tracked by the NIOFS Windows-port design
-// doc.
+// This is a *compile-only* port: it supplies the POSIX-shaped types, constants
+// and free functions the rest of the target expects on Windows so the file
+// system targets build. The functions that map onto Win32 are stubbed with
+// `fatalError(...)` here; real implementations land in follow-up PRs. The stubs
+// deliberately match the bare-libc signatures the `system_*` / `libc_*`
+// wrappers call, so those wrappers (and their non-Windows call sites) need no
+// changes.
 //
 // Everything here is defined at module scope so, thanks to same-module
 // visibility, the rest of the target can use these types, constants and
