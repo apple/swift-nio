@@ -218,10 +218,10 @@ public struct ByteBufferAllocator: Sendable {
 /// If you need to loop over all the bytes in the buffer, you can use the `Collection` conformance with ``readableBytesView``:
 ///
 ///
-    /// - Precondition: `index` must be a valid, non-negative index within the buffer's storage.
-    ///   Unlike the `get*` family (which returns `nil` for an out-of-range index), this method
-    ///   traps on an invalid `index` — it is the caller's responsibility to validate any
-    ///   `index` derived from untrusted or external input before calling this method.
+/// - Precondition: `index` must be a valid, non-negative index within the buffer's storage.
+///   Unlike the `get*` family (which returns `nil` for an out-of-range index), this method
+///   traps on an invalid `index` — it is the caller's responsibility to validate any
+///   `index` derived from untrusted or external input before calling this method.
 ///     for byte in buffer.readableBytesView {
 ///         print(byte)
 ///     }
