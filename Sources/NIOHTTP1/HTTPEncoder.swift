@@ -327,26 +327,40 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
                 respondingToConnect = method == .CONNECT
             }
 
+            let bodyShouldBeChunked: Bool
             if self.configuration.automaticallySetFramingHeaders {
                 // A CONNECT response has no body, so frame it as such — this also strips any
-                // Transfer-Encoding/Content-Length, which a 2xx CONNECT response (a switch to tunnel
-                // mode) must not include (RFC 9110 §9.3.6, RFC 9112 §6.1). A HEAD response keeps
-                // status-based framing so it still advertises what an equivalent GET would return.
+                // Transfer-Encoding/Content-Length, which a 2xx CONNECT response (a switch to
+                // tunnel mode) must not include (RFC 9110 §9.3.6, RFC 9112 §6.1). A HEAD response
+                // can still advertise what an equivalent GET would return (from
+                // https://www.rfc-editor.org/rfc/rfc9112.html#name-transfer-encoding):
+                // > Transfer-Encoding MAY be sent in a response to a HEAD request or in a 304
+                // > (Not Modified) response to a GET request, neither of which includes a message
+                // > body, to indicate that the origin server would have applied a transfer coding
+                // > to the message body if the request had been an unconditional GET.
                 let hasBody: HTTPMethod.HasBody
                 if respondingToConnect || !response.status.mayHaveResponseBody {
                     hasBody = .no
                 } else {
                     hasBody = .yes
                 }
-                self.isChunked =
-                    correctlyFrameTransportHeaders(
+
+                bodyShouldBeChunked = correctlyFrameTransportHeaders(
                         hasBody: hasBody,
                         headers: &response.headers,
                         version: response.version
                     ) == .chunked
+
             } else {
-                self.isChunked = messageIsChunked(headers: response.headers, version: response.version)
+                bodyShouldBeChunked = messageIsChunked(
+                    headers: response.headers,
+                    version: response.version
+                )
             }
+
+            // If we're responding to either a HEAD or a CONNECT request, there will actually be
+            // no body, so set `isChunked` to false.
+            self.isChunked = self.suppressResponseBody ? false : bodyShouldBeChunked
 
             writeHead(
                 wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
@@ -359,13 +373,11 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
             )
         case .body(let bodyPart):
             if self.suppressResponseBody {
-                // A response to a HEAD/CONNECT request must not carry a body. Drop the bytes, but
-                // pass the promise to a zero-length downstream write so it still completes in
-                // order — satisfying it synchronously here would fire out of order and break
-                // handlers that act on the write completion (see the matching note in
-                // `writeTrailers`).
-                let empty = context.channel.allocator.buffer(capacity: 0)
-                context.write(HTTPResponseEncoder.wrapOutboundOut(.byteBuffer(empty)), promise: promise)
+                // A response to a HEAD/CONNECT request cannot carry a body (RFC 9112 §6.3). Rather
+                // than silently dropping the bytes, reject the write so the caller learns of the
+                // misuse. Nothing is written downstream, so the head and end still form a
+                // well-formed bodyless response.
+                promise?.fail(NIOHTTPResponseEncoderError.responseBodyNotAllowed)
             } else {
                 writeChunk(
                     wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
@@ -377,20 +389,12 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
             }
         case .end(let trailers):
             if self.suppressResponseBody {
-                // Suppress the end-of-body marker (e.g. the chunked terminator "0\r\n\r\n") for a
-                // HEAD/CONNECT response, and reset for the next response on this connection.
-                // Route through writeTrailers with isChunked == false so the promise still
-                // completes in order via a zero-length write rather than out of order.
-                self.suppressResponseBody = false
-                writeTrailers(
-                    wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
-                    context: context,
-                    isChunked: false,
-                    trailers: nil,
-                    promise: promise
-                )
-                break
+                // A HEAD/CONNECT response must not be chunked.
+                // When we receive the response head, we actually set this to false if we are
+                // suppressing the body, so assert this still holds at this point.
+                assert(!self.isChunked, "There can be no body for HEAD and CONNECT responses.")
             }
+            self.suppressResponseBody = false
             writeTrailers(
                 wrapOutboundOut: HTTPResponseEncoder.wrapOutboundOut,
                 context: context,
@@ -404,6 +408,32 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
 
 @available(*, unavailable)
 extension HTTPResponseEncoder: Sendable {}
+
+/// Errors thrown by ``HTTPResponseEncoder``.
+public struct NIOHTTPResponseEncoderError: Error {
+    private enum BaseError: Hashable {
+        case responseBodyNotAllowed
+    }
+
+    private let baseError: BaseError
+}
+
+extension NIOHTTPResponseEncoderError {
+    /// A response body was written for a response to a `HEAD` or `CONNECT` request, which cannot
+    /// carry a message body (RFC 9110 §9.3.2, RFC 9112 §6.3). The offending body write is failed
+    /// with this error and no bytes are emitted for it.
+    public static let responseBodyNotAllowed: NIOHTTPResponseEncoderError = .init(
+        baseError: .responseBodyNotAllowed
+    )
+}
+
+extension NIOHTTPResponseEncoderError: Hashable {}
+
+extension NIOHTTPResponseEncoderError: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        String(describing: self.baseError)
+    }
+}
 
 extension ByteBuffer {
     private mutating func write(status: HTTPResponseStatus) {

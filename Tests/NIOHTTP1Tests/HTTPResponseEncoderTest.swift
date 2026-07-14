@@ -412,12 +412,11 @@ class HTTPResponseEncoderTests: XCTestCase {
     // MARK: - HEAD/CONNECT response body suppression
 
     /// Adds only the response encoder, lets it observe a request with `requestMethod`, then writes
-    /// the given response and returns all response bytes as a single string.
+    /// the given (bodyless) response and returns all response bytes as a single string.
     private func encodeResponse(
         toRequestMethod requestMethod: HTTPMethod,
         status: HTTPResponseStatus,
         headers: HTTPHeaders = HTTPHeaders(),
-        body: ByteBuffer? = nil,
         configuration: HTTPResponseEncoder.Configuration = .init()
     ) throws -> String {
         let channel = EmbeddedChannel()
@@ -432,9 +431,6 @@ class HTTPResponseEncoderTests: XCTestCase {
         var responseHead = HTTPResponseHead(version: .http1_1, status: status)
         responseHead.headers = headers
         try channel.writeOutbound(HTTPServerResponsePart.head(responseHead))
-        if let body {
-            try channel.writeOutbound(HTTPServerResponsePart.body(.byteBuffer(body)))
-        }
         try channel.writeOutbound(HTTPServerResponsePart.end(nil))
 
         var all = channel.allocator.buffer(capacity: 128)
@@ -442,6 +438,31 @@ class HTTPResponseEncoderTests: XCTestCase {
             all.writeBuffer(&buffer)
         }
         return String(buffer: all)
+    }
+
+    /// Asserts that writing a body part for a response to `requestMethod` (a HEAD/CONNECT request,
+    /// which cannot have a body) fails with ``NIOHTTPResponseEncoderError/responseBodyNotAllowed``.
+    private func assertBodyWriteRejected(
+        forRequestMethod requestMethod: HTTPMethod,
+        configuration: HTTPResponseEncoder.Configuration = .init(),
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws {
+        let channel = EmbeddedChannel()
+        defer { _ = try? channel.finish() }
+
+        let encoder = HTTPResponseEncoder(configuration: configuration)
+        try channel.pipeline.syncOperations.addHandler(encoder)
+        encoder.recordRequestMethod(requestMethod)
+
+        try channel.writeOutbound(HTTPServerResponsePart.head(HTTPResponseHead(version: .http1_1, status: .ok)))
+        XCTAssertThrowsError(
+            try channel.writeOutbound(HTTPServerResponsePart.body(.byteBuffer(ByteBuffer(string: "hello")))),
+            file: file,
+            line: line
+        ) { error in
+            XCTAssertEqual(error as? NIOHTTPResponseEncoderError, .responseBodyNotAllowed, file: file, line: line)
+        }
     }
 
     func testHeadResponseOmitsChunkedTerminator() throws {
@@ -461,23 +482,29 @@ class HTTPResponseEncoderTests: XCTestCase {
         )
     }
 
-    func testHeadResponseDropsBodyBytes() throws {
-        // Even if a handler mistakenly writes a body for a HEAD response, no body bytes (and no
-        // chunked terminator) may reach the wire.
+    func testWritingBodyToHeadResponseIsRejected() throws {
+        // A HEAD response must not carry a body: writing one is rejected rather than silently dropped.
+        try self.assertBodyWriteRejected(forRequestMethod: .HEAD)
+    }
+
+    func testWritingBodyToHeadResponseIsRejectedInManualFramingMode() throws {
+        // Body suppression is method-based, so it applies even when the caller owns the framing headers.
+        try self.assertBodyWriteRejected(forRequestMethod: .HEAD, configuration: .noFramingTransformation)
+    }
+
+    func testConnectResponseOmitsFramingHeaders() throws {
+        // A CONNECT response carries no body, and a 2xx CONNECT response must not include
+        // Transfer-Encoding or Content-Length (it switches to a tunnel), so no framing header is
+        // emitted.
         XCTAssertEqual(
-            try self.encodeResponse(toRequestMethod: .HEAD, status: .ok, body: ByteBuffer(string: "hello")),
-            "HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n"
+            try self.encodeResponse(toRequestMethod: .CONNECT, status: .ok),
+            "HTTP/1.1 200 OK\r\n\r\n"
         )
     }
 
-    func testConnectResponseOmitsBodyAndFramingHeaders() throws {
-        // A CONNECT response carries no body, and a 2xx CONNECT response must not include
-        // Transfer-Encoding or Content-Length (it switches to a tunnel). So no framing header is
-        // emitted and no body is written, even if a handler mistakenly provides one.
-        XCTAssertEqual(
-            try self.encodeResponse(toRequestMethod: .CONNECT, status: .ok, body: ByteBuffer(string: "hello")),
-            "HTTP/1.1 200 OK\r\n\r\n"
-        )
+    func testWritingBodyToConnectResponseIsRejected() throws {
+        // A CONNECT response must not carry a body either.
+        try self.assertBodyWriteRejected(forRequestMethod: .CONNECT)
     }
 
     func testConnectResponseStripsExplicitContentLength() throws {
@@ -488,16 +515,15 @@ class HTTPResponseEncoderTests: XCTestCase {
         )
     }
 
-    func testManualFramingModeStillOmitsHeadResponseBody() throws {
+    func testManualFramingModeStillOmitsHeadResponseTerminator() throws {
         // With automaticallySetFramingHeaders = false the caller owns the framing headers (here a
-        // chunked Transfer-Encoding is left untouched), but the body and end-of-body marker are
-        // still suppressed for a HEAD response.
+        // chunked Transfer-Encoding is left untouched), but the end-of-body marker is still
+        // suppressed for a HEAD response.
         XCTAssertEqual(
             try self.encodeResponse(
                 toRequestMethod: .HEAD,
                 status: .ok,
                 headers: ["transfer-encoding": "chunked"],
-                body: ByteBuffer(string: "hello"),
                 configuration: .noFramingTransformation
             ),
             "HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n"
