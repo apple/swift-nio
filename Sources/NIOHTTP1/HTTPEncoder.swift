@@ -345,7 +345,8 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
                     hasBody = .yes
                 }
 
-                bodyShouldBeChunked = correctlyFrameTransportHeaders(
+                bodyShouldBeChunked =
+                    correctlyFrameTransportHeaders(
                         hasBody: hasBody,
                         headers: &response.headers,
                         version: response.version
