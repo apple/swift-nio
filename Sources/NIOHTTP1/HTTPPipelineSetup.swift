@@ -1064,9 +1064,12 @@ extension ChannelPipeline.SynchronousOperations {
         self.eventLoop.assertInEventLoop()
 
         let responseEncoder = HTTPResponseEncoder(configuration: encoderConfiguration)
+        // The encoder is outbound-only; the request decoder feeds it each decoded request's method
+        // so responses to HEAD/CONNECT are encoded without a body.
         let requestDecoder = HTTPRequestDecoder(
             leftOverBytesStrategy: upgrade == nil ? .dropBytes : .forwardBytes,
-            limitConfiguration: decoderLimitConfiguration
+            limitConfiguration: decoderLimitConfiguration,
+            responseEncoder: responseEncoder
         )
 
         var handlers: [RemovableChannelHandler] = [responseEncoder, ByteToMessageHandler(requestDecoder)]
