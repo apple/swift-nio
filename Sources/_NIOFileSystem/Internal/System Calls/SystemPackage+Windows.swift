@@ -36,8 +36,15 @@ import SystemPackage
 /// POSIX `off_t`.
 typealias off_t = Int64
 
-/// POSIX `timespec`. Defined locally (rather than imported from ucrt) to avoid
-/// colliding with the CRT declaration in files that reference it.
+/// POSIX `timespec`.
+///
+/// Defined locally rather than reused from ucrt. ucrt does declare a
+/// `struct timespec`, but its `tv_nsec` is a C `long` (32-bit under Windows'
+/// LLP64 model), whereas the shared `FileInfo.Timespec` initializer assigns
+/// `tv_sec`/`tv_nsec` straight into `Int` fields. Declaring a POSIX-shaped
+/// `timespec` with `Int` fields lets the cross-platform `FileInfo` and
+/// `futimens` code compile unchanged, and lets the struct be `Sendable`
+/// (the imported C type is not).
 public struct timespec: Sendable {
     public var tv_sec: Int
     public var tv_nsec: Int
@@ -54,7 +61,15 @@ typealias pthread_key_t = UInt32
 // MARK: - `CInterop.Stat` and friends
 
 extension CInterop {
-    /// Windows stand-in for `struct stat`. Only carries the fields NIOFS reads.
+    /// Windows stand-in for `struct stat`.
+    ///
+    /// These fields exist only to satisfy the shared `FileInfo` code and its
+    /// `Hashable`/`Equatable` conformances, which reference each of them on
+    /// every platform, so the type must carry them to compile. Nothing
+    /// populates a value yet (the `stat` family is stubbed), so the fields are
+    /// kept non-public: the public shape of a Windows platform stat is
+    /// deferred until the implementation lands and we know which Win32
+    /// file-information (e.g. `BY_HANDLE_FILE_INFORMATION`) to surface.
     public struct WindowsStat: Sendable {
         var st_dev: UInt64 = 0
         var st_ino: UInt64 = 0
@@ -74,9 +89,6 @@ extension CInterop {
     }
 
     public typealias Stat = WindowsStat
-
-    @_spi(Testing)
-    public static let maxPathLength: Int32 = 260
 
     /// Directory-stream handle. Matches the Linux representation (opaque).
     typealias DirPointer = OpaquePointer

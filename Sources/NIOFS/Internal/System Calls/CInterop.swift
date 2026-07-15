@@ -52,6 +52,11 @@ extension CInterop {
     #elseif canImport(Android)
     @_spi(Testing)
     public static let maxPathLength = Android.PATH_MAX
+    #elseif os(Windows)
+    // The maximum length of an extended-length (`\\?\`-prefixed) path, which is
+    // longer than the legacy `MAX_PATH` (260) limit.
+    @_spi(Testing)
+    public static let maxPathLength = Int32(Int16.max)
     #endif
 
     #if canImport(Darwin)
