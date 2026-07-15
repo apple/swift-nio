@@ -59,37 +59,13 @@ public struct timespec: Sendable {
 typealias pthread_key_t = UInt32
 
 // MARK: - `CInterop.Stat` and friends
+//
+// `CInterop.Stat` itself is `BY_HANDLE_FILE_INFORMATION`, aliased in
+// `CInterop.swift` alongside the other platforms. The bridging that turns it
+// into the POSIX-shaped values the shared `FileInfo` code reads lives at the
+// bottom of this file.
 
 extension CInterop {
-    /// Windows stand-in for `struct stat`.
-    ///
-    /// These fields exist only to satisfy the shared `FileInfo` code and its
-    /// `Hashable`/`Equatable` conformances, which reference each of them on
-    /// every platform, so the type must carry them to compile. Nothing
-    /// populates a value yet (the `stat` family is stubbed), so the fields are
-    /// kept non-public: the public shape of a Windows platform stat is
-    /// deferred until the implementation lands and we know which Win32
-    /// file-information (e.g. `BY_HANDLE_FILE_INFORMATION`) to surface.
-    public struct WindowsStat: Sendable {
-        var st_dev: UInt64 = 0
-        var st_ino: UInt64 = 0
-        var st_mode: UInt32 = 0
-        var st_nlink: UInt32 = 0
-        var st_uid: UInt32 = 0
-        var st_gid: UInt32 = 0
-        var st_rdev: UInt64 = 0
-        var st_size: Int64 = 0
-        var st_blocks: Int64 = 0
-        var st_blksize: Int64 = 0
-        var st_atim: timespec = timespec()
-        var st_mtim: timespec = timespec()
-        var st_ctim: timespec = timespec()
-
-        init() {}
-    }
-
-    public typealias Stat = WindowsStat
-
     /// Directory-stream handle. Matches the Linux representation (opaque).
     typealias DirPointer = OpaquePointer
 
@@ -422,6 +398,104 @@ func pthread_setspecific(_ key: pthread_key_t, _ value: UnsafeRawPointer?) -> CI
 
 func pthread_getspecific(_ key: pthread_key_t) -> UnsafeMutableRawPointer? {
     fatalError("pthread_getspecific is unavailable on Windows")
+}
+
+// MARK: - `BY_HANDLE_FILE_INFORMATION` -> `FileInfo` bridging
+//
+// `CInterop.Stat` is `BY_HANDLE_FILE_INFORMATION` on Windows. These helpers
+// translate it into the POSIX-shaped values the shared `FileInfo` code reads,
+// keeping the Win32 specifics (and the `CNIOWindows`/WinSDK dependency) out of
+// `FileInfo.swift`.
+
+extension CInterop.Stat {
+    /// A POSIX-style `st_mode` synthesised from `dwFileAttributes`.
+    ///
+    /// This mirrors the Windows CRT's `stat` (`convert_to_stat_mode`): a
+    /// directory maps to `S_IFDIR` and gains the execute bits, anything else is
+    /// a regular file, and the read/write bits follow `FILE_ATTRIBUTE_READONLY`,
+    /// replicated across owner/group/other. The CRT's executable-by-extension
+    /// heuristic is intentionally dropped: it needs the path, which isn't part
+    /// of `BY_HANDLE_FILE_INFORMATION`.
+    var nioMode: CInterop.Mode {
+        var mode: CInterop.Mode =
+            (self.dwFileAttributes & DWORD(FILE_ATTRIBUTE_DIRECTORY)) != 0
+            ? S_IFDIR | 0o100
+            : S_IFREG
+        mode |=
+            (self.dwFileAttributes & DWORD(FILE_ATTRIBUTE_READONLY)) != 0
+            ? 0o400
+            : 0o600
+        mode |= (mode & 0o700) >> 3
+        mode |= (mode & 0o700) >> 6
+        return mode
+    }
+
+    /// The file size assembled from its high and low halves.
+    var nioSize: Int64 {
+        Int64(self.nFileSizeHigh) << 32 | Int64(self.nFileSizeLow)
+    }
+
+    var nioLastAccessTime: FileInfo.Timespec {
+        FileInfo.Timespec(self.ftLastAccessTime)
+    }
+
+    var nioLastDataModificationTime: FileInfo.Timespec {
+        FileInfo.Timespec(self.ftLastWriteTime)
+    }
+
+    /// Windows has no POSIX status-change time; the creation time is the closest
+    /// analogue.
+    var nioLastStatusChangeTime: FileInfo.Timespec {
+        FileInfo.Timespec(self.ftCreationTime)
+    }
+
+    func nioHash(into hasher: inout Hasher) {
+        hasher.combine(self.dwFileAttributes)
+        hasher.combine(self.dwVolumeSerialNumber)
+        hasher.combine(self.nFileSizeHigh)
+        hasher.combine(self.nFileSizeLow)
+        hasher.combine(self.nNumberOfLinks)
+        hasher.combine(self.nFileIndexHigh)
+        hasher.combine(self.nFileIndexLow)
+        hasher.combine(self.ftCreationTime.dwLowDateTime)
+        hasher.combine(self.ftCreationTime.dwHighDateTime)
+        hasher.combine(self.ftLastAccessTime.dwLowDateTime)
+        hasher.combine(self.ftLastAccessTime.dwHighDateTime)
+        hasher.combine(self.ftLastWriteTime.dwLowDateTime)
+        hasher.combine(self.ftLastWriteTime.dwHighDateTime)
+    }
+
+    static func nioIsEqual(_ lhs: CInterop.Stat, _ rhs: CInterop.Stat) -> Bool {
+        lhs.dwFileAttributes == rhs.dwFileAttributes
+            && lhs.dwVolumeSerialNumber == rhs.dwVolumeSerialNumber
+            && lhs.nFileSizeHigh == rhs.nFileSizeHigh
+            && lhs.nFileSizeLow == rhs.nFileSizeLow
+            && lhs.nNumberOfLinks == rhs.nNumberOfLinks
+            && lhs.nFileIndexHigh == rhs.nFileIndexHigh
+            && lhs.nFileIndexLow == rhs.nFileIndexLow
+            && lhs.ftCreationTime.dwLowDateTime == rhs.ftCreationTime.dwLowDateTime
+            && lhs.ftCreationTime.dwHighDateTime == rhs.ftCreationTime.dwHighDateTime
+            && lhs.ftLastAccessTime.dwLowDateTime == rhs.ftLastAccessTime.dwLowDateTime
+            && lhs.ftLastAccessTime.dwHighDateTime == rhs.ftLastAccessTime.dwHighDateTime
+            && lhs.ftLastWriteTime.dwLowDateTime == rhs.ftLastWriteTime.dwLowDateTime
+            && lhs.ftLastWriteTime.dwHighDateTime == rhs.ftLastWriteTime.dwHighDateTime
+    }
+}
+
+extension FileInfo.Timespec {
+    /// Converts a Win32 `FILETIME` (100 ns ticks since 1601-01-01 UTC) into a
+    /// POSIX timespec (seconds and nanoseconds since 1970-01-01 UTC).
+    init(_ filetime: FILETIME) {
+        // The number of 100 ns ticks between 1601-01-01 and 1970-01-01.
+        let epochDelta: Int64 = 116_444_736_000_000_000
+        let ticks =
+            Int64(bitPattern: UInt64(filetime.dwHighDateTime) << 32 | UInt64(filetime.dwLowDateTime))
+            - epochDelta
+        self.init(
+            seconds: Int(ticks / 10_000_000),
+            nanoseconds: Int(ticks % 10_000_000) * 100
+        )
+    }
 }
 
 #endif  // os(Windows)

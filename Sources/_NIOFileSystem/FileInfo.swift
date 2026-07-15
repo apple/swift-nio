@@ -77,6 +77,17 @@ public struct FileInfo: Hashable, Sendable {
     /// Creates a ``FileInfo`` by deriving values from a platform-specific value.
     public init(platformSpecificStatus: CInterop.Stat) {
         self._platformSpecificStatus = Stat(platformSpecificStatus)
+        #if os(Windows)
+        self.type = FileType(platformSpecificMode: platformSpecificStatus.nioMode)
+        self.permissions = FilePermissions(masking: platformSpecificStatus.nioMode)
+        self.size = platformSpecificStatus.nioSize
+        // Windows has no POSIX owner/group; report the defaults.
+        self.userID = UserID(rawValue: 0)
+        self.groupID = GroupID(rawValue: 0)
+        self.lastAccessTime = platformSpecificStatus.nioLastAccessTime
+        self.lastDataModificationTime = platformSpecificStatus.nioLastDataModificationTime
+        self.lastStatusChangeTime = platformSpecificStatus.nioLastStatusChangeTime
+        #else
         self.type = FileType(platformSpecificMode: CInterop.Mode(platformSpecificStatus.st_mode))
         self.permissions = FilePermissions(masking: CInterop.Mode(platformSpecificStatus.st_mode))
         self.size = Int64(platformSpecificStatus.st_size)
@@ -87,10 +98,11 @@ public struct FileInfo: Hashable, Sendable {
         self.lastAccessTime = Timespec(platformSpecificStatus.st_atimespec)
         self.lastDataModificationTime = Timespec(platformSpecificStatus.st_mtimespec)
         self.lastStatusChangeTime = Timespec(platformSpecificStatus.st_ctimespec)
-        #elseif canImport(Glibc) || canImport(Musl) || canImport(Android) || os(Windows)
+        #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
         self.lastAccessTime = Timespec(platformSpecificStatus.st_atim)
         self.lastDataModificationTime = Timespec(platformSpecificStatus.st_mtim)
         self.lastStatusChangeTime = Timespec(platformSpecificStatus.st_ctim)
+        #endif
         #endif
     }
 
@@ -200,6 +212,9 @@ private struct Stat: Hashable {
 
     func hash(into hasher: inout Hasher) {
         let stat = self.stat
+        #if os(Windows)
+        stat.nioHash(into: &hasher)
+        #else
         // Different platforms have different values; these are
         // common between Darwin and Glibc.
         hasher.combine(stat.st_dev)
@@ -220,10 +235,11 @@ private struct Stat: Hashable {
         hasher.combine(FileInfo.Timespec(stat.st_birthtimespec))
         hasher.combine(stat.st_flags)
         hasher.combine(stat.st_gen)
-        #elseif canImport(Glibc) || canImport(Musl) || canImport(Android) || os(Windows)
+        #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
         hasher.combine(FileInfo.Timespec(stat.st_atim))
         hasher.combine(FileInfo.Timespec(stat.st_mtim))
         hasher.combine(FileInfo.Timespec(stat.st_ctim))
+        #endif
         #endif
 
     }
@@ -232,6 +248,9 @@ private struct Stat: Hashable {
         let lStat = lhs.stat
         let rStat = rhs.stat
 
+        #if os(Windows)
+        return CInterop.Stat.nioIsEqual(lStat, rStat)
+        #else
         // Different platforms have different values; these are
         // common between Darwin and Glibc.
         var isEqual = lStat.st_dev == rStat.st_dev
@@ -261,13 +280,14 @@ private struct Stat: Hashable {
                 == FileInfo.Timespec(rStat.st_birthtimespec)
         isEqual = isEqual && lStat.st_flags == rStat.st_flags
         isEqual = isEqual && lStat.st_gen == rStat.st_gen
-        #elseif canImport(Glibc) || canImport(Musl) || canImport(Android) || os(Windows)
+        #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
         isEqual = isEqual && FileInfo.Timespec(lStat.st_atim) == FileInfo.Timespec(rStat.st_atim)
         isEqual = isEqual && FileInfo.Timespec(lStat.st_mtim) == FileInfo.Timespec(rStat.st_mtim)
         isEqual = isEqual && FileInfo.Timespec(lStat.st_ctim) == FileInfo.Timespec(rStat.st_ctim)
         #endif
 
         return isEqual
+        #endif
     }
 }
 

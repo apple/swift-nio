@@ -26,6 +26,8 @@ import CNIOLinux
 #elseif canImport(Android)
 @preconcurrency import Android
 import CNIOLinux
+#elseif os(Windows)
+import CNIOWindows
 #endif
 
 /// Aliases for platform-dependent types used for system calls.
@@ -38,6 +40,11 @@ extension CInterop {
     public typealias Stat = Musl.stat
     #elseif canImport(Android)
     public typealias Stat = Android.stat
+    #elseif os(Windows)
+    // `BY_HANDLE_FILE_INFORMATION` is the Windows analogue of `struct stat`; it
+    // is what `GetFileInformationByHandle` fills in. As on other platforms this
+    // is re-exposed via `FileInfo.platformSpecificStatus`.
+    public typealias Stat = BY_HANDLE_FILE_INFORMATION
     #endif
 
     #if canImport(Darwin)
