@@ -302,6 +302,8 @@ final class FileHandleTests: XCTestCase {
         }
     }
 
+    // These tests create FIFOs via `mkfifo`, which is unavailable on Windows.
+    #if !os(Windows)
     func testWriteAndReadUnseekableFile() async throws {
         let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
@@ -384,6 +386,7 @@ final class FileHandleTests: XCTestCase {
             }
         }
     }
+    #endif  // !os(Windows)
 
     func testReadWholeFileWithOffsets() async throws {
         try await self.withHandle(forFileAtPath: Self.thisFile) { handle in

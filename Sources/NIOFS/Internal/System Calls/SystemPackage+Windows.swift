@@ -103,25 +103,28 @@ extension CInterop {
 
 extension FileDescriptor.OpenOptions {
     // Distinct high bits we own. These are placeholders for a real Win32
-    // mapping in the future implementation.
-    static var noFollow: FileDescriptor.OpenOptions {
+    // mapping in the future implementation. They are `@_spi(Testing) public` to
+    // match the accessibility of the swift-system equivalents on other
+    // platforms (which NIOFS's tests reach via an SPI import).
+    @_spi(Testing) public static var noFollow: FileDescriptor.OpenOptions {
         FileDescriptor.OpenOptions(rawValue: 0x4000_0000)
     }
-    static var closeOnExec: FileDescriptor.OpenOptions {
+    @_spi(Testing) public static var closeOnExec: FileDescriptor.OpenOptions {
         FileDescriptor.OpenOptions(rawValue: 0x2000_0000)
     }
-    static var nonBlocking: FileDescriptor.OpenOptions {
+    @_spi(Testing) public static var nonBlocking: FileDescriptor.OpenOptions {
         FileDescriptor.OpenOptions(rawValue: 0x1000_0000)
     }
-    static var directory: FileDescriptor.OpenOptions {
+    @_spi(Testing) public static var directory: FileDescriptor.OpenOptions {
         FileDescriptor.OpenOptions(rawValue: 0x0800_0000)
     }
 }
 
 extension Errno {
     /// No direct equivalent on Windows; alias to `EINVAL` so switches stay
-    /// exhaustive.
-    static var noData: Errno { Errno.invalidArgument }
+    /// exhaustive. `@_spi(Testing) public` to match the swift-system equivalent
+    /// on other platforms (which NIOFS's tests reach via an SPI import).
+    @_spi(Testing) public static var noData: Errno { Errno.invalidArgument }
 }
 
 // MARK: - `stat` mode constants (typed to `CInterop.Mode`)
