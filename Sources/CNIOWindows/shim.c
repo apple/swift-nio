@@ -58,8 +58,14 @@ size_t CNIOWindows_CMSG_SPACE(size_t length) {
   return WSA_CMSG_SPACE(length);
 }
 
-int CNIOWindows_errno(void) {
-    return errno;
+errno_t CNIOWindows_errno(void) {
+    errno_t value = 0;
+    _get_errno(&value);
+    return value;
+}
+
+void CNIOWindows_set_errno(errno_t value) {
+    _set_errno(value);
 }
 
 DWORD CNIOWindows_FormatGetLastError(DWORD errorCode, LPSTR errorMsg) {
