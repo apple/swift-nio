@@ -495,6 +495,7 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testReadFromNonBlockingPipeFails() throws {
+        #if !os(Windows)
         try withPipe { readFH, writeFH in
             do {
                 try readFH.withUnsafeFileDescriptor { readFD in
@@ -520,6 +521,7 @@ class NonBlockingFileIOTest: XCTestCase {
             }
             return [readFH, writeFH]
         }
+        #endif
     }
 
     func testSeekPointerIsSetToFront() throws {
@@ -798,7 +800,11 @@ class NonBlockingFileIOTest: XCTestCase {
                     try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
                         var data: UInt8 = 0
                         return withUnsafeMutableBytes(of: &data) { ptr in
+                            #if os(Windows)
+                            ssize_t(read(fd, ptr.baseAddress, CUnsignedInt(ptr.count)))
+                            #else
                             read(fd, ptr.baseAddress, ptr.count)
+                            #endif
                         }
                     }
                 )
@@ -823,7 +829,11 @@ class NonBlockingFileIOTest: XCTestCase {
                     try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
                         var data: UInt8 = 0
                         return withUnsafeMutableBytes(of: &data) { ptr in
+                            #if os(Windows)
+                            ssize_t(read(fd, ptr.baseAddress, CUnsignedInt(ptr.count)))
+                            #else
                             read(fd, ptr.baseAddress, ptr.count)
+                            #endif
                         }
                     }
                 )
@@ -882,7 +892,11 @@ class NonBlockingFileIOTest: XCTestCase {
                             var data: UInt16 = 0
                             try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
                             let readReturn = withUnsafeMutableBytes(of: &data) { ptr in
+                                #if os(Windows)
+                                ssize_t(read(fd, ptr.baseAddress, CUnsignedInt(ptr.count)))
+                                #else
                                 read(fd, ptr.baseAddress, ptr.count)
+                                #endif
                             }
                             XCTAssertEqual(
                                 UInt16(bigEndian: (UInt16(UInt8(ascii: "X")) << 8) | UInt16(UInt8(ascii: "Y"))),
@@ -947,7 +961,11 @@ class NonBlockingFileIOTest: XCTestCase {
                             var data: UInt16 = 0
                             try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
                             let readReturn = withUnsafeMutableBytes(of: &data) { ptr in
+                                #if os(Windows)
+                                ssize_t(read(fd, ptr.baseAddress, CUnsignedInt(ptr.count)))
+                                #else
                                 read(fd, ptr.baseAddress, ptr.count)
+                                #endif
                             }
                             XCTAssertEqual(UInt16(bigEndian: UInt16(UInt8(ascii: "Y")) << 8), data)
                             return readReturn
@@ -1161,6 +1179,9 @@ class NonBlockingFileIOTest: XCTestCase {
         }
     }
 
+    #if !os(Windows)
+    // These use POSIX-only NonBlockingFileIO primitives (lstat/symlink/listDirectory/
+    // createDirectory) and mode constants (S_IRWXU/S_IFLNK) unavailable on Windows.
     func testLStat() throws {
         XCTAssertNoThrow(
             try withTemporaryFile(content: "hello, world") { _, path in
@@ -1311,6 +1332,7 @@ class NonBlockingFileIOTest: XCTestCase {
             }
         )
     }
+    #endif
 
     func testChunkedReadingToleratesChunkHandlersWithForeignEventLoops() throws {
         let content = "hello"
@@ -1708,7 +1730,11 @@ extension NonBlockingFileIOTest {
                     try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
                         var data: UInt8 = 0
                         return withUnsafeMutableBytes(of: &data) { ptr in
+                            #if os(Windows)
+                            ssize_t(read(fd, ptr.baseAddress, CUnsignedInt(ptr.count)))
+                            #else
                             read(fd, ptr.baseAddress, ptr.count)
+                            #endif
                         }
                     }
                 )
@@ -1728,7 +1754,11 @@ extension NonBlockingFileIOTest {
                     try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
                         var data: UInt8 = 0
                         return withUnsafeMutableBytes(of: &data) { ptr in
+                            #if os(Windows)
+                            ssize_t(read(fd, ptr.baseAddress, CUnsignedInt(ptr.count)))
+                            #else
                             read(fd, ptr.baseAddress, ptr.count)
+                            #endif
                         }
                     }
                 )
@@ -1780,7 +1810,11 @@ extension NonBlockingFileIOTest {
                             var data: UInt16 = 0
                             try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
                             let readReturn = withUnsafeMutableBytes(of: &data) { ptr in
+                                #if os(Windows)
+                                ssize_t(read(fd, ptr.baseAddress, CUnsignedInt(ptr.count)))
+                                #else
                                 read(fd, ptr.baseAddress, ptr.count)
+                                #endif
                             }
                             XCTAssertEqual(
                                 UInt16(bigEndian: (UInt16(UInt8(ascii: "X")) << 8) | UInt16(UInt8(ascii: "Y"))),
@@ -1837,7 +1871,11 @@ extension NonBlockingFileIOTest {
                             var data: UInt16 = 0
                             try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
                             let readReturn = withUnsafeMutableBytes(of: &data) { ptr in
+                                #if os(Windows)
+                                ssize_t(read(fd, ptr.baseAddress, CUnsignedInt(ptr.count)))
+                                #else
                                 read(fd, ptr.baseAddress, ptr.count)
+                                #endif
                             }
                             XCTAssertEqual(UInt16(bigEndian: UInt16(UInt8(ascii: "Y")) << 8), data)
                             return readReturn
@@ -1896,6 +1934,8 @@ extension NonBlockingFileIOTest {
         }
     }
 
+    #if !os(Windows)
+    // These use POSIX-only NonBlockingFileIO primitives unavailable on Windows.
     func testAsyncLStat() async throws {
         try await withTemporaryFile(content: "hello, world") { _, path in
             let stat = try await self.fileIO.lstat(path: path)
@@ -2009,4 +2049,5 @@ extension NonBlockingFileIOTest {
             }
         }
     }
+    #endif
 }

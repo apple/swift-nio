@@ -191,6 +191,8 @@ class BootstrapTest: XCTestCase {
         )
     }
 
+    #if !os(Windows)
+    // Uses Posix.socketpair / socklen_t / CInt socket handles, unavailable on Windows.
     func testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
         var socketFDs: [CInt] = [-1, -1]
         XCTAssertNoThrow(
@@ -269,6 +271,7 @@ class BootstrapTest: XCTestCase {
         XCTAssertNoThrow(try childChannelDone.futureResult.wait())
         XCTAssertNoThrow(try serverChannelDone.futureResult.wait())
     }
+    #endif
 
     func testTCPClientBootstrapAllowsConformanceCorrectly() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -381,6 +384,7 @@ class BootstrapTest: XCTestCase {
     }
 
     func testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer() {
+        #if !os(Windows)
         XCTAssertNoThrow(
             try withTCPServerChannel(group: self.group) { server in
                 var maybeSocket: Socket? = nil
@@ -413,6 +417,7 @@ class BootstrapTest: XCTestCase {
                 XCTAssertNoThrow(try channel?.close().wait())
             }
         )
+        #endif
     }
 
     func testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer() {
@@ -471,6 +476,7 @@ class BootstrapTest: XCTestCase {
     }
 
     func testPipeBootstrapInEventLoop() {
+        #if !os(Windows)
         let testGrp = DispatchGroup()
         testGrp.enter()
 
@@ -496,6 +502,7 @@ class BootstrapTest: XCTestCase {
             }.wait()
         )
         testGrp.wait()
+        #endif
     }
 
     func testServerBootstrapAddsAcceptHandlerAfterServerChannelInitialiser() {
@@ -797,6 +804,8 @@ class BootstrapTest: XCTestCase {
     }
 
     // There was a bug where file handle ownership was not released when creating pipe channels failed.
+    #if !os(Windows)
+    // Uses raw socket()/Posix.socketpair with CInt handles, unavailable on Windows.
     func testReleaseFileHandleOnOwningFailure() {
         struct NIOPipeBootstrapHooksChannelFail: NIOPipeBootstrapHooks {
             func makePipeChannel(
@@ -888,6 +897,7 @@ class BootstrapTest: XCTestCase {
             $0.takingOwnershipOfDescriptors(input: $1, output: dup($1))
         }
     }
+    #endif
 }
 
 private final class AddOnceHandler: ChannelInboundHandler, Sendable {

@@ -17,6 +17,10 @@ import NIOCore
 import NIOPosix
 import XCTest
 
+#if os(Windows)
+import WinSDK
+#endif
+
 final class SocketOptionProviderTest: XCTestCase {
     var group: MultiThreadedEventLoopGroup!
     var serverChannel: Channel!
@@ -203,6 +207,7 @@ final class SocketOptionProviderTest: XCTestCase {
     }
 
     func testSoIpMulticastIf() throws {
+        #if !os(Windows)
         guard let channel = self.ipv4DatagramChannel else {
             // no multicast support
             return
@@ -225,6 +230,7 @@ final class SocketOptionProviderTest: XCTestCase {
                 XCTAssertEqual($0.s_addr, address.s_addr)
             }.wait()
         )
+        #endif
     }
 
     func testIpMulticastTtl() throws {

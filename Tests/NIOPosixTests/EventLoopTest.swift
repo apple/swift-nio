@@ -795,7 +795,7 @@ final class MultiThreadedEventLoopGroupTests {
         var tries = 0
         while holder.loop != nil {
             #expect(tries < 5, "Reference to EventLoop still alive after 5 seconds")
-            sleep(1)
+            Thread.sleep(forTimeInterval: 1)
             tries += 1
         }
     }
@@ -1615,6 +1615,9 @@ final class MultiThreadedEventLoopGroupTests {
         #expect(MultiThreadedEventLoopGroup.currentEventLoop == nil)
     }
 
+    // Uses `ChannelOptions.socket(SOL_SOCKET, SO_REUSEADDR)`, whose integer
+    // form is unavailable on Windows.
+    #if !os(Windows)
     @Test
     func testWeCanDoTrulySingleThreadedNetworking() {
         final class SaveReceivedByte: ChannelInboundHandler {
@@ -1688,6 +1691,7 @@ final class MultiThreadedEventLoopGroupTests {
         // All done, the EventLoop is terminated so we should be able to check the results.
         #expect(UInt8(ascii: "J") == received.withLockedValue { $0 })
     }
+    #endif  // !os(Windows)
 
     @Test
     func testWeFailOutstandingScheduledTasksOnELShutdown() {
