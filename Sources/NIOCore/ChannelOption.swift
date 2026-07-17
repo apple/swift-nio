@@ -100,6 +100,7 @@ extension ChannelOptions {
             // Use `init(level:name:)` taking `NIOBSDSocket.OptionLevel`/`Option`
             // instead (their `.ip`/`.tcp`/etc. accessors read the enum's raw
             // value).
+
             /// Create a new `SocketOption`.
             ///
             /// - Parameters:
