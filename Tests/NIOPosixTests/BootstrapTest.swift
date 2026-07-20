@@ -178,6 +178,9 @@ class BootstrapTest: XCTestCase {
     }
 
     func testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
+        #if os(Windows)
+        throw XCTSkip("Datagram channels are not yet functional on Windows")
+        #endif
         XCTAssertNoThrow(
             try DatagramBootstrap(group: Self.freshEventLoop(self.state))
                 .channelInitializer { [state] channel in
@@ -194,6 +197,9 @@ class BootstrapTest: XCTestCase {
     #if !os(Windows)
     // Uses Posix.socketpair / socklen_t / CInt socket handles, unavailable on Windows.
     func testPreConnectedClientSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
+        #if os(Windows)
+        throw XCTSkip("Bootstrapping from a pre-connected socket is not yet supported on Windows")
+        #endif
         var socketFDs: [CInt] = [-1, -1]
         XCTAssertNoThrow(
             try Posix.socketpair(
@@ -222,6 +228,9 @@ class BootstrapTest: XCTestCase {
     }
 
     func testPreConnectedServerSocketToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
+        #if os(Windows)
+        throw XCTSkip("Bootstrapping from a pre-connected socket is not yet supported on Windows")
+        #endif
         let socket =
             try NIOBSDSocket.socket(domain: .inet, type: .stream, protocolSubtype: .default)
 
@@ -422,7 +431,10 @@ class BootstrapTest: XCTestCase {
         #endif
     }
 
-    func testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer() {
+    func testDatagramBootstrapSetsChannelOptionsBeforeChannelInitializer() throws {
+        #if os(Windows)
+        throw XCTSkip("Datagram channels are not yet functional on Windows")
+        #endif
         var channel: Channel? = nil
         XCTAssertNoThrow(
             channel = try DatagramBootstrap(group: self.group)
@@ -443,7 +455,10 @@ class BootstrapTest: XCTestCase {
         XCTAssertNoThrow(try channel?.close().wait())
     }
 
-    func testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer() {
+    func testPipeBootstrapSetsChannelOptionsBeforeChannelInitializer() throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         XCTAssertNoThrow(
             try withPipe { inPipe, outPipe in
                 var maybeInFD: CInt? = nil
@@ -722,7 +737,10 @@ class BootstrapTest: XCTestCase {
         )
     }
 
-    func testClientBindWorksOnSocketsBoundToEitherIPv4OrIPv6Only() {
+    func testClientBindWorksOnSocketsBoundToEitherIPv4OrIPv6Only() throws {
+        #if os(Windows)
+        throw XCTSkip("Binding a client socket to an IPv4/IPv6 address crashes on Windows")
+        #endif
         for isIPv4 in [true, false] {
             guard System.supportsIPv6 || isIPv4 else {
                 continue  // need to skip IPv6 tests if we don't support it.
@@ -810,7 +828,10 @@ class BootstrapTest: XCTestCase {
     // There was a bug where file handle ownership was not released when creating pipe channels failed.
     #if !os(Windows)
     // Uses raw socket()/Posix.socketpair with CInt handles, unavailable on Windows.
-    func testReleaseFileHandleOnOwningFailure() {
+    func testReleaseFileHandleOnOwningFailure() throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         struct NIOPipeBootstrapHooksChannelFail: NIOPipeBootstrapHooks {
             func makePipeChannel(
                 eventLoop: NIOPosix.SelectableEventLoop,
@@ -879,24 +900,36 @@ class BootstrapTest: XCTestCase {
     }
 
     func testNoDoubleAddOnPipeBootstrapTakingOwnership_inputOutput() throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         try self.doTestNoDoubleAddOnPipeBootstrapTakingOwnership {
             $0.takingOwnershipOfDescriptor(inputOutput: $1)
         }
     }
 
     func testNoDoubleAddOnPipeBootstrapTakingOwnership_input() throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         try self.doTestNoDoubleAddOnPipeBootstrapTakingOwnership {
             $0.takingOwnershipOfDescriptor(input: $1)
         }
     }
 
     func testNoDoubleAddOnPipeBootstrapTakingOwnership_output() throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         try self.doTestNoDoubleAddOnPipeBootstrapTakingOwnership {
             $0.takingOwnershipOfDescriptor(output: $1)
         }
     }
 
     func testNoDoubleAddOnPipeBootstrapTakingOwnership_inputOutputSeparate() throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         try self.doTestNoDoubleAddOnPipeBootstrapTakingOwnership {
             $0.takingOwnershipOfDescriptors(input: $1, output: dup($1))
         }

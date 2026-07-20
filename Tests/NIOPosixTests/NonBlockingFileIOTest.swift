@@ -472,6 +472,9 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testFileRegionReadFromPipeFails() throws {
+        #if os(Windows)
+        throw XCTSkip("Pipes are not supported on Windows")
+        #endif
         try withPipe { readFH, writeFH in
             try! writeFH.withUnsafeFileDescriptor { writeFD in
                 _ = try! Posix.write(descriptor: writeFD, pointer: "ABC", size: 3)
@@ -744,6 +747,9 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testFileOpenFails() throws {
+        #if os(Windows)
+        throw XCTSkip("Opening a nonexistent file reports a different errno on Windows")
+        #endif
         do {
             try self.fileIO.openFile(
                 _deprecatedPath: "/dev/null/this/does/not/exist",
@@ -1685,6 +1691,9 @@ extension NonBlockingFileIOTest {
     }
 
     func testAsyncFileOpenFails() async throws {
+        #if os(Windows)
+        throw XCTSkip("Opening a nonexistent file reports a different errno on Windows")
+        #endif
         do {
             _ = try await self.fileIO.withFileRegion(_deprecatedPath: "/dev/null/this/does/not/exist") { _ in }
             XCTFail("should've thrown")
