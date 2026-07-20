@@ -18,6 +18,12 @@ import XCTest
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class FileChunksTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     func testFileChunksWrapsAsyncStream() async throws {
         let stream = AsyncThrowingStream<ByteBuffer, Error> {
             $0.yield(ByteBuffer(bytes: [0, 1, 2]))

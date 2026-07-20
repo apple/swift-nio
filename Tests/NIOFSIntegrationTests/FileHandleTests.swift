@@ -20,6 +20,12 @@ import XCTest
 
 @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
 final class FileHandleTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     static let thisFile = FilePath(#filePath)
     static let testData = FilePath(#filePath)
         .removingLastComponent()  // FileHandleTests.swift

@@ -16,6 +16,12 @@ import NIOFS
 import XCTest
 
 class ByteCountTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     func testByteCountBytes() {
         let byteCount = ByteCount.bytes(10)
         XCTAssertEqual(byteCount.bytes, 10)
