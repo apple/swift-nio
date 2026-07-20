@@ -96,7 +96,7 @@ final class NIOThread: Sendable {
 
     static var currentThreadName: String? {
         #if os(Windows)
-        ThreadOpsSystem.threadName(.init(GetCurrentThread()))
+        ThreadOpsSystem.threadName(.init(handle: GetCurrentThread()))
         #else
         ThreadOpsSystem.threadName(.init(handle: pthread_self()))
         #endif
@@ -104,7 +104,11 @@ final class NIOThread: Sendable {
 
     static var currentThreadID: UInt {
         #if os(Windows)
-        UInt(bitPattern: .init(bitPattern: ThreadOpsSystem.currentThread))
+        // Use the OS thread id directly. It is stable for the lifetime of the
+        // thread, whereas `currentThread` hands back a fresh `DuplicateHandle`
+        // on every call — distinct handle values for the same thread (so not a
+        // stable id) that would also leak, since nothing closes them here.
+        UInt(GetCurrentThreadId())
         #else
         UInt(bitPattern: .init(bitPattern: ThreadOpsSystem.currentThread.handle))
         #endif
@@ -162,7 +166,15 @@ final class NIOThread: Sendable {
     internal static func withCurrentThread<Return>(_ body: (NIOThread) throws -> Return) rethrows -> Return {
         let thread = NIOThread(handle: ThreadOpsSystem.currentThread, desiredName: nil)
         defer {
-            thread.takeOwnership()
+            let handle = thread.takeOwnership()
+            #if os(Windows)
+            // On Windows `currentThread` gave us an owning HANDLE via
+            // `DuplicateHandle`; release it now. We can't `joinThread` it (that
+            // would wait on the current thread and deadlock), so close directly.
+            CloseHandle(handle.handle)
+            #else
+            _ = handle
+            #endif
         }
         return try body(thread)
     }

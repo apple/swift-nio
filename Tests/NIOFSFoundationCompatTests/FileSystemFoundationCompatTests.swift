@@ -64,6 +64,9 @@ final class FileSystemBytesConformanceTests: XCTestCase {
         )
     }
 
+    // `Data(contentsOf:maximumSizeAllowed:)` is only provided on these
+    // platforms (see `NIOFSFoundationCompat/Data+FileSystem.swift`).
+    #if canImport(Darwin) || os(Linux) || os(Android)
     func testReadFileIntoData() async throws {
         let fs = FileSystem.shared
         let path = try await fs.temporaryFilePath()
@@ -76,4 +79,5 @@ final class FileSystemBytesConformanceTests: XCTestCase {
 
         XCTAssertEqual(contents, Data([0, 1, 2]))
     }
+    #endif
 }

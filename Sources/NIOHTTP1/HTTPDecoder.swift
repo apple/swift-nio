@@ -546,16 +546,19 @@ public struct NIOHTTPDecoderLimitConfiguration: Sendable, Hashable {
     /// Maximum size (in bytes) of a single header field (name + value). Default: 81,920 (80 KB).
     public var maxHeaderFieldSize: Int
 
-    /// Maximum total size (in bytes) of all header field names and values combined in a single message. Default: 2,097,152 (2 MB).
+    /// Maximum total size (in bytes) of all header field names and values combined in a single message. Default: 81,920 (80 KB).
     public var maxHeaderListSize: Int
 
-    /// Maximum number of header fields allowed in a single message (including trailers). Default: 256.
+    /// Maximum number of header fields allowed in a single message (including trailers). Default: 65,534.
+    ///
+    /// The default is `UInt16.max - 1` for compatibility with `swift-http-types`, whose
+    /// `HTTPFields` representation supports up to that many fields.
     public var maxHeaderFieldCount: Int
 
     public init() {
         self.maxHeaderFieldSize = 80 * 1024
-        self.maxHeaderListSize = 16384 * 128
-        self.maxHeaderFieldCount = 256
+        self.maxHeaderListSize = 80 * 1024
+        self.maxHeaderFieldCount = Int(UInt16.max) - 1
     }
 }
 
@@ -587,6 +590,12 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     private let kind: HTTPDecoderKind
     private var stopParsing = false  // set on upgrade or HTTP version error
     private var lastResponseHeaderWasInformational = false
+
+    /// The paired response encoder, if any, that this (server request) decoder feeds decoded
+    /// request methods to so it can omit the body from responses to `HEAD`/`CONNECT` requests.
+    /// Set via the internal initializer used by `configureHTTPServerPipeline`; `nil` otherwise
+    /// (client decoding, or direct use), in which case decoding is unaffected.
+    private var responseEncoder: HTTPResponseEncoder? = nil
 
     /// Creates a new instance of `HTTPDecoder`.
     ///
@@ -639,6 +648,23 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
         self.parser = BetterHTTPParser(kind: kind, configuration: limitConfiguration)
         self.leftOverBytesStrategy = leftOverBytesStrategy
         self.informationalResponseStrategy = informationalResponseStrategy
+    }
+
+    /// Creates a request decoder that feeds each decoded request's method to `responseEncoder`, so
+    /// it can omit the body from responses to `HEAD`/`CONNECT` requests. Used by
+    /// `configureHTTPServerPipeline`.
+    internal convenience init(
+        leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
+        informationalResponseStrategy: NIOInformationalResponseStrategy = .drop,
+        limitConfiguration: NIOHTTPDecoderLimitConfiguration = .init(),
+        responseEncoder: HTTPResponseEncoder
+    ) {
+        self.init(
+            leftOverBytesStrategy: leftOverBytesStrategy,
+            informationalResponseStrategy: informationalResponseStrategy,
+            limitConfiguration: limitConfiguration
+        )
+        self.responseEncoder = responseEncoder
     }
 
     func didReceiveBody(_ bytes: UnsafeRawBufferPointer) {
@@ -727,6 +753,9 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
                     keepAliveState: keepAliveState
                 )
             )
+            // Record the method so the paired response encoder can omit the body from responses to
+            // HEAD/CONNECT requests. No-op unless an encoder was wired up (server pipeline).
+            self.responseEncoder?.recordRequestMethod(reqHead.method)
             message = NIOAny(HTTPServerRequestPart.head(reqHead))
 
         case .response where (100..<200).contains(statusCode) && statusCode != 101:

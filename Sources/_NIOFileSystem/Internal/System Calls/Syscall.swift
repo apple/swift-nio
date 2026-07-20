@@ -26,6 +26,10 @@ import CNIOLinux
 #elseif canImport(Bionic)
 @preconcurrency import Bionic
 import CNIOLinux
+#elseif os(Windows)
+// `CInterop.Stat` is `BY_HANDLE_FILE_INFORMATION`; its initializer is only
+// visible where the defining module is imported.
+import CNIOWindows
 #endif
 
 @_spi(Testing)
