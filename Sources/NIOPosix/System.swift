@@ -101,6 +101,7 @@ private let sysWrite = _write
 private let sysRead = _read
 private let sysLseek = _lseek
 private let sysFtruncate = _chsize_s
+private let sysClose = _close
 #endif
 
 #if os(Android)
@@ -580,6 +581,7 @@ internal enum Posix: Sendable {
             sysShutdown(descriptor, how.cValue)
         }
     }
+    #endif
 
     @inline(never)
     public static func close(descriptor: CInt) throws {
@@ -605,6 +607,7 @@ internal enum Posix: Sendable {
         }
     }
 
+    #if !os(Windows)
     @inline(never)
     public static func bind(descriptor: CInt, ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
         _ = try syscall(blocking: false) {
