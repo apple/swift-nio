@@ -328,6 +328,48 @@ extension EventLoopFuture {
             return next.futureResult.assumeIsolatedUnsafeUnchecked()
         }
 
+        /// When the current `EventLoopFuture<Value>.Isolated` is fulfilled, run the provided callback,
+        /// which will provide a new `EventLoopFuture.Isolated`.
+        ///
+        /// This allows you to dynamically dispatch new asynchronous tasks as phases in a
+        /// longer series of processing steps. Note that you can use the results of the
+        /// current `EventLoopFuture<Value>.Isolated` when determining how to dispatch the next operation.
+        ///
+        /// Because the callback returns an `EventLoopFuture<NewValue>.Isolated`, the caller is asserting
+        /// that the future returned from the callback is bound to the same ``EventLoop`` as this future.
+        /// `EventLoopFuture<NewValue>.Isolated` can only be constructed via
+        /// ``EventLoopFuture/assumeIsolated()``, which requires being on the future's event loop.
+        ///
+        /// - Note: The `NewValue` need not be `Sendable` since the isolation domains of this future
+        /// and the future returned from the callback must be the same. Call ``nonisolated()`` on the
+        /// result if you need a non-isolated ``EventLoopFuture``.
+        ///
+        /// - Parameters:
+        ///   - callback: Function that will receive the value of this `EventLoopFuture.Isolated` and return
+        ///         a new `EventLoopFuture.Isolated`.
+        /// - Returns: A future that will receive the eventual value.
+        @inlinable
+        @available(*, noasync)
+        public func flatMapIsolated<NewValue>(
+            _ callback: @escaping (Value) -> EventLoopFuture<NewValue>.Isolated
+        ) -> EventLoopFuture<NewValue>.Isolated {
+            let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self._wrapped.eventLoop)
+            let base = self._wrapped
+            base._whenCompleteIsolated {
+                switch base._value! {
+                case .success(let t):
+                    let futureU = callback(t)
+                    futureU._wrapped.eventLoop.assertInEventLoop()
+                    return futureU._wrapped._addCallback {
+                        next._setValue(value: futureU._wrapped._value!)
+                    }
+                case .failure(let error):
+                    return next._setValue(value: .failure(error))
+                }
+            }
+            return next.futureResult.assumeIsolatedUnsafeUnchecked()
+        }
+
         /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
         /// performs a synchronous computation and returns a new value of type `NewValue`. The provided
         /// callback may optionally `throw`.
