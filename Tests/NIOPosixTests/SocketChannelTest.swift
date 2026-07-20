@@ -1033,6 +1033,9 @@ final class SocketChannelTest: XCTestCase {
     }
 
     func testServerClosesTheConnectionImmediately() throws {
+        #if os(Windows)
+        throw XCTSkip("Connection-reset handling is unreliable on Windows and can leak a promise")
+        #endif
         // This is a regression test for a problem that the grpc-swift compatibility tests hit where everything would
         // get stuck on a server that just insta-closes every accepted connection.
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)

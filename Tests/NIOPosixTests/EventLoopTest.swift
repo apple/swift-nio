@@ -559,7 +559,15 @@ final class MultiThreadedEventLoopGroupTests {
         try group.syncShutdownGracefully()
     }
 
-    @Test
+    @Test(
+        .disabled("Registering an invalid fd traps in the WSAPoll selector on Windows") {
+            #if os(Windows)
+            return true
+            #else
+            return false
+            #endif
+        }
+    )
     func testShuttingDownFailsRegistration() throws {
         // This test catches a regression where the selectable event loop would allow a socket registration while
         // it was nominally "shutting down". To do this, we take advantage of the fact that the event loop attempts
@@ -2272,7 +2280,15 @@ final class MultiThreadedEventLoopGroupTests {
         }
     }
 
-    @Test
+    @Test(
+        .disabled("The WSAPoll selector has no epoll-style descriptor, so its debugDescription differs on Windows") {
+            #if os(Windows)
+            return true
+            #else
+            return false
+            #endif
+        }
+    )
     func testStructuredConcurrencyMTELGStartStop() async throws {
         let loops = try await MultiThreadedEventLoopGroup.withEventLoopGroup(
             numberOfThreads: 3

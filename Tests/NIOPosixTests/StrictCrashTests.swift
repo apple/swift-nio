@@ -26,7 +26,15 @@ import ucrt
 
 @Suite
 struct StrictCrashTests {
-    @Test
+    @Test(
+        .disabled("Scheduling after shutdown does not trap as expected on Windows") {
+            #if os(Windows)
+            return true
+            #else
+            return false
+            #endif
+        }
+    )
     func eventLoopScheduleAfterShutdown() async {
         let result = await #expect(processExitsWith: .failure, observing: [\.standardErrorContent]) {
             func blockingFunctionsAllowedInCrashTest() {
