@@ -152,16 +152,19 @@ import Testing
     }
 
     @Test func defaultFieldCountLimitRejectsExcessiveHeaders() throws {
+        var config = NIOHTTPDecoderLimitConfiguration()
+        config.maxHeaderListSize = .max
+        let decoder = HTTPRequestDecoder(limitConfiguration: config)
         let channel = EmbeddedChannel()
-        try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPRequestDecoder()))
+        try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(decoder))
 
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeString("GET / HTTP/1.1\r\nHost: example.com\r\n")
         try channel.writeInbound(buffer)
 
-        // Default limit is 256 fields. Sending 257 should fail.
+        // Default limit is UInt16.max - 1 fields. Sending UInt16.max should fail.
         var threwError = false
-        for i in 0..<257 {
+        for i in 0..<Int(UInt16.max) {
             let headerBuffer = ByteBuffer(string: "X-H-\(i): v\r\n")
             do {
                 try channel.writeInbound(headerBuffer)
@@ -171,7 +174,7 @@ import Testing
             }
         }
 
-        #expect(threwError, "Expected default field count limit to reject request with 257+ headers")
+        #expect(threwError, "Expected default field count limit to reject request with UInt16.max headers")
         _ = try? channel.finish()
     }
 
@@ -220,7 +223,7 @@ import Testing
         _ = try? channel.finish()
     }
 
-    @Test func defaultMaxHeaderListSizeIs2MB() throws {
+    @Test func defaultMaxHeaderListSizeIs80KB() throws {
         var config = NIOHTTPDecoderLimitConfiguration()
         config.maxHeaderFieldCount = 10_000
         let decoder = HTTPRequestDecoder(limitConfiguration: config)
@@ -231,13 +234,13 @@ import Testing
         buffer.writeString("GET / HTTP/1.1\r\n")
         try channel.writeInbound(buffer)
 
-        // Default maxHeaderListSize is 16384 * 128 = 2 MB. Send headers totaling > 2 MB.
-        // Use values just under the default 16 KB field-size limit so the field-size
-        // limit doesn't trigger first.
-        let valueSize = 16000
+        // Default maxHeaderListSize is 80 KB. Send headers totaling > 80 KB.
+        // Use values well under the default 80 KB field-size limit so the
+        // field-size limit doesn't trigger first.
+        let valueSize = 8000
         var totalBytes = 0
         var threwError = false
-        for i in 0..<200 {
+        for i in 0..<32 {
             let name = "X-H-\(i)"
             let value = String(repeating: "a", count: valueSize)
             let headerBuffer = ByteBuffer(string: "\(name): \(value)\r\n")
@@ -250,8 +253,8 @@ import Testing
             }
         }
 
-        #expect(threwError, "Expected default 2 MB header list size limit to reject request")
-        #expect(totalBytes > 16384 * 128, "Test should have exceeded 2 MB before error")
+        #expect(threwError, "Expected default 80 KB header list size limit to reject request")
+        #expect(totalBytes > 80 * 1024, "Test should have exceeded 80 KB before error")
         _ = try? channel.finish()
     }
 

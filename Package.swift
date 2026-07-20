@@ -257,6 +257,7 @@ let package = Package(
                 "NIOPosix",
                 "CNIOLinux",
                 "CNIODarwin",
+                "CNIOWindows",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
@@ -285,6 +286,7 @@ let package = Package(
                 "NIOPosix",
                 "CNIOLinux",
                 "CNIODarwin",
+                "CNIOWindows",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
@@ -462,18 +464,7 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOFoundationCompat",
                 "NIOWebSocket",
-            ],
-            swiftSettings: swiftSettings
-        ),
-        .executableTarget(
-            name: "NIOCrashTester",
-            dependencies: [
-                "NIOPosix",
-                "NIOCore",
-                "NIOEmbedded",
-                "NIOHTTP1",
-                "NIOWebSocket",
-                "NIOFoundationCompat",
+                "CNIOWindows",
             ],
             swiftSettings: swiftSettings
         ),

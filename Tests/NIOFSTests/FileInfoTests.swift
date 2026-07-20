@@ -32,6 +32,10 @@ private let S_IFREG = Glibc.S_IFREG
 private let S_IFREG = Musl.S_IFREG
 #endif
 
+// `CInterop.Stat` is `BY_HANDLE_FILE_INFORMATION` on Windows, so these tests
+// (which build a POSIX `struct stat`) don't apply as written. Windows coverage
+// that constructs a `BY_HANDLE_FILE_INFORMATION` is a follow-up.
+#if !os(Windows)
 final class FileInfoTests: XCTestCase {
     private var status: CInterop.Stat {
         var status = CInterop.Stat()
@@ -167,3 +171,4 @@ final class FileInfoTests: XCTestCase {
         #endif
     }
 }
+#endif  // !os(Windows)
