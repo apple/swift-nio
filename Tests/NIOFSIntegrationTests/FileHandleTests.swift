@@ -326,6 +326,80 @@ final class FileHandleTests: XCTestCase {
         }
     }
 
+    #if canImport(Darwin)
+    func testWriteToTerminalCharacterDeviceFallsBackToPlainWrite() async throws {
+        // Regression test for https://github.com/apple/swift-nio/issues/3613.
+        // On Darwin, pwrite on a terminal returns ENXIO (not ESPIPE like a FIFO);
+        // an offset-0 write must fall back to plain write().
+        var primary: Int32 = -1
+        var replica: Int32 = -1
+        guard openpty(&primary, &replica, nil, nil, nil) == 0 else {
+            throw XCTSkip("Unable to allocate a pseudo-terminal.")
+        }
+        guard let name = ttyname(replica) else {
+            close(primary)
+            close(replica)
+            throw XCTSkip("Unable to resolve the pseudo-terminal path.")
+        }
+        let terminalPath = FilePath(String(cString: name))
+        close(replica)
+        defer { close(primary) }
+
+        try await self.withHandle(forFileAtPath: terminalPath, accessMode: .writeOnly) {
+            handle in
+            let someBytes = ByteBuffer(repeating: 42, count: 16)
+            let written = try await handle.write(
+                contentsOf: someBytes.readableBytesView,
+                toAbsoluteOffset: 0
+            )
+            XCTAssertEqual(written, 16)
+        }
+    }
+
+    func testReadFromTerminalCharacterDeviceFallsBackToPlainRead() async throws {
+        // Companion read-path test for https://github.com/apple/swift-nio/issues/3613.
+        var primary: Int32 = -1
+        var replica: Int32 = -1
+        guard openpty(&primary, &replica, nil, nil, nil) == 0 else {
+            throw XCTSkip("Unable to allocate a pseudo-terminal.")
+        }
+        // Keep both ends open for the duration: closing the last replica fd hangs
+        // up the line and discards any queued input.
+        defer {
+            close(primary)
+            close(replica)
+        }
+        guard let name = ttyname(replica) else {
+            throw XCTSkip("Unable to resolve the pseudo-terminal path.")
+        }
+        // Put the line in raw mode so the bytes fed in aren't transformed by the
+        // terminal's line discipline before they're read back.
+        var settings = termios()
+        guard tcgetattr(replica, &settings) == 0 else {
+            throw XCTSkip("Unable to read the pseudo-terminal settings.")
+        }
+        cfmakeraw(&settings)
+        guard tcsetattr(replica, TCSANOW, &settings) == 0 else {
+            throw XCTSkip("Unable to put the pseudo-terminal into raw mode.")
+        }
+
+        let terminalPath = FilePath(String(cString: name))
+
+        // Queue bytes from the primary side so the read has something to return.
+        let expected = ByteBuffer(repeating: 42, count: 16)
+        let queued = expected.readableBytesView.withUnsafeBytes {
+            write(primary, $0.baseAddress, $0.count)
+        }
+        try XCTSkipUnless(queued == 16, "Unable to queue bytes on the pseudo-terminal.")
+
+        try await self.withHandle(forFileAtPath: terminalPath, accessMode: .readOnly) {
+            handle in
+            let chunk = try await handle.readChunk(fromAbsoluteOffset: 0, length: .bytes(16))
+            XCTAssertEqual(chunk, expected)
+        }
+    }
+    #endif
+
     func testWriteAndReadUnseekableFileOverMaximumSizeAllowedThrowsError() async throws {
         let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
