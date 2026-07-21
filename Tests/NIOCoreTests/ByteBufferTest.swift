@@ -4726,5 +4726,67 @@ extension ByteBufferTest {
         XCTAssertEqual(0, self.buf.readableBytes)
         XCTAssertEqual(prefix.count + payload.count, self.buf.readerIndex)
     }
+
+    // MARK: - Async withUnsafeReadableBytes
+
+    func testAsyncWithUnsafeReadableBytesCopiesBytes() async throws {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 32)
+        let expected: [UInt8] = [0x01, 0x02, 0x03, 0x04]
+        buf.writeBytes(expected)
+
+        try await buf.withUnsafeReadableBytes { ptr in
+            XCTAssertEqual(ptr.count, 4)
+            let bytes = [UInt8](ptr)
+            XCTAssertEqual(bytes, expected)
+        }
+    }
+
+    func testAsyncWithUnsafeReadableBytesEmptyBuffer() async throws {
+        let alloc = ByteBufferAllocator()
+        let buf = alloc.buffer(capacity: 32)
+
+        try await buf.withUnsafeReadableBytes { ptr in
+            XCTAssertEqual(ptr.count, 0)
+        }
+    }
+
+    func testAsyncWithUnsafeReadableBytesCanSuspend() async throws {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 32)
+        buf.writeString("hello")
+
+        // Verify that suspension (Task.yield) in the middle doesn't
+        // invalidate the pointer.
+        try await buf.withUnsafeReadableBytes { ptr in
+            // Artificially suspend
+            await Task.yield()
+            let bytes = [UInt8](ptr)
+            XCTAssertEqual(bytes, [UInt8]("hello".utf8))
+            // Suspend again after reading
+            await Task.yield()
+            // Verify pointer is still valid
+            let bytesAgain = [UInt8](ptr)
+            XCTAssertEqual(bytesAgain, [UInt8]("hello".utf8))
+        }
+    }
+
+    func testAsyncWithUnsafeReadableBytesCopyIsIndependent() async throws {
+        let alloc = ByteBufferAllocator()
+        var buf = alloc.buffer(capacity: 32)
+        buf.writeString("original")
+
+        // Capture the copied pointer via an unsafe container
+        let captured = try await buf.withUnsafeReadableBytes { ptr in
+            Data(ptr)
+        }
+
+        // Now mutate the original buffer
+        buf.clear()
+        buf.writeString("modified")
+
+        // The captured copy should still have the original content
+        XCTAssertEqual(String(data: captured, encoding: .utf8), "original")
+    }
 }
 #endif
