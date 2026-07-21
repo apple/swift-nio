@@ -1,13 +1,8 @@
 # ``NIOFileSystem``
 
-> Warning: Do not use this module. Instead use [`_NIOFileSystem`][_fs-docs].
+> Warning: Do not use this module.
 >
-> `NIOFileSystem` currently exposes the same API as `_NIOFileSystem`, which is not API stable. `NIOFileSystem`
-> was created in error, and its lack of underscore incorrectly implies API stability. Users who are currently importing
-> `NIOFileSystem` should move to `_NIOFileSystem`.
->
-> Refer to [`_NIOFilesystem`][_fs-docs] for documentation on the API of this module.
->
-> There is ongoing work in NIO to provide a filesystem library with a stable API.
-
-[_fs-docs]: ./_NIOFileSystem
+> `NIOFileSystem` was created in error; its lack of underscore incorrectly implies API stability.
+> Users who are currently importing `NIOFileSystem` should migrate to
+> [`NIOFS`](https://github.com/apple/swift-nio/tree/main/Sources/NIOFS), which provides the same
+> API as a stable module.

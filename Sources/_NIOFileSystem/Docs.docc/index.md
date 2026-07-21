@@ -1,5 +1,9 @@
 # ``_NIOFileSystem``
 
+> Warning: This is the legacy implementation module. Users should migrate to
+> [`NIOFS`](https://github.com/apple/swift-nio/tree/main/Sources/NIOFS) which
+> provides the same API under a stable module name.
+
 A file system library for Swift.
 
 ## Overview
