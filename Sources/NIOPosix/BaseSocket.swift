@@ -384,7 +384,7 @@ class BaseSocket: BaseSocketProtocol {
 extension BaseSocket: Selectable {
     func withUnsafeHandle<T>(_ body: (NIOBSDSocket.Handle) throws -> T) throws -> T {
         guard self.isOpen else {
-            throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
+            throw ChannelError.ioOnClosedChannel
         }
         return try body(self.descriptor)
     }

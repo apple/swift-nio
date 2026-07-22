@@ -46,7 +46,7 @@ final class SelectablePipeHandle {
         fatalError(missingPipeSupportWindows)
         #else
         guard self.isOpen else {
-            throw IOError(errnoCode: EBADF, reason: "SelectablePipeHandle already closed [in close]")
+            throw ChannelError.ioOnClosedChannel
         }
         defer {
             self.fileDescriptor = -1
@@ -63,7 +63,7 @@ final class SelectablePipeHandle {
 extension SelectablePipeHandle: Selectable {
     func withUnsafeHandle<T>(_ body: (NIOBSDSocket.Handle) throws -> T) throws -> T {
         guard self.isOpen else {
-            throw IOError(errnoCode: EBADF, reason: "SelectablePipeHandle already closed [in wUH]")
+            throw ChannelError.ioOnClosedChannel
         }
         return try body(self.fileDescriptor)
     }
