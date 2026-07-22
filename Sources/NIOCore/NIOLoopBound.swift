@@ -44,6 +44,16 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
         self._value = value
     }
 
+    /// Initialise a ``NIOLoopBound`` to `value` with the assertion that the code is running on `eventLoop`.
+    ///
+    /// - Note: This is an unchecked variant of ``init(_:eventLoop:)`` that only asserts in debug mode.
+    @inlinable
+    public init(unchecked value: Value, eventLoop: EventLoop) {
+        eventLoop.assertInEventLoop()
+        self.eventLoop = eventLoop
+        self._value = value
+    }
+
     /// Access the `value` with the precondition that the code is running on `eventLoop`.
     ///
     /// - Note: ``NIOLoopBound`` itself is value-typed, so any writes will only affect the current value.
@@ -55,6 +65,22 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
         }
         _modify {
             self.eventLoop.preconditionInEventLoop()
+            yield &self._value
+        }
+    }
+
+    /// Access the `value` with the assertion that the code is running on `eventLoop`.
+    ///
+    /// - Note: ``NIOLoopBound`` itself is value-typed, so any writes will only affect the current value.
+    /// - Note: This is an unchecked variant of ``value`` that only asserts in debug mode.
+    @inlinable
+    public var uncheckedValue: Value {
+        get {
+            self.eventLoop.assertInEventLoop()
+            return self._value
+        }
+        _modify {
+            self.eventLoop.assertInEventLoop()
             yield &self._value
         }
     }
@@ -101,6 +127,15 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         // This precondition is absolutely required. If not, it were possible to take a non-Sendable `Value` from
         // _off_ the ``EventLoop`` and transport it _to_ the ``EventLoop``. That would be illegal.
         eventLoop.preconditionInEventLoop()
+        self.init(_value: value, uncheckedEventLoop: eventLoop)
+    }
+
+    /// Initialise a ``NIOLoopBoundBox`` to `value` with the assertion that the code is running on `eventLoop`.
+    ///
+    /// - Note: This is an unchecked variant of ``init(_:eventLoop:)`` that only asserts in debug mode.
+    @inlinable
+    public convenience init(unchecked value: Value, eventLoop: EventLoop) {
+        eventLoop.assertInEventLoop()
         self.init(_value: value, uncheckedEventLoop: eventLoop)
     }
 
@@ -174,6 +209,22 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         }
     }
 
+    /// Access the `value` with the assertion that the code is running on `eventLoop`.
+    ///
+    /// - Note: ``NIOLoopBoundBox`` itself is reference-typed, so any writes will affect anybody sharing this reference.
+    /// - Note: This is an unchecked variant of ``value`` that only asserts in debug mode.
+    @inlinable
+    public var uncheckedValue: Value {
+        get {
+            self.eventLoop.assertInEventLoop()
+            return self._value
+        }
+        _modify {
+            self.eventLoop.assertInEventLoop()
+            yield &self._value
+        }
+    }
+
     /// Safely access and potentially modify the contained value with a closure.
     ///
     /// This method provides a way to perform operations on the contained value while ensuring
@@ -191,6 +242,27 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         _ handler: (inout Value) throws(Failure) -> Success
     ) throws(Failure) -> Success {
         self.eventLoop.preconditionInEventLoop()
+        return try handler(&self._value)
+    }
+
+    /// Safely access and potentially modify the contained value with a closure.
+    ///
+    /// This method provides a way to perform operations on the contained value while ensuring
+    /// thread safety through EventLoop verification. The closure receives an `inout` parameter
+    /// allowing both read and write access to the value.
+    ///
+    /// - Parameter handler: A closure that receives an `inout` reference to the contained value.
+    ///   The closure can read from and write to this value. Any modifications made within the
+    ///   closure will be reflected in the box after the closure completes, even if the closure throws.
+    /// - Returns: The value returned by the `handler` closure.
+    /// - Note: This method is particularly useful when you need to perform read and write operations
+    ///         on the value because it reduces the on EventLoop checks.
+    /// - Note: This is an unchecked variant of ``withValue(_:)`` that only asserts in debug mode.
+    @inlinable
+    public func withUncheckedValue<Success, Failure: Error>(
+        _ handler: (inout Value) throws(Failure) -> Success
+    ) throws(Failure) -> Success {
+        self.eventLoop.assertInEventLoop()
         return try handler(&self._value)
     }
 }
