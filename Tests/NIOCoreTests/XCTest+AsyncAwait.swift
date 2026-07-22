@@ -42,7 +42,7 @@
 import XCTest
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-internal func XCTAssertThrowsError<T>(
+nonisolated(nonsending) internal func XCTAssertThrowsError<T>(
     _ expression: @autoclosure () async throws -> T,
     file: StaticString = #filePath,
     line: UInt = #line,
@@ -57,7 +57,7 @@ internal func XCTAssertThrowsError<T>(
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-internal func XCTAssertNoThrow<T>(
+nonisolated(nonsending) internal func XCTAssertNoThrow<T>(
     _ expression: @autoclosure () async throws -> T,
     file: StaticString = #filePath,
     line: UInt = #line
@@ -70,7 +70,7 @@ internal func XCTAssertNoThrow<T>(
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-internal func XCTAssertNoThrowWithResult<Result>(
+nonisolated(nonsending) internal func XCTAssertNoThrowWithResult<Result>(
     _ expression: @autoclosure () async throws -> Result,
     file: StaticString = #filePath,
     line: UInt = #line
@@ -84,7 +84,7 @@ internal func XCTAssertNoThrowWithResult<Result>(
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-internal func XCTAsyncAssertNotNil(
+nonisolated(nonsending) internal func XCTAsyncAssertNotNil(
     _ expression: @autoclosure () async throws -> Any?,
     file: StaticString = #filePath,
     line: UInt = #line
@@ -94,7 +94,7 @@ internal func XCTAsyncAssertNotNil(
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-internal func XCTAsyncAssertNil(
+nonisolated(nonsending) internal func XCTAsyncAssertNil(
     _ expression: @autoclosure () async throws -> Any?,
     file: StaticString = #filePath,
     line: UInt = #line

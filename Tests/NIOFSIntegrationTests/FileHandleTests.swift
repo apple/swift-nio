@@ -702,10 +702,12 @@ final class FileHandleTests: XCTestCase {
         try await self.testCloseOrDetachMidRead(close: false)
     }
 
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
     func testCloseBeforeReadingFromFile() async throws {
         try await self.testCloseOrDetachBeforeRead(close: true)
     }
 
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
     func testDetachBeforeReadingFromFile() async throws {
         try await self.testCloseOrDetachBeforeRead(close: false)
     }
@@ -751,6 +753,7 @@ final class FileHandleTests: XCTestCase {
         }
     }
 
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
     private func testCloseOrDetachBeforeRead(close: Bool) async throws {
         try await self.withHandle(forFileAtPath: Self.thisFile, autoClose: false) { handle in
             if close {
@@ -762,7 +765,7 @@ final class FileHandleTests: XCTestCase {
 
             var iterator = handle.readChunks().makeAsyncIterator()
             await XCTAssertThrowsFileSystemErrorAsync {
-                try await iterator.next()
+                try await iterator.next(isolation: #isolation)
             } onError: { error in
                 XCTAssertEqual(error.code, .closed)
             }
