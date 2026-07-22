@@ -19,6 +19,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <stdatomic.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -199,8 +200,15 @@ void *replacement_realloc(void *ptr, size_t size) {
 }
 
 void *replacement_calloc(size_t count, size_t size) {
-    void *ptr = replacement_malloc(count * size);
-    memset(ptr, 0, count * size);
+    if (size != 0 && count > SIZE_MAX / size) {
+        return NULL;
+    }
+
+    size_t total_size = count * size;
+    void *ptr = replacement_malloc(total_size);
+    if (ptr) {
+        memset(ptr, 0, total_size);
+    }
     return ptr;
 }
 
