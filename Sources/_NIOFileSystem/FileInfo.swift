@@ -59,6 +59,12 @@ public struct FileInfo: Hashable, Sendable {
     /// The size of the file in bytes.
     public var size: Int64
 
+    /// The size of the file on disk in bytes.
+    ///
+    /// This value accounts for holes in sparse files and file system compression.
+    /// If the information is not available, this may be `nil`.
+    public var onDiskSize: Int64?
+
     /// User ID of the file.
     public var userID: UserID
 
@@ -81,6 +87,7 @@ public struct FileInfo: Hashable, Sendable {
         self.type = FileType(platformSpecificMode: platformSpecificStatus.nioMode)
         self.permissions = FilePermissions(masking: platformSpecificStatus.nioMode)
         self.size = platformSpecificStatus.nioSize
+        self.onDiskSize = nil
         // Windows has no POSIX owner/group; report the defaults.
         self.userID = UserID(rawValue: 0)
         self.groupID = GroupID(rawValue: 0)
@@ -91,6 +98,7 @@ public struct FileInfo: Hashable, Sendable {
         self.type = FileType(platformSpecificMode: CInterop.Mode(platformSpecificStatus.st_mode))
         self.permissions = FilePermissions(masking: CInterop.Mode(platformSpecificStatus.st_mode))
         self.size = Int64(platformSpecificStatus.st_size)
+        self.onDiskSize = Int64(platformSpecificStatus.st_blocks) * 512
         self.userID = UserID(rawValue: platformSpecificStatus.st_uid)
         self.groupID = GroupID(rawValue: platformSpecificStatus.st_gid)
 
@@ -114,6 +122,7 @@ public struct FileInfo: Hashable, Sendable {
         type: FileType,
         permissions: FilePermissions,
         size: Int64,
+        onDiskSize: Int64? = nil,
         userID: UserID,
         groupID: GroupID,
         lastAccessTime: Timespec,
@@ -124,6 +133,7 @@ public struct FileInfo: Hashable, Sendable {
         self.type = type
         self.permissions = permissions
         self.size = size
+        self.onDiskSize = onDiskSize
         self.userID = userID
         self.groupID = groupID
         self.lastAccessTime = lastAccessTime
