@@ -399,7 +399,7 @@ final class FileSystemErrorTests: XCTestCase {
                 .badFileDescriptor: .closed,
                 .ioError: .io,
                 .illegalSeek: .unsupported,
-                .noSuchDeviceOrAddress: .unsupported,
+                .noSuchAddressOrDevice: .unsupported,
             ]
         ) { errno in
             .read(usingSyscall: .pread, error: errno, path: "", location: .fixed)
@@ -423,7 +423,7 @@ final class FileSystemErrorTests: XCTestCase {
                 .badFileDescriptor: .closed,
                 .ioError: .io,
                 .illegalSeek: .unsupported,
-                .noSuchDeviceOrAddress: .unsupported,
+                .noSuchAddressOrDevice: .unsupported,
             ]
         ) { errno in
             .write(usingSyscall: .pwrite, error: errno, path: "", location: .fixed)
