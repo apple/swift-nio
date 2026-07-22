@@ -464,7 +464,7 @@ extension FileSystemError {
                     Could not read from file ('\(path)'); an I/O error occurred while reading \
                     from the file system.
                     """
-            case .illegalSeek:
+            case .illegalSeek, .noSuchDeviceOrAddress:
                 code = .unsupported
                 message = "File is not seekable: '\(path)'."
             default:
@@ -516,7 +516,7 @@ extension FileSystemError {
                     Could not write to file ('\(path)'); an I/O error occurred while writing to \
                     the file system.
                     """
-            case .illegalSeek:
+            case .illegalSeek, .noSuchDeviceOrAddress:
                 code = .unsupported
                 message = "File is not seekable: '\(path)'."
             default:

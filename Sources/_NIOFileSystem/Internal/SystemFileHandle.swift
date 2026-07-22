@@ -1061,7 +1061,7 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
                     fromAbsoluteOffset: offset,
                     length: length.bytes
                 ).flatMapError { error in
-                    if let errno = error as? Errno, errno == .illegalSeek {
+                    if let errno = error as? Errno, errno == .illegalSeek || errno == .noSuchDeviceOrAddress {
                         guard offset == 0 else {
                             return .failure(
                                 FileSystemError(
@@ -1125,7 +1125,7 @@ extension SystemFileHandle: WritableFileHandleProtocol {
             try sendableView._withUnsafeDescriptor { descriptor in
                 try descriptor.write(contentsOf: bytes, toAbsoluteOffset: offset)
                     .flatMapError { error in
-                        if let errno = error as? Errno, errno == .illegalSeek {
+                        if let errno = error as? Errno, errno == .illegalSeek || errno == .noSuchDeviceOrAddress {
                             guard offset == 0 else {
                                 return .failure(
                                     FileSystemError(
