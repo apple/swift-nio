@@ -543,10 +543,10 @@ where In == HTTPClientResponsePart, Out == HTTPClientRequestPart {
 
 /// Configuration for the HTTP/1 decoder's parsing limits.
 public struct NIOHTTPDecoderLimitConfiguration: Sendable, Hashable {
-    /// Maximum size (in bytes) of a single header field (name + value). Default: 81,920 (80 KB).
+    /// Maximum size (in bytes) of a single header field (name + value). Default: 131,072 (128 KB).
     public var maxHeaderFieldSize: Int
 
-    /// Maximum total size (in bytes) of all header field names and values combined in a single message. Default: 81,920 (80 KB).
+    /// Maximum total size (in bytes) of all header field names and values combined in a single message. Default: 131,072 (128 KB).
     public var maxHeaderListSize: Int
 
     /// Maximum number of header fields allowed in a single message (including trailers). Default: 65,534.
@@ -556,8 +556,8 @@ public struct NIOHTTPDecoderLimitConfiguration: Sendable, Hashable {
     public var maxHeaderFieldCount: Int
 
     public init() {
-        self.maxHeaderFieldSize = 80 * 1024
-        self.maxHeaderListSize = 80 * 1024
+        self.maxHeaderFieldSize = 128 * 1024
+        self.maxHeaderListSize = 128 * 1024
         self.maxHeaderFieldCount = Int(UInt16.max) - 1
     }
 }
