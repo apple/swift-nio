@@ -475,6 +475,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
     private var reportExplicitCongestionNotifications = false
     private var receivePacketInfo = false
     private var receiveSegmentSize = false
+    private var receiveTimestamp = false
 
     // Guard against re-entrance of flushNow() method.
     private let pendingWrites: PendingDatagramWritesManager
@@ -647,6 +648,14 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             }
             let enable = value as! ChannelOptions.Types.DatagramReceiveSegmentSize.Value
             self.receiveSegmentSize = enable
+        case _ as ChannelOptions.Types.TimestampOption:
+            self.receiveTimestamp = value as! Bool
+            let valueAsInt = self.receiveTimestamp ? 1 : 0
+            try self.socket.setOption(
+                level: .socket,
+                name: .so_timestamp,
+                value: valueAsInt
+            )
         default:
             try super.setOption0(option, value: value)
         }
@@ -727,6 +736,8 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             return self.receiveSegmentSize as! Option.Value
         case _ as ChannelOptions.Types.BufferedWritableBytesOption:
             return Int(self.pendingWrites.bufferedBytes) as! Option.Value
+        case _ as ChannelOptions.Types.TimestampOption:
+            return self.receiveTimestamp as! Option.Value
         default:
             return try super.getOption0(option)
         }
@@ -771,7 +782,9 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
     override func readFromSocket() throws -> ReadResult {
         if self.vectorReadManager != nil {
             return try self.vectorReadFromSocket()
-        } else if self.reportExplicitCongestionNotifications || self.receivePacketInfo || self.receiveSegmentSize {
+        } else if self.reportExplicitCongestionNotifications || self.receivePacketInfo || self.receiveSegmentSize
+            || self.receiveTimestamp
+        {
             let pooledMsgBuffer = self.selectableEventLoop.msgBufferPool.get()
             defer { self.selectableEventLoop.msgBufferPool.put(pooledMsgBuffer) }
             return try pooledMsgBuffer.withUnsafePointers { _, _, controlMessageStorage in
@@ -816,7 +829,8 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                 readPending = false
 
                 let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
-                if self.reportExplicitCongestionNotifications || self.receivePacketInfo || self.receiveSegmentSize,
+                if self.reportExplicitCongestionNotifications || self.receivePacketInfo || self.receiveSegmentSize
+                    || self.receiveTimestamp,
                     let controlMessagesReceived = controlBytes.receivedControlMessages
                 {
                     metadata = .init(from: controlMessagesReceived)
@@ -861,7 +875,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
                     socket: self.socket,
                     buffer: &buffer,
                     parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo
-                        || self.receiveSegmentSize
+                        || self.receiveSegmentSize || self.receiveTimestamp
                 )
             }
 
