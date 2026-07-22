@@ -74,6 +74,14 @@ extension _HasFileHandle {
         }
     }
 
+    public func withUnsafeDescriptor<R: Sendable>(
+        _ execute: @Sendable @escaping (FileDescriptor) async throws -> R
+    ) async throws -> R {
+        try await self.fileHandle.withUnsafeDescriptor {
+            try await execute($0)
+        }
+    }
+
     public func detachUnsafeFileDescriptor() throws -> FileDescriptor {
         try self.fileHandle.detachUnsafeFileDescriptor()
     }
@@ -146,6 +154,14 @@ public struct FileHandle: FileHandleProtocol, Sendable {
     ) async throws -> R {
         try await self.systemFileHandle.withUnsafeDescriptor {
             try execute($0)
+        }
+    }
+
+    public func withUnsafeDescriptor<R: Sendable>(
+        _ execute: @Sendable @escaping (FileDescriptor) async throws -> R
+    ) async throws -> R {
+        try await self.systemFileHandle.withUnsafeDescriptor {
+            try await execute($0)
         }
     }
 

@@ -270,6 +270,20 @@ extension SystemFileHandle: FileHandleProtocol {
         }
     }
 
+    public func withUnsafeDescriptor<R: Sendable>(
+        _ execute: @Sendable @escaping (FileDescriptor) async throws -> R
+    ) async throws -> R {
+        let descriptor = try self.sendableView._withUnsafeDescriptor({ $0 }, onUnavailable: {
+            FileSystemError(
+                code: .closed,
+                message: "File is closed ('\(self.sendableView.path)').",
+                cause: nil,
+                location: .here()
+            )
+        })
+        return try await execute(descriptor)
+    }
+
     public func detachUnsafeFileDescriptor() throws -> FileDescriptor {
         try self.sendableView.lifecycle.withLockedValue { lifecycle in
             switch lifecycle {

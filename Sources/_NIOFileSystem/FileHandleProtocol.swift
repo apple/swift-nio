@@ -125,6 +125,20 @@ public protocol FileHandleProtocol {
         _ execute: @Sendable @escaping (FileDescriptor) throws -> R
     ) async throws -> R
 
+    /// Runs the provided callback with the file descriptor for this handle.
+    ///
+    /// This function should be used with caution: the `FileDescriptor` must not be escaped from
+    /// the closure nor should it be closed. Where possible make use of the methods defined
+    /// on ``FileHandleProtocol`` instead; this function is intended as an escape hatch.
+    ///
+    /// Note that `execute` is not run if the handle has already been closed.
+    ///
+    /// - Parameter execute: A closure to run.
+    /// - Returns: The result of the closure.
+    func withUnsafeDescriptor<R: Sendable>(
+        _ execute: @Sendable @escaping (FileDescriptor) async throws -> R
+    ) async throws -> R
+
     /// Detaches and returns the file descriptor from the handle.
     ///
     /// After detaching the file descriptor the handle is rendered invalid. All methods will throw
