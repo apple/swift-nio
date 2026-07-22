@@ -88,4 +88,28 @@ class ByteCountTests: XCTestCase {
         XCTAssertLessThan(byteCount1, byteCount2)
         XCTAssertGreaterThan(byteCount2, byteCount1)
     }
+    func testByteCountNegative() {
+        XCTAssertEqual(ByteCount.kilobytes(-10).bytes, -10_000)
+        XCTAssertEqual(ByteCount.megabytes(-10).bytes, -10_000_000)
+        XCTAssertEqual(ByteCount.gigabytes(-10).bytes, -10_000_000_000)
+        XCTAssertEqual(ByteCount.kibibytes(-10).bytes, -10_240)
+        XCTAssertEqual(ByteCount.mebibytes(-10).bytes, -10_485_760)
+        XCTAssertEqual(ByteCount.gibibytes(-10).bytes, -10_737_418_240)
+    }
+
+    func testByteCountOverflow() {
+        XCTAssertEqual(ByteCount.kilobytes(.max).bytes, .max)
+        XCTAssertEqual(ByteCount.megabytes(.max).bytes, .max)
+        XCTAssertEqual(ByteCount.gigabytes(.max).bytes, .max)
+        XCTAssertEqual(ByteCount.kibibytes(.max).bytes, .max)
+        XCTAssertEqual(ByteCount.mebibytes(.max).bytes, .max)
+        XCTAssertEqual(ByteCount.gibibytes(.max).bytes, .max)
+        
+        XCTAssertEqual(ByteCount.kilobytes(.min).bytes, .min)
+        XCTAssertEqual(ByteCount.megabytes(.min).bytes, .min)
+        XCTAssertEqual(ByteCount.gigabytes(.min).bytes, .min)
+        XCTAssertEqual(ByteCount.kibibytes(.min).bytes, .min)
+        XCTAssertEqual(ByteCount.mebibytes(.min).bytes, .min)
+        XCTAssertEqual(ByteCount.gibibytes(.min).bytes, .min)
+    }
 }
