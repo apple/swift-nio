@@ -48,7 +48,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     ///
     /// - Note: This is an unchecked variant of ``init(_:eventLoop:)`` that only asserts in debug mode.
     @inlinable
-    public init(unchecked value: Value, eventLoop: EventLoop) {
+    public init(uncheckedUnsafe value: Value, eventLoop: EventLoop) {
         eventLoop.assertInEventLoop()
         self.eventLoop = eventLoop
         self._value = value
@@ -74,7 +74,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     /// - Note: ``NIOLoopBound`` itself is value-typed, so any writes will only affect the current value.
     /// - Note: This is an unchecked variant of ``value`` that only asserts in debug mode.
     @inlinable
-    public var uncheckedValue: Value {
+    public var uncheckedUnsafeValue: Value {
         get {
             self.eventLoop.assertInEventLoop()
             return self._value
@@ -134,7 +134,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     ///
     /// - Note: This is an unchecked variant of ``init(_:eventLoop:)`` that only asserts in debug mode.
     @inlinable
-    public convenience init(unchecked value: Value, eventLoop: EventLoop) {
+    public convenience init(uncheckedUnsafe value: Value, eventLoop: EventLoop) {
         eventLoop.assertInEventLoop()
         self.init(_value: value, uncheckedEventLoop: eventLoop)
     }
@@ -214,7 +214,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     /// - Note: ``NIOLoopBoundBox`` itself is reference-typed, so any writes will affect anybody sharing this reference.
     /// - Note: This is an unchecked variant of ``value`` that only asserts in debug mode.
     @inlinable
-    public var uncheckedValue: Value {
+    public var uncheckedUnsafeValue: Value {
         get {
             self.eventLoop.assertInEventLoop()
             return self._value
@@ -259,7 +259,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     ///         on the value because it reduces the on EventLoop checks.
     /// - Note: This is an unchecked variant of ``withValue(_:)`` that only asserts in debug mode.
     @inlinable
-    public func withUncheckedValue<Success, Failure: Error>(
+    public func withUncheckedUnsafeValue<Success, Failure: Error>(
         _ handler: (inout Value) throws(Failure) -> Success
     ) throws(Failure) -> Success {
         self.eventLoop.assertInEventLoop()
