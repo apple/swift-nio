@@ -783,8 +783,19 @@ extension Channel {
 
 /// A `ClientBootstrap` is an easy way to bootstrap a `SocketChannel` when creating network clients.
 ///
-/// Usually you re-use a `ClientBootstrap` once you set it up and called `connect` multiple times on it.
-/// This way you ensure that the same `EventLoop`s will be shared across all your connections.
+/// You may re-use a `ClientBootstrap` once you set it up and call `connect` multiple times on it.
+/// This ensures all connections you create share the same `EventLoopGroup`. The connections will
+/// be assigned by sequential calls to `EventLoopGroup.next()`.
+///
+/// If you want all connections to share the same `EventLoop`, you can pass a single `EventLoop`
+/// to the `group` parameter. All `EventLoop`s are also `EventLoopGroup`s that contain only
+/// themselves.
+///
+/// Keep in mind that `ClientBoostrap` is not `Sendable`, so you cannot share the same
+/// instance across multiple `EventLoop`s or multiple concurrency domains in general. 
+/// Creating a `ClientBootstrap` is cheap. So instead of arranging synchronization allowing
+/// concurrent code to re-use a single `ClientBootstrap` instance across many tasks, it is often 
+/// easier to create a dedicated instance for each task.
 ///
 /// Example:
 ///
@@ -802,7 +813,7 @@ extension Channel {
 ///             // resolves to both IPv4 and IPv6 addresses, cf. Happy Eyeballs).
 ///             channel.pipeline.addHandler(MyChannelHandler())
 ///         }
-///     try! bootstrap.connect(host: "example.org", port: 12345).wait()
+///     try bootstrap.connect(host: "example.org", port: 12345).wait()
 ///     /* the Channel is now connected */
 /// ```
 ///
