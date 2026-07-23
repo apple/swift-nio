@@ -142,6 +142,29 @@ extension EventLoopPromise {
             }
         }
     }
+
+    /// Complete a future with the result (or error) of the `async` function `body`.
+    ///
+    /// This function can be used to bridge the `async` world into an `EventLoopPromise`.
+    ///
+    /// - Parameters:
+    ///   - body: The `async` function to run.
+    /// - Returns: A `Task` which was created to `await` the `body`.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @discardableResult
+    @inlinable
+    public func completeWithTaskSending(
+        _ body: sending @escaping () async throws -> sending Value
+    ) -> Task<Void, Never> {
+        Task {
+            do {
+                let value = try await body()
+                self.succeed(value)
+            } catch {
+                self.fail(error)
+            }
+        }
+    }
 }
 
 extension Channel {
@@ -523,6 +546,11 @@ extension AsyncSequenceFromIterator: Sendable where AsyncIterator: Sendable {}
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension EventLoop {
+    /// Create a future that will be completed with the result of a Task.
+    /// This overload requires the task body result to be `Sendable`. If your return type is not sendable, consider using ``makeFutureWithTaskSending(_:)``.
+    /// - Parameter body: Async work to be run in a Task. The result of this function will be used to complete the future.
+    /// - Note: This Task is unstructured. It cannot be cancelled.
+    /// - Returns: A future which will be completed with the result of `body`
     @preconcurrency
     @inlinable
     public func makeFutureWithTask<Return: Sendable>(
@@ -530,6 +558,20 @@ extension EventLoop {
     ) -> EventLoopFuture<Return> {
         let promise = self.makePromise(of: Return.self)
         promise.completeWithTask(body)
+        return promise.futureResult
+    }
+    
+    /// Create a future that will be completed with the result of a Task.
+    /// This overload requires the task body to return the result as `sending`, so the result does not need to be `Sendable`. If your return type is not disconnected, and is Sendable, consider using ``makeFutureWithTask(_:)``.
+    /// - Parameter body: Async work to be run in a Task. The result of this function will be used to complete the future.
+    /// - Note: This Task is unstructured. It cannot be cancelled.
+    /// - Returns: A future which will be completed with the result of `body`
+    @inlinable
+    public func makeFutureWithTaskSending<Return>(
+        _ body: sending @escaping () async throws -> sending Return
+    ) -> EventLoopFuture<Return> {
+        let promise = self.makePromise(of: Return.self)
+        promise.completeWithTaskSending(body)
         return promise.futureResult
     }
 }
