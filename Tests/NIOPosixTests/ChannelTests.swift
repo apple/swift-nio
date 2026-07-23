@@ -3133,8 +3133,9 @@ final class ChannelTests: XCTestCase {
     }
 
     func testApplyingTwoDistinctSocketOptionsOfSameTypeWorks() throws {
-        // SO_TIMESTAMP is not available on Windows.
-        #if !os(Windows)
+        #if os(Windows)
+        throw XCTSkip("SO_TIMESTAMP is not available on Windows")
+        #else
         let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully())

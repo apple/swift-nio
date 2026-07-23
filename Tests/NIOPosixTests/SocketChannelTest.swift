@@ -373,8 +373,9 @@ final class SocketChannelTest: XCTestCase {
     }
 
     public func testWithConfiguredStreamSocket() throws {
-        // Creating a channel from a pre-connected socket is not supported on Windows.
-        #if !os(Windows)
+        #if os(Windows)
+        throw XCTSkip("Creating a channel from a pre-connected socket is not supported on Windows")
+        #else
         let didAccept = ConditionLock<Int>(value: 0)
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
@@ -421,8 +422,9 @@ final class SocketChannelTest: XCTestCase {
     }
 
     public func testWithConfiguredDatagramSocket() throws {
-        // Creating a channel from a pre-connected socket is not supported on Windows.
-        #if !os(Windows)
+        #if os(Windows)
+        throw XCTSkip("Creating a channel from a pre-connected socket is not supported on Windows")
+        #else
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
@@ -622,8 +624,9 @@ final class SocketChannelTest: XCTestCase {
     }
 
     func testSocketFlagNONBLOCKWorks() throws {
-        // fcntl / O_NONBLOCK flag manipulation is not available on Windows.
-        #if !os(Windows)
+        #if os(Windows)
+        throw XCTSkip("fcntl / O_NONBLOCK flag manipulation is not available on Windows")
+        #else
         var socket = try assertNoThrowWithValue(try ServerSocket(protocolFamily: .inet, setNonBlocking: true))
         XCTAssertNoThrow(
             try socket.withUnsafeHandle { fd in
@@ -759,8 +762,9 @@ final class SocketChannelTest: XCTestCase {
     }
 
     func testSetSockOptDoesNotOverrideExistingFlags() throws {
-        // fcntl flag manipulation is not available on Windows.
-        #if !os(Windows)
+        #if os(Windows)
+        throw XCTSkip("fcntl flag manipulation is not available on Windows")
+        #else
         let s = try assertNoThrowWithValue(
             Socket(
                 protocolFamily: .inet,

@@ -152,8 +152,9 @@ final class PipeChannelTest: XCTestCase {
     }
 
     func testWeWorkFineWithASingleFileDescriptor() throws {
-        // Posix.socketpair is not available on Windows.
-        #if !os(Windows)
+        #if os(Windows)
+        throw XCTSkip("socketpair is not available on Windows")
+        #else
         final class EchoHandler: ChannelInboundHandler, Sendable {
             typealias InboundIn = ByteBuffer
             typealias OutboundOut = ByteBuffer
