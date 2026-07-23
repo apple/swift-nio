@@ -2013,6 +2013,46 @@ final class MultiThreadedEventLoopGroupTests {
         }
     }
 
+    @Test
+    func testAsyncToFutureConversionSendingSuccess() throws {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            #expect(throws: Never.self) {
+                try group.syncShutdownGracefully()
+            }
+        }
+
+        // `makeFutureWithTaskSending` returns the result as `sending`, so the body may
+        // return a non-`Sendable` value.
+        let future = group.next().makeFutureWithTaskSending {
+            try await Task.sleep(nanoseconds: 37)
+            return NonSendableObject(value: 42)
+        }
+        #expect(try future.map { $0.value }.wait() == 42)
+    }
+
+    @Test
+    func testAsyncToFutureConversionSendingFailure() throws {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            #expect(throws: Never.self) {
+                try group.syncShutdownGracefully()
+            }
+        }
+
+        struct DummyError: Error {}
+
+        let future = group.next().makeFutureWithTaskSending { () async throws -> NonSendableObject in
+            try await Task.sleep(nanoseconds: 37)
+            throw DummyError()
+        }
+        #expect(throws: DummyError.self) {
+            try future.map { $0.value }.wait()
+        }
+    }
+
     // Test for possible starvation discussed here: https://github.com/apple/swift-nio/pull/2645#discussion_r1486747118
     @Test
     func testNonStarvation() throws {
