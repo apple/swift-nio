@@ -48,7 +48,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     ///
     /// - Note: This is an unchecked variant of ``init(_:eventLoop:)`` that only asserts in debug mode.
     @inlinable
-    public init(uncheckedUnsafe value: Value, eventLoop: EventLoop) {
+    public init(uncheckedOnEventLoop value: Value, eventLoop: EventLoop) {
         eventLoop.assertInEventLoop()
         self.eventLoop = eventLoop
         self._value = value
@@ -134,7 +134,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     ///
     /// - Note: This is an unchecked variant of ``init(_:eventLoop:)`` that only asserts in debug mode.
     @inlinable
-    public convenience init(uncheckedUnsafe value: Value, eventLoop: EventLoop) {
+    public convenience init(uncheckedOnEventLoop value: Value, eventLoop: EventLoop) {
         eventLoop.assertInEventLoop()
         self.init(_value: value, uncheckedEventLoop: eventLoop)
     }
