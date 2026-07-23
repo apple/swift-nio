@@ -1,0 +1,1943 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the SwiftNIO open source project
+//
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftNIO project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+
+import Atomics
+import Dispatch
+import NIOConcurrencyHelpers
+import Testing
+
+@testable import NIOAsyncRuntime
+@testable import NIOCore
+
+enum EventLoopFutureTestError: Error {
+    case example
+}
+
+@Suite("EventLoopFutureTest", .serialized, .timeLimit(.minutes(1)))
+class EventLoopFutureTest {
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    private func makeEventLoop() -> AsyncEventLoop {
+        AsyncEventLoop(__testOnly_manualTimeMode: true)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFutureFulfilledIfHasResult() throws {
+        let eventLoop = makeEventLoop()
+        let f = EventLoopFuture(eventLoop: eventLoop, value: 5)
+        #expect(f.isFulfilled)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFutureFulfilledIfHasError() throws {
+        let eventLoop = makeEventLoop()
+        let f = EventLoopFuture<Void>(eventLoop: eventLoop, error: EventLoopFutureTestError.example)
+        #expect(f.isFulfilled)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFoldWithMultipleEventLoops() throws {
+        let nThreads = 3
+        let eventLoopGroup = AsyncEventLoopGroup(numberOfThreads: nThreads)
+        defer {
+            #expect(throws: Never.self) { try eventLoopGroup.syncShutdownGracefully() }
+        }
+
+        let eventLoop0 = eventLoopGroup.next()
+        let eventLoop1 = eventLoopGroup.next()
+        let eventLoop2 = eventLoopGroup.next()
+
+        #expect(eventLoop0 !== eventLoop1)
+        #expect(eventLoop1 !== eventLoop2)
+        #expect(eventLoop0 !== eventLoop2)
+
+        let f0: EventLoopFuture<[Int]> = eventLoop0.submit { [0] }
+        let f1s: [EventLoopFuture<Int>] = (1...4).map { id in eventLoop1.submit { id } }
+        let f2s: [EventLoopFuture<Int>] = (5...8).map { id in eventLoop2.submit { id } }
+
+        var fN = f0.fold(f1s) { (f1Value: [Int], f2Value: Int) -> EventLoopFuture<[Int]> in
+            #expect(eventLoop0.inEventLoop)
+            return eventLoop1.makeSucceededFuture(f1Value + [f2Value])
+        }
+
+        fN = fN.fold(f2s) { (f1Value: [Int], f2Value: Int) -> EventLoopFuture<[Int]> in
+            #expect(eventLoop0.inEventLoop)
+            return eventLoop2.makeSucceededFuture(f1Value + [f2Value])
+        }
+
+        let allValues = try fN.wait()
+        #expect(fN.eventLoop === f0.eventLoop)
+        #expect(fN.isFulfilled)
+        #expect(allValues == [0, 1, 2, 3, 4, 5, 6, 7, 8])
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFoldWithSuccessAndAllSuccesses() throws {
+        let eventLoop = makeEventLoop()
+        let secondEventLoop = makeEventLoop()
+        let f0 = eventLoop.makeSucceededFuture([0])
+
+        let futures: [EventLoopFuture<Int>] = (1...5).map { (id: Int) in
+            secondEventLoop.makeSucceededFuture(id)
+        }
+
+        let fN = f0.fold(futures) { (f1Value: [Int], f2Value: Int) -> EventLoopFuture<[Int]> in
+            #expect(eventLoop.inEventLoop)
+            return secondEventLoop.makeSucceededFuture(f1Value + [f2Value])
+        }
+
+        let allValues = try fN.wait()
+        #expect(fN.eventLoop === f0.eventLoop)
+        #expect(fN.isFulfilled)
+        #expect(allValues == [0, 1, 2, 3, 4, 5])
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFoldWithSuccessAndOneFailure() async throws {
+        struct E: Error {}
+        let eventLoop = makeEventLoop()
+        let secondEventLoop = makeEventLoop()
+        let f0: EventLoopFuture<Int> = eventLoop.makeSucceededFuture(0)
+
+        let promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in
+            secondEventLoop.makePromise()
+        }
+        var futures = promises.map { $0.futureResult }
+        let failedFuture: EventLoopFuture<Int> = secondEventLoop.makeFailedFuture(E())
+        futures.insert(failedFuture, at: futures.startIndex)
+
+        let fN = f0.fold(futures) { (f1Value: Int, f2Value: Int) -> EventLoopFuture<Int> in
+            #expect(eventLoop.inEventLoop)
+            return secondEventLoop.makeSucceededFuture(f1Value + f2Value)
+        }
+
+        _ = promises.map { $0.succeed(0) }
+        await eventLoop.run()
+        await #expect(throws: E.self) {
+            try await fN.get()
+        }
+        #expect(fN.isFulfilled)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFoldWithSuccessAndEmptyFutureList() throws {
+        let eventLoop = makeEventLoop()
+        let f0 = eventLoop.makeSucceededFuture(0)
+
+        let futures: [EventLoopFuture<Int>] = []
+
+        let fN = f0.fold(futures) { (f1Value: Int, f2Value: Int) -> EventLoopFuture<Int> in
+            #expect(eventLoop.inEventLoop)
+            return eventLoop.makeSucceededFuture(f1Value + f2Value)
+        }
+
+        let summationResult = try fN.wait()
+        #expect(fN.isFulfilled)
+        #expect(summationResult == 0)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFoldWithFailureAndEmptyFutureList() throws {
+        struct E: Error {}
+        let eventLoop = makeEventLoop()
+        let f0: EventLoopFuture<Int> = eventLoop.makeFailedFuture(E())
+
+        let futures: [EventLoopFuture<Int>] = []
+
+        let fN = f0.fold(futures) { (f1Value: Int, f2Value: Int) -> EventLoopFuture<Int> in
+            #expect(eventLoop.inEventLoop)
+            return eventLoop.makeSucceededFuture(f1Value + f2Value)
+        }
+
+        #expect(fN.isFulfilled)
+        #expect(throws: E.self) {
+            try fN.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFoldWithFailureAndAllSuccesses() throws {
+        struct E: Error {}
+        let eventLoop = makeEventLoop()
+        let secondEventLoop = makeEventLoop()
+        let f0: EventLoopFuture<Int> = eventLoop.makeFailedFuture(E())
+
+        let promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in
+            secondEventLoop.makePromise()
+        }
+        let futures = promises.map { $0.futureResult }
+
+        let fN = f0.fold(futures) { (f1Value: Int, f2Value: Int) -> EventLoopFuture<Int> in
+            #expect(eventLoop.inEventLoop)
+            return secondEventLoop.makeSucceededFuture(f1Value + f2Value)
+        }
+
+        _ = promises.map { $0.succeed(1) }
+        #expect(fN.isFulfilled)
+        #expect(throws: E.self) {
+            try fN.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFoldWithFailureAndAllUnfulfilled() throws {
+        struct E: Error {}
+        let eventLoop = makeEventLoop()
+        let secondEventLoop = makeEventLoop()
+        let f0: EventLoopFuture<Int> = eventLoop.makeFailedFuture(E())
+
+        let promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in
+            secondEventLoop.makePromise()
+        }
+        let futures = promises.map { $0.futureResult }
+
+        let fN = f0.fold(futures) { (f1Value: Int, f2Value: Int) -> EventLoopFuture<Int> in
+            #expect(eventLoop.inEventLoop)
+            return secondEventLoop.makeSucceededFuture(f1Value + f2Value)
+        }
+
+        #expect(fN.isFulfilled)
+        #expect(throws: E.self) {
+            try fN.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFoldWithFailureAndAllFailures() throws {
+        struct E: Error {}
+        let eventLoop = makeEventLoop()
+        let secondEventLoop = makeEventLoop()
+        let f0: EventLoopFuture<Int> = eventLoop.makeFailedFuture(E())
+
+        let futures: [EventLoopFuture<Int>] = (0..<100).map { (_: Int) in
+            secondEventLoop.makeFailedFuture(E())
+        }
+
+        let fN = f0.fold(futures) { (f1Value: Int, f2Value: Int) -> EventLoopFuture<Int> in
+            #expect(eventLoop.inEventLoop)
+            return secondEventLoop.makeSucceededFuture(f1Value + f2Value)
+        }
+
+        #expect(fN.isFulfilled)
+        #expect(throws: E.self) {
+            try fN.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAndAllWithEmptyFutureList() throws {
+        let eventLoop = makeEventLoop()
+        let futures: [EventLoopFuture<Void>] = []
+
+        let fN = EventLoopFuture.andAllSucceed(futures, on: eventLoop)
+
+        #expect(fN.isFulfilled)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAndAllWithAllSuccesses() throws {
+        let eventLoop = makeEventLoop()
+        let promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
+        let futures = promises.map { $0.futureResult }
+
+        let fN = EventLoopFuture.andAllSucceed(futures, on: eventLoop)
+        _ = promises.map { $0.succeed(()) }
+        () = try fN.wait()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAndAllWithAllFailures() throws {
+        struct E: Error {}
+        let eventLoop = makeEventLoop()
+        let promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
+        let futures = promises.map { $0.futureResult }
+
+        let fN = EventLoopFuture.andAllSucceed(futures, on: eventLoop)
+        _ = promises.map { $0.fail(E()) }
+        #expect(throws: E.self) {
+            try fN.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAndAllWithOneFailure() throws {
+        struct E: Error {}
+        let eventLoop = makeEventLoop()
+        var promises: [EventLoopPromise<Void>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
+        _ = promises.map { $0.succeed(()) }
+        let failedPromise = eventLoop.makePromise(of: Void.self)
+        failedPromise.fail(E())
+        promises.append(failedPromise)
+
+        let futures = promises.map { $0.futureResult }
+
+        let fN = EventLoopFuture.andAllSucceed(futures, on: eventLoop)
+        #expect(throws: E.self) {
+            try fN.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReduceWithAllSuccesses() throws {
+        let eventLoop = makeEventLoop()
+        let promises: [EventLoopPromise<Int>] = (0..<5).map { (_: Int) in eventLoop.makePromise() }
+        let futures = promises.map { $0.futureResult }
+
+        let fN: EventLoopFuture<[Int]> = EventLoopFuture<[Int]>.reduce(into: [], futures, on: eventLoop) {
+            $0.append($1)
+        }
+        for i in 1...5 {
+            promises[i - 1].succeed((i))
+        }
+        let results = try fN.wait()
+        #expect(results == [1, 2, 3, 4, 5])
+        #expect(fN.eventLoop === eventLoop)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReduceWithOnlyInitialValue() throws {
+        let eventLoop = makeEventLoop()
+        let futures: [EventLoopFuture<Int>] = []
+
+        let fN: EventLoopFuture<[Int]> = EventLoopFuture<[Int]>.reduce(into: [], futures, on: eventLoop) {
+            $0.append($1)
+        }
+
+        let results = try fN.wait()
+        #expect(results == [])
+        #expect(fN.eventLoop === eventLoop)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReduceWithAllFailures() throws {
+        struct E: Error {}
+        let eventLoop = makeEventLoop()
+        let promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
+        let futures = promises.map { $0.futureResult }
+
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop) {
+            $0 + $1
+        }
+        _ = promises.map { $0.fail(E()) }
+        #expect(fN.eventLoop === eventLoop)
+        #expect(throws: E.self) {
+            try fN.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReduceWithOneFailure() throws {
+        struct E: Error {}
+        let eventLoop = makeEventLoop()
+        var promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
+        _ = promises.map { $0.succeed((1)) }
+        let failedPromise = eventLoop.makePromise(of: Int.self)
+        failedPromise.fail(E())
+        promises.append(failedPromise)
+
+        let futures = promises.map { $0.futureResult }
+
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop) {
+            $0 + $1
+        }
+        #expect(fN.eventLoop === eventLoop)
+        #expect(throws: E.self) {
+            try fN.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReduceWhichDoesFailFast() throws {
+        struct E: Error {}
+        let eventLoop = makeEventLoop()
+        var promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
+
+        let failedPromise = eventLoop.makePromise(of: Int.self)
+        promises.insert(failedPromise, at: promises.startIndex)
+
+        let futures = promises.map { $0.futureResult }
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop) {
+            $0 + $1
+        }
+
+        failedPromise.fail(E())
+
+        #expect(fN.isFulfilled)
+        #expect(fN.eventLoop === eventLoop)
+        #expect(throws: E.self) {
+            try fN.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReduceIntoWithAllSuccesses() throws {
+        let eventLoop = makeEventLoop()
+        let futures: [EventLoopFuture<Int>] = [1, 2, 2, 3, 3, 3].map { (id: Int) in
+            eventLoop.makeSucceededFuture(id)
+        }
+
+        let fN: EventLoopFuture<[Int: Int]> = EventLoopFuture<[Int: Int]>.reduce(
+            into: [:],
+            futures,
+            on: eventLoop
+        ) {
+            (freqs, elem) in
+            if let value = freqs[elem] {
+                freqs[elem] = value + 1
+            } else {
+                freqs[elem] = 1
+            }
+        }
+
+        let results = try fN.wait()
+        #expect(results == [1: 1, 2: 2, 3: 3])
+        #expect(fN.eventLoop === eventLoop)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReduceIntoWithEmptyFutureList() throws {
+        let eventLoop = makeEventLoop()
+        let futures: [EventLoopFuture<Int>] = []
+
+        let fN: EventLoopFuture<[Int: Int]> = EventLoopFuture<[Int: Int]>.reduce(
+            into: [:],
+            futures,
+            on: eventLoop
+        ) {
+            (freqs, elem) in
+            if let value = freqs[elem] {
+                freqs[elem] = value + 1
+            } else {
+                freqs[elem] = 1
+            }
+        }
+
+        let results = try fN.wait()
+        #expect(results.isEmpty)
+        #expect(fN.eventLoop === eventLoop)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReduceIntoWithAllFailure() throws {
+        struct E: Error {}
+        let eventLoop = makeEventLoop()
+        let futures: [EventLoopFuture<Int>] = [1, 2, 2, 3, 3, 3].map { (id: Int) in
+            eventLoop.makeFailedFuture(E())
+        }
+
+        let fN: EventLoopFuture<[Int: Int]> = EventLoopFuture<[Int: Int]>.reduce(
+            into: [:],
+            futures,
+            on: eventLoop
+        ) {
+            (freqs, elem) in
+            if let value = freqs[elem] {
+                freqs[elem] = value + 1
+            } else {
+                freqs[elem] = 1
+            }
+        }
+
+        #expect(fN.isFulfilled)
+        #expect(fN.eventLoop === eventLoop)
+        #expect(throws: E.self) {
+            try fN.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReduceIntoWithMultipleEventLoops() throws {
+        let nThreads = 3
+        let eventLoopGroup = AsyncEventLoopGroup(numberOfThreads: nThreads)
+        defer {
+            #expect(throws: Never.self) { try eventLoopGroup.syncShutdownGracefully() }
+        }
+
+        let eventLoop0 = eventLoopGroup.next()
+        let eventLoop1 = eventLoopGroup.next()
+        let eventLoop2 = eventLoopGroup.next()
+
+        #expect(eventLoop0 !== eventLoop1)
+        #expect(eventLoop1 !== eventLoop2)
+        #expect(eventLoop0 !== eventLoop2)
+
+        let f0: EventLoopFuture<[Int: Int]> = eventLoop0.submit { [:] }
+        let f1s: [EventLoopFuture<Int>] = (1...4).map { id in eventLoop1.submit { id / 2 } }
+        let f2s: [EventLoopFuture<Int>] = (5...8).map { id in eventLoop2.submit { id / 2 } }
+
+        let fN = EventLoopFuture<[Int: Int]>.reduce(into: [:], f1s + f2s, on: eventLoop0) {
+            (freqs, elem) in
+            #expect(eventLoop0.inEventLoop)
+            if let value = freqs[elem] {
+                freqs[elem] = value + 1
+            } else {
+                freqs[elem] = 1
+            }
+        }
+
+        let allValues = try fN.wait()
+        #expect(fN.eventLoop === f0.eventLoop)
+        #expect(fN.isFulfilled)
+        #expect(allValues == [0: 1, 1: 2, 2: 2, 3: 2, 4: 1])
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testThenThrowingWhichDoesNotThrow() throws {
+        let eventLoop = makeEventLoop()
+        let completion = eventLoop.submit {
+            var ran = false
+            let p = eventLoop.makePromise(of: String.self)
+            p.futureResult.map {
+                $0.count
+            }.flatMapThrowing {
+                1 + $0
+            }.assumeIsolated().whenSuccess {
+                ran = true
+                #expect($0 == 6)
+            }
+            p.succeed("hello")
+            return ran
+        }
+        let ran = try completion.wait()
+        #expect(ran)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testThenThrowingWhichDoesThrow() throws {
+        enum DummyError: Error, Equatable {
+            case dummyError
+        }
+        let eventLoop = makeEventLoop()
+        let completion = eventLoop.submit {
+            var ran = false
+            let p = eventLoop.makePromise(of: String.self)
+            p.futureResult.map {
+                $0.count
+            }.flatMapThrowing { (x: Int) throws -> Int in
+                #expect(5 == x)
+                throw DummyError.dummyError
+            }.map { (x: Int) -> Int in
+                Issue.record("shouldn't have been called")
+                return x
+            }.assumeIsolated().whenFailure {
+                ran = true
+                #expect(.some(DummyError.dummyError) == $0 as? DummyError)
+            }
+            p.succeed("hello")
+            return ran
+        }
+        let ran = try completion.wait()
+        #expect(ran)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testflatMapErrorThrowingWhichDoesNotThrow() throws {
+        enum DummyError: Error, Equatable {
+            case dummyError
+        }
+        let eventLoop = makeEventLoop()
+        let completion = eventLoop.submit {
+            var ran = false
+            let p = eventLoop.makePromise(of: String.self)
+            p.futureResult.map {
+                $0.count
+            }.flatMapErrorThrowing {
+                #expect(.some(DummyError.dummyError) == $0 as? DummyError)
+                return 5
+            }.flatMapErrorThrowing { (_: Error) in
+                Issue.record("shouldn't have been called")
+                return 5
+            }.assumeIsolated().whenSuccess {
+                ran = true
+                #expect($0 == 5)
+            }
+            p.fail(DummyError.dummyError)
+            return ran
+        }
+        let ran = try completion.wait()
+        #expect(ran)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testflatMapErrorThrowingWhichDoesThrow() throws {
+        enum DummyError: Error, Equatable {
+            case dummyError1
+            case dummyError2
+        }
+        let eventLoop = makeEventLoop()
+        let completion = eventLoop.submit {
+            var ran = false
+            let p = eventLoop.makePromise(of: String.self)
+            p.futureResult.map {
+                $0.count
+            }.flatMapErrorThrowing { (x: Error) throws -> Int in
+                #expect(.some(DummyError.dummyError1) == x as? DummyError)
+                throw DummyError.dummyError2
+            }.map { (x: Int) -> Int in
+                Issue.record("shouldn't have been called")
+                return x
+            }.assumeIsolated().whenFailure {
+                ran = true
+                #expect(.some(DummyError.dummyError2) == $0 as? DummyError)
+            }
+            p.fail(DummyError.dummyError1)
+            return ran
+        }
+        let ran = try completion.wait()
+        #expect(ran)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testOrderOfFutureCompletion() throws {
+        let eventLoop = makeEventLoop()
+        let completion = eventLoop.submit {
+            var state = 0
+            let p: EventLoopPromise<Void> = EventLoopPromise(
+                eventLoop: eventLoop,
+                file: #filePath,
+                line: #line
+            )
+            p.futureResult.assumeIsolated().map {
+                #expect(state == 0)
+                state += 1
+            }.map {
+                #expect(state == 1)
+                state += 1
+            }.whenSuccess {
+                #expect(state == 2)
+                state += 1
+            }
+            p.succeed(())
+            #expect(p.futureResult.isFulfilled)
+            return state
+        }
+        let state = try completion.wait()
+        #expect(state == 3)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testEventLoopHoppingInThen() throws {
+        let n = 20
+        let elg = AsyncEventLoopGroup(numberOfThreads: n)
+        var prev: EventLoopFuture<Int> = elg.next().makeSucceededFuture(0)
+        for i in (1..<20) {
+            let p = elg.next().makePromise(of: Int.self)
+            prev.flatMap { (i2: Int) -> EventLoopFuture<Int> in
+                #expect(i - 1 == i2)
+                p.succeed(i)
+                return p.futureResult
+            }.whenSuccess { i2 in
+                #expect(i == i2)
+            }
+            prev = p.futureResult
+        }
+        let result = try prev.wait()
+        #expect(n - 1 == result)
+        #expect(throws: Never.self) { try elg.syncShutdownGracefully() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testEventLoopHoppingInThenWithFailures() throws {
+        enum DummyError: Error {
+            case dummy
+        }
+        let n = 20
+        let elg = AsyncEventLoopGroup(numberOfThreads: n)
+        var prev: EventLoopFuture<Int> = elg.next().makeSucceededFuture(0)
+        for i in (1..<n) {
+            let p = elg.next().makePromise(of: Int.self)
+            prev.flatMap { (i2: Int) -> EventLoopFuture<Int> in
+                #expect(i - 1 == i2)
+                if i == n / 2 {
+                    p.fail(DummyError.dummy)
+                } else {
+                    p.succeed(i)
+                }
+                return p.futureResult
+            }.flatMapError { error in
+                p.fail(error)
+                return p.futureResult
+            }.whenSuccess { i2 in
+                #expect(i == i2)
+            }
+            prev = p.futureResult
+        }
+        #expect(throws: DummyError.self) {
+            try prev.wait()
+        }
+        #expect(throws: Never.self) { try elg.syncShutdownGracefully() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testEventLoopHoppingAndAll() throws {
+        let n = 20
+        let elg = AsyncEventLoopGroup(numberOfThreads: n)
+        let ps = (0..<n).map { (_: Int) -> EventLoopPromise<Void> in
+            elg.next().makePromise()
+        }
+        let allOfEm = EventLoopFuture.andAllSucceed(ps.map { $0.futureResult }, on: elg.next())
+        for promise in ps.reversed() {
+            DispatchQueue.global().async {
+                promise.succeed(())
+            }
+        }
+        try allOfEm.wait()
+        #expect(throws: Never.self) { try elg.syncShutdownGracefully() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testEventLoopHoppingAndAllWithFailures() throws {
+        enum DummyError: Error { case dummy }
+        let n = 20
+        let fireBackEl = AsyncEventLoopGroup(numberOfThreads: 1)
+        let elg = AsyncEventLoopGroup(numberOfThreads: n)
+        let ps = (0..<n).map { (_: Int) -> EventLoopPromise<Void> in
+            elg.next().makePromise()
+        }
+        let allOfEm = EventLoopFuture.andAllSucceed(ps.map { $0.futureResult }, on: fireBackEl.next())
+        for (index, promise) in ps.reversed().enumerated() {
+            DispatchQueue.global().async {
+                if index == n / 2 {
+                    promise.fail(DummyError.dummy)
+                } else {
+                    promise.succeed(())
+                }
+            }
+        }
+        #expect(throws: DummyError.self) {
+            try allOfEm.wait()
+        }
+        #expect(throws: Never.self) { try elg.syncShutdownGracefully() }
+        #expect(throws: Never.self) { try fireBackEl.syncShutdownGracefully() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFutureInVariousScenarios() throws {
+        enum DummyError: Error {
+            case dummy0
+            case dummy1
+        }
+        let elg = AsyncEventLoopGroup(numberOfThreads: 2)
+        let el1 = elg.next()
+        let el2 = elg.next()
+        precondition(el1 !== el2)
+        let q1 = DispatchQueue(label: "q1")
+        let q2 = DispatchQueue(label: "q2")
+
+        // this determines which promise is fulfilled first (and (true, true) meaning they race)
+        for whoGoesFirst in [(false, true), (true, false), (true, true)] {
+            // this determines what EventLoops the Promises are created on
+            for eventLoops in [(el1, el1), (el1, el2), (el2, el1), (el2, el2)] {
+                // this determines if the promises fail or succeed
+                for whoSucceeds in [(false, false), (false, true), (true, false), (true, true)] {
+                    let p0 = eventLoops.0.makePromise(of: Int.self)
+                    let p1 = eventLoops.1.makePromise(of: String.self)
+                    let fAll = p0.futureResult.and(p1.futureResult)
+
+                    // preheat both queues so we have a better chance of racing
+                    let sem1 = DispatchSemaphore(value: 0)
+                    let sem2 = DispatchSemaphore(value: 0)
+                    let g = DispatchGroup()
+                    q1.async(group: g) {
+                        sem2.signal()
+                        sem1.wait()
+                    }
+                    q2.async(group: g) {
+                        sem1.signal()
+                        sem2.wait()
+                    }
+                    g.wait()
+
+                    if whoGoesFirst.0 {
+                        q1.async {
+                            if whoSucceeds.0 {
+                                p0.succeed(7)
+                            } else {
+                                p0.fail(DummyError.dummy0)
+                            }
+                            if !whoGoesFirst.1 {
+                                q2.asyncAfter(deadline: .now() + 0.1) {
+                                    if whoSucceeds.1 {
+                                        p1.succeed("hello")
+                                    } else {
+                                        p1.fail(DummyError.dummy1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if whoGoesFirst.1 {
+                        q2.async {
+                            if whoSucceeds.1 {
+                                p1.succeed("hello")
+                            } else {
+                                p1.fail(DummyError.dummy1)
+                            }
+                            if !whoGoesFirst.0 {
+                                q1.asyncAfter(deadline: .now() + 0.1) {
+                                    if whoSucceeds.0 {
+                                        p0.succeed(7)
+                                    } else {
+                                        p0.fail(DummyError.dummy0)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    do {
+                        let result = try fAll.wait()
+                        if !whoSucceeds.0 || !whoSucceeds.1 {
+                            Issue.record("unexpected success")
+                        } else {
+                            #expect((7, "hello") == result)
+                        }
+                    } catch let e as DummyError {
+                        switch e {
+                        case .dummy0:
+                            #expect(!whoSucceeds.0)
+                        case .dummy1:
+                            #expect(!whoSucceeds.1)
+                        }
+                    } catch {
+                        Issue.record("unexpected error: \(error)")
+                    }
+                }
+            }
+        }
+
+        #expect(throws: Never.self) { try elg.syncShutdownGracefully() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testLoopHoppingHelperSuccess() throws {
+        let group = AsyncEventLoopGroup(numberOfThreads: 2)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+        let loop1 = group.next()
+        let loop2 = group.next()
+        #expect(!(loop1 === loop2))
+
+        let succeedingPromise = loop1.makePromise(of: Void.self)
+        let succeedingFuture = succeedingPromise.futureResult.map {
+            #expect(loop1.inEventLoop)
+        }.hop(to: loop2).map {
+            #expect(loop2.inEventLoop)
+        }
+        succeedingPromise.succeed(())
+        #expect(throws: Never.self) { try succeedingFuture.wait() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testLoopHoppingHelperFailure() throws {
+        let group = AsyncEventLoopGroup(numberOfThreads: 2)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+
+        let loop1 = group.next()
+        let loop2 = group.next()
+        #expect(!(loop1 === loop2))
+
+        let failingPromise = loop2.makePromise(of: Void.self)
+        let failingFuture = failingPromise.futureResult.flatMapErrorThrowing { error in
+            #expect(error as? EventLoopFutureTestError == EventLoopFutureTestError.example)
+            #expect(loop2.inEventLoop)
+            throw error
+        }.hop(to: loop1).recover { error in
+            #expect(error as? EventLoopFutureTestError == EventLoopFutureTestError.example)
+            #expect(loop1.inEventLoop)
+        }
+
+        failingPromise.fail(EventLoopFutureTestError.example)
+        #expect(throws: Never.self) { try failingFuture.wait() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testLoopHoppingHelperNoHopping() throws {
+        let group = AsyncEventLoopGroup(numberOfThreads: 2)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+        let loop1 = group.next()
+        let loop2 = group.next()
+        #expect(!(loop1 === loop2))
+
+        let noHoppingPromise = loop1.makePromise(of: Void.self)
+        let noHoppingFuture = noHoppingPromise.futureResult.hop(to: loop1)
+        #expect(noHoppingFuture === noHoppingPromise.futureResult)
+        noHoppingPromise.succeed(())
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFlatMapResultHappyPath() async {
+        let el = makeEventLoop()
+
+        let p = el.makePromise(of: Int.self)
+        let f = p.futureResult.flatMapResult { (_: Int) in
+            Result<String, Never>.success("hello world")
+        }
+        p.succeed(1)
+        await #expect(throws: Never.self) {
+            let result = try await f.get()
+            #expect("hello world" == result)
+        }
+        await #expect(throws: Never.self) { try await el.shutdownGracefully() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFlatMapResultFailurePath() async {
+        struct DummyError: Error {}
+        let el = makeEventLoop()
+
+        let p = el.makePromise(of: Int.self)
+        let f = p.futureResult.flatMapResult { (_: Int) in
+            Result<Int, Error>.failure(DummyError())
+        }
+        p.succeed(1)
+        await #expect(throws: DummyError.self) { try await f.get() }
+        await #expect(throws: Never.self) { try await el.shutdownGracefully() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testWhenAllSucceedFailsImmediately() {
+        let group = AsyncEventLoopGroup(numberOfThreads: 2)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+
+        func doTest(promise: EventLoopPromise<[Int]>?) {
+            let promises = [
+                group.next().makePromise(of: Int.self),
+                group.next().makePromise(of: Int.self),
+            ]
+            let futures = promises.map { $0.futureResult }
+            let futureResult: EventLoopFuture<[Int]>
+
+            if let promise = promise {
+                futureResult = promise.futureResult
+                EventLoopFuture.whenAllSucceed(futures, promise: promise)
+            } else {
+                futureResult = EventLoopFuture.whenAllSucceed(futures, on: group.next())
+            }
+
+            promises[0].fail(EventLoopFutureTestError.example)
+            #expect(throws: EventLoopFutureTestError.self) {
+                try futureResult.wait()
+            }
+        }
+
+        doTest(promise: nil)
+        doTest(promise: group.next().makePromise())
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testWhenAllSucceedResolvesAfterFutures() throws {
+        let group = AsyncEventLoopGroup(numberOfThreads: 6)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+
+        func doTest(promise: EventLoopPromise<[Int]>?) throws {
+            let promises = (0..<5).map { _ in group.next().makePromise(of: Int.self) }
+            let futures = promises.map { $0.futureResult }
+
+            let succeeded = NIOLockedValueBox(false)
+            let completedPromises = NIOLockedValueBox(false)
+
+            let mainFuture: EventLoopFuture<[Int]>
+
+            if let promise = promise {
+                mainFuture = promise.futureResult
+                EventLoopFuture.whenAllSucceed(futures, promise: promise)
+            } else {
+                mainFuture = EventLoopFuture.whenAllSucceed(futures, on: group.next())
+            }
+
+            mainFuture.whenSuccess { _ in
+                #expect(completedPromises.withLockedValue { $0 })
+                #expect(!succeeded.withLockedValue { $0 })
+                succeeded.withLockedValue { $0 = true }
+            }
+
+            // Should be false, as none of the promises have completed yet
+            #expect(!succeeded.withLockedValue { $0 })
+
+            // complete the first four promises
+            for (index, promise) in promises.dropLast().enumerated() {
+                promise.succeed(index)
+            }
+
+            // Should still be false, as one promise hasn't completed yet
+            #expect(!succeeded.withLockedValue { $0 })
+
+            // Complete the last promise
+            completedPromises.withLockedValue { $0 = true }
+            promises.last!.succeed(4)
+
+            let results = try assertNoThrowWithValue(mainFuture.wait())
+            #expect(results == [0, 1, 2, 3, 4])
+        }
+
+        #expect(throws: Never.self) { try doTest(promise: nil) }
+        #expect(throws: Never.self) { try doTest(promise: group.next().makePromise()) }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testWhenAllSucceedIsIndependentOfFulfillmentOrder() throws {
+        let group = AsyncEventLoopGroup(numberOfThreads: 6)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+
+        func doTest(promise: EventLoopPromise<[Int]>?) throws {
+            let expected = Array(0..<1000)
+            let promises = expected.map { _ in group.next().makePromise(of: Int.self) }
+            let futures = promises.map { $0.futureResult }
+
+            let succeeded = NIOLockedValueBox(false)
+            let completedPromises = NIOLockedValueBox(false)
+
+            let mainFuture: EventLoopFuture<[Int]>
+
+            if let promise = promise {
+                mainFuture = promise.futureResult
+                EventLoopFuture.whenAllSucceed(futures, promise: promise)
+            } else {
+                mainFuture = EventLoopFuture.whenAllSucceed(futures, on: group.next())
+            }
+
+            mainFuture.whenSuccess { _ in
+                #expect(completedPromises.withLockedValue { $0 })
+                #expect(!succeeded.withLockedValue { $0 })
+                succeeded.withLockedValue { $0 = true }
+            }
+
+            for index in expected.reversed() {
+                if index == 0 {
+                    completedPromises.withLockedValue { $0 = true }
+                }
+                promises[index].succeed(index)
+            }
+
+            let results = try assertNoThrowWithValue(mainFuture.wait())
+            #expect(results == expected)
+        }
+
+        #expect(throws: Never.self) { try doTest(promise: nil) }
+        #expect(throws: Never.self) { try doTest(promise: group.next().makePromise()) }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testWhenAllCompleteResultsWithFailuresStillSucceed() {
+        let group = AsyncEventLoopGroup(numberOfThreads: 2)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+
+        func doTest(promise: EventLoopPromise<[Result<Bool, Error>]>?) {
+            let futures: [EventLoopFuture<Bool>] = [
+                group.next().makeFailedFuture(EventLoopFutureTestError.example),
+                group.next().makeSucceededFuture(true),
+            ]
+            let future: EventLoopFuture<[Result<Bool, Error>]>
+
+            if let promise = promise {
+                future = promise.futureResult
+                EventLoopFuture.whenAllComplete(futures, promise: promise)
+            } else {
+                future = EventLoopFuture.whenAllComplete(futures, on: group.next())
+            }
+
+            #expect(throws: Never.self) { try future.wait() }
+        }
+
+        doTest(promise: nil)
+        doTest(promise: group.next().makePromise())
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testWhenAllCompleteResults() throws {
+        let group = AsyncEventLoopGroup(numberOfThreads: 2)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+
+        func doTest(promise: EventLoopPromise<[Result<Int, Error>]>?) throws {
+            let futures: [EventLoopFuture<Int>] = [
+                group.next().makeSucceededFuture(3),
+                group.next().makeFailedFuture(EventLoopFutureTestError.example),
+                group.next().makeSucceededFuture(10),
+                group.next().makeFailedFuture(EventLoopFutureTestError.example),
+                group.next().makeSucceededFuture(5),
+            ]
+            let future: EventLoopFuture<[Result<Int, Error>]>
+
+            if let promise = promise {
+                future = promise.futureResult
+                EventLoopFuture.whenAllComplete(futures, promise: promise)
+            } else {
+                future = EventLoopFuture.whenAllComplete(futures, on: group.next())
+            }
+
+            let results = try assertNoThrowWithValue(future.wait())
+
+            #expect(try results[0].get() == 3)
+            #expect(throws: Error.self) { try results[1].get() }
+            #expect(try results[2].get() == 10)
+            #expect(throws: Error.self) { try results[3].get() }
+            #expect(try results[4].get() == 5)
+        }
+
+        #expect(throws: Never.self) { try doTest(promise: nil) }
+        #expect(throws: Never.self) { try doTest(promise: group.next().makePromise()) }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testWhenAllCompleteResolvesAfterFutures() throws {
+        let group = AsyncEventLoopGroup(numberOfThreads: 6)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+
+        func doTest(promise: EventLoopPromise<[Result<Int, Error>]>?) throws {
+            let promises = (0..<5).map { _ in group.next().makePromise(of: Int.self) }
+            let futures = promises.map { $0.futureResult }
+
+            let succeeded = NIOLockedValueBox(false)
+            let completedPromises = NIOLockedValueBox(false)
+
+            let mainFuture: EventLoopFuture<[Result<Int, Error>]>
+
+            if let promise = promise {
+                mainFuture = promise.futureResult
+                EventLoopFuture.whenAllComplete(futures, promise: promise)
+            } else {
+                mainFuture = EventLoopFuture.whenAllComplete(futures, on: group.next())
+            }
+
+            mainFuture.whenSuccess { _ in
+                #expect(completedPromises.withLockedValue { $0 })
+                #expect(!succeeded.withLockedValue { $0 })
+                succeeded.withLockedValue { $0 = true }
+            }
+
+            // Should be false, as none of the promises have completed yet
+            #expect(!succeeded.withLockedValue { $0 })
+
+            // complete the first four promises
+            for (index, promise) in promises.dropLast().enumerated() {
+                promise.succeed(index)
+            }
+
+            // Should still be false, as one promise hasn't completed yet
+            #expect(!succeeded.withLockedValue { $0 })
+
+            // Complete the last promise
+            completedPromises.withLockedValue { $0 = true }
+            promises.last!.succeed(4)
+
+            let results = try assertNoThrowWithValue(mainFuture.wait().map { try $0.get() })
+            #expect(results == [0, 1, 2, 3, 4])
+        }
+
+        #expect(throws: Never.self) { try doTest(promise: nil) }
+        #expect(throws: Never.self) { try doTest(promise: group.next().makePromise()) }
+    }
+
+    struct DatabaseError: Error {}
+    final class Database: Sendable {
+        private let query: @Sendable () -> EventLoopFuture<[String]>
+        private let _closed = NIOLockedValueBox(false)
+
+        var closed: Bool {
+            self._closed.withLockedValue { $0 }
+        }
+
+        init(query: @escaping @Sendable () -> EventLoopFuture<[String]>) {
+            self.query = query
+        }
+
+        func runQuery() -> EventLoopFuture<[String]> {
+            self.query()
+        }
+
+        func close() {
+            self._closed.withLockedValue { $0 = true }
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAlways() throws {
+        let group = makeEventLoop()
+        let loop = group.next()
+        let db = Database { loop.makeSucceededFuture(["Item 1", "Item 2", "Item 3"]) }
+
+        #expect(!db.closed)
+        let _ = try assertNoThrowWithValue(
+            db.runQuery().always { result in
+                assertSuccess(result)
+                db.close()
+            }.map { $0.map { $0.uppercased() } }.wait()
+        )
+        #expect(db.closed)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAlwaysWithFailingPromise() throws {
+        let group = makeEventLoop()
+        let loop = group.next()
+        let db = Database { loop.makeFailedFuture(DatabaseError()) }
+
+        #expect(!db.closed)
+
+        #expect(throws: DatabaseError.self) {
+            try db.runQuery().always { result in
+                assertFailure(result)
+                db.close()
+            }.map { $0.map { $0.uppercased() } }.wait()
+        }
+        #expect(db.closed)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testPromiseCompletedWithSuccessfulFuture() throws {
+        let group = makeEventLoop()
+        let loop = group.next()
+
+        let future = loop.makeSucceededFuture("yay")
+        let promise = loop.makePromise(of: String.self)
+
+        promise.completeWith(future)
+        #expect(try promise.futureResult.wait() == "yay")
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFutureFulfilledIfHasNonSendableResult() throws {
+        let eventLoop = makeEventLoop()
+        let completion = eventLoop.submit {
+            let f = EventLoopFuture(eventLoop: eventLoop, isolatedValue: NonSendableObject(value: 5))
+            #expect(f.isFulfilled)
+        }
+        #expect(throws: Never.self) {
+            try completion.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testSucceededIsolatedFutureIsCompleted() throws {
+        let group = makeEventLoop()
+        let loop = group.next()
+        let completion = loop.submit {
+            let value = NonSendableObject(value: 4)
+
+            let future = loop.makeSucceededIsolatedFuture(value)
+
+            future.whenComplete { result in
+                switch result {
+                case .success(let nonSendableStruct):
+                    #expect(nonSendableStruct == value)
+                case .failure(let error):
+                    Issue.record("\(error)")
+                }
+            }
+        }
+        #expect(throws: Never.self) {
+            try completion.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testPromiseCompletedWithFailedFuture() throws {
+        let group = makeEventLoop()
+        let loop = group.next()
+
+        let future: EventLoopFuture<EventLoopFutureTestError> = loop.makeFailedFuture(
+            EventLoopFutureTestError.example
+        )
+        let promise = loop.makePromise(of: EventLoopFutureTestError.self)
+
+        promise.completeWith(future)
+        #expect(throws: EventLoopFutureTestError.self) {
+            try promise.futureResult.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testPromiseCompletedWithSuccessfulResult() throws {
+        let group = makeEventLoop()
+        let loop = group.next()
+
+        let promise = loop.makePromise(of: Void.self)
+
+        let result: Result<Void, Error> = .success(())
+        promise.completeWith(result)
+        #expect(throws: Never.self) { try promise.futureResult.wait() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testPromiseCompletedWithFailedResult() throws {
+        let group = makeEventLoop()
+        let loop = group.next()
+
+        let promise = loop.makePromise(of: Void.self)
+
+        let result: Result<Void, Error> = .failure(EventLoopFutureTestError.example)
+        promise.completeWith(result)
+        #expect(throws: EventLoopFutureTestError.self) {
+            try promise.futureResult.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAndAllCompleteWithZeroFutures() {
+        let eventLoop = makeEventLoop()
+        let done = DispatchSemaphore(value: 0)
+        EventLoopFuture<Void>.andAllComplete([], on: eventLoop).whenComplete {
+            (result: Result<Void, Error>) in
+            _ = result.mapError { error -> Error in
+                Issue.record("unexpected error \(error)")
+                return error
+            }
+            done.signal()
+        }
+        done.wait()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAndAllSucceedWithZeroFutures() {
+        let eventLoop = makeEventLoop()
+        let done = DispatchSemaphore(value: 0)
+        EventLoopFuture<Void>.andAllSucceed([], on: eventLoop).whenComplete { result in
+            _ = result.mapError { error -> Error in
+                Issue.record("unexpected error \(error)")
+                return error
+            }
+            done.signal()
+        }
+        done.wait()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAndAllCompleteWithPreSucceededFutures() {
+        let eventLoop = makeEventLoop()
+        let succeeded = eventLoop.makeSucceededFuture(())
+
+        for i in 0..<10 {
+            #expect(throws: Never.self) {
+                try EventLoopFuture<Void>.andAllComplete(
+                    Array(repeating: succeeded, count: i),
+                    on: eventLoop
+                ).wait()
+            }
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAndAllCompleteWithPreFailedFutures() {
+        struct Dummy: Error {}
+        let eventLoop = makeEventLoop()
+        let failed: EventLoopFuture<Void> = eventLoop.makeFailedFuture(Dummy())
+
+        for i in 0..<10 {
+            #expect(throws: Never.self) {
+                try EventLoopFuture<Void>.andAllComplete(
+                    Array(repeating: failed, count: i),
+                    on: eventLoop
+                ).wait()
+            }
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAndAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures() {
+        struct Dummy: Error {}
+        let eventLoop = makeEventLoop()
+        let succeeded = eventLoop.makeSucceededFuture(())
+        let incompletes = [
+            eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
+            eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
+            eventLoop.makePromise(of: Void.self),
+        ]
+        var futures: [EventLoopFuture<Void>] = []
+
+        for i in 0..<10 {
+            if i % 2 == 0 {
+                futures.append(succeeded)
+            } else {
+                futures.append(incompletes[i / 2].futureResult)
+            }
+        }
+
+        let overall = EventLoopFuture<Void>.andAllComplete(futures, on: eventLoop)
+        #expect(!overall.isFulfilled)
+        for (idx, incomplete) in incompletes.enumerated() {
+            #expect(!overall.isFulfilled)
+            if idx % 2 == 0 {
+                incomplete.succeed(())
+            } else {
+                incomplete.fail(Dummy())
+            }
+        }
+        #expect(throws: Never.self) { try overall.wait() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testWhenAllCompleteWithMixOfPreSuccededAndNotYetCompletedFutures() {
+        struct Dummy: Error {}
+        let eventLoop = makeEventLoop()
+        let succeeded = eventLoop.makeSucceededFuture(())
+        let incompletes = [
+            eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
+            eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
+            eventLoop.makePromise(of: Void.self),
+        ]
+        var futures: [EventLoopFuture<Void>] = []
+
+        for i in 0..<10 {
+            if i % 2 == 0 {
+                futures.append(succeeded)
+            } else {
+                futures.append(incompletes[i / 2].futureResult)
+            }
+        }
+
+        let overall = EventLoopFuture<Void>.whenAllComplete(futures, on: eventLoop)
+        #expect(!overall.isFulfilled)
+        for (idx, incomplete) in incompletes.enumerated() {
+            #expect(!overall.isFulfilled)
+            if idx % 2 == 0 {
+                incomplete.succeed(())
+            } else {
+                incomplete.fail(Dummy())
+            }
+        }
+        let expected: [Result<Void, Error>] = [
+            .success(()), .success(()),
+            .success(()), .failure(Dummy()),
+            .success(()), .success(()),
+            .success(()), .failure(Dummy()),
+            .success(()), .success(()),
+        ]
+        func assertIsEqual(_ expecteds: [Result<Void, Error>], _ actuals: [Result<Void, Error>]) {
+            #expect(expecteds.count == actuals.count, "counts not equal")
+            for i in expecteds.indices {
+                let expected = expecteds[i]
+                let actual = actuals[i]
+                switch (expected, actual) {
+                case (.success(()), .success(())):
+                    ()
+                case (.failure(let le), .failure(let re)):
+                    #expect(le is Dummy)
+                    #expect(re is Dummy)
+                default:
+                    Issue.record("\(expecteds) and \(actuals) not equal")
+                }
+            }
+        }
+        #expect(throws: Never.self) { assertIsEqual(expected, try overall.wait()) }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testRepeatedTaskOffEventLoopGroupFuture() throws {
+        let elg1: EventLoopGroup = AsyncEventLoopGroup(numberOfThreads: 1)
+        defer {
+            #expect(throws: Never.self) { try elg1.syncShutdownGracefully() }
+        }
+
+        let elg2: EventLoopGroup = AsyncEventLoopGroup(numberOfThreads: 1)
+        defer {
+            #expect(throws: Never.self) { try elg2.syncShutdownGracefully() }
+        }
+
+        let exitPromise: EventLoopPromise<Void> = elg1.next().makePromise()
+        let callNumber = NIOLockedValueBox(0)
+        _ = elg1.next().scheduleRepeatedAsyncTask(initialDelay: .nanoseconds(0), delay: .nanoseconds(0)) { task in
+            struct Dummy: Error {}
+
+            callNumber.withLockedValue { $0 += 1 }
+            switch callNumber.withLockedValue({ $0 }) {
+            case 1:
+                return elg2.next().makeSucceededFuture(())
+            case 2:
+                task.cancel(promise: exitPromise)
+                return elg2.next().makeFailedFuture(Dummy())
+            default:
+                Issue.record("shouldn't be called \(callNumber)")
+                return elg2.next().makeFailedFuture(Dummy())
+            }
+        }
+
+        try exitPromise.futureResult.wait()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testEventLoopFutureOrErrorNoThrow() throws {
+        let eventLoop = makeEventLoop()
+        let promise = eventLoop.makePromise(of: Int?.self)
+        let result: Result<Int?, Error> = .success(42)
+        promise.completeWith(result)
+
+        #expect(try promise.futureResult.unwrap(orError: EventLoopFutureTestError.example).wait() == 42)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testEventLoopFutureOrThrows() {
+        let eventLoop = makeEventLoop()
+        let promise = eventLoop.makePromise(of: Int?.self)
+        let result: Result<Int?, Error> = .success(nil)
+        promise.completeWith(result)
+
+        #expect(throws: EventLoopFutureTestError.example) {
+            try promise.futureResult.unwrap(orError: EventLoopFutureTestError.example).wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testEventLoopFutureOrNoReplacement() {
+        let eventLoop = makeEventLoop()
+        let promise = eventLoop.makePromise(of: Int?.self)
+        let result: Result<Int?, Error> = .success(42)
+        promise.completeWith(result)
+
+        #expect(try! promise.futureResult.unwrap(orReplace: 41).wait() == 42)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testEventLoopFutureOrReplacement() {
+        let eventLoop = makeEventLoop()
+        let promise = eventLoop.makePromise(of: Int?.self)
+        let result: Result<Int?, Error> = .success(nil)
+        promise.completeWith(result)
+
+        #expect(try! promise.futureResult.unwrap(orReplace: 42).wait() == 42)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testEventLoopFutureOrNoElse() {
+        let eventLoop = makeEventLoop()
+        let promise = eventLoop.makePromise(of: Int?.self)
+        let result: Result<Int?, Error> = .success(42)
+        promise.completeWith(result)
+
+        #expect(try! promise.futureResult.unwrap(orElse: { 41 }).wait() == 42)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testEventLoopFutureOrElse() {
+        let eventLoop = makeEventLoop()
+        let promise = eventLoop.makePromise(of: Int?.self)
+        let result: Result<Int?, Error> = .success(4)
+        promise.completeWith(result)
+
+        let x = 2
+        #expect(try! promise.futureResult.unwrap(orElse: { x * 2 }).wait() == 4)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFlatBlockingMapOnto() {
+        let group = AsyncEventLoopGroup(numberOfThreads: 1)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+
+        let eventLoop = group.next()
+        let p = eventLoop.makePromise(of: String.self)
+        let sem = DispatchSemaphore(value: 0)
+        let blockingRan = ManagedAtomic(false)
+        let nonBlockingRan = ManagedAtomic(false)
+        p.futureResult.map {
+            $0.count
+        }.flatMapBlocking(onto: DispatchQueue.global()) { value -> Int in
+            sem.wait()  // Block in chained EventLoopFuture
+            blockingRan.store(true, ordering: .sequentiallyConsistent)
+            return 1 + value
+        }.whenSuccess {
+            #expect($0 == 6)
+            let blockingRanResult = blockingRan.load(ordering: .sequentiallyConsistent)
+            #expect(blockingRanResult)
+            let nonBlockingRanResult = nonBlockingRan.load(ordering: .sequentiallyConsistent)
+            #expect(nonBlockingRanResult)
+        }
+        p.succeed("hello")
+
+        let p2 = eventLoop.makePromise(of: Bool.self)
+        p2.futureResult.whenSuccess { _ in
+            nonBlockingRan.store(true, ordering: .sequentiallyConsistent)
+        }
+        p2.succeed(true)
+
+        sem.signal()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testWhenSuccessBlocking() {
+        let eventLoop = makeEventLoop()
+        let sem = DispatchSemaphore(value: 0)
+        let nonBlockingRan = NIOLockedValueBox(false)
+        let p = eventLoop.makePromise(of: String.self)
+        p.futureResult.whenSuccessBlocking(onto: DispatchQueue.global()) {
+            sem.wait()  // Block in callback
+            #expect($0 == "hello")
+            nonBlockingRan.withLockedValue { #expect($0) }
+
+        }
+        p.succeed("hello")
+
+        let p2 = eventLoop.makePromise(of: Bool.self)
+        p2.futureResult.whenSuccess { _ in
+            nonBlockingRan.withLockedValue { $0 = true }
+        }
+        p2.succeed(true)
+
+        let didRun = try! p2.futureResult.wait()
+        #expect(didRun)
+        sem.signal()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testWhenFailureBlocking() {
+        let eventLoop = makeEventLoop()
+        let sem = DispatchSemaphore(value: 0)
+        let nonBlockingRan = NIOLockedValueBox(false)
+        let p = eventLoop.makePromise(of: String.self)
+        p.futureResult.whenFailureBlocking(onto: DispatchQueue.global()) { err in
+            sem.wait()  // Block in callback
+            #expect(err as! EventLoopFutureTestError == EventLoopFutureTestError.example)
+            #expect(nonBlockingRan.withLockedValue { $0 })
+        }
+        p.fail(EventLoopFutureTestError.example)
+
+        let p2 = eventLoop.makePromise(of: Bool.self)
+        p2.futureResult.whenSuccess { _ in
+            nonBlockingRan.withLockedValue { $0 = true }
+        }
+        p2.succeed(true)
+
+        let didRun = try! p2.futureResult.wait()
+        #expect(didRun)
+        sem.signal()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testWhenCompleteBlockingSuccess() {
+        let eventLoop = makeEventLoop()
+        let sem = DispatchSemaphore(value: 0)
+        let nonBlockingRan = NIOLockedValueBox(false)
+        let p = eventLoop.makePromise(of: String.self)
+        p.futureResult.whenCompleteBlocking(onto: DispatchQueue.global()) { _ in
+            sem.wait()  // Block in callback
+            #expect(nonBlockingRan.withLockedValue { $0 })
+        }
+        p.succeed("hello")
+
+        let p2 = eventLoop.makePromise(of: Bool.self)
+        p2.futureResult.whenSuccess { _ in
+            nonBlockingRan.withLockedValue { $0 = true }
+        }
+        p2.succeed(true)
+
+        let didRun = try! p2.futureResult.wait()
+        #expect(didRun)
+        sem.signal()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testWhenCompleteBlockingFailure() {
+        let eventLoop = makeEventLoop()
+        let sem = DispatchSemaphore(value: 0)
+        let nonBlockingRan = NIOLockedValueBox(false)
+        let p = eventLoop.makePromise(of: String.self)
+        p.futureResult.whenCompleteBlocking(onto: DispatchQueue.global()) { _ in
+            sem.wait()  // Block in callback
+            #expect(nonBlockingRan.withLockedValue { $0 })
+        }
+        p.fail(EventLoopFutureTestError.example)
+
+        let p2 = eventLoop.makePromise(of: Bool.self)
+        p2.futureResult.whenSuccess { _ in
+            nonBlockingRan.withLockedValue { $0 = true }
+        }
+        p2.succeed(true)
+
+        let didRun = try! p2.futureResult.wait()
+        #expect(didRun)
+        sem.signal()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFlatMapWithEL() throws {
+        let el = makeEventLoop()
+
+        let result = try el.makeSucceededFuture(1).flatMapWithEventLoop { one, el2 in
+            #expect(el === el2)
+            return el2.makeSucceededFuture(one + 1)
+        }.wait()
+        #expect(2 == result)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFlatMapErrorWithEL() throws {
+        let el = makeEventLoop()
+        struct E: Error {}
+
+        let result = try el.makeFailedFuture(E()).flatMapErrorWithEventLoop { error, el2 in
+            #expect(error is E)
+            return el2.makeSucceededFuture(1)
+        }.wait()
+        #expect(1 == result)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testFoldWithEL() throws {
+        let el = makeEventLoop()
+
+        let futures = (1...10).map { el.makeSucceededFuture($0) }
+
+        let calls = NIOLockedValueBox(0)
+        let all = el.makeSucceededFuture(0).foldWithEventLoop(futures) { l, r, el2 in
+            calls.withLockedValue { $0 += 1 }
+            #expect(el === el2)
+            #expect(calls.withLockedValue { $0 } == r)
+            return el2.makeSucceededFuture(l + r)
+        }
+
+        let expectedResult = (1...10).reduce(0, +)
+        let result = try all.wait()
+        #expect(expectedResult == result)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAssertSuccess() {
+        let eventLoop = makeEventLoop()
+
+        let promise = eventLoop.makePromise(of: String.self)
+        let assertedFuture = promise.futureResult.assertSuccess()
+        promise.succeed("hello")
+
+        #expect(throws: Never.self) { try assertedFuture.wait() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testAssertFailure() {
+        let eventLoop = makeEventLoop()
+
+        let promise = eventLoop.makePromise(of: String.self)
+        let assertedFuture = promise.futureResult.assertFailure()
+        promise.fail(EventLoopFutureTestError.example)
+
+        #expect(throws: EventLoopFutureTestError.example) {
+            try assertedFuture.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testPreconditionSuccess() {
+        let eventLoop = makeEventLoop()
+
+        let promise = eventLoop.makePromise(of: String.self)
+        let preconditionedFuture = promise.futureResult.preconditionSuccess()
+        promise.succeed("hello")
+
+        #expect(throws: Never.self) { try preconditionedFuture.wait() }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testPreconditionFailure() {
+        let eventLoop = makeEventLoop()
+
+        let promise = eventLoop.makePromise(of: String.self)
+        let preconditionedFuture = promise.futureResult.preconditionFailure()
+        promise.fail(EventLoopFutureTestError.example)
+
+        #expect(throws: EventLoopFutureTestError.example) {
+            try preconditionedFuture.wait()
+        }
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testSetOrCascadeReplacesNil() throws {
+        let eventLoop = makeEventLoop()
+
+        var promise: EventLoopPromise<Void>? = nil
+        let other = eventLoop.makePromise(of: Void.self)
+        promise.setOrCascade(to: other)
+        #expect(promise != nil)
+        promise?.succeed()
+        try other.futureResult.wait()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testSetOrCascadeCascadesToExisting() throws {
+        let eventLoop = makeEventLoop()
+
+        var promise: EventLoopPromise<Void>? = eventLoop.makePromise(of: Void.self)
+        let other = eventLoop.makePromise(of: Void.self)
+        promise.setOrCascade(to: other)
+        promise?.succeed()
+        try other.futureResult.wait()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testSetOrCascadeNoOpOnNil() throws {
+        let eventLoop = makeEventLoop()
+
+        var promise: EventLoopPromise<Void>? = eventLoop.makePromise(of: Void.self)
+        promise.setOrCascade(to: nil)
+        #expect(promise != nil)
+        promise?.succeed()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testPromiseEquatable() {
+        let eventLoop = makeEventLoop()
+
+        let promise1 = eventLoop.makePromise(of: Void.self)
+        let promise2 = eventLoop.makePromise(of: Void.self)
+        let promise3 = promise1
+        #expect(promise1 == promise3)
+        #expect(promise1 != promise2)
+        #expect(promise3 != promise2)
+
+        promise1.succeed()
+        promise2.succeed()
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testPromiseEquatable_WhenSucceeded() {
+        let eventLoop = makeEventLoop()
+
+        let promise1 = eventLoop.makePromise(of: Void.self)
+        let promise2 = eventLoop.makePromise(of: Void.self)
+        let promise3 = promise1
+
+        promise1.succeed()
+        promise2.succeed()
+        #expect(promise1 == promise3)
+        #expect(promise1 != promise2)
+        #expect(promise3 != promise2)
+    }
+
+    @Test
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testPromiseEquatable_WhenFailed() {
+        struct E: Error {}
+        let eventLoop = makeEventLoop()
+
+        let promise1 = eventLoop.makePromise(of: Void.self)
+        let promise2 = eventLoop.makePromise(of: Void.self)
+        let promise3 = promise1
+
+        promise1.fail(E())
+        promise2.fail(E())
+        #expect(promise1 == promise3)
+        #expect(promise1 != promise2)
+        #expect(promise3 != promise2)
+    }
+}
+
+class NonSendableObject: Equatable {
+    var value: Int
+    init(value: Int) {
+        self.value = value
+    }
+
+    static func == (lhs: NonSendableObject, rhs: NonSendableObject) -> Bool {
+        lhs.value == rhs.value
+    }
+}
+@available(*, unavailable)
+extension NonSendableObject: Sendable {}
