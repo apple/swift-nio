@@ -152,6 +152,9 @@ final class PipeChannelTest: XCTestCase {
     }
 
     func testWeWorkFineWithASingleFileDescriptor() throws {
+        #if os(Windows)
+        throw XCTSkip("socketpair is not available on Windows")
+        #else
         final class EchoHandler: ChannelInboundHandler, Sendable {
             typealias InboundIn = ByteBuffer
             typealias OutboundOut = ByteBuffer
@@ -205,6 +208,7 @@ final class PipeChannelTest: XCTestCase {
             }
         )
         XCTAssertEqual(UInt8(ascii: "X"), spaceForX)
+        #endif
     }
 
     func testWriteEndGoingAway() throws {

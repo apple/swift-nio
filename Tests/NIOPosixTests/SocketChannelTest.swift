@@ -373,6 +373,9 @@ final class SocketChannelTest: XCTestCase {
     }
 
     public func testWithConfiguredStreamSocket() throws {
+        #if os(Windows)
+        throw XCTSkip("Creating a channel from a pre-connected socket is not supported on Windows")
+        #else
         let didAccept = ConditionLock<Int>(value: 0)
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
@@ -415,9 +418,13 @@ final class SocketChannelTest: XCTestCase {
 
         try serverChannel.close().wait()
         try clientChannel.close().wait()
+        #endif
     }
 
     public func testWithConfiguredDatagramSocket() throws {
+        #if os(Windows)
+        throw XCTSkip("Creating a channel from a pre-connected socket is not supported on Windows")
+        #else
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
@@ -432,6 +439,7 @@ final class SocketChannelTest: XCTestCase {
         XCTAssertEqual(true, serverChannel.isActive)
 
         try serverChannel.close().wait()
+        #endif
     }
 
     public func testPendingConnectNotificationOrder() throws {
@@ -616,6 +624,9 @@ final class SocketChannelTest: XCTestCase {
     }
 
     func testSocketFlagNONBLOCKWorks() throws {
+        #if os(Windows)
+        throw XCTSkip("fcntl / O_NONBLOCK flag manipulation is not available on Windows")
+        #else
         var socket = try assertNoThrowWithValue(try ServerSocket(protocolFamily: .inet, setNonBlocking: true))
         XCTAssertNoThrow(
             try socket.withUnsafeHandle { fd in
@@ -639,10 +650,11 @@ final class SocketChannelTest: XCTestCase {
             }
         )
         XCTAssertNoThrow(try socket.close())
+        #endif
     }
 
     func testInstantTCPConnectionResetThrowsError() throws {
-        #if !os(Linux) && !os(Android)
+        #if !os(Linux) && !os(Android) && !os(Windows)
         // This test checks that we correctly fail with an error rather than
         // asserting or silently ignoring if a client aborts the connection
         // early with a RST before accept(). The behaviour is the same as closing the socket
@@ -750,6 +762,9 @@ final class SocketChannelTest: XCTestCase {
     }
 
     func testSetSockOptDoesNotOverrideExistingFlags() throws {
+        #if os(Windows)
+        throw XCTSkip("fcntl flag manipulation is not available on Windows")
+        #else
         let s = try assertNoThrowWithValue(
             Socket(
                 protocolFamily: .inet,
@@ -789,6 +804,7 @@ final class SocketChannelTest: XCTestCase {
         )
 
         XCTAssertNoThrow(try s.close())
+        #endif
     }
 
     func testServerChannelDoesNotBreakIfAcceptingFailsWithEINVAL() throws {

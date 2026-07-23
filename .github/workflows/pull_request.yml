@@ -86,7 +86,7 @@ jobs:
           MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: false
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: false
           MATRIX_WINDOWS_6_3_ENABLED: true
-          MATRIX_WINDOWS_COMMAND: "swift build"
+          MATRIX_WINDOWS_COMMAND: "swift build --build-tests"
 
   windows-build:
     name: Windows build (currently-supported targets)

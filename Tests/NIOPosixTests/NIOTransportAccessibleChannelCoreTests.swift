@@ -17,6 +17,13 @@ import NIOEmbedded
 import NIOPosix  // NOTE: Not @testable import here -- testing public API surface.
 import Testing
 
+#if os(Windows)
+import WinSDK
+
+// `STDOUT_FILENO` is not defined on Windows; the CRT uses fd 1 for stdout.
+private let STDOUT_FILENO: CInt = 1
+#endif
+
 @Suite struct NIOTransportAccessibleChannelCoreTests {
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test func testUnderlyingSocketAccessForSocketBasedChannel() throws {

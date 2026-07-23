@@ -3133,6 +3133,9 @@ final class ChannelTests: XCTestCase {
     }
 
     func testApplyingTwoDistinctSocketOptionsOfSameTypeWorks() throws {
+        #if os(Windows)
+        throw XCTSkip("SO_TIMESTAMP is not available on Windows")
+        #else
         let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully())
@@ -3218,6 +3221,7 @@ final class ChannelTests: XCTestCase {
         XCTAssertTrue(try getBoolSocketOption(channel: accepted3, level: .socket, name: .so_keepalive))
 
         XCTAssertFalse(try getBoolSocketOption(channel: accepted3, level: .tcp, name: .tcp_nodelay))
+        #endif
     }
 
     func testUnprocessedOutboundUserEventFailsOnServerSocketChannel() throws {
@@ -3642,6 +3646,7 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
 }
 
 private func veryNasty_blockUntilReadBufferIsNonEmpty(channel: Channel) throws {
+    #if !os(Windows)
     struct ThisIsNotASocketChannelError: Error {}
     guard let channel = channel as? SocketChannel else {
         throw ThisIsNotASocketChannelError()
@@ -3652,4 +3657,5 @@ private func veryNasty_blockUntilReadBufferIsNonEmpty(channel: Channel) throws {
             try NIOBSDSocket.poll(fds: &pollFd, nfds: 1, timeout: -1)
         XCTAssertEqual(1, nfds)
     }
+    #endif
 }

@@ -243,6 +243,9 @@ class EchoServerClientTest: XCTestCase {
     }
 
     func testEchoVsock() throws {
+        #if os(Windows)
+        throw XCTSkip("VSOCK is not supported on Windows")
+        #else
         try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -289,6 +292,7 @@ class EchoServerClientTest: XCTestCase {
         try clientChannel.writeAndFlush(buffer).wait()
 
         XCTAssertEqual(try promise.futureResult.wait(), buffer)
+        #endif
     }
 
     func testChannelActiveOnConnect() throws {

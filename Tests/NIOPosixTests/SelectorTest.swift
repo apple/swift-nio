@@ -21,6 +21,8 @@ import XCTest
 
 class SelectorTest: XCTestCase {
 
+    #if !os(Windows)
+    // Uses pthread_self and a raw Selector<Registration>, unavailable on Windows.
     func testDeregisterWhileProcessingEvents() throws {
         try assertDeregisterWhileProcessingEvents(closeAfterDeregister: false)
     }
@@ -120,6 +122,7 @@ class SelectorTest: XCTestCase {
 
         XCTAssertEqual(1, readyCount)
     }
+    #endif
 
     private static let testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse = 10
     func testWeDoNotDeliverEventsForPreviouslyClosedChannels() throws {
@@ -422,6 +425,9 @@ class SelectorTest: XCTestCase {
     }
 
     func testTimerFDIsLevelTriggered() throws {
+        #if os(Windows)
+        throw XCTSkip("socketpair is not available on Windows")
+        #else
         // this is a regression test for https://github.com/apple/swift-nio/issues/872
         let delayToUseInMicroSeconds: Int64 = 100_000  // needs to be much greater than time it takes to EL.execute
 
@@ -503,5 +509,6 @@ class SelectorTest: XCTestCase {
         )
         sched.cancel()
         XCTAssertNoThrow(try channelHasBeenClosedPromise.futureResult.wait())
+        #endif
     }
 }

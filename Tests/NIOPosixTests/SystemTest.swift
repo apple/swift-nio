@@ -19,6 +19,10 @@ import XCTest
 @testable import NIOPosix
 
 class SystemTest: XCTestCase {
+    // None of these tests apply on Windows: the syscall-wrapper perf test is
+    // POSIX-only, `testErrorsWorkCorrectly` uses a POSIX fd as a socket handle,
+    // and the rest depend on POSIX `cmsg` support.
+    #if !os(Windows)
     func testSystemCallWrapperPerformance() throws {
         try runSystemCallWrapperPerformanceTest(
             testAssertFunction: XCTAssert,
@@ -184,4 +188,5 @@ class SystemTest: XCTestCase {
             XCTAssertEqual(msgNum, 2)
         }
     }
+    #endif  // !os(Windows)
 }

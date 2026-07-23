@@ -795,7 +795,7 @@ final class MultiThreadedEventLoopGroupTests {
         var tries = 0
         while holder.loop != nil {
             #expect(tries < 5, "Reference to EventLoop still alive after 5 seconds")
-            sleep(1)
+            Thread.sleep(forTimeInterval: 1)
             tries += 1
         }
     }
@@ -1615,7 +1615,17 @@ final class MultiThreadedEventLoopGroupTests {
         #expect(MultiThreadedEventLoopGroup.currentEventLoop == nil)
     }
 
-    @Test
+    // Takes over the current thread as an event loop, which relies on the
+    // concurrency-takeover machinery that is unsupported on Windows.
+    @Test(
+        .disabled("Taking over the current thread as an event loop is not supported on Windows") {
+            #if os(Windows)
+            return true
+            #else
+            return false
+            #endif
+        }
+    )
     func testWeCanDoTrulySingleThreadedNetworking() {
         final class SaveReceivedByte: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
@@ -1651,7 +1661,7 @@ final class MultiThreadedEventLoopGroupTests {
             let receiveHandler = NIOLoopBound(SaveReceivedByte(received: received), eventLoop: loop)
 
             ServerBootstrap(group: loop)
-                .serverChannelOption(ChannelOptions.socket(.init(SOL_SOCKET), .init(SO_REUSEADDR)), value: 1)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { accepted in
                     accepted.eventLoop.makeCompletedFuture {
                         try accepted.pipeline.syncOperations.addHandler(receiveHandler.value)

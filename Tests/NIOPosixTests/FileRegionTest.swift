@@ -282,11 +282,11 @@ class FileRegionTest: XCTestCase {
             var fr2Bytes = fr1Bytes
             try fh1.withUnsafeFileDescriptor { fd in
                 let r = try Posix.read(descriptor: fd, pointer: &fr1Bytes, size: 5)
-                XCTAssertEqual(r, IOResult<Int>.processed(5))
+                XCTAssertEqual(r, .processed(5))
             }
             try fh2.withUnsafeFileDescriptor { fd in
                 let r = try Posix.read(descriptor: fd, pointer: &fr2Bytes, size: 5)
-                XCTAssertEqual(r, IOResult<Int>.processed(5))
+                XCTAssertEqual(r, .processed(5))
             }
             defer {
                 // fr2's underlying fd must be closed by us.

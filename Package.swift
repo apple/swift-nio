@@ -570,6 +570,7 @@ let package = Package(
             dependencies: [
                 "NIOCore",
                 "NIOFoundationCompat",
+                "NIOPosix",
             ],
             swiftSettings: swiftSettings
         ),
