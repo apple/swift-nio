@@ -76,6 +76,7 @@ final class FileInfoTests: XCTestCase {
         XCTAssertEqual(info.userID, FileInfo.UserID(rawValue: 5))
         XCTAssertEqual(info.groupID, FileInfo.GroupID(rawValue: 6))
         XCTAssertEqual(info.size, 8)
+        XCTAssertEqual(info.onDiskSize, 9 * 512)
 
         XCTAssertEqual(info.lastAccessTime, FileInfo.Timespec(seconds: 0, nanoseconds: 0))
         XCTAssertEqual(info.lastDataModificationTime, FileInfo.Timespec(seconds: 1, nanoseconds: 0))

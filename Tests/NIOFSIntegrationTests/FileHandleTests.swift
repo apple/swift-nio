@@ -1222,6 +1222,17 @@ final class FileHandleTests: XCTestCase {
         }
     }
 
+    func testOnDiskSizeOfSparseFile() async throws {
+        try await self.withTemporaryFile { handle in
+            try await handle.write(contentsOf: Array("hi".utf8), toAbsoluteOffset: 0)
+            try await handle.resize(to: .mebibytes(128))
+
+            let info = try await handle.info()
+            XCTAssertEqual(info.size, 128 * 1024 * 1024)
+            XCTAssertLessThan(info.onDiskSize, 1024 * 1024)
+        }
+    }
+
     func testResizeFileErrors() async throws {
         try await self.withTemporaryFile { handle in
             try await handle.write(
