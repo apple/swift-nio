@@ -36,6 +36,8 @@ extension Errno {
             return Errno(rawValue: Musl.errno)
             #elseif canImport(Android)
             return Errno(rawValue: Android.errno)
+            #elseif os(Windows)
+            return Errno(rawValue: _nio_fs_errno)
             #endif
         }
         set {
@@ -47,6 +49,8 @@ extension Errno {
             Musl.errno = newValue.rawValue
             #elseif canImport(Android)
             Android.errno = newValue.rawValue
+            #elseif os(Windows)
+            _nio_fs_errno = newValue.rawValue
             #endif
         }
     }
@@ -60,6 +64,8 @@ extension Errno {
         Musl.errno = 0
         #elseif canImport(Android)
         Android.errno = 0
+        #elseif os(Windows)
+        _nio_fs_errno = 0
         #endif
     }
 }

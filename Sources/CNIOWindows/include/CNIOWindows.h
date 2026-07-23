@@ -21,6 +21,7 @@
 #include <time.h>
 #include <stdint.h>
 #include <basetsd.h>
+#include <errno.h>
 
 #define NIO(name) CNIOWindows_ ## name
 
@@ -107,7 +108,13 @@ WSACMSGHDR *NIO(CMSG_NXTHDR)(const WSAMSG *, LPWSACMSGHDR);
 size_t NIO(CMSG_LEN)(size_t);
 size_t NIO(CMSG_SPACE)(size_t);
 
-int NIO(errno)(void);
+// Reads `errno`. Windows spells the errno type `errno_t` (a typedef for `int`)
+// and exposes it only through the `_get_errno`/`_set_errno` accessors, since
+// `errno` itself is a macro. Wrap those here so Swift can read/write it.
+errno_t NIO(errno)(void);
+
+// Sets `errno`; see `CNIOWindows_errno`.
+void NIO(set_errno)(errno_t value);
 
 DWORD NIO(FormatGetLastError)(DWORD errorCode, LPSTR errorMsg);
 
