@@ -609,6 +609,7 @@ class DatagramChannelTests: XCTestCase {
     }
 
     func testSettingTwoDistinctChannelOptionsWorksForDatagramChannel() throws {
+        // SO_TIMESTAMP is not available on Windows.
         #if !os(Windows)
         let channel = try assertNoThrowWithValue(
             DatagramBootstrap(group: group)

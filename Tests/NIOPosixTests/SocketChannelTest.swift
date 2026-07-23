@@ -373,6 +373,7 @@ final class SocketChannelTest: XCTestCase {
     }
 
     public func testWithConfiguredStreamSocket() throws {
+        // Creating a channel from a pre-connected socket is not supported on Windows.
         #if !os(Windows)
         let didAccept = ConditionLock<Int>(value: 0)
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -420,6 +421,7 @@ final class SocketChannelTest: XCTestCase {
     }
 
     public func testWithConfiguredDatagramSocket() throws {
+        // Creating a channel from a pre-connected socket is not supported on Windows.
         #if !os(Windows)
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
@@ -620,6 +622,7 @@ final class SocketChannelTest: XCTestCase {
     }
 
     func testSocketFlagNONBLOCKWorks() throws {
+        // fcntl / O_NONBLOCK flag manipulation is not available on Windows.
         #if !os(Windows)
         var socket = try assertNoThrowWithValue(try ServerSocket(protocolFamily: .inet, setNonBlocking: true))
         XCTAssertNoThrow(
@@ -756,6 +759,7 @@ final class SocketChannelTest: XCTestCase {
     }
 
     func testSetSockOptDoesNotOverrideExistingFlags() throws {
+        // fcntl flag manipulation is not available on Windows.
         #if !os(Windows)
         let s = try assertNoThrowWithValue(
             Socket(

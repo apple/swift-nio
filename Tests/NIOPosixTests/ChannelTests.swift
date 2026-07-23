@@ -3133,6 +3133,7 @@ final class ChannelTests: XCTestCase {
     }
 
     func testApplyingTwoDistinctSocketOptionsOfSameTypeWorks() throws {
+        // SO_TIMESTAMP is not available on Windows.
         #if !os(Windows)
         let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {

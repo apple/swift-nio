@@ -384,6 +384,7 @@ class BootstrapTest: XCTestCase {
     }
 
     func testPreConnectedSocketSetsChannelOptionsBeforeChannelInitializer() {
+        // Creating a channel from a pre-connected socket is not supported on Windows.
         #if !os(Windows)
         XCTAssertNoThrow(
             try withTCPServerChannel(group: self.group) { server in
@@ -476,6 +477,7 @@ class BootstrapTest: XCTestCase {
     }
 
     func testPipeBootstrapInEventLoop() {
+        // Pipe channels are not supported on Windows.
         #if !os(Windows)
         let testGrp = DispatchGroup()
         testGrp.enter()

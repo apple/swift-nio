@@ -1615,10 +1615,17 @@ final class MultiThreadedEventLoopGroupTests {
         #expect(MultiThreadedEventLoopGroup.currentEventLoop == nil)
     }
 
-    // Uses `ChannelOptions.socket(SOL_SOCKET, SO_REUSEADDR)`, whose integer
-    // form is unavailable on Windows.
-    #if !os(Windows)
-    @Test
+    // Takes over the current thread as an event loop, which relies on the
+    // concurrency-takeover machinery that is unsupported on Windows.
+    @Test(
+        .disabled("Taking over the current thread as an event loop is not supported on Windows") {
+            #if os(Windows)
+            return true
+            #else
+            return false
+            #endif
+        }
+    )
     func testWeCanDoTrulySingleThreadedNetworking() {
         final class SaveReceivedByte: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
@@ -1654,7 +1661,7 @@ final class MultiThreadedEventLoopGroupTests {
             let receiveHandler = NIOLoopBound(SaveReceivedByte(received: received), eventLoop: loop)
 
             ServerBootstrap(group: loop)
-                .serverChannelOption(ChannelOptions.socket(.init(SOL_SOCKET), .init(SO_REUSEADDR)), value: 1)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { accepted in
                     accepted.eventLoop.makeCompletedFuture {
                         try accepted.pipeline.syncOperations.addHandler(receiveHandler.value)
@@ -1691,7 +1698,6 @@ final class MultiThreadedEventLoopGroupTests {
         // All done, the EventLoop is terminated so we should be able to check the results.
         #expect(UInt8(ascii: "J") == received.withLockedValue { $0 })
     }
-    #endif  // !os(Windows)
 
     @Test
     func testWeFailOutstandingScheduledTasksOnELShutdown() {

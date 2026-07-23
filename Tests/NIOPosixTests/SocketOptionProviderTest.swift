@@ -207,6 +207,7 @@ final class SocketOptionProviderTest: XCTestCase {
     }
 
     func testSoIpMulticastIf() throws {
+        // in_addr.s_addr is not available on Windows.
         #if !os(Windows)
         guard let channel = self.ipv4DatagramChannel else {
             // no multicast support

@@ -425,6 +425,7 @@ class SelectorTest: XCTestCase {
     }
 
     func testTimerFDIsLevelTriggered() throws {
+        // Posix.socketpair is not available on Windows.
         #if !os(Windows)
         // this is a regression test for https://github.com/apple/swift-nio/issues/872
         let delayToUseInMicroSeconds: Int64 = 100_000  // needs to be much greater than time it takes to EL.execute

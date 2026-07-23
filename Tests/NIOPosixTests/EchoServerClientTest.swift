@@ -243,6 +243,7 @@ class EchoServerClientTest: XCTestCase {
     }
 
     func testEchoVsock() throws {
+        // VSOCK is not supported on Windows.
         #if !os(Windows)
         try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)

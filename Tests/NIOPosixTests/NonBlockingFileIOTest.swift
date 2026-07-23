@@ -495,6 +495,7 @@ class NonBlockingFileIOTest: XCTestCase {
     }
 
     func testReadFromNonBlockingPipeFails() throws {
+        // Anonymous pipes with these semantics are not available on Windows.
         #if !os(Windows)
         try withPipe { readFH, writeFH in
             do {

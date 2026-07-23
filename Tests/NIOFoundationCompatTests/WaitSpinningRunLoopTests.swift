@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 import NIOFoundationCompat
+import NIOPosix
 import XCTest
 
 final class WaitSpinningRunLoopTests: XCTestCase {

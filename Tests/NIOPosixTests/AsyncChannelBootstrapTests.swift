@@ -605,6 +605,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testServerClientBootstrap_withAsyncChannel_clientConnectedSocket() async throws {
+        // Creating a channel from a pre-connected socket is not supported on Windows.
         #if !os(Windows)
         let eventLoopGroup = self.group!
 
@@ -1327,6 +1328,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     // MARK: VSock
 
     func testVSock() async throws {
+        // VSOCK is not supported on Windows.
         #if !os(Windows)
         try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
         let eventLoopGroup = self.group!
