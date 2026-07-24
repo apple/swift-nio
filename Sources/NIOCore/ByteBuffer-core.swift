@@ -190,6 +190,9 @@ public struct ByteBufferAllocator: Sendable {
 /// `ByteBuffer` stores contiguously allocated raw bytes. It is a random and sequential accessible sequence of zero or
 /// more bytes (octets).
 ///
+/// ### Value Semantics
+/// `ByteBuffer` is a value type. The reader and writer indices can always be modified without a copy of the underlying data. Any data modification may need to copy the contents using copy-on-write if there are multiple references to the underlying data storage.
+///
 /// ### Allocation
 /// Use `allocator.buffer(capacity: desiredCapacity)` to allocate a new `ByteBuffer`.
 ///
