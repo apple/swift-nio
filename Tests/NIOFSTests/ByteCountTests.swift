@@ -87,7 +87,8 @@ class ByteCountTests: XCTestCase {
         let byteCount2 = ByteCount.bytes(20)
         XCTAssertLessThan(byteCount1, byteCount2)
         XCTAssertGreaterThan(byteCount2, byteCount1)
-    }
+}
+
     func testByteCountNegative() {
         XCTAssertEqual(ByteCount.kilobytes(-10).bytes, -10_000)
         XCTAssertEqual(ByteCount.megabytes(-10).bytes, -10_000_000)
