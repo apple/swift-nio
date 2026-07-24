@@ -456,6 +456,27 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         self._scheduleTaskIsolatedUnsafeUnchecked(deadline: .now() + delay, task)
     }
 
+    @inlinable
+    @discardableResult
+    func _scheduleCallbackIsolatedUnsafeUnchecked(
+        at deadline: NIODeadline,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        let taskID = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
+        let task = ScheduledTask(id: taskID, handler, deadline)
+        try self._scheduleIsolated0(.scheduled(task))
+        return NIOScheduledCallback(self, id: taskID)
+    }
+
+    @inlinable
+    @discardableResult
+    func _scheduleCallbackIsolatedUnsafeUnchecked(
+        in amount: TimeAmount,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        try self._scheduleCallbackIsolatedUnsafeUnchecked(at: .now() + amount, handler: handler)
+    }
+
     // - see: `EventLoop.execute`
     @inlinable
     internal func execute(_ task: @escaping () -> Void) {

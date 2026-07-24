@@ -765,9 +765,8 @@ internal func descriptionForAddress(
     bytes: UnsafeRawPointer,
     length byteCount: Int
 ) throws -> String {
-    var addressBytes: [Int8] = Array(repeating: 0, count: byteCount)
-    return try addressBytes.withUnsafeMutableBufferPointer {
-        (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
+    try withUnsafeTemporaryAllocation(of: Int8.self, capacity: byteCount) {
+        (addressBytesPtr: UnsafeMutableBufferPointer<Int8>) -> String in
         try NIOBSDSocket.inet_ntop(
             addressFamily: family,
             addressBytes: bytes,
