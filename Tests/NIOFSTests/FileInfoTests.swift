@@ -80,6 +80,7 @@ final class FileInfoTests: XCTestCase {
         XCTAssertEqual(info.lastAccessTime, FileInfo.Timespec(seconds: 0, nanoseconds: 0))
         XCTAssertEqual(info.lastDataModificationTime, FileInfo.Timespec(seconds: 1, nanoseconds: 0))
         XCTAssertEqual(info.lastStatusChangeTime, FileInfo.Timespec(seconds: 2, nanoseconds: 0))
+        XCTAssertEqual(info.onDiskSize, 9 * 512)
     }
 
     func testEquatableConformance() {
