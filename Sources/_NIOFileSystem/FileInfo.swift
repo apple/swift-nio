@@ -59,6 +59,9 @@ public struct FileInfo: Hashable, Sendable {
     /// The size of the file in bytes.
     public var size: Int64
 
+    /// The actual size of the file on disk in bytes, if available.
+    public var onDiskSize: Int64?
+
     /// User ID of the file.
     public var userID: UserID
 
@@ -81,6 +84,7 @@ public struct FileInfo: Hashable, Sendable {
         self.type = FileType(platformSpecificMode: platformSpecificStatus.nioMode)
         self.permissions = FilePermissions(masking: platformSpecificStatus.nioMode)
         self.size = platformSpecificStatus.nioSize
+        self.onDiskSize = nil
         // Windows has no POSIX owner/group; report the defaults.
         self.userID = UserID(rawValue: 0)
         self.groupID = GroupID(rawValue: 0)
@@ -91,6 +95,7 @@ public struct FileInfo: Hashable, Sendable {
         self.type = FileType(platformSpecificMode: CInterop.Mode(platformSpecificStatus.st_mode))
         self.permissions = FilePermissions(masking: CInterop.Mode(platformSpecificStatus.st_mode))
         self.size = Int64(platformSpecificStatus.st_size)
+        self.onDiskSize = Int64(platformSpecificStatus.st_blocks) * 512
         self.userID = UserID(rawValue: platformSpecificStatus.st_uid)
         self.groupID = GroupID(rawValue: platformSpecificStatus.st_gid)
 
@@ -120,10 +125,39 @@ public struct FileInfo: Hashable, Sendable {
         lastDataModificationTime: Timespec,
         lastStatusChangeTime: Timespec
     ) {
+        self.init(
+            type: type,
+            permissions: permissions,
+            size: size,
+            onDiskSize: nil,
+            userID: userID,
+            groupID: groupID,
+            lastAccessTime: lastAccessTime,
+            lastDataModificationTime: lastDataModificationTime,
+            lastStatusChangeTime: lastStatusChangeTime
+        )
+    }
+
+    /// Creates a ``FileInfo`` from the provided values.
+    ///
+    /// If you have a platform specific status value prefer calling
+    /// ``init(platformSpecificStatus:)``.
+    public init(
+        type: FileType,
+        permissions: FilePermissions,
+        size: Int64,
+        onDiskSize: Int64?,
+        userID: UserID,
+        groupID: GroupID,
+        lastAccessTime: Timespec,
+        lastDataModificationTime: Timespec,
+        lastStatusChangeTime: Timespec
+    ) {
         self._platformSpecificStatus = nil
         self.type = type
         self.permissions = permissions
         self.size = size
+        self.onDiskSize = onDiskSize
         self.userID = userID
         self.groupID = groupID
         self.lastAccessTime = lastAccessTime

@@ -477,6 +477,7 @@ extension FileSystemProtocol {
         at sourcePath: FilePath,
         to destinationPath: FilePath,
         strategy copyStrategy: CopyStrategy,
+        replaceExisting: Bool = false,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -492,7 +493,7 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: copyStrategy,
-            replaceExisting: false,
+            replaceExisting: replaceExisting,
             shouldProceedAfterError: shouldProceedAfterError,
             shouldCopyItem: shouldCopyItem
         )
@@ -518,13 +519,14 @@ extension FileSystemProtocol {
     public func copyItem(
         at sourcePath: FilePath,
         to destinationPath: FilePath,
-        strategy copyStrategy: CopyStrategy = .platformDefault
+        strategy copyStrategy: CopyStrategy = .platformDefault,
+        replaceExisting: Bool = false
     ) async throws {
         try await self.copyItem(
             at: sourcePath,
             to: destinationPath,
             strategy: copyStrategy,
-            replaceExisting: false,
+            replaceExisting: replaceExisting,
             shouldProceedAfterError: { _, error in
                 throw error
             },
@@ -619,6 +621,7 @@ extension FileSystemProtocol {
     public func copyItem(
         at sourcePath: FilePath,
         to destinationPath: FilePath,
+        replaceExisting: Bool = false,
         shouldProceedAfterError:
             @escaping @Sendable (
                 _ source: DirectoryEntry,
@@ -634,7 +637,7 @@ extension FileSystemProtocol {
             at: sourcePath,
             to: destinationPath,
             strategy: .platformDefault,
-            replaceExisting: false,
+            replaceExisting: replaceExisting,
             shouldProceedAfterError: shouldProceedAfterError,
             shouldCopyItem: shouldCopyItem
         )
