@@ -90,15 +90,7 @@ private let STDOUT_FILENO: CInt = 1
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    @Test(
-        .disabled("NIOPipeBootstrap is not supported on Windows") {
-            #if os(Windows)
-            return true
-            #else
-            return false
-            #endif
-        }
-    )
+    @Test(.disabled(if: System.isWindows, "NIOPipeBootstrap is not supported on Windows"))
     func testUnderlyingTransportConformanceForExpectedChannels() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { #expect(throws: Never.self) { try group.syncShutdownGracefully() } }

@@ -34,6 +34,14 @@ func usleep(_ microseconds: UInt32) -> CInt {
 #endif
 
 extension System {
+    static var isWindows: Bool {
+        #if os(Windows)
+        return true
+        #else
+        return false
+        #endif
+    }
+
     static var supportsIPv6: Bool {
         do {
             let ipv6Loopback = try SocketAddress.makeAddressResolvingHost("::1", port: 0)

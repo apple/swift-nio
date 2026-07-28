@@ -29,15 +29,7 @@ struct SystemCrashTests {
     // `NIOPipeBootstrap` deliberately `fatalError`s on Windows, so this test can
     // only exercise its `EBADF` handling on the POSIX platforms. It's compiled
     // everywhere exit tests are available but skipped at runtime on Windows.
-    @Test(
-        .disabled("NIOPipeBootstrap is not supported on Windows") {
-            #if os(Windows)
-            return true
-            #else
-            return false
-            #endif
-        }
-    )
+    @Test(.disabled(if: System.isWindows, "NIOPipeBootstrap is not supported on Windows"))
     func ebadfIsUnacceptable() async {
         let result = await #expect(processExitsWith: .failure, observing: [\.standardErrorContent]) {
             func blockingFunctionsAllowedInCrashTest() {
