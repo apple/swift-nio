@@ -22,7 +22,7 @@ import XCTest
 class ThreadTest: XCTestCase {
     override func setUpWithError() throws {
         #if os(Windows)
-        throw XCTSkip("ThreadTest crashes or hangs on Windows")
+        throw XCTSkip("ThreadTest crashes or stalls on Windows")
         #endif
     }
 

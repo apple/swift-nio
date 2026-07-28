@@ -22,7 +22,7 @@ import XCTest
 class EchoServerClientTest: XCTestCase {
     override func setUpWithError() throws {
         #if os(Windows)
-        // Several of these socket echo integration tests hang or crash on
+        // Several of these socket echo integration tests stall or crash on
         // Windows (Unix domain sockets, dual-stack IPv4/IPv6 binds, and others),
         // so the whole suite is skipped there pending functional networking.
         throw XCTSkip("EchoServerClientTest exercises socket behaviour that is not yet functional on Windows")
