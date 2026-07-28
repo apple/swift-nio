@@ -60,124 +60,211 @@ public enum ByteToMessageDecoderVerifier: Sendable {
     ) throws where Decoder.InboundOut: Equatable {
         typealias Out = Decoder.InboundOut
 
-        func verifySimple(channel: RecordingChannel) throws {
-            for (input, expectedOutputs) in inputOutputPairs.shuffled() {
-                try channel.writeInbound(input)
-                for expectedOutput in expectedOutputs {
-                    guard let actualOutput = try channel.readInbound(as: Out.self) else {
-                        throw VerificationError<Out>(
-                            inputs: channel.inboundWrites,
-                            errorCode: .underProduction(expectedOutput)
-                        )
-                    }
-                    guard actualOutput == expectedOutput else {
-                        throw VerificationError<Out>(
-                            inputs: channel.inboundWrites,
-                            errorCode: .wrongProduction(
-                                actual: actualOutput,
-                                expected: expectedOutput
-                            )
-                        )
-                    }
-                }
-                let actualExtraOutput = try channel.readInbound(as: Out.self)
-                guard actualExtraOutput == nil else {
-                    throw VerificationError<Out>(
-                        inputs: channel.inboundWrites,
-                        errorCode: .overProduction(actualExtraOutput!)
+        func makeChannel() -> RecordingChannel {
+            let decoder = decoderFactory()
+            return RecordingChannel(
+                EmbeddedChannel(handler: ByteToMessageHandler<Decoder>(decoder))
+            )
+        }
+
+        func verifyOutput(
+            _ actualOutput: Out,
+            equals expectedOutput: Out,
+            in channel: RecordingChannel
+        ) throws {
+            guard actualOutput == expectedOutput else {
+                throw VerificationError<Out>(
+                    inputs: channel.inboundWrites,
+                    errorCode: .wrongProduction(
+                        actual: actualOutput,
+                        expected: expectedOutput
                     )
-                }
+                )
             }
         }
 
-        func verifyDripFeed(channel: RecordingChannel) throws {
+        func verifyAvailableOutputs(
+            _ expectedOutputs: [Out],
+            nextExpectedIndex: inout Int,
+            in channel: RecordingChannel
+        ) throws {
+            while let actualOutput = try channel.readInbound(as: Out.self) {
+                guard nextExpectedIndex < expectedOutputs.count else {
+                    throw VerificationError<Out>(
+                        inputs: channel.inboundWrites,
+                        errorCode: .overProduction(actualOutput)
+                    )
+                }
+
+                try verifyOutput(
+                    actualOutput,
+                    equals: expectedOutputs[nextExpectedIndex],
+                    in: channel
+                )
+                nextExpectedIndex += 1
+            }
+        }
+
+        func verifyOutputs(
+            _ expectedOutputs: [Out],
+            nextExpectedIndex initialExpectedIndex: Int,
+            in channel: RecordingChannel
+        ) throws {
+            var nextExpectedIndex = initialExpectedIndex
+
+            try verifyAvailableOutputs(
+                expectedOutputs,
+                nextExpectedIndex: &nextExpectedIndex,
+                in: channel
+            )
+
+            // Finishing the channel invokes decodeLast and may produce expected output.
+            var outboundLeftovers: [NIOAny] = []
+            var pendingOutboundLeftovers: [NIOAny] = []
+
+            if case .leftOvers(
+                inbound: _,
+                outbound: let outbound,
+                pendingOutbound: let pendingOutbound
+            ) = try channel.finish() {
+                outboundLeftovers = outbound
+                pendingOutboundLeftovers = pendingOutbound
+            }
+
+            // Consume expected output that decodeLast produced while finishing.
+            while nextExpectedIndex < expectedOutputs.count,
+                let actualOutput = try channel.readInbound(as: Out.self)
+            {
+                try verifyOutput(
+                    actualOutput,
+                    equals: expectedOutputs[nextExpectedIndex],
+                    in: channel
+                )
+                nextExpectedIndex += 1
+            }
+
+            guard nextExpectedIndex == expectedOutputs.count else {
+                throw VerificationError<Out>(
+                    inputs: channel.inboundWrites,
+                    errorCode: .underProduction(
+                        expectedOutputs[nextExpectedIndex]
+                    )
+                )
+            }
+
+            // Anything still inbound after satisfying the expectations is a genuine
+            // teardown leftover.
+            var unexpectedInboundOutputs: [Out] = []
+            while let actualOutput = try channel.readInbound(as: Out.self) {
+                unexpectedInboundOutputs.append(actualOutput)
+            }
+
+            if let actualOutput = unexpectedInboundOutputs.first,
+                !expectedOutputs.isEmpty
+            {
+                throw VerificationError<Out>(
+                    inputs: channel.inboundWrites,
+                    errorCode: .overProduction(actualOutput)
+                )
+            }
+
+            let unexpectedInboundLeftovers = unexpectedInboundOutputs.map {
+                NIOAny($0)
+            }
+
+            guard unexpectedInboundLeftovers.isEmpty,
+                outboundLeftovers.isEmpty,
+                pendingOutboundLeftovers.isEmpty
+            else {
+                throw VerificationError<Out>(
+                    inputs: channel.inboundWrites,
+                    errorCode: .leftOversOnDeconstructingChannel(
+                        inbound: unexpectedInboundLeftovers,
+                        outbound: outboundLeftovers,
+                        pendingOutbound: pendingOutboundLeftovers
+                    )
+                )
+            }
+        }
+
+        func verifySimple() throws {
+            let channel = makeChannel()
+            var expectedOutputs: [Out] = []
+            var nextExpectedIndex = 0
+
+            for (input, outputs) in inputOutputPairs.shuffled() {
+                try channel.writeInbound(input)
+                expectedOutputs.append(contentsOf: outputs)
+                try verifyAvailableOutputs(
+                    expectedOutputs,
+                    nextExpectedIndex: &nextExpectedIndex,
+                    in: channel
+                )
+            }
+
+            try verifyOutputs(
+                expectedOutputs,
+                nextExpectedIndex: nextExpectedIndex,
+                in: channel
+            )
+        }
+
+        func verifyDripFeed() throws {
+            let channel = makeChannel()
+            var expectedOutputs: [Out] = []
+            var nextExpectedIndex = 0
+
             for _ in 0..<10 {
-                for (input, expectedOutputs) in inputOutputPairs.shuffled() {
-                    for c in input.readableBytesView {
+                for (input, outputs) in inputOutputPairs.shuffled() {
+                    for byte in input.readableBytesView {
                         var buffer = channel.allocator.buffer(capacity: 12)
                         buffer.writeString("BEFORE")
-                        buffer.writeInteger(c)
+                        buffer.writeInteger(byte)
                         buffer.writeString("AFTER")
                         buffer.moveReaderIndex(forwardBy: 6)
                         buffer.moveWriterIndex(to: buffer.readerIndex + 1)
                         try channel.writeInbound(buffer)
                     }
-                    for expectedOutput in expectedOutputs {
-                        guard let actualOutput = try channel.readInbound(as: Out.self) else {
-                            throw VerificationError<Out>(
-                                inputs: channel.inboundWrites,
-                                errorCode: .underProduction(expectedOutput)
-                            )
-                        }
-                        guard actualOutput == expectedOutput else {
-                            throw VerificationError<Out>(
-                                inputs: channel.inboundWrites,
-                                errorCode: .wrongProduction(
-                                    actual: actualOutput,
-                                    expected: expectedOutput
-                                )
-                            )
-                        }
-                    }
-                    let actualExtraOutput = try channel.readInbound(as: Out.self)
-                    guard actualExtraOutput == nil else {
-                        throw VerificationError<Out>(
-                            inputs: channel.inboundWrites,
-                            errorCode: .overProduction(actualExtraOutput!)
-                        )
-                    }
+
+                    expectedOutputs.append(contentsOf: outputs)
+                    try verifyAvailableOutputs(
+                        expectedOutputs,
+                        nextExpectedIndex: &nextExpectedIndex,
+                        in: channel
+                    )
                 }
             }
+
+            try verifyOutputs(
+                expectedOutputs,
+                nextExpectedIndex: nextExpectedIndex,
+                in: channel
+            )
         }
 
-        func verifyManyAtOnce(channel: RecordingChannel) throws {
+        func verifyManyAtOnce() throws {
+            let channel = makeChannel()
             var overallBuffer = channel.allocator.buffer(capacity: 1024)
-            var overallExpecteds: [Out] = []
+            var expectedOutputs: [Out] = []
 
             for _ in 0..<10 {
-                for (var input, expectedOutputs) in inputOutputPairs.shuffled() {
+                for (var input, outputs) in inputOutputPairs.shuffled() {
                     overallBuffer.writeBuffer(&input)
-                    overallExpecteds.append(contentsOf: expectedOutputs)
+                    expectedOutputs.append(contentsOf: outputs)
                 }
             }
 
             try channel.writeInbound(overallBuffer)
-            for expectedOutput in overallExpecteds {
-                guard let actualOutput = try channel.readInbound(as: Out.self) else {
-                    throw VerificationError<Out>(
-                        inputs: channel.inboundWrites,
-                        errorCode: .underProduction(expectedOutput)
-                    )
-                }
-                guard actualOutput == expectedOutput else {
-                    throw VerificationError<Out>(
-                        inputs: channel.inboundWrites,
-                        errorCode: .wrongProduction(
-                            actual: actualOutput,
-                            expected: expectedOutput
-                        )
-                    )
-                }
-            }
-        }
-
-        let decoder: Decoder = decoderFactory()
-        let channel = RecordingChannel(EmbeddedChannel(handler: ByteToMessageHandler<Decoder>(decoder)))
-
-        try verifySimple(channel: channel)
-        try verifyDripFeed(channel: channel)
-        try verifyManyAtOnce(channel: channel)
-
-        if case .leftOvers(inbound: let ib, outbound: let ob, pendingOutbound: let pob) = try channel.finish() {
-            throw VerificationError<Out>(
-                inputs: channel.inboundWrites,
-                errorCode: .leftOversOnDeconstructingChannel(
-                    inbound: ib,
-                    outbound: ob,
-                    pendingOutbound: pob
-                )
+            try verifyOutputs(
+                expectedOutputs,
+                nextExpectedIndex: 0,
+                in: channel
             )
         }
+
+        try verifySimple()
+        try verifyDripFeed()
+        try verifyManyAtOnce()
     }
 }
 

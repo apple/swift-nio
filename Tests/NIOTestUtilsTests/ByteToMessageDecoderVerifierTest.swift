@@ -145,6 +145,18 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
         }
     }
 
+    func testAcceptsOutputProducedDuringDecodeLast() {
+        // The leading newline separates repeated inputs in the drip-feed and many-at-once strategies.
+        XCTAssertNoThrow(
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                stringInputOutputPairs: [("\nunterminated", ["unterminated"])],
+                decoderFactory: {
+                    NIOSplitUTF8LinesMessageDecoder(omittingEmptySubsequences: true)
+                }
+            )
+        )
+    }
+
     func testLeftovers() {
         struct NeverDoAnything: ByteToMessageDecoder {
             typealias InboundOut = String
