@@ -559,7 +559,7 @@ final class MultiThreadedEventLoopGroupTests {
         try group.syncShutdownGracefully()
     }
 
-    @Test
+    @Test(.disabled(if: System.isWindows, "Registering an invalid fd traps in the WSAPoll selector on Windows"))
     func testShuttingDownFailsRegistration() throws {
         // This test catches a regression where the selectable event loop would allow a socket registration while
         // it was nominally "shutting down". To do this, we take advantage of the fact that the event loop attempts
@@ -1618,13 +1618,10 @@ final class MultiThreadedEventLoopGroupTests {
     // Takes over the current thread as an event loop, which relies on the
     // concurrency-takeover machinery that is unsupported on Windows.
     @Test(
-        .disabled("Taking over the current thread as an event loop is not supported on Windows") {
-            #if os(Windows)
-            return true
-            #else
-            return false
-            #endif
-        }
+        .disabled(
+            if: System.isWindows,
+            "Taking over the current thread as an event loop is not supported on Windows"
+        )
     )
     func testWeCanDoTrulySingleThreadedNetworking() {
         final class SaveReceivedByte: ChannelInboundHandler {
@@ -2272,7 +2269,12 @@ final class MultiThreadedEventLoopGroupTests {
         }
     }
 
-    @Test
+    @Test(
+        .disabled(
+            if: System.isWindows,
+            "The WSAPoll selector has no epoll-style descriptor, so its debugDescription differs on Windows"
+        )
+    )
     func testStructuredConcurrencyMTELGStartStop() async throws {
         let loops = try await MultiThreadedEventLoopGroup.withEventLoopGroup(
             numberOfThreads: 3

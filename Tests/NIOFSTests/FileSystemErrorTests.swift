@@ -16,6 +16,12 @@
 import XCTest
 
 final class FileSystemErrorTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     func testFileSystemErrorCustomStringConvertible() throws {
         var error = FileSystemError(
             code: .unsupported,

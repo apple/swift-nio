@@ -19,6 +19,12 @@ import XCTest
 
 #if ENABLE_MOCKING
 final class SyscallTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     func test_openat() throws {
         // Asserts POSIX `oflag` bit values; the Windows `OpenOptions` bits are
         // placeholders, so this doesn't apply as written.

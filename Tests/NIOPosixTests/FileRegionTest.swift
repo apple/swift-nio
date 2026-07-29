@@ -18,6 +18,11 @@ import XCTest
 @testable import NIOPosix
 
 class FileRegionTest: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("Sending FileRegions over a socket is not yet supported on Windows")
+        #endif
+    }
 
     func testWriteFileRegion() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)

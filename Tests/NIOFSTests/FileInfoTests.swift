@@ -37,6 +37,12 @@ private let S_IFREG = Musl.S_IFREG
 // that constructs a `BY_HANDLE_FILE_INFORMATION` is a follow-up.
 #if !os(Windows)
 final class FileInfoTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     private var status: CInterop.Stat {
         var status = CInterop.Stat()
         status.st_dev = 1

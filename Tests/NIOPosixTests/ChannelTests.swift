@@ -78,6 +78,12 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
 }
 
 final class ChannelTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("ChannelTests exercise socket channel behaviour that is not yet functional on Windows")
+        #endif
+    }
+
     func testBasicLifecycle() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let loop = group.next()

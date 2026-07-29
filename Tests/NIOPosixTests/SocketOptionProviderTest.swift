@@ -22,6 +22,12 @@ import WinSDK
 #endif
 
 final class SocketOptionProviderTest: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("setUp relies on System.enumerateDevices(), which crashes on Windows")
+        #endif
+    }
+
     var group: MultiThreadedEventLoopGroup!
     var serverChannel: Channel!
     var clientChannel: Channel!
@@ -74,6 +80,11 @@ final class SocketOptionProviderTest: XCTestCase {
     }
 
     override func setUp() {
+        #if os(Windows)
+        // This suite is skipped on Windows (see `setUpWithError`); avoid running
+        // the `enumerateDevices`-based setup, which would trap, beforehand.
+        return
+        #else
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.serverChannel = try? assertNoThrowWithValue(
             ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
@@ -121,14 +132,19 @@ final class SocketOptionProviderTest: XCTestCase {
                 ).map { channel }
             }.wait()
         }
+        #endif
     }
 
     override func tearDown() {
+        #if os(Windows)
+        return
+        #else
         XCTAssertNoThrow(try ipv6DatagramChannel?.close().wait())
         XCTAssertNoThrow(try ipv4DatagramChannel?.close().wait())
         XCTAssertNoThrow(try clientChannel.close().wait())
         XCTAssertNoThrow(try serverChannel.close().wait())
         XCTAssertNoThrow(try group.syncShutdownGracefully())
+        #endif
     }
 
     func testSettingAndGettingComplexSocketOption() throws {

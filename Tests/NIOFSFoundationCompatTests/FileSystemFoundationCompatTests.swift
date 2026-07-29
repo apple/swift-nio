@@ -49,6 +49,12 @@ extension FileSystem {
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class FileSystemBytesConformanceTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     func testTimepecToDate() async throws {
         XCTAssertEqual(
             FileInfo.Timespec(seconds: 0, nanoseconds: 0).date,

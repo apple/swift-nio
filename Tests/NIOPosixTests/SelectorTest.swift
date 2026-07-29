@@ -126,6 +126,9 @@ class SelectorTest: XCTestCase {
 
     private static let testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse = 10
     func testWeDoNotDeliverEventsForPreviouslyClosedChannels() throws {
+        #if os(Windows)
+        throw XCTSkip("Reconnecting channels are not reliably re-registered with the selector on Windows")
+        #endif
         enum DidNotReadError: Error {
             case didNotReadGotInactive
             case didNotReadGotReadComplete

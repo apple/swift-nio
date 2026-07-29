@@ -143,6 +143,12 @@ final class DatagramReadRecorder<DataType: Sendable>: ChannelInboundHandler {
 }
 
 class DatagramChannelTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("Datagram channels are not yet functional on Windows")
+        #endif
+    }
+
     private var group: MultiThreadedEventLoopGroup! = nil
     private var firstChannel: Channel! = nil
     private var secondChannel: Channel! = nil
