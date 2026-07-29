@@ -57,13 +57,6 @@ class UtilitiesTest: XCTestCase {
     }
 
     func testEnumeratingDevices() throws {
-        #if os(Windows)
-        // `System.enumerateDevices()` currently crashes on Windows: its
-        // `GetAdaptersAddresses`-based implementation mis-sizes its buffer (see
-        // `Sources/NIOCore/Utilities.swift`), so this test is skipped there
-        // pending a fix to the underlying enumeration.
-        throw XCTSkip("System.enumerateDevices() currently crashes on Windows")
-        #endif
         // This is a tricky test, because we can't really assert much and expect this
         // to pass on all systems. The best we can do is assume there is a loopback:
         // maybe an IPv4 one, maybe an IPv6 one, but there will be one. We look for
