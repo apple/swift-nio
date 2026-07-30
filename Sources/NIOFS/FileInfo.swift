@@ -91,6 +91,9 @@ public struct FileInfo: Hashable, Sendable {
 
     /// Creates a ``FileInfo`` by deriving values from a platform-specific value.
     public init(platformSpecificStatus: CInterop.Stat) {
+        #if os(Windows)
+        fatalError("FileInfo.onDiskSize is not implemented on Windows")
+        #endif
         self._platformSpecificStatus = Stat(platformSpecificStatus)
         #if os(Windows)
         self.type = FileType(platformSpecificMode: platformSpecificStatus.nioMode)
