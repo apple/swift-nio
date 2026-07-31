@@ -180,6 +180,29 @@ extension ChannelOptions.Types {
     }
 }
 
+extension ChannelOptions {
+    /// - seealso: `RemoteVsockAddress`
+    public static let remoteVsockAddress = Types.RemoteVsockAddress()
+}
+
+extension ChannelOption where Self == ChannelOptions.Types.RemoteVsockAddress {
+    public static var remoteVsockAddress: Self { .init() }
+}
+
+extension ChannelOptions.Types {
+    /// This get-only option is used on channels backed by vsock sockets to get the remote peer's VSOCK address.
+    ///
+    /// `Channel/remoteAddress` cannot report a vsock peer, because `SocketAddress` has no vsock
+    /// representation. This option exposes the peer address that `getpeername` reports for the
+    /// connection instead, which is where the peer's context ID (CID) comes from.
+    ///
+    /// Only meaningful on a connected vsock channel; getting it on a listening channel fails.
+    public struct RemoteVsockAddress: ChannelOption, Sendable {
+        public typealias Value = VsockAddress
+        public init() {}
+    }
+}
+
 // MARK: - Public API that might throw runtime error if not implemented on the platform.
 
 extension NIOBSDSocket.AddressFamily {
@@ -289,6 +312,35 @@ extension BaseSocket {
     func getLocalVsockContextID() throws -> VsockAddress.ContextID {
         try self.withUnsafeHandle { fd in
             try VsockAddress.ContextID.getLocalContextID(fd)
+        }
+    }
+
+    /// Reads the peer address of a connected vsock socket.
+    ///
+    /// `getpeername` already fills a `sockaddr_vm` for `AF_VSOCK` sockets; this reinterprets it
+    /// rather than routing through `SocketAddress`, which cannot represent a vsock address.
+    ///
+    /// The address family is validated before the result is trusted: on a non-vsock socket
+    /// `getpeername` fills a different `sockaddr`, and reinterpreting those bytes would yield a
+    /// meaningless context ID derived from, for example, a peer's IP address and port.
+    func getRemoteVsockAddress() throws -> VsockAddress {
+        try self.withUnsafeHandle { fd in
+            var addr = sockaddr_vm()
+            var len = socklen_t(MemoryLayout<sockaddr_vm>.size)
+            try withUnsafeMutablePointer(to: &addr) { addrPtr in
+                try addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPtr in
+                    try NIOBSDSocket.getpeername(socket: fd, address: sockaddrPtr, address_len: &len)
+                }
+            }
+            guard addr.svm_family == sa_family_t(NIOBSDSocket.AddressFamily.vsock.rawValue),
+                len >= socklen_t(MemoryLayout<sockaddr_vm>.size)
+            else {
+                throw SocketAddressError.unsupported
+            }
+            return VsockAddress(
+                cid: VsockAddress.ContextID(rawValue: addr.svm_cid),
+                port: VsockAddress.Port(rawValue: addr.svm_port)
+            )
         }
     }
 }

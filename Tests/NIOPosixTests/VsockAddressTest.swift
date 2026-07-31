@@ -83,4 +83,34 @@ class VsockAddressTest: XCTestCase {
         XCTAssertEqual(try channel.getOption(.localVsockContextID).wait(), localCID)
     }
     #endif
+
+    // Getting the remote vsock address is not available on Windows.
+    #if !os(Windows)
+    /// A non-vsock socket must not report a vsock peer address.
+    ///
+    /// `getpeername` on a UDS socket fills a `sockaddr_un`; if those bytes were reinterpreted as a
+    /// `sockaddr_vm` the option would return a context ID derived from unrelated memory. Callers use
+    /// the CID to make trust decisions, so this must fail instead.
+    func testGetRemoteVsockAddressRejectsNonVsockSocket() throws {
+        // A socketpair gives us an already-connected non-vsock socket without binding anything.
+        var fds: [CInt] = [-1, -1]
+        try fds.withUnsafeMutableBufferPointer { ptr in
+            try Posix.socketpair(
+                domain: .unix,
+                type: .stream,
+                protocolSubtype: .default,
+                socketVector: ptr.baseAddress
+            )
+        }
+        let peer = try Socket(socket: fds[1], setNonBlocking: false)
+        defer { try? peer.close() }
+
+        let socket = try Socket(socket: fds[0], setNonBlocking: false)
+        defer { try? socket.close() }
+
+        XCTAssertThrowsError(try socket.getRemoteVsockAddress()) { error in
+            XCTAssertEqual(error as? SocketAddressError, .unsupported)
+        }
+    }
+    #endif
 }
