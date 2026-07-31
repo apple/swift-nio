@@ -105,5 +105,57 @@ struct LoopBoundCrashTests {
         }
         expectCrashOutput(result, matches: Self.regex)
     }
+
+    @Test
+    func uncheckedInitOfChecksEventLoop() async {
+        let result = await #expect(processExitsWith: .failure, observing: [\.standardErrorContent]) {
+            let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+            let loop = group.any()
+            _ = NIOLoopBound(uncheckedOnEventLoop: 1, eventLoop: loop)  // BOOM
+        }
+        expectCrashOutput(result, matches: Self.regex)
+    }
+
+    @Test
+    func uncheckedInitOfBoxChecksEventLoop() async {
+        let result = await #expect(processExitsWith: .failure, observing: [\.standardErrorContent]) {
+            let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+            let loop = group.any()
+            _ = NIOLoopBoundBox(uncheckedOnEventLoop: 1, eventLoop: loop)  // BOOM
+        }
+        expectCrashOutput(result, matches: Self.regex)
+    }
+
+    @Test
+    func uncheckedGetChecksEventLoop() async {
+        let result = await #expect(processExitsWith: .failure, observing: [\.standardErrorContent]) {
+            func blockingFunctionsAllowedInCrashTest() {
+                let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+                let loop = group.any()
+                let sendable = try? loop.submit {
+                    NIOLoopBound(1, eventLoop: loop)
+                }.wait()
+                _ = sendable?.uncheckedUnsafeValue  // BOOM
+            }
+            blockingFunctionsAllowedInCrashTest()
+        }
+        expectCrashOutput(result, matches: Self.regex)
+    }
+
+    @Test
+    func uncheckedGetOfBoxChecksEventLoop() async {
+        let result = await #expect(processExitsWith: .failure, observing: [\.standardErrorContent]) {
+            func blockingFunctionsAllowedInCrashTest() {
+                let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+                let loop = group.any()
+                let sendable = try? loop.submit {
+                    NIOLoopBoundBox(1, eventLoop: loop)
+                }.wait()
+                _ = sendable?.uncheckedUnsafeValue  // BOOM
+            }
+            blockingFunctionsAllowedInCrashTest()
+        }
+        expectCrashOutput(result, matches: Self.regex)
+    }
 }
 #endif
