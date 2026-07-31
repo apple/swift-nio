@@ -72,7 +72,7 @@ public struct FileInfo: Hashable, Sendable {
     /// The number of bytes allocated for the file on disk.
     ///
     /// This may differ from ``size`` for files which are sparse or compressed.
-    public var onDiskSize: Int64
+    public var allocatedSize: Int64
 
     /// User ID of the file.
     public var userID: UserID
@@ -92,7 +92,7 @@ public struct FileInfo: Hashable, Sendable {
     /// Creates a ``FileInfo`` by deriving values from a platform-specific value.
     public init(platformSpecificStatus: CInterop.Stat) {
         #if os(Windows)
-        fatalError("FileInfo.onDiskSize is not implemented on Windows")
+        fatalError("FileInfo.allocatedSize is not implemented on Windows")
         #endif
         self._platformSpecificStatus = Stat(platformSpecificStatus)
         #if os(Windows)
@@ -109,7 +109,7 @@ public struct FileInfo: Hashable, Sendable {
         self.type = FileType(platformSpecificMode: CInterop.Mode(platformSpecificStatus.st_mode))
         self.permissions = FilePermissions(masking: CInterop.Mode(platformSpecificStatus.st_mode))
         self.size = Int64(platformSpecificStatus.st_size)
-        self.onDiskSize = Int64(S_BLKSIZE) * Int64(platformSpecificStatus.st_blocks)
+        self.allocatedSize = Int64(S_BLKSIZE) * Int64(platformSpecificStatus.st_blocks)
         self.userID = UserID(rawValue: platformSpecificStatus.st_uid)
         self.groupID = GroupID(rawValue: platformSpecificStatus.st_gid)
 
@@ -133,7 +133,7 @@ public struct FileInfo: Hashable, Sendable {
         type: FileType,
         permissions: FilePermissions,
         size: Int64,
-        onDiskSize: Int64,
+        allocatedSize: Int64,
         userID: UserID,
         groupID: GroupID,
         lastAccessTime: Timespec,
@@ -144,7 +144,7 @@ public struct FileInfo: Hashable, Sendable {
         self.type = type
         self.permissions = permissions
         self.size = size
-        self.onDiskSize = onDiskSize
+        self.allocatedSize = allocatedSize
         self.userID = userID
         self.groupID = groupID
         self.lastAccessTime = lastAccessTime
