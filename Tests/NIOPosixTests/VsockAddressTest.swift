@@ -112,5 +112,59 @@ class VsockAddressTest: XCTestCase {
             XCTAssertEqual(error as? SocketAddressError, .unsupported)
         }
     }
+
+    /// Both ends of a real vsock connection report the peer's address.
+    ///
+    /// This is the path the option exists for, so it needs a live connection: it exercises
+    /// `getpeername` on an `AF_VSOCK` socket and the reinterpretation of the resulting
+    /// `sockaddr_vm`.
+    func testGetRemoteVsockAddressOverLoopback() throws {
+        try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+
+        let port = VsockAddress.Port(5678)
+
+        // Read the peer address on the accepted channel. Sending the address rather than the
+        // channel through the promise keeps this Sendable-clean.
+        let acceptedPeer = group.next().makePromise(of: VsockAddress.self)
+
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+                .childChannelInitializer { channel in
+                    acceptedPeer.completeWith(channel.getOption(.remoteVsockAddress))
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                }
+                .bind(to: VsockAddress(cid: .any, port: port))
+                .wait()
+        )
+        defer { XCTAssertNoThrow(try serverChannel.close().wait()) }
+
+        #if canImport(Darwin)
+        let connectAddress = VsockAddress(cid: .any, port: port)
+        #elseif os(Linux) || os(Android)
+        let connectAddress = VsockAddress(cid: .local, port: port)
+        #endif
+
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group).connect(to: connectAddress).wait()
+        )
+        defer { XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed()) }
+
+        // Client side: the peer is the listener, so the port must be the one we bound. This is the
+        // assertion that catches a misread `sockaddr_vm` -- wrong field offsets could not happen to
+        // produce the port we chose.
+        let clientPeer = try assertNoThrowWithValue(
+            clientChannel.getOption(.remoteVsockAddress).wait()
+        )
+        XCTAssertEqual(clientPeer.port, port)
+
+        // Server side: reading the accepted channel's peer must succeed, and because both ends of a
+        // loopback connection live in the same context it reports the same CID the client saw.
+        let serverPeer = try assertNoThrowWithValue(acceptedPeer.futureResult.wait())
+        XCTAssertEqual(serverPeer.cid, clientPeer.cid)
+    }
     #endif
 }
