@@ -2269,12 +2269,7 @@ final class MultiThreadedEventLoopGroupTests {
         }
     }
 
-    @Test(
-        .disabled(
-            if: System.isWindows,
-            "The WSAPoll selector has no epoll-style descriptor, so its debugDescription differs on Windows"
-        )
-    )
+    @Test
     func testStructuredConcurrencyMTELGStartStop() async throws {
         let loops = try await MultiThreadedEventLoopGroup.withEventLoopGroup(
             numberOfThreads: 3
