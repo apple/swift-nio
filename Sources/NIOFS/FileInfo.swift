@@ -91,10 +91,19 @@ public struct FileInfo: Hashable, Sendable {
 
     /// Creates a ``FileInfo`` by deriving values from a platform-specific value.
     public init(platformSpecificStatus: CInterop.Stat) {
+        self._platformSpecificStatus = Stat(platformSpecificStatus)
         #if os(Windows)
+        self.type = FileType(platformSpecificMode: platformSpecificStatus.nioMode)
+        self.permissions = FilePermissions(masking: platformSpecificStatus.nioMode)
+        self.size = platformSpecificStatus.nioSize
+        // Windows has no POSIX owner/group; report the defaults.
+        self.userID = UserID(rawValue: 0)
+        self.groupID = GroupID(rawValue: 0)
+        self.lastAccessTime = platformSpecificStatus.nioLastAccessTime
+        self.lastDataModificationTime = platformSpecificStatus.nioLastDataModificationTime
+        self.lastStatusChangeTime = platformSpecificStatus.nioLastStatusChangeTime
         fatalError("FileInfo.allocatedSize is not implemented on Windows")
         #else
-        self._platformSpecificStatus = Stat(platformSpecificStatus)
         self.type = FileType(platformSpecificMode: CInterop.Mode(platformSpecificStatus.st_mode))
         self.permissions = FilePermissions(masking: CInterop.Mode(platformSpecificStatus.st_mode))
         self.size = Int64(platformSpecificStatus.st_size)
