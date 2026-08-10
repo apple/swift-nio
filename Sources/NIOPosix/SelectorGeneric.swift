@@ -26,7 +26,6 @@ import WinSDK
 @usableFromInline
 internal enum SelectorLifecycleState: Sendable {
     case open
-    case closing
     case closed
 }
 
