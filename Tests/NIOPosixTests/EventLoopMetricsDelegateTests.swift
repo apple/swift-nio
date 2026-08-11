@@ -34,15 +34,6 @@ final class RecorderDelegate: NIOEventLoopMetricsDelegate, Sendable {
 }
 
 final class EventLoopMetricsDelegateTests: XCTestCase {
-    override func setUpWithError() throws {
-        #if os(Windows)
-        // These tests assert on event-loop tick counts, but the WSAPoll selector
-        // wakes far more often than epoll/kqueue, so the counts are unreliable
-        // (and flaky) on Windows.
-        throw XCTSkip("Event-loop tick-count metrics are unreliable on the WSAPoll selector")
-        #endif
-    }
-
     func testMetricsDelegateNotCalledWhenNoEvents() throws {
         let delegate = RecorderDelegate()
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1, metricsDelegate: delegate)
