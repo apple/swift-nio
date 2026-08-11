@@ -22,12 +22,6 @@ import WinSDK
 #endif
 
 final class SocketOptionProviderTest: XCTestCase {
-    override func setUpWithError() throws {
-        #if os(Windows)
-        throw XCTSkip("setUp relies on System.enumerateDevices(), which crashes on Windows")
-        #endif
-    }
-
     var group: MultiThreadedEventLoopGroup!
     var serverChannel: Channel!
     var clientChannel: Channel!
@@ -80,11 +74,6 @@ final class SocketOptionProviderTest: XCTestCase {
     }
 
     override func setUp() {
-        #if os(Windows)
-        // This suite is skipped on Windows (see `setUpWithError`); avoid running
-        // the `enumerateDevices`-based setup, which would trap, beforehand.
-        return
-        #else
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.serverChannel = try? assertNoThrowWithValue(
             ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
@@ -132,19 +121,14 @@ final class SocketOptionProviderTest: XCTestCase {
                 ).map { channel }
             }.wait()
         }
-        #endif
     }
 
     override func tearDown() {
-        #if os(Windows)
-        return
-        #else
         XCTAssertNoThrow(try ipv6DatagramChannel?.close().wait())
         XCTAssertNoThrow(try ipv4DatagramChannel?.close().wait())
         XCTAssertNoThrow(try clientChannel.close().wait())
         XCTAssertNoThrow(try serverChannel.close().wait())
         XCTAssertNoThrow(try group.syncShutdownGracefully())
-        #endif
     }
 
     func testSettingAndGettingComplexSocketOption() throws {
@@ -201,10 +185,25 @@ final class SocketOptionProviderTest: XCTestCase {
         // we just abandon the other tests: this is sufficient to prove that the error path works.
         let provider = try assertNoThrowWithValue(self.convertedChannel())
 
+        #if os(Windows)
+        // Winsock's `SO_RCVTIMEO` takes a `DWORD` rather than a `timeval`, so the `Int` used
+        // below is (more than) large enough and would be accepted. A single byte is too small
+        // for any option, and Winsock reports that as `WSAEFAULT`.
+        XCTAssertThrowsError(
+            try provider.unsafeSetSocketOption(level: .socket, name: .so_rcvtimeo, value: UInt8(1)).wait()
+        ) { error in
+            guard case .winsock(let code)? = (error as? IOError)?.error else {
+                XCTFail("Expected a winsock-domain IOError, got \(error)")
+                return
+            }
+            XCTAssertEqual(WSAEFAULT, code)
+        }
+        #else
         XCTAssertThrowsError(try provider.unsafeSetSocketOption(level: .socket, name: .so_rcvtimeo, value: 1).wait()) {
             error in
             XCTAssertEqual(EINVAL, (error as? IOError)?.errnoCode)
         }
+        #endif
     }
 
     // MARK: Tests for the safe helper functions.
