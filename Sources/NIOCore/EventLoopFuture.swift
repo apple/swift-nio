@@ -173,6 +173,9 @@ internal struct OperationPlaceholderError: Error {
 ///     some other API, create an already-resolved object with `eventLoop.makeSucceededFuture(result)`
 ///     or `eventLoop.newFailedFuture(error:)`.
 ///
+/// Completing a promise is required. Dropping an `EventLoopPromise` without calling `succeed` or `fail`
+/// is programmer error and is asserted in debug builds.
+///
 /// - Note: `EventLoopPromise` has reference semantics.
 public struct EventLoopPromise<Value> {
     /// The `EventLoopFuture` which is used by the `EventLoopPromise`. You can use it to add callbacks which are notified once the
@@ -420,6 +423,25 @@ extension EventLoopPromise: Equatable {}
 /// or `EventLoopFuture` callbacks need to invoke a lock (either directly or in the form of `DispatchQueue`) this
 /// should be considered a code smell worth investigating: the `EventLoop`-based synchronization guarantees of
 /// `EventLoopFuture` should be sufficient to guarantee thread-safety.
+///
+/// #### Callback lifetimes
+///
+/// Developers coming from UIKit or AppKit often capture `self` weakly in closures to avoid retain cycles.
+/// That pattern is unnecessary, and usually unhelpful, for `EventLoopFuture` callbacks.
+///
+/// Future callbacks are one-shot: they run at most once. After a callback has run, NIO drops it and any
+/// references it holds. If the process exits before the future completes, the callback is discarded with it.
+/// Callbacks are therefore not a source of unbreakable retain cycles.
+///
+/// In addition, a future is not allowed to remain unsatisfiable. Dropping an `EventLoopPromise` without
+/// completing it is programmer error and is asserted in debug builds. Any object that holds a promise is
+/// responsible for completing it or transferring that responsibility. As a result, every `EventLoopFuture`
+/// callback will either run or the process will exit first.
+///
+/// Because of those two properties, capturing `self` strongly in a future callback is the correct default.
+/// A weak or unowned capture does not make the callback safer: it only adds an extra nil check, or a crash
+/// if `self` has already been released. Prefer a strong capture unless you have a specific reason to do
+/// otherwise that is independent of NIO's future lifetime rules.
 public final class EventLoopFuture<Value> {
     // TODO: Provide a tracing facility.  It would be nice to be able to set '.debugTrace = true' on any EventLoopFuture or EventLoopPromise and have every subsequent chained EventLoopFuture report the success result or failure error.  That would simplify some debugging scenarios.
     @usableFromInline
