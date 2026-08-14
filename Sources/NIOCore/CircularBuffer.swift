@@ -17,13 +17,13 @@
 /// expansions from happening frequently. Expansions will always force an allocation and a copy to happen.
 public struct CircularBuffer<Element>: CustomStringConvertible {
     @usableFromInline
-    internal private(set) var _buffer: ContiguousArray<Element?>
+    internal var _buffer: ContiguousArray<Element?>
 
     @usableFromInline
-    internal private(set) var headBackingIndex: Int
+    internal var headBackingIndex: Int
 
     @usableFromInline
-    internal private(set) var tailBackingIndex: Int
+    internal var tailBackingIndex: Int
 
     @inlinable
     internal var mask: Int {
@@ -63,9 +63,9 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
     /// - Note: Every index is invalidated as soon as you perform a length-changing operating on the `CircularBuffer`
     ///         but remains valid when you replace one item by another using the subscript.
     public struct Index: Comparable, Sendable {
-        @usableFromInline private(set) var _backingIndex: UInt32
-        @usableFromInline private(set) var _backingCheck: _UInt24
-        @usableFromInline private(set) var isIndexGEQHeadIndex: Bool
+        @usableFromInline var _backingIndex: UInt32
+        @usableFromInline var _backingCheck: _UInt24
+        @usableFromInline var isIndexGEQHeadIndex: Bool
 
         @inlinable
         internal var backingIndex: Int {
