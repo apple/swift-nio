@@ -21,12 +21,6 @@
 #include <stdio.h>
 #include <winbase.h>
 
-int CNIOWindows_sendmmsg(SOCKET s, CNIOWindows_mmsghdr *msgvec, unsigned int vlen,
-                         int flags) {
-  assert(!"sendmmsg not implemented");
-  abort();
-}
-
 int CNIOWindows_recvmmsg(SOCKET s, CNIOWindows_mmsghdr *msgvec,
                          unsigned int vlen, int flags,
                          struct timespec *timeout) {
