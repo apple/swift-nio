@@ -376,7 +376,7 @@ extension NIOBSDSocket {
         var pfnWSASendMsg: LPFN_WSASENDMSG?
         var cbBytesReturned: DWORD = 0
         if WinSDK.WSAIoctl(
-            s,
+            Handle,
             SIO_GET_EXTENSION_FUNCTION_POINTER,
             &InBuffer,
             DWORD(MemoryLayout.stride(ofValue: InBuffer)),
