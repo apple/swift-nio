@@ -369,7 +369,7 @@ extension NIOBSDSocket {
     /// Winsock does not export `WSASendMsg` for direct linking, it has to be looked up per
     /// socket through `WSAIoctl`.
     private static func lookupWSASendMsg(
-        socket s: NIOBSDSocket.Handle
+        socket Handle: NIOBSDSocket.Handle
     ) throws -> LPFN_WSASENDMSG {
         // TODO(compnerd) see comment above
         var InBuffer = WSAID_WSASENDMSG
