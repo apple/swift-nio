@@ -191,7 +191,7 @@ final class NIOLoopBoundTests: XCTestCase {
     }
 
     func testUncheckedUnsafeValueSetter() {
-        let loopBound = NIOLoopBound(0, eventLoop: loop)
+        var loopBound = NIOLoopBound(0, eventLoop: loop)
         loopBound.uncheckedUnsafeValue = 42
         XCTAssertEqual(loopBound.value, 42)
 
@@ -201,8 +201,8 @@ final class NIOLoopBoundTests: XCTestCase {
     }
 
     func testUncheckedAndCheckedProduceSameResultOnEventLoop() {
-        let checked = NIOLoopBound(CoWValue(), eventLoop: loop)
-        let unchecked = NIOLoopBound(CoWValue(), eventLoop: loop)
+        var checked = NIOLoopBound(CoWValue(), eventLoop: loop)
+        var unchecked = NIOLoopBound(CoWValue(), eventLoop: loop)
 
         XCTAssertTrue(checked.value.mutateInPlace())
         XCTAssertTrue(unchecked.uncheckedUnsafeValue.mutateInPlace())
