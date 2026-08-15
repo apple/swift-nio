@@ -359,7 +359,11 @@ extension NIOBSDSocket {
             nil,
             nil
         ) == SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "sendmsg")
+            let lastError = WSAGetLastError()
+            if lastError == WSAEWOULDBLOCK {
+                return .wouldBlock(0)
+            }
+            throw IOError(winsock: lastError, reason: "sendmsg")
         }
         return .processed(size_t(NumberOfBytesSent))
     }
