@@ -79,7 +79,6 @@ extension Selector: _SelectorBackendProtocol {
 
     func initialiseState0() throws {
         self.pollFDs.reserveCapacity(16)
-        self.deregisteredFDs.reserveCapacity(16)
 
         // Wake-up mechanism.
         //
@@ -296,6 +295,14 @@ extension Selector: _SelectorBackendProtocol {
                 Int32(clamping: timeAmount.nanoseconds / 1_000_000)
             }
 
+        // Drop entries belonging to sockets that have since been deregistered. This has to happen
+        // before polling rather than after delivering events: those sockets are usually closed
+        // immediately after being deregistered, and passing a closed handle to `WSAPoll` earns a
+        // `POLLNVAL`, which this selector treats as a fatal loss of track of a descriptor. Doing it
+        // here covers every path out of the previous call, including the ones that returned no
+        // events at all.
+        self.compactPollFDsIfNeeded()
+
         precondition(
             !self.pollFDs.isEmpty,
             "pollFDs should never be empty here, since we need an eventFD for waking up on demand"
@@ -315,6 +322,12 @@ extension Selector: _SelectorBackendProtocol {
                 // reset the revents
                 self.pollFDs[i].revents = 0
                 let fd = pollFD.fd
+
+                // The socket may have been deregistered by an earlier event in this same batch, in
+                // which case its events are no longer wanted and its handle may already be closed.
+                guard NIOBSDSocket.Handle(fd) != NIOBSDSocket.invalidHandle else {
+                    continue
+                }
 
                 // Check if this is the wakeup socket
                 if NIOBSDSocket.Handle(fd) == self.wakeupReadSocket {
@@ -341,40 +354,48 @@ extension Selector: _SelectorBackendProtocol {
 
                 try body((SelectorEvent(io: selectorEvent, registration: registration)))
             }
-
-            // Clean up any deregistered fds in a single linear in-place compaction
-            // pass: walk `pollFDs` once with a read/write cursor, dropping entries
-            // whose index is in `deregisteredFDs` and updating `pollFDIndexes`
-            // for any surviving entry that shifted left. This is O(n) and avoids
-            // both the previous `sorted(by: >)` (O(k log k)) and per-call
-            // `pollFDs.remove(at:)` (O(n) each, O(k·n) total).
-            //
-            // The wakeup socket is always at `pollFDs[0]` and is never registered
-            // in `pollFDIndexes`, so we treat index 0 as a fixed survivor.
-            if !self.deregisteredFDs.isEmpty {
-                var write = 0
-                for read in 0..<self.pollFDs.count {
-                    if self.deregisteredFDs.contains(read) {
-                        let fd = self.pollFDs[read].fd
-                        self.registrations.removeValue(forKey: Int(fd))
-                        continue
-                    }
-                    if write != read {
-                        self.pollFDs[write] = self.pollFDs[read]
-                        if write != 0 {
-                            self.pollFDIndexes[NIOBSDSocket.Handle(self.pollFDs[write].fd)] = write
-                        }
-                    }
-                    write += 1
-                }
-                self.pollFDs.removeLast(self.pollFDs.count - write)
-                self.deregisteredFDs.removeAll(keepingCapacity: true)
-            }
         } else if result == 0 {
             // nothing has happened
         } else if result == WinSDK.SOCKET_ERROR {
             throw IOError(winsock: WSAGetLastError(), reason: "WSAPoll")
         }
+    }
+
+    /// Removes `pollFDs` entries whose sockets have been deregistered.
+    ///
+    /// Walks the array once with a read and a write cursor, dropping tombstoned entries and
+    /// updating `pollFDIndexes` for every surviving entry that shifts left. The wakeup socket is
+    /// always `pollFDs[0]` and is never published in `pollFDIndexes`, so index 0 is a fixed
+    /// survivor.
+    @usableFromInline
+    func compactPollFDsIfNeeded() {
+        guard self.pollFDsNeedCompaction else {
+            return
+        }
+
+        let invalidHandle = UInt64(NIOBSDSocket.invalidHandle)
+        var write = 0
+        for read in 0..<self.pollFDs.count {
+            guard self.pollFDs[read].fd != invalidHandle else {
+                continue
+            }
+            if write != read {
+                self.pollFDs[write] = self.pollFDs[read]
+                if write != 0 {
+                    self.pollFDIndexes[NIOBSDSocket.Handle(self.pollFDs[write].fd)] = write
+                }
+            }
+            write += 1
+        }
+        self.pollFDs.removeLast(self.pollFDs.count - write)
+        self.pollFDsNeedCompaction = false
+
+        // Several places rely on the wakeup socket staying at index 0, and on it never appearing in
+        // `pollFDIndexes` (so that it cannot be deregistered, and therefore cannot be tombstoned).
+        assert(
+            self.pollFDs.first?.fd == UInt64(self.wakeupReadSocket),
+            "wakeup socket is no longer the first pollFDs entry"
+        )
     }
 
     func register0(
@@ -383,6 +404,10 @@ extension Selector: _SelectorBackendProtocol {
         interested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws {
+        assert(
+            self.pollFDIndexes[fileDescriptor] == nil,
+            "socket \(fileDescriptor) is already registered at index \(self.pollFDIndexes[fileDescriptor]!)"
+        )
         let poll = pollfd(fd: UInt64(fileDescriptor), events: interested.wsaPollEvent, revents: 0)
         self.pollFDIndexes[fileDescriptor] = self.pollFDs.count
         self.pollFDs.append(poll)
@@ -407,7 +432,17 @@ extension Selector: _SelectorBackendProtocol {
         registrationID: SelectorRegistrationID
     ) throws {
         if let index = self.pollFDIndexes.removeValue(forKey: fileDescriptor) {
-            self.deregisteredFDs.insert(index)
+            // Tombstone the entry rather than removing it: this may be running inside the event
+            // delivery loop in `whenReady0`, which is iterating `pollFDs` by index. The entry is
+            // dropped by `compactPollFDsIfNeeded` before the next poll.
+            //
+            // Note that the handle is cleared here and not merely marked, so that a subsequent
+            // `register0` for the same handle -- Windows reuses socket handles readily -- cannot be
+            // confused with this one.
+            self.pollFDs[index].fd = UInt64(NIOBSDSocket.invalidHandle)
+            self.pollFDs[index].events = 0
+            self.pollFDs[index].revents = 0
+            self.pollFDsNeedCompaction = true
         }
     }
 
@@ -444,7 +479,7 @@ extension Selector: _SelectorBackendProtocol {
             }
             self.pollFDs.removeAll()
             self.pollFDIndexes.removeAll()
-            self.deregisteredFDs.removeAll()
+            self.pollFDsNeedCompaction = false
         }
     }
 }
