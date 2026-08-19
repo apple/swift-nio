@@ -84,6 +84,47 @@ class VsockAddressTest: XCTestCase {
     }
     #endif
 
+    // Getting the local vsock address is not available on Windows.
+    #if !os(Windows)
+    /// A listener bound to `Port/any` reports the port the kernel actually chose.
+    ///
+    /// This is what ``ChannelOptions/Types/LocalVsockContextID`` can't do: it reports the context ID
+    /// only, so a caller which binds `.any` has no way to learn where to connect.
+    func testGetLocalVsockAddressReportsBoundPort() throws {
+        try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
+
+        let socket = try ServerSocket(protocolFamily: .vsock, setNonBlocking: true)
+        defer { try? socket.close() }
+        try socket.bind(to: VsockAddress(cid: .any, port: .any))
+
+        let address = try socket.getLocalVsockAddress()
+        XCTAssertNotEqual(address.port, .any, "The kernel should have assigned a concrete port")
+        XCTAssertEqual(address.cid, try socket.getLocalVsockContextID())
+
+        // Check the address from the channel option matches.
+        let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully()) }
+        let eventLoop = singleThreadedELG.next()
+        let channel = try ServerSocketChannel(
+            serverSocket: socket,
+            eventLoop: eventLoop as! SelectableEventLoop,
+            group: singleThreadedELG
+        )
+        XCTAssertEqual(try channel.getOption(.localVsockAddress).wait(), address)
+    }
+
+    /// A non-vsock socket must not report a vsock local address, for the same reason
+    /// ``testGetRemoteVsockAddressRejectsNonVsockSocket()`` covers on the peer side.
+    func testGetLocalVsockAddressRejectsNonVsockSocket() throws {
+        let socket = try ServerSocket(protocolFamily: .unix, setNonBlocking: false)
+        defer { try? socket.close() }
+
+        XCTAssertThrowsError(try socket.getLocalVsockAddress()) { error in
+            XCTAssertEqual(error as? SocketAddressError, .unsupported)
+        }
+    }
+    #endif
+
     // Getting the remote vsock address is not available on Windows.
     #if !os(Windows)
     /// A non-vsock socket must not report a vsock peer address.

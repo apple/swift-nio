@@ -181,6 +181,30 @@ extension ChannelOptions.Types {
 }
 
 extension ChannelOptions {
+    /// - seealso: `LocalVsockAddress`
+    public static let localVsockAddress = Types.LocalVsockAddress()
+}
+
+extension ChannelOption where Self == ChannelOptions.Types.LocalVsockAddress {
+    public static var localVsockAddress: Self { .init() }
+}
+
+extension ChannelOptions.Types {
+    /// This get-only option is used on channels backed by vsock sockets to get the local VSOCK address.
+    ///
+    /// `Channel/localAddress` cannot report a vsock address, because `SocketAddress` has no vsock
+    /// representation. This option exposes the address that `getsockname` reports for the socket
+    /// instead.
+    ///
+    /// ``LocalVsockContextID`` reports only the context ID, so it can't tell you which port a
+    /// listener bound to when it was bound to `VsockAddress/Port/any`. This option reports both.
+    public struct LocalVsockAddress: ChannelOption, Sendable {
+        public typealias Value = VsockAddress
+        public init() {}
+    }
+}
+
+extension ChannelOptions {
     /// - seealso: `RemoteVsockAddress`
     public static let remoteVsockAddress = Types.RemoteVsockAddress()
 }
@@ -315,21 +339,39 @@ extension BaseSocket {
         }
     }
 
+    /// Reads the local address of a vsock socket.
+    ///
+    /// ``getLocalVsockContextID()`` reports only the context ID, so it can't say which port a
+    /// listener bound to when it was bound to `VsockAddress/Port/any`. This reports both.
+    func getLocalVsockAddress() throws -> VsockAddress {
+        try self.getVsockAddress(NIOBSDSocket.getsockname(socket:address:address_len:))
+    }
+
     /// Reads the peer address of a connected vsock socket.
-    ///
-    /// `getpeername` already fills a `sockaddr_vm` for `AF_VSOCK` sockets; this reinterprets it
-    /// rather than routing through `SocketAddress`, which cannot represent a vsock address.
-    ///
-    /// The address family is validated before the result is trusted: on a non-vsock socket
-    /// `getpeername` fills a different `sockaddr`, and reinterpreting those bytes would yield a
-    /// meaningless context ID derived from, for example, a peer's IP address and port.
     func getRemoteVsockAddress() throws -> VsockAddress {
+        try self.getVsockAddress(NIOBSDSocket.getpeername(socket:address:address_len:))
+    }
+
+    /// Reads a `sockaddr_vm` from `getName`.
+    ///
+    /// `getsockname`/`getpeername` already fill a `sockaddr_vm` for `AF_VSOCK` sockets; this
+    /// reinterprets it rather than routing through `SocketAddress`, which cannot represent a vsock
+    /// address.
+    ///
+    /// The address family is validated before the result is trusted: on a non-vsock socket these
+    /// calls fill a different `sockaddr`, and reinterpreting those bytes would yield a meaningless
+    /// context ID derived from, for example, an IP address and port.
+    private func getVsockAddress(
+        _ getName: (
+            NIOBSDSocket.Handle, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>
+        ) throws -> Void
+    ) throws -> VsockAddress {
         try self.withUnsafeHandle { fd in
             var addr = sockaddr_vm()
             var len = socklen_t(MemoryLayout<sockaddr_vm>.size)
             try withUnsafeMutablePointer(to: &addr) { addrPtr in
                 try addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPtr in
-                    try NIOBSDSocket.getpeername(socket: fd, address: sockaddrPtr, address_len: &len)
+                    try getName(fd, sockaddrPtr, &len)
                 }
             }
             guard addr.svm_family == sa_family_t(NIOBSDSocket.AddressFamily.vsock.rawValue),

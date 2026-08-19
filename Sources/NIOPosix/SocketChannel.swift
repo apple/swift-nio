@@ -133,6 +133,12 @@ final class SocketChannel: BaseStreamSocketChannel<Socket>, @unchecked Sendable 
             #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
             #endif
+        case _ as ChannelOptions.Types.LocalVsockAddress:
+            #if os(Windows) || os(OpenBSD)
+            fallthrough
+            #else
+            return try self.socket.getLocalVsockAddress() as! Option.Value
+            #endif
         case _ as ChannelOptions.Types.RemoteVsockAddress:
             #if os(Windows) || os(OpenBSD)
             fallthrough
@@ -297,6 +303,12 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
             fallthrough
             #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
+            #endif
+        case _ as ChannelOptions.Types.LocalVsockAddress:
+            #if os(Windows) || os(OpenBSD)
+            fallthrough
+            #else
+            return try self.socket.getLocalVsockAddress() as! Option.Value
             #endif
         default:
             return try super.getOption0(option)
