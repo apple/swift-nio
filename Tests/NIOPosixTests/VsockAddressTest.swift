@@ -100,6 +100,7 @@ class VsockAddressTest: XCTestCase {
         let address = try socket.getLocalVsockAddress()
         XCTAssertNotEqual(address.port, .any, "The kernel should have assigned a concrete port")
         XCTAssertEqual(address.cid, try socket.getLocalVsockContextID())
+        XCTAssertEqual(address.cid, .any)
 
         // Check the address from the channel option matches.
         let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
