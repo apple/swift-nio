@@ -560,7 +560,7 @@ extension EventLoop {
         promise.completeWithTask(body)
         return promise.futureResult
     }
-    
+
     /// Create a future that will be completed with the result of a Task.
     /// This overload requires the task body to return the result as `sending`, so the result does not need to be `Sendable`. If your return type is not disconnected, and is Sendable, consider using ``makeFutureWithTask(_:)``.
     /// - Parameter body: Async work to be run in a Task. The result of this function will be used to complete the future.
