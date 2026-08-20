@@ -556,6 +556,44 @@ extension EventLoopFuture {
         return next.futureResult
     }
 
+    /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback,
+    /// which will provide a new `EventLoopFuture.Isolated`.
+    ///
+    /// This is a variant of ``flatMap(_:)`` for cases where the inner future is known to be bound
+    /// to the same ``EventLoop`` as this future. Because the callback returns an
+    /// `EventLoopFuture<NewValue>.Isolated`, the caller is asserting that the future returned from
+    /// the callback is bound to the same ``EventLoop`` as this future.
+    /// `EventLoopFuture<NewValue>.Isolated` can only be constructed via
+    /// ``EventLoopFuture/assumeIsolated()``, which requires being on the future's event loop —
+    /// the callback runs on this future's event loop, so that construction is always safe.
+    ///
+    /// - Note: The `NewValue` need not be `Sendable` since the isolation domains of this future
+    /// and the future returned from the callback must be the same.
+    ///
+    /// - Parameters:
+    ///   - callback: Function that will receive the value of this `EventLoopFuture` and return
+    ///         a new `EventLoopFuture.Isolated`.
+    /// - Returns: A future that will receive the eventual value.
+    @inlinable
+    public func flatMapIsolated<NewValue>(
+        _ callback: @escaping @Sendable (Value) -> EventLoopFuture<NewValue>.Isolated
+    ) -> EventLoopFuture<NewValue> {
+        let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
+        self._whenComplete {
+            switch self._value! {
+            case .success(let t):
+                let futureU = callback(t)
+                futureU._wrapped.eventLoop.assertInEventLoop()
+                return futureU._wrapped._addCallback {
+                    next._setValue(value: futureU._wrapped._value!)
+                }
+            case .failure(let error):
+                return next._setValue(value: .failure(error))
+            }
+        }
+        return next.futureResult
+    }
+
     /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
     /// performs a synchronous computation and returns a new value of type `NewValue`. The provided
     /// callback may optionally `throw`.

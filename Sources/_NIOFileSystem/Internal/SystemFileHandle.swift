@@ -848,6 +848,8 @@ extension SystemFileHandle.SendableView {
                         flags: materialization.exclusive ? [.exclusive] : []
                     )
                 }
+                #elseif os(Windows)
+                fatalError("file materialization via rename is unavailable on Windows")
                 #endif
 
                 if materialization.exclusive {

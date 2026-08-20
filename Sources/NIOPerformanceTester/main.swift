@@ -21,6 +21,8 @@
 @preconcurrency import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
+#elseif canImport(WinSDK)
+import CNIOWindows
 #endif
 
 import Dispatch
@@ -37,7 +39,13 @@ import NIOPosix
 import NIOWebSocket
 
 // Use unbuffered stdout to help detect exactly which test was running in the event of a crash.
+#if os(Windows)
+// `stdout` is a macro on the Windows CRT that Swift cannot reference directly;
+// the CNIOWindows wrapper disables buffering with the macro expanded in C.
+CNIOWindows_setStdoutUnbuffered()
+#else
 setbuf(stdout, nil)
+#endif
 
 // MARK: Test Harness
 

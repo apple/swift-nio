@@ -57,6 +57,8 @@ class VsockAddressTest: XCTestCase {
         XCTAssertNotEqual(VsockAddress(cid: 0, port: 0), .init(cid: 0, port: 1))
     }
 
+    // Getting the local vsock context ID is not available on Windows.
+    #if !os(Windows)
     func testGetLocalCID() throws {
         try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
 
@@ -80,4 +82,5 @@ class VsockAddressTest: XCTestCase {
         )
         XCTAssertEqual(try channel.getOption(.localVsockContextID).wait(), localCID)
     }
+    #endif
 }

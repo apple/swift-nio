@@ -1344,6 +1344,8 @@ extension FileSystem {
                 }
             }
         }
+        #elseif os(Windows)
+        fatalError("_copyRegularFile is unavailable on Windows")
         #endif
     }
 
@@ -1727,6 +1729,8 @@ extension FileSystem {
             )
             return .failure(error)
         }
+        #elseif os(Windows)
+        fatalError("_copySymbolicLink is unavailable on Windows")
         #endif
     }
 

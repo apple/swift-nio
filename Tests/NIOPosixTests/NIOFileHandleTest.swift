@@ -18,6 +18,10 @@ import XCTest
 
 @testable import NIOCore
 
+#if os(Windows)
+import ucrt
+#endif
+
 final class NIOFileHandleTest: XCTestCase {
     func testOpenCloseWorks() throws {
         let pipeFDs = try Self.makePipe()
@@ -161,7 +165,11 @@ final class NIOFileHandleTest: XCTestCase {
     private static func makePipe() throws -> (CInt, CInt) {
         var pipeFDs: [CInt] = [-1, -1]
         let err = pipeFDs.withUnsafeMutableBufferPointer { pipePtr in
+            #if os(Windows)
+            _pipe(pipePtr.baseAddress!, 4096, _O_BINARY)
+            #else
             pipe(pipePtr.baseAddress!)
+            #endif
         }
         guard err == 0 else {
             throw POSIXError(what: "pipe", errnoCode: errno)

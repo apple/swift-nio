@@ -37,6 +37,7 @@ DEBIAN_FRONTEND=noninteractive "$PACKAGE_MANAGER_BIN" install -y\
     libcurl4-openssl-dev\
     libedit2\
     libgcc-11-dev\
+    libncurses-dev\
     libpython3-dev\
     libsqlite3-0\
     libstdc++-11-dev\

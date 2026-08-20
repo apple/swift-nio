@@ -302,6 +302,50 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
                 XCTAssertEqual(r, originalValue.x - 2)
             }
 
+            // This block tests `flatMapIsolated` on `EventLoopFuture<Value>.Isolated`. `NewValue` is
+            // `SuperNotSendable`, which would not compile against the Sendable-requiring `flatMap`.
+            // The result is `Isolated` because the callback's returned future is asserted to be on
+            // the same event loop.
+            let isolatedFlatMapped: EventLoopFuture<SuperNotSendable>.Isolated = newFuture.flatMapIsolated { _ in
+                XCTAssertEqual(originalValue.x, 5)
+                let returned = SuperNotSendable()
+                returned.x = 42
+                return loop.assumeIsolated().makeSucceededFuture(returned).assumeIsolated()
+            }
+            isolatedFlatMapped.whenSuccess { val in
+                XCTAssertEqual(val.x, 42)
+                XCTAssertEqual(originalValue.x, 5)
+            }
+
+            // This block tests `flatMapIsolated` on the non-isolated ``EventLoopFuture``. The callback
+            // is `@Sendable` (the function is callable from off-loop), so this block does not capture
+            // `originalValue`. The key thing being tested is that `NewValue` (`SuperNotSendable`) does
+            // not need to be `Sendable`.
+            let plainFlatMapped: EventLoopFuture<SuperNotSendable> = newFuture.nonisolated().flatMapIsolated { _ in
+                let returned = SuperNotSendable()
+                returned.x = 99
+                return loop.assumeIsolated().makeSucceededFuture(returned).assumeIsolated()
+            }
+            plainFlatMapped.assumeIsolated().whenSuccess { val in
+                XCTAssertEqual(val.x, 99)
+                XCTAssertEqual(originalValue.x, 5)
+            }
+
+            // Failure path: a failed upstream must propagate the error without invoking the callback.
+            throwingFuture.flatMapIsolated { _ in
+                XCTFail("flatMapIsolated callback should not run on failure")
+                return loop.makeSucceededIsolatedFuture(SuperNotSendable())
+            }.whenFailure { error in
+                XCTAssertEqual(error as? TestError, .error)
+            }
+            throwingFuture.nonisolated().flatMapIsolated {
+                (_: SuperNotSendable) -> EventLoopFuture<SuperNotSendable>.Isolated in
+                XCTFail("flatMapIsolated callback should not run on failure")
+                return loop.makeSucceededIsolatedFuture(SuperNotSendable())
+            }.assumeIsolated().whenFailure { error in
+                XCTAssertEqual(error as? TestError, .error)
+            }
+
             // This block handles unwrap.
             newFuture.map { x -> SuperNotSendable? in
                 XCTAssertEqual(originalValue.x, 5)

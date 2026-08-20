@@ -320,8 +320,15 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     /// Deregister the given `SelectableChannel` from this `SelectableEventLoop`.
     internal func deregister<C: SelectableChannel>(channel: C, mode: CloseMode = .all) throws {
         self.assertInEventLoop()
-        guard self.isOpen else {
-            // It's possible the EventLoop was closed before we were able to call deregister, so just return in this case as there is no harm.
+        // Note that this deliberately does not check `isOpen`, which is also false once the loop
+        // has merely stopped accepting *new* registrations. Existing registrations must still be
+        // removed in that state: `Selector.closeGently` closes all remaining channels precisely
+        // then, and each of them closes its socket whether or not it was deregistered first. The
+        // epoll and kqueue backends tolerate that, because there a registration lives in the
+        // kernel and is dropped along with the descriptor, but the WSAPoll backend keeps its
+        // registrations in an array of its own, where a closed socket leaves a stale entry.
+        guard self._selector.lifecycleState == .open else {
+            // It's possible the Selector was closed before we were able to call deregister, so just return in this case as there is no harm.
             return
         }
 
@@ -454,6 +461,27 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         _ task: @escaping () throws -> T
     ) -> Scheduled<T> {
         self._scheduleTaskIsolatedUnsafeUnchecked(deadline: .now() + delay, task)
+    }
+
+    @inlinable
+    @discardableResult
+    func _scheduleCallbackIsolatedUnsafeUnchecked(
+        at deadline: NIODeadline,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        let taskID = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
+        let task = ScheduledTask(id: taskID, handler, deadline)
+        try self._scheduleIsolated0(.scheduled(task))
+        return NIOScheduledCallback(self, id: taskID)
+    }
+
+    @inlinable
+    @discardableResult
+    func _scheduleCallbackIsolatedUnsafeUnchecked(
+        in amount: TimeAmount,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        try self._scheduleCallbackIsolatedUnsafeUnchecked(at: .now() + amount, handler: handler)
     }
 
     // - see: `EventLoop.execute`
@@ -809,7 +837,11 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
                 self.run(task)
             }
             // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
-            self.tasksCopy.removeAll(keepingCapacity: true)
+            //
+            // This needs an autorelease pool as we potentially run arbitrary user code here on deinit.
+            withAutoReleasePool {
+                self.tasksCopy.removeAll(keepingCapacity: true)
+            }
         }
     }
 

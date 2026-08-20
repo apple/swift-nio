@@ -22,6 +22,11 @@ import XCTest
 
 @testable import NIOCore
 
+#if os(Windows)
+import WinSDK
+private typealias in_port_t = UInt16
+#endif
+
 private final class IndexWritingHandler: ChannelDuplexHandler {
     typealias InboundIn = ByteBuffer
     typealias InboundOut = ByteBuffer

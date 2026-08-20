@@ -320,6 +320,9 @@ class HTTPServerClientTest: XCTestCase {
     }
 
     func testSimpleGetFileRegion() throws {
+        #if os(Windows)
+        throw XCTSkip("Sending a FileRegion over a socket is not yet supported on Windows")
+        #endif
         try testSimpleGet(.fileRegion)
     }
 
@@ -441,6 +444,9 @@ class HTTPServerClientTest: XCTestCase {
     }
 
     func testSimpleGetChunkedEncodingFileRegion() throws {
+        #if os(Windows)
+        throw XCTSkip("Sending a FileRegion over a socket is not yet supported on Windows")
+        #endif
         try testSimpleGetChunkedEncoding(.fileRegion)
     }
 
@@ -514,6 +520,9 @@ class HTTPServerClientTest: XCTestCase {
     }
 
     func testSimpleGetTrailersFileRegion() throws {
+        #if os(Windows)
+        throw XCTSkip("Sending a FileRegion over a socket is not yet supported on Windows")
+        #endif
         try testSimpleGetTrailers(.fileRegion)
     }
 
@@ -653,6 +662,9 @@ class HTTPServerClientTest: XCTestCase {
     }
 
     func testMassiveResponseFileRegion() throws {
+        #if os(Windows)
+        throw XCTSkip("Sending a FileRegion over a socket is not yet supported on Windows")
+        #endif
         try testMassiveResponse(.fileRegion)
     }
 

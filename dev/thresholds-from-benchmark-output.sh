@@ -118,7 +118,7 @@ scrape_benchmarks_output_diff() {
 
     log "Scraping diff from log"
     # Trim out everything but the diff
-    git_diff="$(echo "$lines" | sed '1,/=== BEGIN DIFF ===/d' | sed '/Post job cleanup/,$d' | sed 's/^[0-9][0-9][0-9][0-9]-.*Z //')"
+    git_diff="$(echo "$lines" | sed '1,/^=== BEGIN DIFF/d' | sed '/Post job cleanup/,$d' | sed 's/^[0-9][0-9][0-9][0-9]-.*Z //')"
 
     echo "$git_diff"
 }

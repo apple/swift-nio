@@ -17,6 +17,9 @@ import XCTest
 
 @testable import NIOPosix
 
+// This file constructs POSIX msghdr and UnsafeControlMessageCollection
+// throughout, which are unsupported on Windows.
+#if !os(Windows)
 extension UnsafeControlMessageCollection {
     fileprivate init(controlBytes: UnsafeMutableRawBufferPointer) {
         let msgHdr = msghdr(
@@ -128,3 +131,4 @@ class ControlMessageTests: XCTestCase {
         XCTAssertGreaterThan(storage[2].count, MemoryLayout<cmsghdr>.stride)
     }
 }
+#endif
