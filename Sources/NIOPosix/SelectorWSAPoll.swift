@@ -67,7 +67,25 @@ extension SelectorEventSet {
             self.formUnion(.error)
         }
         if mapped & WinSDK.POLLHUP != 0 {
-            self.formUnion(.reset)
+            // WSAPoll has no `POLLRDHUP` equivalent. `POLLHUP` is the only hangup signal it
+            // produces and it is raised both when the peer shuts down its write side in an
+            // orderly fashion (FIN) and when the connection is aborted (RST). Reporting it as
+            // `.reset` would conflate the two: `SelectableEventLoop.handleEvent` treats `.reset`
+            // as terminal and unconditionally tears the whole `Channel` down, so a peer's FIN
+            // would close both directions and `allowRemoteHalfClosure` could never be honoured.
+            //
+            // Report `.readEOF` instead, which is what `epoll` synthesises from `EPOLLRDHUP`, and
+            // let the subsequent `recv` establish what actually happened: it returns 0 for an
+            // orderly FIN, which `readable0` turns into half-closure when the `Channel` allows it,
+            // and it fails with `WSAECONNRESET`/`WSAECONNABORTED` for an abortive teardown, which
+            // closes the `Channel` with the real error. The socket, not the poll bit, is the
+            // authority on which of the two occurred.
+            //
+            // This stays one-shot despite `POLLHUP` being reported regardless of the requested
+            // `events`: `BaseSocketChannel.readEOF0` removes `.readEOF` from the registration's
+            // interest and `whenReady0` intersects every event set with `registration.interested`,
+            // so later `POLLHUP` reports for the same socket are masked and cannot spin the loop.
+            self.formUnion(.readEOF)
         }
         if mapped & WinSDK.POLLNVAL != 0 {
             preconditionFailure("Invalid fd supplied.")
