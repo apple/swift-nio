@@ -16,6 +16,24 @@ import NIOCore
 
 private let defaultWhitespaces = [" ", "\t"].map({ $0.utf8.first! })
 
+/// Uppercases `byte` if, and only if, it is an ASCII lowercase letter (`a`...`z`).
+///
+/// A naive `byte & 0xdf` mask clears bit `0x20` unconditionally, which also folds
+/// several *distinct* punctuation bytes into the same value because they only
+/// differ from one another in that bit: `^`(0x5e)/`~`(0x7e), `[`(0x5b)/`{`(0x7b),
+/// `]`(0x5d)/`}`(0x7d), `\`(0x5c)/`|`(0x7c), and `@`(0x40)/`` ` ``(0x60). All of
+/// these are legal `tchar` bytes in HTTP header field names (RFC 7230 §3.2.6), so
+/// masking them collapses otherwise-distinct header names into the same identity.
+@inline(__always)
+private func uppercaseASCIILetter(_ byte: UInt8) -> UInt8 {
+    switch byte {
+    case UInt8(ascii: "a")...UInt8(ascii: "z"):
+        return byte & 0xdf
+    default:
+        return byte
+    }
+}
+
 extension ByteBufferView {
     internal func trim(limitingElements: [UInt8]) -> ByteBufferView {
         guard let lastNonWhitespaceIndex = self.lastIndex(where: { !limitingElements.contains($0) }),
@@ -51,7 +69,7 @@ extension Sequence where Self.Element == UInt8 {
 
                 for idx in 0..<lhsBuffer.count {
                     // let's hope this gets vectorised ;)
-                    if lhsBuffer[idx] & 0xdf != rhsBuffer[idx] & 0xdf {
+                    if uppercaseASCIILetter(lhsBuffer[idx]) != uppercaseASCIILetter(rhsBuffer[idx]) {
                         return false
                     }
                 }
@@ -62,7 +80,7 @@ extension Sequence where Self.Element == UInt8 {
         if let maybeResult = maybeMaybeResult, let result = maybeResult {
             return result
         } else {
-            return self.elementsEqual(to, by: { ($0 & 0xdf) == ($1 & 0xdf) })
+            return self.elementsEqual(to, by: { uppercaseASCIILetter($0) == uppercaseASCIILetter($1) })
         }
     }
 }
