@@ -1880,6 +1880,39 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
         try connectedServer.pipeline.assertDoesNotContainUpgrader()
     }
 
+    func testTypedUpgradeHandlerBarfsOnUnexpectedOrdering() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertEqual(true, try? channel.finish().isClean)
+        }
+
+        let handler = NIOTypedHTTPServerUpgradeHandler<Bool>(
+            httpEncoder: HTTPResponseEncoder(),
+            extraHTTPHandlers: [],
+            upgradeConfiguration: .init(
+                upgraders: [ExplodingUpgrader(forProtocol: "myproto")],
+                notUpgradingCompletionHandler: { channel in
+                    XCTFail("notUpgradingCompletionHandler called")
+                    return channel.eventLoop.makeSucceededFuture(false)
+                }
+            )
+        )
+        let data = HTTPServerRequestPart.body(channel.allocator.buffer(string: "hello"))
+
+        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+
+        XCTAssertThrowsError(try channel.writeInbound(data)) { error in
+            XCTAssertEqual(.invalidHTTPOrdering, error as? HTTPServerUpgradeErrors)
+        }
+
+        // The upgrade result future must be failed with the same error, and the handler
+        // must have removed itself from the pipeline instead of lingering there silently.
+        XCTAssertThrowsError(try handler.upgradeResultFuture.wait()) { error in
+            XCTAssertEqual(.invalidHTTPOrdering, error as? HTTPServerUpgradeErrors)
+        }
+        try channel.pipeline.assertDoesNotContain(handlerType: NIOTypedHTTPServerUpgradeHandler<Bool>.self)
+    }
+
     // - MARK: The following tests are all overridden from the base class since they slightly differ in behaviour
 
     override func testSimpleUpgradeSucceeds() throws {
