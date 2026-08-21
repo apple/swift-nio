@@ -65,6 +65,7 @@ extension ByteBuffer {
         /// Calculates the minimum number of bytes needed to encode an integer using this strategy
         /// - Parameter integer: The integer to be encoded
         /// - Returns: The number of bytes needed to encode it
+        @inlinable
         public static func bytesNeededForInteger<IntegerType: FixedWidthInteger>(_ integer: IntegerType) -> Int {
             // We must cast the integer to UInt64 here
             // Otherwise, an integer can fall through to the default case
