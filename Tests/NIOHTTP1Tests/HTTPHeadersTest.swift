@@ -210,6 +210,29 @@ class HTTPHeadersTest: XCTestCase {
         XCTAssertNil(headers.first(name: "not-present"))
     }
 
+    func testHeaderNamesDifferingOnlyByPunctuationThatSharesTheCaseBitAreDistinct() {
+        // '^' (0x5e) and '~' (0x7e) - and several other tchar punctuation pairs -
+        // only differ in bit 0x20, the same bit that separates lowercase from
+        // uppercase ASCII letters. A naive case-fold that masks that bit
+        // unconditionally treats these as the same header name, which they are
+        // not: both characters are legal in HTTP header field names (RFC 7230
+        // §3.2.6) and must be compared byte-for-byte.
+        var headers = HTTPHeaders()
+        headers.add(name: "X-Foo^Bar", value: "caret-value")
+
+        XCTAssertEqual(headers.first(name: "X-Foo^Bar"), "caret-value")
+        XCTAssertNil(headers.first(name: "X-Foo~Bar"))
+        XCTAssertTrue(headers.contains(name: "X-Foo^Bar"))
+        XCTAssertFalse(headers.contains(name: "X-Foo~Bar"))
+        XCTAssertEqual(headers[canonicalForm: "X-Foo~Bar"], [])
+
+        headers.remove(name: "X-Foo~Bar")
+        XCTAssertEqual(headers.first(name: "X-Foo^Bar"), "caret-value", "removing a distinct header must not remove this one")
+
+        headers.remove(name: "X-Foo^Bar")
+        XCTAssertNil(headers.first(name: "X-Foo^Bar"))
+    }
+
     func testKeepAliveStateStartsWithClose() {
         var headers = HTTPHeaders([("Connection", "close")])
 
