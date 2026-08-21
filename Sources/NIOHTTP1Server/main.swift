@@ -16,6 +16,10 @@ import NIOCore
 import NIOHTTP1
 import NIOPosix
 
+#if os(Windows)
+import WinSDK
+#endif
+
 extension String {
     func chopPrefix(_ prefix: String) -> String? {
         if self.unicodeScalars.starts(with: prefix.unicodeScalars) {
@@ -630,13 +634,14 @@ default:
     bindTarget = BindTo.ip(host: defaultHost, port: defaultPort)
 }
 
+let fileIO = NonBlockingFileIO(threadPool: .singleton)
+
 func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
     channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMapThrowing {
         try channel.pipeline.syncOperations.addHandler(HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
     }
 }
 
-let fileIO = NonBlockingFileIO(threadPool: .singleton)
 let socketBootstrap = ServerBootstrap(group: MultiThreadedEventLoopGroup.singleton)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .serverChannelOption(.backlog, value: 256)
@@ -664,7 +669,14 @@ let channel = try { () -> Channel in
     case .unixDomainSocket(let path):
         return try socketBootstrap.bind(unixDomainSocketPath: path).wait()
     case .stdio:
+        #if os(Windows)
+        return try pipeBootstrap.takingOwnershipOfDescriptors(
+            input: Int32(bitPattern: STD_INPUT_HANDLE),
+            output: Int32(bitPattern: STD_OUTPUT_HANDLE)
+        ).wait()
+        #else
         return try pipeBootstrap.takingOwnershipOfDescriptors(input: STDIN_FILENO, output: STDOUT_FILENO).wait()
+        #endif
     }
 }()
 

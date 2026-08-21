@@ -15,6 +15,8 @@
 import NIOCore
 import XCTest
 
+// Depends on the SAL harness, which is gated off on Windows.
+#if !os(Windows)
 final class SALEventLoopTests: XCTestCase {
     func testSchedulingTaskOnSleepingLoopWakesUpOnce() throws {
         try withSALContext { context in
@@ -57,3 +59,4 @@ final class SALEventLoopTests: XCTestCase {
         }
     }
 }
+#endif

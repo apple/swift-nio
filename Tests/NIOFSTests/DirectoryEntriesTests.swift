@@ -17,6 +17,12 @@ import XCTest
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class DirectoryEntriesTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     func testDirectoryEntriesWrapsAsyncStream() async throws {
         let stream = AsyncThrowingStream<[DirectoryEntry], Error> {
             $0.yield([DirectoryEntry(path: "foo", type: .regular)!])

@@ -41,41 +41,15 @@ function gen() {
         echo -n ", T$n"
     done
     echo ")? {"
+    echo "        guard let result = self.getMultipleIntegers(at: self.readerIndex, endianness: endianness, as: \`as\`) else {"
+    echo "            return nil"
+    echo "        }"
     echo "        var bytesRequired: Int = MemoryLayout<T1>.size"
     for n in $(seq 2 "$how_many"); do
         echo "        bytesRequired &+= MemoryLayout<T$n>.size"
     done
-    echo
-    echo "        guard self.readableBytes >= bytesRequired else {"
-    echo "            return nil"
-    echo "        }"
-    echo
-    for n in $(seq 1 "$how_many"); do
-        echo "        var v$n: T$n = 0"
-    done
-    echo "        var offset = 0"
-    echo "        self.readWithUnsafeReadableBytes { ptr -> Int in"
-    echo "            assert(ptr.count >= bytesRequired)"
-    echo "            let basePtr = ptr.baseAddress! // safe, ptr is non-empty"
-    for n in $(seq 1 "$how_many"); do
-        echo "            withUnsafeMutableBytes(of: &v$n) { destPtr in"
-        echo "                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T$n>.size)"
-        echo "            }"
-        echo "            offset = offset &+ MemoryLayout<T$n>.size"
-    done
-    echo "            assert(offset == bytesRequired)"
-    echo "            return offset"
-    echo "        }"
-    echo "        switch endianness {"
-    for endianness in big little; do
-        echo "        case .$endianness:"
-        echo -n "            return (T1(${endianness}Endian: v1)"
-        for n in $(seq 2 "$how_many"); do
-            echo -n ", T$n(${endianness}Endian: v$n)"
-        done
-        echo ")"
-    done
-    echo "        }"
+    echo "        self._moveReaderIndex(forwardBy: bytesRequired)"
+    echo "        return result"
     echo "    }"
     echo
 
@@ -100,8 +74,65 @@ function gen() {
         echo -n ", T$n"
     done
     echo ")? {"
-    echo "        var copy = self"
-    echo "        return copy.readMultipleIntegers(endianness: endianness, as: \`as\`)"
+    echo "        self.getMultipleIntegers(at: self.readerIndex, endianness: endianness, as: \`as\`)"
+    echo "    }"
+    echo
+
+    # GET
+    echo "    @inlinable"
+    echo "    @_alwaysEmitIntoClient"
+    echo -n "    public func getMultipleIntegers<T1: FixedWidthInteger"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", T$n: FixedWidthInteger"
+    done
+    echo -n ">("
+    echo -n "at index: Int, endianness: Endianness = .big, as: (T1"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", T$n"
+    done
+    echo -n ").Type = (T1"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", T$n"
+    done
+    echo -n ").self) -> (T1"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", T$n"
+    done
+    echo ")? {"
+    echo "        var bytesRequired: Int = MemoryLayout<T1>.size"
+    for n in $(seq 2 "$how_many"); do
+        echo "        bytesRequired &+= MemoryLayout<T$n>.size"
+    done
+    echo
+    echo "        guard let range = self.rangeWithinReadableBytes(index: index, length: bytesRequired) else {"
+    echo "            return nil"
+    echo "        }"
+    echo
+    for n in $(seq 1 "$how_many"); do
+        echo "        var v$n: T$n = 0"
+    done
+    echo "        var offset = range.lowerBound"
+    echo "        self.withUnsafeReadableBytes { ptr in"
+    echo "            assert(ptr.count >= range.lowerBound + bytesRequired)"
+    echo "            let basePtr = ptr.baseAddress! // safe, ptr is non-empty"
+    for n in $(seq 1 "$how_many"); do
+        echo "            withUnsafeMutableBytes(of: &v$n) { destPtr in"
+        echo "                destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T$n>.size)"
+        echo "            }"
+        echo "            offset = offset &+ MemoryLayout<T$n>.size"
+    done
+    echo "            assert(offset == range.upperBound)"
+    echo "        }"
+    echo "        switch endianness {"
+    for endianness in big little; do
+        echo "        case .$endianness:"
+        echo -n "            return (T1(${endianness}Endian: v1)"
+        for n in $(seq 2 "$how_many"); do
+            echo -n ", T$n(${endianness}Endian: v$n)"
+        done
+        echo ")"
+    done
+    echo "        }"
     echo "    }"
     echo
 
@@ -126,6 +157,37 @@ function gen() {
         echo -n ", T$n"
     done
     echo ").self) -> Int {"
+    echo -n "        let bytesWritten = self.setMultipleIntegers(value1"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", value$n"
+    done
+    echo ", at: self.writerIndex, endianness: endianness, as: \`as\`)"
+    echo "        self._moveWriterIndex(forwardBy: bytesWritten)"
+    echo "        return bytesWritten"
+    echo "    }"
+    echo
+
+    # SET
+    echo "    @inlinable"
+    echo "    @_alwaysEmitIntoClient"
+    echo "    @discardableResult"
+    echo -n "    public mutating func setMultipleIntegers<T1: FixedWidthInteger"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", T$n: FixedWidthInteger"
+    done
+    echo -n ">(_ value1: T1"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", _ value$n: T$n"
+    done
+    echo -n ", at index: Int, endianness: Endianness = .big, as: (T1"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", T$n"
+    done
+    echo -n ").Type = (T1"
+    for n in $(seq 2 "$how_many"); do
+        echo -n ", T$n"
+    done
+    echo ").self) -> Int {"
     for n in $(seq 1 "$how_many"); do
         echo "        var v$n: T$n"
     done
@@ -138,22 +200,13 @@ function gen() {
     done
     echo "        }"
     echo
-    echo "        var spaceNeeded: Int = MemoryLayout<T1>.size"
-    for n in $(seq 2 "$how_many"); do
-        echo "        spaceNeeded &+= MemoryLayout<T$n>.size"
-    done
-    echo
-    echo "        return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in"
-    echo "            assert(ptr.count >= spaceNeeded)"
-    echo "            var offset = 0"
-    echo "            let basePtr = ptr.baseAddress! // safe: pointer is non zero length"
+    echo "        var offset = index"
+    echo "        var bytesWritten = 0"
     for n in $(seq 1 "$how_many"); do
-        echo "            (basePtr + offset).copyMemory(from: &v$n, byteCount: MemoryLayout<T$n>.size)"
-        echo "            offset = offset &+ MemoryLayout<T$n>.size"
+        echo "        bytesWritten &+= Swift.withUnsafeBytes(of: &v$n) { self.setBytes(\$0, at: offset) }"
+        echo "        offset = offset &+ MemoryLayout<T$n>.size"
     done
-    echo "            assert(offset == spaceNeeded)"
-    echo "            return offset"
-    echo "        }"
+    echo "        return bytesWritten"
     echo "    }"
     echo
 }

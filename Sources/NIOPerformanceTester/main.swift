@@ -21,6 +21,8 @@
 @preconcurrency import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
+#elseif canImport(WinSDK)
+import CNIOWindows
 #endif
 
 import Dispatch
@@ -37,7 +39,13 @@ import NIOPosix
 import NIOWebSocket
 
 // Use unbuffered stdout to help detect exactly which test was running in the event of a crash.
+#if os(Windows)
+// `stdout` is a macro on the Windows CRT that Swift cannot reference directly;
+// the CNIOWindows wrapper disables buffering with the macro expanded in C.
+CNIOWindows_setStdoutUnbuffered()
+#else
 setbuf(stdout, nil)
+#endif
 
 // MARK: Test Harness
 
@@ -869,6 +877,23 @@ measureAndPrint(desc: "el_not_in_eventloop_100M") {
 }
 
 try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark(runCount: 1_000_000))
+
+try measureAndPrint(
+    desc: "channel_pipeline_init_no_handlers_1m",
+    benchmark: ChannelPipelineInstantiationBenchmark(runCount: 1_000_000, handlerCount: 0)
+)
+try measureAndPrint(
+    desc: "channel_pipeline_init_1_handler_1m",
+    benchmark: ChannelPipelineInstantiationBenchmark(runCount: 1_000_000, handlerCount: 1)
+)
+try measureAndPrint(
+    desc: "channel_pipeline_init_3_handlers_1m",
+    benchmark: ChannelPipelineInstantiationBenchmark(runCount: 1_000_000, handlerCount: 3)
+)
+try measureAndPrint(
+    desc: "channel_pipeline_init_10_handlers_1m",
+    benchmark: ChannelPipelineInstantiationBenchmark(runCount: 1_000_000, handlerCount: 10)
+)
 
 try measureAndPrint(
     desc: "websocket_encode_50b_space_at_front_100k_frames_cow",

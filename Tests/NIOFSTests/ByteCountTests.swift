@@ -16,6 +16,12 @@ import NIOFS
 import XCTest
 
 class ByteCountTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     func testByteCountBytes() {
         let byteCount = ByteCount.bytes(10)
         XCTAssertEqual(byteCount.bytes, 10)
@@ -49,6 +55,28 @@ class ByteCountTests: XCTestCase {
     func testByteCountGibibytes() {
         let byteCount = ByteCount.gibibytes(10)
         XCTAssertEqual(byteCount.bytes, 10_737_418_240)
+    }
+
+    func testByteCountSaturatesOnPositiveOverflow() {
+        // Passing very large counts to a unit factory used to trap on
+        // arithmetic overflow. Instead the value should saturate to Int64.max.
+        XCTAssertEqual(ByteCount.kilobytes(.max).bytes, .max)
+        XCTAssertEqual(ByteCount.megabytes(.max).bytes, .max)
+        XCTAssertEqual(ByteCount.gigabytes(.max).bytes, .max)
+        XCTAssertEqual(ByteCount.kibibytes(.max).bytes, .max)
+        XCTAssertEqual(ByteCount.mebibytes(.max).bytes, .max)
+        XCTAssertEqual(ByteCount.gibibytes(.max).bytes, .max)
+    }
+
+    func testByteCountSaturatesOnNegativeOverflow() {
+        // Likewise, very large negative counts should saturate to Int64.min
+        // rather than trapping.
+        XCTAssertEqual(ByteCount.kilobytes(.min).bytes, .min)
+        XCTAssertEqual(ByteCount.megabytes(.min).bytes, .min)
+        XCTAssertEqual(ByteCount.gigabytes(.min).bytes, .min)
+        XCTAssertEqual(ByteCount.kibibytes(.min).bytes, .min)
+        XCTAssertEqual(ByteCount.mebibytes(.min).bytes, .min)
+        XCTAssertEqual(ByteCount.gibibytes(.min).bytes, .min)
     }
 
     func testByteCountUnlimited() {

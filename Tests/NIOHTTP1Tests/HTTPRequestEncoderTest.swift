@@ -448,6 +448,24 @@ class HTTPRequestEncoderTests: XCTestCase {
         XCTAssertEqual(trailerBuffer, ByteBuffer(string: "0\r\n\r\n"))
     }
 
+    func testConflictingFramingHeadersStripsTransferEncoding() throws {
+        let headers = HTTPHeaders([
+            ("transfer-encoding", "chunked"),
+            ("content-length", "3"),
+        ])
+        let writtenData = try sendRequest(withMethod: .POST, andHeaders: headers)
+        writtenData.assertContainsOnly("POST /uri HTTP/1.1\r\ncontent-length: 3\r\n\r\n")
+    }
+
+    func testConflictingFramingHeadersStripsTransferEncoding_unlikely() throws {
+        let headers = HTTPHeaders([
+            ("transfer-encoding", "chunked"),
+            ("content-length", "0"),
+        ])
+        let writtenData = try sendRequest(withMethod: .GET, andHeaders: headers)
+        writtenData.assertContainsOnly("GET /uri HTTP/1.1\r\ncontent-length: 0\r\n\r\n")
+    }
+
     private func assertOutboundContainsOnly(_ channel: EmbeddedChannel, _ expected: String) {
         XCTAssertNoThrow(
             XCTAssertNotNil(

@@ -157,7 +157,14 @@ class HTTPDecoderTest: XCTestCase {
             }
         }
 
-        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPRequestDecoder())))
+        var config = NIOHTTPDecoderLimitConfiguration()
+        config.maxHeaderFieldCount = 10_000
+        config.maxHeaderListSize = .max
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.addHandler(
+                ByteToMessageHandler(HTTPRequestDecoder(limitConfiguration: config))
+            )
+        )
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(Receiver()))
 
         // This is a hypothetical HTTP/2.0 protocol response, assuming it is
@@ -1072,8 +1079,12 @@ class HTTPDecoderTest: XCTestCase {
 
     func testDecodingLongHeaderFieldNames() {
         // Our maximum field size is 80kB, so we're going to write an 80kB + 1 byte field name to confirm it fails.
+        var config = NIOHTTPDecoderLimitConfiguration()
+        config.maxHeaderListSize = .max
         XCTAssertNoThrow(
-            try self.channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPRequestDecoder()))
+            try self.channel.pipeline.syncOperations.addHandler(
+                ByteToMessageHandler(HTTPRequestDecoder(limitConfiguration: config))
+            )
         )
 
         var buffer = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\n")
@@ -1100,8 +1111,12 @@ class HTTPDecoderTest: XCTestCase {
 
     func testDecodingLongHeaderFieldValues() {
         // Our maximum field size is 80kB, so we're going to write an 80kB + 1 byte field value to confirm it fails.
+        var config = NIOHTTPDecoderLimitConfiguration()
+        config.maxHeaderListSize = .max
         XCTAssertNoThrow(
-            try self.channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPRequestDecoder()))
+            try self.channel.pipeline.syncOperations.addHandler(
+                ByteToMessageHandler(HTTPRequestDecoder(limitConfiguration: config))
+            )
         )
 
         var buffer = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\nx: ")
@@ -1128,8 +1143,12 @@ class HTTPDecoderTest: XCTestCase {
 
     func testDecodingLongURLs() {
         // Our maximum field size is 80kB, so we're going to write an 80kB + 1 byte URL to confirm it fails.
+        var config = NIOHTTPDecoderLimitConfiguration()
+        config.maxHeaderListSize = .max
         XCTAssertNoThrow(
-            try self.channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPRequestDecoder()))
+            try self.channel.pipeline.syncOperations.addHandler(
+                ByteToMessageHandler(HTTPRequestDecoder(limitConfiguration: config))
+            )
         )
 
         var buffer = ByteBuffer(string: "GET ")

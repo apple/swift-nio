@@ -21,6 +21,12 @@ import System
 #endif
 
 final class FilePathTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     /// Tests that the conversion of a SystemPackage.FilePath instance to a NIOFilePath instance (and vice-versa) results in the same underlying object.
     func testConversion() {
         // Create a NIOFilePath and SystemPackage.FilePath instance, both pointing to "/foo/bar/../baz"

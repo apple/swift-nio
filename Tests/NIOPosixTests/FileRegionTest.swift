@@ -18,6 +18,11 @@ import XCTest
 @testable import NIOPosix
 
 class FileRegionTest: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("Sending FileRegions over a socket is not yet supported on Windows")
+        #endif
+    }
 
     func testWriteFileRegion() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -282,11 +287,11 @@ class FileRegionTest: XCTestCase {
             var fr2Bytes = fr1Bytes
             try fh1.withUnsafeFileDescriptor { fd in
                 let r = try Posix.read(descriptor: fd, pointer: &fr1Bytes, size: 5)
-                XCTAssertEqual(r, IOResult<Int>.processed(5))
+                XCTAssertEqual(r, .processed(5))
             }
             try fh2.withUnsafeFileDescriptor { fd in
                 let r = try Posix.read(descriptor: fd, pointer: &fr2Bytes, size: 5)
-                XCTAssertEqual(r, IOResult<Int>.processed(5))
+                XCTAssertEqual(r, .processed(5))
             }
             defer {
                 // fr2's underlying fd must be closed by us.

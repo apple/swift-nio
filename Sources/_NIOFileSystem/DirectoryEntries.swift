@@ -382,8 +382,19 @@ private struct DirectoryEnumerator: Sendable {
         case symbolicLink
         case symbolicLinkToNonExistentTarget
 
+        // Compatibility function.
+        @_disfavoredOverload
         init?(rawValue: UInt16) {
-            switch Int32(rawValue) {
+            // This cast is safe on all platforms that matter, CInt it at least 32bits, so we can safely assign
+            // an unsigned 16bit integer
+            guard let value = FTSInfo(rawValue: CInt(rawValue)) else {
+                return nil
+            }
+            self = value
+        }
+
+        init?(rawValue: CInt) {
+            switch rawValue {
             case FTS_D:
                 self = .directoryPreOrder
             case FTS_DC:
@@ -556,6 +567,8 @@ private struct DirectoryEnumerator: Sendable {
                 // Empty is checked for above, root can't exist within a directory, and directory
                 // items must be a single path component.
                 name = FilePath.Component(platformString: CNIODarwin_dirent_dname(entry))!
+                #elseif os(Windows)
+                name = FilePath.Component(platformString: CNIOWindows_dirent_dname(entry))!
                 #else
                 name = FilePath.Component(platformString: CNIOLinux_dirent_dname(entry))!
                 #endif

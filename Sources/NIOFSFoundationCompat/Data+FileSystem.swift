@@ -15,8 +15,12 @@
 #if canImport(Darwin) || os(Linux) || os(Android)
 import NIOFS
 import NIOCore
-import NIOFoundationCompat
+import NIOFoundationEssentialsCompat
+#if canImport(FoundationEssentials)
+import struct FoundationEssentials.Data
+#else
 import struct Foundation.Data
+#endif
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension Data {

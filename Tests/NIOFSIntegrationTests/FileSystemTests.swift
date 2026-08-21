@@ -15,7 +15,6 @@
 import NIOConcurrencyHelpers
 import NIOCore
 @_spi(Testing) @testable import NIOFS
-import SystemPackage
 import XCTest
 
 extension NIOFilePath {
@@ -63,6 +62,12 @@ extension FileSystem {
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class FileSystemTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     var fs: FileSystem { .shared }
 
     func testOpenFileForReading() async throws {
@@ -480,6 +485,28 @@ final class FileSystemTests: XCTestCase {
         }
     }
 
+    func testCreateDirectoryWithIntermediatePathsConcurrently() async throws {
+        // Two paths sharing a common ancestor created concurrently; both should succeed
+        // even if one task races to create the shared ancestor first.
+        let base = try await self.fs.temporaryFilePath()
+        let path1 = NIOFilePath(base.underlying.appending("shared-ancestor").appending("child1"))
+        let path2 = NIOFilePath(base.underlying.appending("shared-ancestor").appending("child2"))
+
+        let fs = self.fs
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { try await fs.createDirectory(at: path1, withIntermediateDirectories: true) }
+            group.addTask { try await fs.createDirectory(at: path2, withIntermediateDirectories: true) }
+            try await group.waitForAll()
+        }
+
+        for path in [path1, path2] {
+            try await self.fs.withDirectoryHandle(atPath: path) { dir in
+                let info = try await dir.info()
+                XCTAssertEqual(info.type, .directory)
+            }
+        }
+    }
+
     func testCreateDirectoryAtPathWhichExists() async throws {
         let path = try await self.fs.temporaryFilePath()
         try await self.fs.withFileHandle(
@@ -578,7 +605,11 @@ final class FileSystemTests: XCTestCase {
     }
 
     #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android)
-    func testHomeDirectoryFromPasswd() {
+    func testHomeDirectoryFromPasswd() throws {
+        #if targetEnvironment(simulator)
+        // Simulators don't have a passwd database entry for the current user.
+        throw XCTSkip("getpwuid_r has no passwd entry in simulator environments")
+        #else
         // Should always succeed on Unix-like systems for the current user
         let result = Libc.homeDirectoryFromPasswd()
         switch result {
@@ -588,6 +619,7 @@ final class FileSystemTests: XCTestCase {
         case .failure(let errno):
             XCTFail("Expected success, got error: \(errno)")
         }
+        #endif
     }
     #endif
 
@@ -2002,8 +2034,27 @@ extension FileSystemTests {
     }
 
     func testCopyFileReplacingExistingFileSucceeds() async throws {
+        // Use a dedicated subdirectory so the temp file check isn't polluted by
+        // concurrent tests or other processes writing to the shared temp directory.
+        let testDirectory = try await self.fs.temporaryFilePath()
+        try await self.fs.createDirectory(
+            at: testDirectory,
+            withIntermediateDirectories: false,
+            permissions: .ownerReadWriteExecute
+        )
+        let fs = self.fs
+
+        self.addTeardownBlock {
+            // clean up the test directory
+            _ = try await fs.removeItem(
+                at: testDirectory,
+                strategy: .platformDefault,
+                recursively: true
+            )
+        }
+
         let sourceFileContent: [UInt8] = [1, 2, 3]
-        let source = try await self.fs.temporaryFilePath()
+        let source = self.fs.temporaryFilePath(inDirectory: testDirectory.underlying)
         _ = try await self.fs.withFileHandle(
             forWritingAt: source,
             options: .newFile(replaceExisting: false, permissions: .ownerReadWrite)
@@ -2015,7 +2066,7 @@ extension FileSystemTests {
         }
 
         let existingFileContent: [UInt8] = [4, 5, 6]
-        let destination = try await self.fs.temporaryFilePath()
+        let destination = self.fs.temporaryFilePath(inDirectory: testDirectory.underlying)
         _ = try await self.fs.withFileHandle(
             forWritingAt: destination,
             options: .newFile(replaceExisting: false, permissions: .ownerReadWriteExecute)
@@ -2057,8 +2108,7 @@ extension FileSystemTests {
 
         // verify no temp files are left (Linux only - Darwin uses COPYFILE_UNLINK)
         #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
-        let destinationDirectory = NIOFilePath(destination.underlying.removingLastComponent())
-        let temporaryFiles = try await self.fs.withDirectoryHandle(atPath: destinationDirectory) { dir in
+        let temporaryFiles = try await self.fs.withDirectoryHandle(atPath: testDirectory) { dir in
             var temporaryFiles: [String] = []
             for try await batch in dir.listContents().batched() {
                 for entry in batch where entry.name.hasPrefix(".tmp-") {
@@ -2110,23 +2160,41 @@ extension FileSystemTests {
     }
 
     func testCopySymlinkReplacingExistingSymlinkSucceeds() async throws {
-        let sourceTarget = try await self.fs.temporaryFilePath()
+        // Use a dedicated subdirectory so the temp symlink check isn't polluted by
+        // concurrent tests or other processes writing to the shared temp directory.
+        let testDirectory = try await self.fs.temporaryFilePath()
+        try await self.fs.createDirectory(
+            at: testDirectory,
+            withIntermediateDirectories: false,
+            permissions: .ownerReadWriteExecute
+        )
+        let fs = self.fs
+        self.addTeardownBlock {
+            // clean up the test directory
+            _ = try await fs.removeItem(
+                at: testDirectory,
+                strategy: .platformDefault,
+                recursively: true
+            )
+        }
+
+        let sourceTarget = self.fs.temporaryFilePath(inDirectory: testDirectory.underlying)
         try await self.fs.withFileHandle(
             forWritingAt: sourceTarget,
             options: .newFile(replaceExisting: false)
         ) { _ in }
-        let sourceSymlink = try await self.fs.temporaryFilePath()
+        let sourceSymlink = self.fs.temporaryFilePath(inDirectory: testDirectory.underlying)
         try await self.fs.createSymbolicLink(
             at: sourceSymlink,
             withDestination: sourceTarget
         )
 
-        let destinationTarget = try await self.fs.temporaryFilePath()
+        let destinationTarget = self.fs.temporaryFilePath(inDirectory: testDirectory.underlying)
         try await self.fs.withFileHandle(
             forWritingAt: destinationTarget,
             options: .newFile(replaceExisting: false)
         ) { _ in }
-        let destinationSymlink = try await self.fs.temporaryFilePath()
+        let destinationSymlink = self.fs.temporaryFilePath(inDirectory: testDirectory.underlying)
         try await self.fs.createSymbolicLink(
             at: destinationSymlink,
             withDestination: destinationTarget
@@ -2150,8 +2218,7 @@ extension FileSystemTests {
         XCTAssertEqual(sourceTargetAfterCopy, sourceTarget)
 
         // verify no temp symlinks are left
-        let destinationDirectory = NIOFilePath(destinationSymlink.underlying.removingLastComponent())
-        let temporarySymlinks = try await self.fs.withDirectoryHandle(atPath: destinationDirectory) { dir in
+        let temporarySymlinks = try await self.fs.withDirectoryHandle(atPath: testDirectory) { dir in
             var temporarySymlinks: [String] = []
             for try await batch in dir.listContents().batched() {
                 for entry in batch where entry.name.hasPrefix(".tmp-link-") {

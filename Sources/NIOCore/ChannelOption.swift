@@ -93,6 +93,14 @@ extension ChannelOptions {
             }
 
             #if !os(Windows)
+            // Unavailable on Windows: there, WinSDK imports the socket option
+            // level/name constants (`IPPROTO_IP`, `IP_TTL`, `SO_REUSEADDR`, …)
+            // as enumeration cases rather than plain integers, so they don't fit
+            // the integer `SocketOptionLevel`/`SocketOptionName` typealiases.
+            // Use `init(level:name:)` taking `NIOBSDSocket.OptionLevel`/`Option`
+            // instead (their `.ip`/`.tcp`/etc. accessors read the enum's raw
+            // value).
+
             /// Create a new `SocketOption`.
             ///
             /// - Parameters:
@@ -312,6 +320,8 @@ extension ChannelOptions {
 
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public struct ChannelOptions: Sendable {
+    // Unavailable on Windows; see `SocketOption.init(level:name:)`. Use the
+    // typed `socketOption(_:)`/`ipOption(_:)`/`tcpOption(_:)` accessors instead.
     #if !os(Windows)
     public static let socket: @Sendable (SocketOptionLevel, SocketOptionName) -> ChannelOptions.Types.SocketOption = {
         (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
@@ -388,6 +398,8 @@ public struct ChannelOptions: Sendable {
 
 /// - seealso: `SocketOption`.
 extension ChannelOption where Self == ChannelOptions.Types.SocketOption {
+    // Unavailable on Windows; see `SocketOption.init(level:name:)`. Use the
+    // typed `socketOption(_:)`/`ipOption(_:)`/`tcpOption(_:)` accessors instead.
     #if !(os(Windows))
     public static func socket(_ level: SocketOptionLevel, _ name: SocketOptionName) -> Self {
         .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))

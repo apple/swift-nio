@@ -17,3 +17,7 @@
 // Once we support C23, this should become `thread_local`.
 // DO NOT TOUCH DIRECTLY, use `c_nio_posix_{get,set}_el_id`
 _Thread_local uintptr_t _c_nio_posix_thread_local_el_id;
+
+// Once we support C23, this should become `thread_local`.
+// DO NOT TOUCH DIRECTLY, use `c_nio_posix_{get,set}_el_ptr`
+_Thread_local void * _c_nio_posix_thread_local_el_ptr;

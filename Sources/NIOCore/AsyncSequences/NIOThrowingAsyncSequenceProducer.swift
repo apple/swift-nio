@@ -630,6 +630,10 @@ extension NIOThrowingAsyncSequenceProducer {
                     // it isn't, so drop the lock, create the continuation and then try again.
                     //
                     // See https://github.com/swiftlang/swift/issues/85668
+                    //
+                    // We switched to using NIOUnsafeContinuation after running with
+                    // CheckedContinuation for more than a year. Now we use NIOUnsafeContinuation
+                    // to reduce runtime costs.
                     return try await withNIOUnsafeThrowingContinuation {
                         (continuation: NIOUnsafeContinuation<Element?, any Error>) in
                         let (action, delegate, didSuspend) = self._state.withLockedValue { state in
@@ -1076,7 +1080,7 @@ extension NIOThrowingAsyncSequenceProducer {
         enum FinishAction: Sendable {
             /// Indicates that the continuation should be resumed with `nil` and
             /// that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
-            case resumeContinuationWithFailureAndCallDidTerminate(UnsafeContinuation<Element?, Error>, Failure?)
+            case resumeContinuationWithFailureAndCallDidTerminate(NIOUnsafeContinuation<Element?, Error>, Failure?)
             /// Indicates that nothing should be done.
             case none
         }
@@ -1130,7 +1134,7 @@ extension NIOThrowingAsyncSequenceProducer {
             case callDidTerminate
             /// Indicates that the continuation should be resumed with a `CancellationError` and
             /// that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
-            case resumeContinuationWithCancellationErrorAndCallDidTerminate(UnsafeContinuation<Element?, Error>)
+            case resumeContinuationWithCancellationErrorAndCallDidTerminate(NIOUnsafeContinuation<Element?, Error>)
             /// Indicates that nothing should be done.
             case none
         }

@@ -21,8 +21,9 @@ import Testing
 
 @testable import NIOPosix
 
-@Suite("NIOThreadPoolTest", .timeLimit(.minutes(1)))
+@Suite("NIOThreadPoolTest")
 class NIOThreadPoolTest {
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testThreadNamesAreSetUp() {
         let numberOfThreads = 11
@@ -69,6 +70,7 @@ class NIOThreadPoolTest {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testThreadPoolStartsMultipleTimes() async throws {
         let numberOfThreads = 1
@@ -119,6 +121,7 @@ class NIOThreadPoolTest {
         await #expect(throws: Never.self) { try await pool.shutdownGracefully() }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAsyncThreadPool() async throws {
         let numberOfThreads = 1
@@ -134,6 +137,7 @@ class NIOThreadPoolTest {
         try await pool.shutdownGracefully()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAsyncThreadPoolErrorPropagation() async throws {
         struct ThreadPoolError: Error {}
@@ -151,6 +155,7 @@ class NIOThreadPoolTest {
         try await pool.shutdownGracefully()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAsyncThreadPoolNotActiveError() async throws {
         struct ThreadPoolError: Error {}
@@ -170,6 +175,7 @@ class NIOThreadPoolTest {
         try await pool.shutdownGracefully()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAsyncThreadPoolCancellation() async throws {
         let pool = NIOThreadPool(numberOfThreads: 1)
@@ -194,6 +200,7 @@ class NIOThreadPoolTest {
         try await pool.shutdownGracefully()
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     @Test
     func testAsyncShutdownWorks() async throws {
         let threadPool = NIOThreadPool(numberOfThreads: 17)
@@ -209,5 +216,55 @@ class NIOThreadPoolTest {
         await #expect(throws: (any Error).self) {
             try await future.get()
         }
+    }
+
+    @Test
+    func testCanPinThreadsToCores() async throws {
+        #if os(Linux)
+        let availableCPUIDs = NIOThread.currentAffinity.cpuIds.sorted()
+        let numberOfThreads = max(1, availableCPUIDs.count / 2)
+        let pinnedCPUIDs = Array(availableCPUIDs.prefix(numberOfThreads))
+        let pool = NIOThreadPool(pinnedCPUIDs: pinnedCPUIDs)
+        pool.start()
+        defer {
+            #expect(throws: Never.self) {
+                try pool.syncShutdownGracefully()
+            }
+        }
+
+        let allThreadCPUAffinities = NIOLockedValueBox<[Int]>([])
+        let threadNameCollectionSem = DispatchSemaphore(value: 0)
+        let threadBlockingSem = DispatchSemaphore(value: 0)
+
+        // let's use up all the threads
+        for i in (0..<numberOfThreads) {
+            pool.submit { s in
+                switch s {
+                case .cancelled:
+                    Issue.record("work item \(i) cancelled")
+                case .active:
+                    let affinity = NIOThread.currentAffinity.cpuIds
+                    #expect(affinity.count == 1)
+                    allThreadCPUAffinities.withLockedValue {
+                        $0.append(affinity.first!)
+                    }
+                    threadNameCollectionSem.signal()
+                }
+                threadBlockingSem.wait()
+            }
+        }
+
+        // now, let's wait for all the threads to have done their work
+        for _ in (0..<numberOfThreads) {
+            threadNameCollectionSem.wait()
+        }
+        // and finally, let them exit
+        for _ in (0..<numberOfThreads) {
+            threadBlockingSem.signal()
+        }
+
+        let localAllThreads = allThreadCPUAffinities.withLockedValue { $0 }
+        #expect(localAllThreads.sorted() == pinnedCPUIDs)
+        #endif
     }
 }

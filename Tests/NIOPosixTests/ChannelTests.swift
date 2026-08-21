@@ -14,11 +14,11 @@
 
 import Dispatch
 import NIOConcurrencyHelpers
+@_spi(CustomByteBufferAllocator) @testable import NIOCore
 import NIOEmbedded
 import NIOTestUtils
 import XCTest
 
-@testable import NIOCore
 @testable import NIOPosix
 
 #if os(Linux)
@@ -78,6 +78,12 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
 }
 
 final class ChannelTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("ChannelTests exercise socket channel behaviour that is not yet functional on Windows")
+        #endif
+    }
+
     func testBasicLifecycle() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let loop = group.next()
@@ -867,10 +873,10 @@ final class ChannelTests: XCTestCase {
     func testPendingWritesNoMoreThanWritevLimitIsWritten() throws {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator(
-            hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedFree: { _ in },
-            hookedMemcpy: { _, _, _ in }
+            allocate: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            reallocate: { _, _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            deallocate: { _ in },
+            copy: { _, _, _ in }
         )
         // each buffer is half the writev limit
         let halfTheWriteVLimit = Socket.writevLimitBytes / 2
@@ -909,10 +915,10 @@ final class ChannelTests: XCTestCase {
 
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator(
-            hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedFree: { _ in },
-            hookedMemcpy: { _, _, _ in }
+            allocate: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            reallocate: { _, _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            deallocate: { _ in },
+            copy: { _, _, _ in }
         )
 
         let biggerThanWriteV = Socket.writevLimitBytes + 23
@@ -3133,6 +3139,9 @@ final class ChannelTests: XCTestCase {
     }
 
     func testApplyingTwoDistinctSocketOptionsOfSameTypeWorks() throws {
+        #if os(Windows)
+        throw XCTSkip("SO_TIMESTAMP is not available on Windows")
+        #else
         let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully())
@@ -3218,6 +3227,7 @@ final class ChannelTests: XCTestCase {
         XCTAssertTrue(try getBoolSocketOption(channel: accepted3, level: .socket, name: .so_keepalive))
 
         XCTAssertFalse(try getBoolSocketOption(channel: accepted3, level: .tcp, name: .tcp_nodelay))
+        #endif
     }
 
     func testUnprocessedOutboundUserEventFailsOnServerSocketChannel() throws {
@@ -3642,6 +3652,7 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
 }
 
 private func veryNasty_blockUntilReadBufferIsNonEmpty(channel: Channel) throws {
+    #if !os(Windows)
     struct ThisIsNotASocketChannelError: Error {}
     guard let channel = channel as? SocketChannel else {
         throw ThisIsNotASocketChannelError()
@@ -3652,4 +3663,5 @@ private func veryNasty_blockUntilReadBufferIsNonEmpty(channel: Channel) throws {
             try NIOBSDSocket.poll(fds: &pollFd, nfds: 1, timeout: -1)
         XCTAssertEqual(1, nfds)
     }
+    #endif
 }

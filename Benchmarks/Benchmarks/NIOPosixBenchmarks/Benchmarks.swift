@@ -18,7 +18,7 @@ import NIOPosix
 
 private let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
 
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     let defaultMetrics: [BenchmarkMetric] = [
         .mallocCountTotal,
         .cpuTotal,
@@ -159,6 +159,51 @@ let benchmarks = {
         for _ in benchmark.scaledIterations {
             let handle = try! eventLoop.scheduleCallback(in: .hours(1), handler: timer)
         }
+    }
+
+    Benchmark(
+        "MTELG.assumeIsolated().scheduleTask(in:_:)",
+        configuration: Benchmark.Configuration(
+            metrics: defaultMetrics,
+            scalingFactor: .mega,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
+        )
+    ) { benchmark in
+        let iterations = benchmark.scaledIterations.count
+        try! eventLoop.submit {
+            benchmark.startMeasurement()
+            let isolatedEventLoop = eventLoop.assumeIsolated()
+            for _ in 0..<iterations {
+                isolatedEventLoop.scheduleTask(in: .hours(1), {})
+            }
+            benchmark.stopMeasurement()
+        }.wait()
+    }
+
+    Benchmark(
+        "MTELG.assumeIsolated().scheduleCallback(in:_:)",
+        configuration: Benchmark.Configuration(
+            metrics: defaultMetrics,
+            scalingFactor: .mega,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
+        )
+    ) { benchmark in
+        final class Timer: NIOScheduledCallbackHandler, Sendable {
+            func handleScheduledCallback(eventLoop: some EventLoop) {}
+        }
+        let timer = Timer()
+        let iterations = benchmark.scaledIterations.count
+
+        try! eventLoop.submit {
+            benchmark.startMeasurement()
+            let isolatedEventLoop = eventLoop.assumeIsolated()
+            for _ in 0..<iterations {
+                let handle = try! isolatedEventLoop.scheduleCallback(in: .hours(1), handler: timer)
+            }
+            benchmark.stopMeasurement()
+        }.wait()
     }
 
     Benchmark(

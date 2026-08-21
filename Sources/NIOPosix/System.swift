@@ -101,6 +101,7 @@ private let sysWrite = _write
 private let sysRead = _read
 private let sysLseek = _lseek
 private let sysFtruncate = _chsize_s
+private let sysClose = _close
 #endif
 
 #if os(Android)
@@ -493,7 +494,8 @@ internal enum Posix: Sendable {
     #else
     @usableFromInline
     static var UIO_MAXIOV: Int {
-        fatalError("unsupported OS")
+        // TODO: This is a placeholder value. Find the correct one for Windows.
+        64
     }
     @usableFromInline
     static var SHUT_RD: Int {
@@ -569,7 +571,7 @@ internal enum Posix: Sendable {
     #elseif os(Linux) || os(FreeBSD) || os(Android) || os(OpenBSD)
     static let SOL_UDP: CInt = CInt(IPPROTO_UDP)
     #elseif os(Windows)
-    static let SOL_UDP: CInt = CInt(IPPROTO_UDP)
+    static let SOL_UDP: CInt = CInt(IPPROTO_UDP.rawValue)
     #endif
 
     #if !os(Windows)
@@ -579,6 +581,7 @@ internal enum Posix: Sendable {
             sysShutdown(descriptor, how.cValue)
         }
     }
+    #endif
 
     @inline(never)
     public static func close(descriptor: CInt) throws {
@@ -604,6 +607,7 @@ internal enum Posix: Sendable {
         }
     }
 
+    #if !os(Windows)
     @inline(never)
     public static func bind(descriptor: CInt, ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
         _ = try syscall(blocking: false) {

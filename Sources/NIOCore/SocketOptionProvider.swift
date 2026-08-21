@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 #if canImport(Darwin)
 import Darwin
-#elseif os(Linux) || os(Android)
+#elseif os(Linux) || os(FreeBSD) || os(Android)
 #if canImport(Glibc)
 @preconcurrency import Glibc
 #elseif canImport(Musl)

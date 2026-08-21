@@ -11,9 +11,9 @@ integer encodings, in which smaller numbers can be encoded in fewer bytes.
 We have added functions to help with reading and writing data which is prefixed with lengths encoded by various
 strategies.
 
-## ``NIOBinaryIntegerEncodingStrategy`` protocol
+## NIOBinaryIntegerEncodingStrategy protocol
 
-The first building block is a protocol which describes how to encode and decode an integer.
+The first building block is the ``NIOBinaryIntegerEncodingStrategy`` protocol which describes how to encode and decode an integer.
 
 An implementation of this protocol is needed for any encoding strategy. One example is the ``ByteBuffer/QUICBinaryEncodingStrategy``.
 
@@ -30,7 +30,7 @@ Note that implementations of this protocol need to either:
   reading. This is what QUIC does.
 - Always use the same length, e.g. a simple strategy which always writes the integer as a `UInt64`.
 
-## Extensions on ``ByteBuffer``
+## Extensions on ByteBuffer
 
 To provide a more user-friendly API, we have added extensions on `ByteBuffer` for writing integers with a
 chosen ``NIOBinaryIntegerEncodingStrategy``. These are ``ByteBuffer/writeEncodedInteger(_:strategy:)``
@@ -42,7 +42,19 @@ We added further APIs on ByteBuffer for reading data, strings and buffers which 
 APIs first read an integer using a chosen encoding strategy. The integer then dictates how many bytes of data are read
 starting from after the integer.
 
+```swift
+let bytes = myBuffer.readLengthPrefixedBytes(strategy: .quic)
+let string = myBuffer.readLengthPrefixedString(strategy: .quic)
+let buffer = myBuffer.readLengthPrefixedSlice(strategy: .quic)
+```
+
 Similarly, there are APIs which take data, write its length using the provided strategy, and then write the data itself.
+
+```swift
+myBuffer.writeLengthPrefixedBytes([0x48, 0x65, 0x6c, 0x6c, 0x6f], strategy: .quic)
+myBuffer.writeLengthPrefixedString("Hello World", strategy: .quic)
+myBuffer.writeLengthPrefixedBuffer(ByteBuffer(...), strategy: .quic)
+```
 
 ## Writing complex data with a length-prefix
 

@@ -20,8 +20,8 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
     // MARK: - writeEncodedInteger tests
 
     func testWriteOneByteQUICVariableLengthInteger() {
-        // One byte, ie less than 63, just write out as-is
-        for number in 0..<63 {
+        // One byte covers 0...63 (6 bits), written out as-is
+        for number in 0...63 {
             var buffer = ByteBuffer()
             let strategy = ByteBuffer.QUICBinaryEncodingStrategy.quic
             let bytesWritten = strategy.writeInteger(number, to: &buffer)
@@ -30,6 +30,35 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
             XCTAssertEqual(buffer.readInteger(as: UInt8.self), UInt8(number))
             XCTAssertEqual(buffer.readableBytes, 0)
         }
+    }
+
+    func testBytesNeededForIntegerAtBoundaries() {
+        // The 1/2/4/8 byte encodings cover the values representable in 6/14/30/62 bits,
+        // ie up to and including 2^6-1, 2^14-1, 2^30-1 and 2^62-1 (RFC 9000 § 16).
+        let cases: [(Int64, Int)] = [
+            (62, 1), (63, 1), (64, 2),
+            (16383, 2), (16384, 4),
+            (1_073_741_823, 4), (1_073_741_824, 8),
+            (4_611_686_018_427_387_903, 8),
+        ]
+        for (value, expected) in cases {
+            XCTAssertEqual(
+                ByteBuffer.QUICBinaryEncodingStrategy.bytesNeededForInteger(value),
+                expected,
+                "wrong byte count for \(value)"
+            )
+        }
+    }
+
+    func testWriteReadMaximumQUICVariableLengthInteger() {
+        // 2^62-1 is the largest value the encoding can represent and must round-trip.
+        let maximum: Int64 = 4_611_686_018_427_387_903
+        var buffer = ByteBuffer()
+        let strategy = ByteBuffer.QUICBinaryEncodingStrategy.quic
+        let bytesWritten = strategy.writeInteger(maximum, to: &buffer)
+        XCTAssertEqual(bytesWritten, 8)
+        XCTAssertEqual(strategy.readInteger(as: Int64.self, from: &buffer), maximum)
+        XCTAssertEqual(buffer.readableBytes, 0)
     }
 
     func testWriteBigUInt8() {

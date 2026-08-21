@@ -16,6 +16,10 @@ import NIOCore
 import NIOPosix
 import XCTest
 
+// These multicast tests rely on the deprecated `System.enumerateInterfaces` /
+// `NIONetworkInterface` API, which is unavailable on Windows.
+#if !os(Windows)
+
 final class PromiseOnReadHandler: ChannelInboundHandler, Sendable {
     typealias InboundIn = AddressedEnvelope<ByteBuffer>
 
@@ -802,3 +806,5 @@ final class MulticastTest: XCTestCase {
         )
     }
 }
+
+#endif  // !os(Windows)

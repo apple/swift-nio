@@ -16,6 +16,12 @@
 import XCTest
 
 final class FileSystemErrorTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     func testFileSystemErrorCustomStringConvertible() throws {
         var error = FileSystemError(
             code: .unsupported,
@@ -399,6 +405,7 @@ final class FileSystemErrorTests: XCTestCase {
                 .badFileDescriptor: .closed,
                 .ioError: .io,
                 .illegalSeek: .unsupported,
+                .noSuchAddressOrDevice: .unsupported,
             ]
         ) { errno in
             .read(usingSyscall: .pread, error: errno, path: "", location: .fixed)
@@ -422,6 +429,7 @@ final class FileSystemErrorTests: XCTestCase {
                 .badFileDescriptor: .closed,
                 .ioError: .io,
                 .illegalSeek: .unsupported,
+                .noSuchAddressOrDevice: .unsupported,
             ]
         ) { errno in
             .write(usingSyscall: .pwrite, error: errno, path: "", location: .fixed)
@@ -433,6 +441,7 @@ final class FileSystemErrorTests: XCTestCase {
             expected: [
                 .badFileDescriptor: .closed,
                 .permissionDenied: .permissionDenied,
+                .notPermitted: .permissionDenied,
                 .fileExists: .fileAlreadyExists,
                 .ioError: .io,
                 .tooManyOpenFiles: .unavailable,

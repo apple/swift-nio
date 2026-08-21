@@ -283,6 +283,23 @@ final class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try self.decoderChannel.readAllOutboundBytes()))
     }
 
+    func testDecoderRejectsFramesWithOverflowingPayloadLength() throws {
+        XCTAssertNoThrow(
+            try self.decoderChannel.pipeline.syncOperations.addHandler(WebSocketFrameEncoder(), position: .first)
+        )
+        XCTAssertNoThrow(try self.decoderChannel.pipeline.syncOperations.addHandler(WebSocketProtocolErrorHandler()))
+
+        // 8-byte extended length with MSB set (0x8000000000000001 > Int.max), which would
+        // previously cause a Swift fatal trap inside Int(lengthQWord).
+        self.buffer.writeBytes([0x82, 0x7F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01])
+
+        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
+            XCTAssertEqual(.invalidFrameLength, error as? NIOWebSocketError)
+        }
+
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try self.decoderChannel.readAllOutboundBytes()))
+    }
+
     func testDecoderRejectsFragmentedControlFrames() throws {
         XCTAssertNoThrow(
             try self.decoderChannel.pipeline.syncOperations.addHandler(WebSocketFrameEncoder(), position: .first)

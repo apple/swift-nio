@@ -151,8 +151,6 @@ extern const unsigned int CNIOLinux_RENAME_EXCHANGE;
 extern const unsigned long CNIOLinux_UTIME_OMIT;
 extern const unsigned long CNIOLinux_UTIME_NOW;
 
-extern const long CNIOLinux_UDP_MAX_SEGMENTS;
-
 // Filesystem magic constants for cgroup detection
 #ifdef __ANDROID__
 #if defined(__LP64__)

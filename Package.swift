@@ -1,4 +1,4 @@
-// swift-tools-version:6.0
+// swift-tools-version:6.1
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -51,6 +51,7 @@ let package = Package(
         .library(name: "NIOTLS", targets: ["NIOTLS"]),
         .library(name: "NIOHTTP1", targets: ["NIOHTTP1"]),
         .library(name: "NIOConcurrencyHelpers", targets: ["NIOConcurrencyHelpers"]),
+        .library(name: "NIOFoundationEssentialsCompat", targets: ["NIOFoundationEssentialsCompat"]),
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
@@ -66,6 +67,7 @@ let package = Package(
                 "NIOConcurrencyHelpers",
                 "_NIOBase64",
                 "CNIOOpenBSD",
+                "CNIOFreeBSD",
                 "CNIODarwin",
                 "CNIOLinux",
                 "CNIOWindows",
@@ -130,10 +132,17 @@ let package = Package(
             swiftSettings: swiftSettings
         ),
         .target(
+            name: "NIOFoundationEssentialsCompat",
+            dependencies: [
+                "NIOCore"
+            ],
+            swiftSettings: swiftSettings
+        ),
+        .target(
             name: "NIOFoundationCompat",
             dependencies: [
                 .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
-                "NIOCore",
+                "NIOFoundationEssentialsCompat",
             ],
             swiftSettings: swiftSettings
         ),
@@ -157,6 +166,10 @@ let package = Package(
         ),
         .target(
             name: "CNIOOpenBSD",
+            dependencies: []
+        ),
+        .target(
+            name: "CNIOFreeBSD",
             dependencies: []
         ),
         .target(
@@ -244,6 +257,7 @@ let package = Package(
                 "NIOPosix",
                 "CNIOLinux",
                 "CNIODarwin",
+                "CNIOWindows",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
@@ -259,7 +273,7 @@ let package = Package(
             name: "NIOFSFoundationCompat",
             dependencies: [
                 "NIOFS",
-                "NIOFoundationCompat",
+                "NIOFoundationEssentialsCompat",
             ],
             path: "Sources/NIOFSFoundationCompat",
             swiftSettings: swiftSettings
@@ -272,6 +286,7 @@ let package = Package(
                 "NIOPosix",
                 "CNIOLinux",
                 "CNIODarwin",
+                "CNIOWindows",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
@@ -287,7 +302,7 @@ let package = Package(
             name: "_NIOFileSystemFoundationCompat",
             dependencies: [
                 "_NIOFileSystem",
-                "NIOFoundationCompat",
+                "NIOFoundationEssentialsCompat",
             ],
             path: "Sources/_NIOFileSystemFoundationCompat",
             swiftSettings: swiftSettings
@@ -449,18 +464,7 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOFoundationCompat",
                 "NIOWebSocket",
-            ],
-            swiftSettings: swiftSettings
-        ),
-        .executableTarget(
-            name: "NIOCrashTester",
-            dependencies: [
-                "NIOPosix",
-                "NIOCore",
-                "NIOEmbedded",
-                "NIOHTTP1",
-                "NIOWebSocket",
-                "NIOFoundationCompat",
+                "CNIOWindows",
             ],
             swiftSettings: swiftSettings
         ),
@@ -566,6 +570,7 @@ let package = Package(
             dependencies: [
                 "NIOCore",
                 "NIOFoundationCompat",
+                "NIOPosix",
             ],
             swiftSettings: swiftSettings
         ),

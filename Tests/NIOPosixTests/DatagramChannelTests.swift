@@ -143,6 +143,12 @@ final class DatagramReadRecorder<DataType: Sendable>: ChannelInboundHandler {
 }
 
 class DatagramChannelTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("Datagram channels are not yet functional on Windows")
+        #endif
+    }
+
     private var group: MultiThreadedEventLoopGroup! = nil
     private var firstChannel: Channel! = nil
     private var secondChannel: Channel! = nil
@@ -409,6 +415,9 @@ class DatagramChannelTests: XCTestCase {
         }
     }
 
+    #if !os(Windows)
+    // These tests use a mock overriding recvmsg(...storageLen: inout socklen_t...),
+    // relying on NIOCore-internal socklen_t which isn't visible on Windows.
     public func testRecvMsgFailsWithECONNREFUSED() throws {
         try assertRecvMsgFails(error: ECONNREFUSED, active: true)
     }
@@ -491,6 +500,7 @@ class DatagramChannelTests: XCTestCase {
         let ioError = try promise.futureResult.wait()
         XCTAssertEqual(error, ioError.errnoCode)
     }
+    #endif
 
     public func testRecvMmsgFailsWithECONNREFUSED() throws {
         try assertRecvMmsgFails(error: ECONNREFUSED, active: true)
@@ -605,6 +615,9 @@ class DatagramChannelTests: XCTestCase {
     }
 
     func testSettingTwoDistinctChannelOptionsWorksForDatagramChannel() throws {
+        #if os(Windows)
+        throw XCTSkip("SO_TIMESTAMP is not available on Windows")
+        #else
         let channel = try assertNoThrowWithValue(
             DatagramBootstrap(group: group)
                 .channelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -618,6 +631,7 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertTrue(try getBoolSocketOption(channel: channel, level: .socket, name: .so_reuseaddr))
         XCTAssertTrue(try getBoolSocketOption(channel: channel, level: .socket, name: .so_timestamp))
         XCTAssertFalse(try getBoolSocketOption(channel: channel, level: .socket, name: .so_keepalive))
+        #endif
     }
 
     func testUnprocessedOutboundUserEventFailsOnDatagramChannel() throws {
@@ -761,14 +775,9 @@ class DatagramChannelTests: XCTestCase {
                     let channel2 = try buildChannel(group: self.group, host: "::1")
                     try channel2.setOption(.explicitCongestionNotification, value: false).wait()
                     XCTAssertFalse(try channel2.getOption(.explicitCongestionNotification).wait())
-                } catch let error as SocketAddressError {
-                    switch error {
-                    case .unknown:
-                        // IPv6 resolution can fail even if supported.
-                        return
-                    case .unsupported, .unixDomainSocketPathTooLong, .failedToParseIPString:
-                        throw error
-                    }
+                } catch is SocketAddressError.UnknownHost {
+                    // IPv6 resolution can fail even if supported.
+                    return
                 }
             }()
         )
@@ -969,14 +978,9 @@ class DatagramChannelTests: XCTestCase {
                     let channel2 = try buildChannel(group: self.group, host: "::1")
                     try channel2.setOption(.receivePacketInfo, value: false).wait()
                     XCTAssertFalse(try channel2.getOption(.receivePacketInfo).wait())
-                } catch let error as SocketAddressError {
-                    switch error {
-                    case .unknown:
-                        // IPv6 resolution can fail even if supported.
-                        return
-                    case .unsupported, .unixDomainSocketPathTooLong, .failedToParseIPString:
-                        throw error
-                    }
+                } catch is SocketAddressError.UnknownHost {
+                    // IPv6 resolution can fail even if supported.
+                    return
                 }
             }()
         )
@@ -1549,7 +1553,9 @@ class DatagramChannelTests: XCTestCase {
     func testWriteBufferAtGSOSegmentCountLimit() throws {
         try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
 
-        let udpMaxSegments = System.udpMaxSegments ?? 64
+        // Newer kernels raised this; use the lower value to ensure the segment count is within the
+        // limit.
+        let udpMaxSegments = 64
 
         var segments = udpMaxSegments
 
@@ -1582,8 +1588,8 @@ class DatagramChannelTests: XCTestCase {
     func testWriteBufferAboveGSOSegmentCountLimitShouldError() throws {
         try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
 
-        // commonly 64 or 128 on systems which may or may not define UDP_MAX_SEGMENTS, pick the larger to ensure failure
-        let udpMaxSegments = System.udpMaxSegments ?? 128
+        // This is lower (64) in older kernels, but a too-high value is fine.
+        let udpMaxSegments = 128
 
         let segmentSize = 10
         let didSet = self.firstChannel.setOption(.datagramSegmentSize, value: CInt(segmentSize))

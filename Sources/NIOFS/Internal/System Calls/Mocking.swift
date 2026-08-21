@@ -300,6 +300,11 @@ internal var system_errno: CInt {
     get { Android.errno }
     set { Android.errno = newValue }
 }
+#elseif os(Windows)
+internal var system_errno: CInt {
+    get { _nio_fs_errno }
+    set { _nio_fs_errno = newValue }
+}
 #endif
 
 // MARK: C stdlib decls
@@ -343,14 +348,22 @@ extension String {
         _ body: (UnsafePointer<CInterop.PlatformChar>) throws -> Result
     ) rethrows -> Result {
         // Need to #if because CChar may be signed
-        try withCString(body)
+        #if os(Windows)
+        return try self.withCString(encodedAs: UTF16.self, body)
+        #else
+        return try withCString(body)
+        #endif
     }
 
     internal init(
         _errorCorrectingPlatformString platformString: UnsafePointer<CInterop.PlatformChar>
     ) {
         // Need to #if because CChar may be signed
+        #if os(Windows)
+        self.init(decodingCString: platformString, as: UTF16.self)
+        #else
         self.init(cString: platformString)
+        #endif
     }
 }
 

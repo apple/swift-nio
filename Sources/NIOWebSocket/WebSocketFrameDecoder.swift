@@ -108,7 +108,7 @@ struct WSParser {
     /// The current state of the decoder during incremental parse.
     var state: DecoderState = .idle
 
-    mutating func parseStep(_ buffer: inout ByteBuffer) -> ParseResult {
+    mutating func parseStep(_ buffer: inout ByteBuffer) throws -> ParseResult {
         switch self.state {
         case .idle:
             // This is a new buffer. We want to find the first octet and save it off.
@@ -160,10 +160,14 @@ struct WSParser {
                 return .insufficientData
             }
 
+            guard lengthQWord <= UInt64(Int.max) else {
+                throw NIOWebSocketError.invalidFrameLength
+            }
+            let length = Int(lengthQWord)
             if masked {
-                self.state = .waitingForMask(firstByte: firstByte, length: Int(lengthQWord))
+                self.state = .waitingForMask(firstByte: firstByte, length: length)
             } else {
-                self.state = .waitingForData(firstByte: firstByte, length: Int(lengthQWord), maskingKey: nil)
+                self.state = .waitingForData(firstByte: firstByte, length: length, maskingKey: nil)
             }
             return .continueParsing
 
@@ -261,7 +265,7 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
         // rely on that: sometimes we have zero-length elements to parse, and the caller doesn't
         // guarantee to call us with zero-length bytes.
         while true {
-            switch parser.parseStep(&buffer) {
+            switch try parser.parseStep(&buffer) {
             case .result(let frame):
                 context.fireChannelRead(WebSocketFrameDecoder.wrapInboundOut(frame))
                 return .continue

@@ -33,6 +33,9 @@ public struct NIOUpgradableHTTPServerPipelineConfiguration<UpgradeResult: Sendab
     /// The configuration for the ``HTTPResponseEncoder``.
     public var encoderConfiguration = HTTPResponseEncoder.Configuration()
 
+    /// The configuration for the ``HTTPRequestDecoder``'s parsing limits.
+    public var decoderConfiguration = NIOHTTPDecoderLimitConfiguration()
+
     /// The configuration for the ``NIOTypedHTTPServerUpgradeHandler``.
     public var upgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult>
 
@@ -103,7 +106,15 @@ extension ChannelPipeline.SynchronousOperations {
         self.eventLoop.assertInEventLoop()
 
         let responseEncoder = HTTPResponseEncoder(configuration: configuration.encoderConfiguration)
-        let requestDecoder = ByteToMessageHandler(HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes))
+        // The encoder is outbound-only; the request decoder feeds it each decoded request's method
+        // so responses to HEAD/CONNECT are encoded without a body.
+        let requestDecoder = ByteToMessageHandler(
+            HTTPRequestDecoder(
+                leftOverBytesStrategy: .forwardBytes,
+                limitConfiguration: configuration.decoderConfiguration,
+                responseEncoder: responseEncoder
+            )
+        )
 
         var extraHTTPHandlers = [RemovableChannelHandler]()
         extraHTTPHandlers.reserveCapacity(4)
@@ -155,6 +166,9 @@ public struct NIOUpgradableHTTPClientPipelineConfiguration<UpgradeResult: Sendab
 
     /// The configuration for the ``HTTPRequestEncoder``.
     public var encoderConfiguration = HTTPRequestEncoder.Configuration()
+
+    /// The configuration for the ``HTTPResponseDecoder``'s parsing limits.
+    public var decoderConfiguration = NIOHTTPDecoderLimitConfiguration()
 
     /// The configuration for the ``NIOTypedHTTPClientUpgradeHandler``.
     public var upgradeConfiguration: NIOTypedHTTPClientUpgradeConfiguration<UpgradeResult>
@@ -223,7 +237,10 @@ extension ChannelPipeline.SynchronousOperations {
 
         let requestEncoder = HTTPRequestEncoder(configuration: configuration.encoderConfiguration)
         let responseDecoder = ByteToMessageHandler(
-            HTTPResponseDecoder(leftOverBytesStrategy: configuration.leftOverBytesStrategy)
+            HTTPResponseDecoder(
+                leftOverBytesStrategy: configuration.leftOverBytesStrategy,
+                limitConfiguration: configuration.decoderConfiguration
+            )
         )
         var httpHandlers = [RemovableChannelHandler]()
         httpHandlers.reserveCapacity(3)

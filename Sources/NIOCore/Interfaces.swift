@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if os(Linux) || os(FreeBSD) || os(Android)
+#if os(Linux) || os(Android)
 #if canImport(Glibc)
 @preconcurrency import Glibc
 #elseif canImport(Musl)
@@ -20,6 +20,9 @@
 @preconcurrency import Bionic
 #endif
 import CNIOLinux
+#elseif os(FreeBSD)
+@preconcurrency import Glibc
+import CNIOFreeBSD
 #elseif os(OpenBSD)
 import CNIOOpenBSD
 #elseif canImport(Darwin)
@@ -53,7 +56,7 @@ extension ifaddrs {
     fileprivate var dstaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux) || os(Android)
         return self.ifa_ifu.ifu_dstaddr
-        #elseif canImport(Darwin) || os(OpenBSD)
+        #elseif canImport(Darwin) || os(FreeBSD) || os(OpenBSD)
         return self.ifa_dstaddr
         #endif
     }
@@ -61,7 +64,7 @@ extension ifaddrs {
     fileprivate var broadaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux) || os(Android)
         return self.ifa_ifu.ifu_broadaddr
-        #elseif canImport(Darwin) || os(OpenBSD)
+        #elseif canImport(Darwin) || os(FreeBSD) || os(OpenBSD)
         return self.ifa_dstaddr
         #endif
     }

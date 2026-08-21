@@ -149,6 +149,20 @@ internal func system_symlink(
     return symlink(destination, source)
 }
 
+/// symlinkat(2): Make symbolic link to a file relative to directory file descriptor
+internal func system_symlinkat(
+    _ destination: UnsafePointer<CInterop.PlatformChar>,
+    _ dirfd: FileDescriptor.RawValue,
+    _ source: UnsafePointer<CInterop.PlatformChar>
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(destination, dirfd, source)
+    }
+    #endif
+    return symlinkat(destination, dirfd, source)
+}
+
 /// readlink(2): Read value of a symolic link
 internal func system_readlink(
     _ path: UnsafePointer<CInterop.PlatformChar>,
@@ -179,13 +193,15 @@ internal func system_flistxattr(
     return flistxattr(fd, namebuf, size, 0)
     #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return flistxattr(fd, namebuf, size)
+    #elseif os(Windows)
+    fatalError("flistxattr is unavailable on Windows")
     #endif
 }
 
 /// fgetxattr(2): Get an extended attribute value
 internal func system_fgetxattr(
     _ fd: FileDescriptor.RawValue,
-    _ name: UnsafePointer<CChar>,
+    _ name: UnsafePointer<CInterop.PlatformChar>,
     _ value: UnsafeMutableRawPointer?,
     _ size: Int
 ) -> Int {
@@ -201,13 +217,15 @@ internal func system_fgetxattr(
     return fgetxattr(fd, name, value, size, 0, 0)
     #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fgetxattr(fd, name, value, size)
+    #elseif os(Windows)
+    fatalError("fgetxattr is unavailable on Windows")
     #endif
 }
 
 /// fsetxattr(2): Set an extended attribute value
 internal func system_fsetxattr(
     _ fd: FileDescriptor.RawValue,
-    _ name: UnsafePointer<CChar>,
+    _ name: UnsafePointer<CInterop.PlatformChar>,
     _ value: UnsafeRawPointer?,
     _ size: Int
 ) -> CInt {
@@ -223,13 +241,15 @@ internal func system_fsetxattr(
     return fsetxattr(fd, name, value, size, 0, 0)
     #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fsetxattr(fd, name, value, size, 0)
+    #elseif os(Windows)
+    fatalError("fsetxattr is unavailable on Windows")
     #endif
 }
 
 /// fremovexattr(2): Remove an extended attribute value
 internal func system_fremovexattr(
     _ fd: FileDescriptor.RawValue,
-    _ name: UnsafePointer<CChar>
+    _ name: UnsafePointer<CInterop.PlatformChar>
 ) -> CInt {
     #if ENABLE_MOCKING
     if mockingEnabled {
@@ -242,6 +262,8 @@ internal func system_fremovexattr(
     return fremovexattr(fd, name, 0)
     #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fremovexattr(fd, name)
+    #elseif os(Windows)
+    fatalError("fremovexattr is unavailable on Windows")
     #endif
 }
 
@@ -270,6 +292,22 @@ internal func system_renamex_np(
     }
     #endif
     return renamex_np(old, new, flags)
+}
+
+/// renameatx_np(2): Rename a file relative to directory file descriptors
+internal func system_renameatx_np(
+    _ oldFD: FileDescriptor.RawValue,
+    _ old: UnsafePointer<CInterop.PlatformChar>,
+    _ newFD: FileDescriptor.RawValue,
+    _ new: UnsafePointer<CInterop.PlatformChar>,
+    _ flags: CUnsignedInt
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(oldFD, old, newFD, new, flags)
+    }
+    #endif
+    return renameatx_np(oldFD, old, newFD, new, flags)
 }
 #endif
 
@@ -331,6 +369,20 @@ internal func system_unlink(
     }
     #endif
     return unlink(path)
+}
+
+/// unlinkat(2): Remove a directory entry relative to a directory file descriptor
+internal func system_unlinkat(
+    _ fd: FileDescriptor.RawValue,
+    _ path: UnsafePointer<CInterop.PlatformChar>,
+    _ flags: CInt
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(fd, path, flags)
+    }
+    #endif
+    return unlinkat(fd, path, flags)
 }
 
 #if canImport(Glibc) || canImport(Musl) || canImport(Android)
