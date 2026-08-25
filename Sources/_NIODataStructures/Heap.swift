@@ -30,7 +30,7 @@ import ucrt
 @usableFromInline
 internal struct Heap<Element: Comparable> {
     @usableFromInline
-    internal private(set) var storage: [Element]
+    internal /* private(set) */ var storage: [Element]
 
     @inlinable
     internal init() {

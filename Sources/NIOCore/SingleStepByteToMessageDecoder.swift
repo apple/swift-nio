@@ -195,11 +195,11 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     }
 
     @usableFromInline
-    internal private(set) var decoder: Decoder
+    internal /* private(set) */ var decoder: Decoder
     @usableFromInline
     let maximumBufferSize: Int?
     @usableFromInline
-    internal private(set) var _buffer: ByteBuffer?
+    internal /* private(set) */ var _buffer: ByteBuffer?
 
     /// Initialize a `NIOSingleStepByteToMessageProcessor`.
     ///
