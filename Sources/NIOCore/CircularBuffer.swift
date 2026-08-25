@@ -19,11 +19,23 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
     @usableFromInline
     internal var _buffer: ContiguousArray<Element?>
 
+    /// - Note: Must only be modified by `CircularBuffer` itself, use ``headBackingIndex`` to read it.
     @usableFromInline
-    internal var headBackingIndex: Int
+    internal var _headBackingIndex: Int
 
+    /// - Note: Must only be modified by `CircularBuffer` itself, use ``tailBackingIndex`` to read it.
     @usableFromInline
-    internal var tailBackingIndex: Int
+    internal var _tailBackingIndex: Int
+
+    @inlinable
+    internal var headBackingIndex: Int {
+        self._headBackingIndex
+    }
+
+    @inlinable
+    internal var tailBackingIndex: Int {
+        self._tailBackingIndex
+    }
 
     @inlinable
     internal var mask: Int {
@@ -32,12 +44,12 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
 
     @inlinable
     internal mutating func advanceHeadIdx(by: Int) {
-        self.headBackingIndex = indexAdvanced(index: self.headBackingIndex, by: by)
+        self._headBackingIndex = indexAdvanced(index: self.headBackingIndex, by: by)
     }
 
     @inlinable
     internal mutating func advanceTailIdx(by: Int) {
-        self.tailBackingIndex = indexAdvanced(index: self.tailBackingIndex, by: by)
+        self._tailBackingIndex = indexAdvanced(index: self.tailBackingIndex, by: by)
     }
 
     @inlinable
@@ -65,7 +77,13 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
     public struct Index: Comparable, Sendable {
         @usableFromInline var _backingIndex: UInt32
         @usableFromInline var _backingCheck: _UInt24
-        @usableFromInline var isIndexGEQHeadIndex: Bool
+        /// - Note: Must only be modified by `Index` itself, use ``isIndexGEQHeadIndex`` to read it.
+        @usableFromInline var _isIndexGEQHeadIndex: Bool
+
+        @inlinable
+        internal var isIndexGEQHeadIndex: Bool {
+            self._isIndexGEQHeadIndex
+        }
 
         @inlinable
         internal var backingIndex: Int {
@@ -74,7 +92,7 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
 
         @inlinable
         internal init(backingIndex: Int, backingCount: Int, backingIndexOfHead: Int) {
-            self.isIndexGEQHeadIndex = backingIndex >= backingIndexOfHead
+            self._isIndexGEQHeadIndex = backingIndex >= backingIndexOfHead
             self._backingCheck = .max
             self._backingIndex = UInt32(backingIndex)
             debugOnly {
@@ -315,8 +333,8 @@ extension CircularBuffer: RandomAccessCollection {
             precondition(self.distance(from: bounds.upperBound, to: self.endIndex) >= 0)
 
             var newRing = self
-            newRing.headBackingIndex = bounds.lowerBound.backingIndex
-            newRing.tailBackingIndex = bounds.upperBound.backingIndex
+            newRing._headBackingIndex = bounds.lowerBound.backingIndex
+            newRing._tailBackingIndex = bounds.upperBound.backingIndex
             return newRing
         }
         set {
@@ -335,8 +353,8 @@ extension CircularBuffer {
     @inlinable
     public init(initialCapacity: Int) {
         let capacity = Int(UInt32(initialCapacity).nextPowerOf2())
-        self.headBackingIndex = 0
-        self.tailBackingIndex = 0
+        self._headBackingIndex = 0
+        self._tailBackingIndex = 0
         self._buffer = ContiguousArray<Element?>(repeating: nil, count: capacity)
         assert(self._buffer.count == capacity)
     }
@@ -399,8 +417,8 @@ extension CircularBuffer {
         let paddingCount = newCapacity &- newTailIndex
         newBacking.append(contentsOf: repeatElement(nil, count: paddingCount))
 
-        self.headBackingIndex = 0
-        self.tailBackingIndex = newTailIndex
+        self._headBackingIndex = 0
+        self._tailBackingIndex = newTailIndex
         self._buffer = newBacking
         assert(self.verifyInvariants())
     }
@@ -428,8 +446,8 @@ extension CircularBuffer {
         let paddingCount = newCapacity &- newTailIndex
         newBacking.append(contentsOf: repeatElement(nil, count: paddingCount))
 
-        self.headBackingIndex = 0
-        self.tailBackingIndex = newTailIndex
+        self._headBackingIndex = 0
+        self._tailBackingIndex = newTailIndex
         self._buffer = newBacking
         assert(self.verifyInvariants())
     }
@@ -478,8 +496,8 @@ extension CircularBuffer {
             self._buffer.removeAll(keepingCapacity: false)
             self._buffer.append(nil)
         }
-        self.headBackingIndex = 0
-        self.tailBackingIndex = 0
+        self._headBackingIndex = 0
+        self._tailBackingIndex = 0
         assert(self.verifyInvariants())
     }
 
@@ -587,7 +605,7 @@ extension CircularBuffer: RangeReplaceableCollection {
             idx = self.indexAdvanced(index: idx, by: -1)
             self._buffer[idx] = nil
         }
-        self.tailBackingIndex = idx
+        self._tailBackingIndex = idx
     }
 
     /// Removes the specified number of elements from the beginning of the
@@ -609,7 +627,7 @@ extension CircularBuffer: RangeReplaceableCollection {
             self._buffer[idx] = nil
             idx = self.indexAdvanced(index: idx, by: 1)
         }
-        self.headBackingIndex = idx
+        self._headBackingIndex = idx
     }
 
     /// Removes and returns the first element of the `CircularBuffer`.
@@ -707,8 +725,8 @@ extension CircularBuffer: RangeReplaceableCollection {
                 newBuffer.append(contentsOf: repeatElement(nil, count: repetitionCount))
             }
             self._buffer = newBuffer
-            self.headBackingIndex = 0
-            self.tailBackingIndex = newBuffer.count &- repetitionCount
+            self._headBackingIndex = 0
+            self._tailBackingIndex = newBuffer.count &- repetitionCount
         }
         assert(self.verifyInvariants())
     }

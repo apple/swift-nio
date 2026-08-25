@@ -30,11 +30,19 @@ import ucrt
 @usableFromInline
 internal struct Heap<Element: Comparable> {
     @usableFromInline
-    internal var storage: [Element]
+    internal var _storage: [Element]
+
+    /// Read-only view of the heap's backing storage.
+    ///
+    /// - Note: `_storage` must only be modified by `Heap` itself.
+    @inlinable
+    internal var storage: [Element] {
+        self._storage
+    }
 
     @inlinable
     internal init() {
-        self.storage = []
+        self._storage = []
     }
 
     @inlinable
@@ -68,18 +76,18 @@ internal struct Heap<Element: Comparable> {
         let right = self.rightIndex(index)
 
         var root: Int
-        if left <= (self.storage.count - 1) && self.comparator(storage[left], storage[index]) {
+        if left <= (self._storage.count - 1) && self.comparator(self._storage[left], self._storage[index]) {
             root = left
         } else {
             root = index
         }
 
-        if right <= (self.storage.count - 1) && self.comparator(storage[right], storage[root]) {
+        if right <= (self._storage.count - 1) && self.comparator(self._storage[right], self._storage[root]) {
             root = right
         }
 
         if root != index {
-            self.storage.swapAt(index, root)
+            self._storage.swapAt(index, root)
             self._heapify(root)
         }
     }
@@ -88,23 +96,23 @@ internal struct Heap<Element: Comparable> {
     @inlinable
     mutating func _heapRootify(index: Int, key: Element) {
         var index = index
-        if self.comparator(storage[index], key) {
+        if self.comparator(self._storage[index], key) {
             fatalError("New key must be closer to the root than current key")
         }
 
-        self.storage[index] = key
-        while index > 0 && self.comparator(self.storage[index], self.storage[self.parentIndex(index)]) {
-            self.storage.swapAt(index, self.parentIndex(index))
+        self._storage[index] = key
+        while index > 0 && self.comparator(self._storage[index], self._storage[self.parentIndex(index)]) {
+            self._storage.swapAt(index, self.parentIndex(index))
             index = self.parentIndex(index)
         }
     }
 
     @inlinable
     internal mutating func append(_ value: Element) {
-        var i = self.storage.count
-        self.storage.append(value)
-        while i > 0 && self.comparator(self.storage[i], self.storage[self.parentIndex(i)]) {
-            self.storage.swapAt(i, self.parentIndex(i))
+        var i = self._storage.count
+        self._storage.append(value)
+        while i > 0 && self.comparator(self._storage[i], self._storage[self.parentIndex(i)]) {
+            self._storage.swapAt(i, self.parentIndex(i))
             i = self.parentIndex(i)
         }
     }
@@ -118,7 +126,7 @@ internal struct Heap<Element: Comparable> {
     @discardableResult
     @inlinable
     internal mutating func remove(value: Element) -> Bool {
-        if let idx = self.storage.firstIndex(of: value) {
+        if let idx = self._storage.firstIndex(of: value) {
             self._remove(index: idx)
             return true
         } else {
@@ -129,11 +137,11 @@ internal struct Heap<Element: Comparable> {
     @discardableResult
     @inlinable
     internal mutating func removeFirst(where shouldBeRemoved: (Element) throws -> Bool) rethrows -> Element? {
-        guard self.storage.count > 0 else {
+        guard self._storage.count > 0 else {
             return nil
         }
 
-        guard let index = try self.storage.firstIndex(where: shouldBeRemoved) else {
+        guard let index = try self._storage.firstIndex(where: shouldBeRemoved) else {
             return nil
         }
 
@@ -143,18 +151,18 @@ internal struct Heap<Element: Comparable> {
     @discardableResult
     @inlinable
     mutating func _remove(index: Int) -> Element? {
-        guard self.storage.count > 0 else {
+        guard self._storage.count > 0 else {
             return nil
         }
-        let element = self.storage[index]
-        if self.storage.count == 1 || self.storage[index] == self.storage[self.storage.count - 1] {
-            self.storage.removeLast()
-        } else if !self.comparator(self.storage[index], self.storage[self.storage.count - 1]) {
-            self._heapRootify(index: index, key: self.storage[self.storage.count - 1])
-            self.storage.removeLast()
+        let element = self._storage[index]
+        if self._storage.count == 1 || self._storage[index] == self._storage[self._storage.count - 1] {
+            self._storage.removeLast()
+        } else if !self.comparator(self._storage[index], self._storage[self._storage.count - 1]) {
+            self._heapRootify(index: index, key: self._storage[self._storage.count - 1])
+            self._storage.removeLast()
         } else {
-            self.storage[index] = self.storage[self.storage.count - 1]
-            self.storage.removeLast()
+            self._storage[index] = self._storage[self._storage.count - 1]
+            self._storage.removeLast()
             self._heapify(index)
         }
         return element
@@ -164,10 +172,10 @@ internal struct Heap<Element: Comparable> {
 extension Heap: CustomDebugStringConvertible {
     @inlinable
     var debugDescription: String {
-        guard self.storage.count > 0 else {
+        guard self._storage.count > 0 else {
             return "<empty heap>"
         }
-        let descriptions = self.storage.map { String(describing: $0) }
+        let descriptions = self._storage.map { String(describing: $0) }
         let maxLen: Int = descriptions.map { $0.count }.max()!  // storage checked non-empty above
         let paddedDescs = descriptions.map { (desc: String) -> String in
             var desc = desc
@@ -188,11 +196,11 @@ extension Heap: CustomDebugStringConvertible {
             let rcIdx = self.rightIndex(rootIndex)
             var leftSpace = 0
             var rightSpace = 0
-            if lcIdx < self.storage.count {
+            if lcIdx < self._storage.count {
                 let sws = subtreeWidths(rootIndex: lcIdx)
                 leftSpace += sws.0 + sws.1 + maxLen
             }
-            if rcIdx < self.storage.count {
+            if rcIdx < self._storage.count {
                 let sws = subtreeWidths(rootIndex: rcIdx)
                 rightSpace += sws.0 + sws.1 + maxLen
             }
@@ -239,17 +247,17 @@ struct HeapIterator<Element: Comparable>: IteratorProtocol {
 extension Heap: Sequence {
     @inlinable
     var startIndex: Int {
-        self.storage.startIndex
+        self._storage.startIndex
     }
 
     @inlinable
     var endIndex: Int {
-        self.storage.endIndex
+        self._storage.endIndex
     }
 
     @inlinable
     var underestimatedCount: Int {
-        self.storage.count
+        self._storage.count
     }
 
     @inlinable
@@ -259,7 +267,7 @@ extension Heap: Sequence {
 
     @inlinable
     subscript(position: Int) -> Element {
-        self.storage[position]
+        self._storage[position]
     }
 
     @inlinable
@@ -269,7 +277,7 @@ extension Heap: Sequence {
 
     @inlinable
     var count: Int {
-        self.storage.count
+        self._storage.count
     }
 }
 
