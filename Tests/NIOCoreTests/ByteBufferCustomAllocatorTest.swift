@@ -14,8 +14,9 @@
 
 import Atomics
 import NIOConcurrencyHelpers
-@_spi(CustomByteBufferAllocator) @testable import NIOCore
 import XCTest
+
+@_spi(CustomByteBufferAllocator) @testable import NIOCore
 
 // Module-level tracker and hooks (required because C function pointers can't be instance methods)
 private final class AllocationTracker {

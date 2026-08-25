@@ -14,11 +14,11 @@
 
 import Dispatch
 import NIOConcurrencyHelpers
-@_spi(CustomByteBufferAllocator) @testable import NIOCore
 import NIOEmbedded
 import NIOTestUtils
 import XCTest
 
+@_spi(CustomByteBufferAllocator) @testable import NIOCore
 @testable import NIOPosix
 
 #if os(Linux)

@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_spi(Testing) @testable import NIOFS
 import SystemPackage
 import XCTest
+
+@_spi(Testing) @testable import NIOFS
 
 #if canImport(System)
 import System

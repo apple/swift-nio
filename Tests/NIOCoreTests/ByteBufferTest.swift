@@ -13,12 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
-@_spi(CustomByteBufferAllocator) @testable import NIOCore
 import NIOFoundationCompat
 import XCTest
 import _NIOBase64
 
 import struct Foundation.Data
+
+@_spi(CustomByteBufferAllocator) @testable import NIOCore
 
 class ByteBufferTest: XCTestCase {
     private let allocator = ByteBufferAllocator()

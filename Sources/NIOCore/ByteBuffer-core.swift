@@ -43,8 +43,8 @@ extension _ByteBufferSlice: Equatable {}
 /// fits within 24 bits, otherwise the behaviour is undefined.
 @usableFromInline
 struct _ByteBufferSlice: Sendable {
-    @usableFromInline /* private(set) */ var upperBound: ByteBuffer._Index
-    @usableFromInline /* private(set) */ var _begin: _UInt24
+    @usableFromInline /*private(set)*/ var upperBound: ByteBuffer._Index
+    @usableFromInline /*private(set)*/ var _begin: _UInt24
     @inlinable var lowerBound: ByteBuffer._Index {
         UInt32(self._begin)
     }
@@ -324,8 +324,8 @@ public struct ByteBuffer {
     // MARK: Internal _Storage for CoW
     /// Note: This class is **not** thread-safe
     @usableFromInline final class _Storage {
-        @usableFromInline /* private(set) */ var capacity: _Capacity
-        @usableFromInline /* private(set) */ var bytes: UnsafeMutableRawPointer
+        @usableFromInline /*private(set)*/ var capacity: _Capacity
+        @usableFromInline /*private(set)*/ var bytes: UnsafeMutableRawPointer
         @usableFromInline let allocator: ByteBufferAllocator
 
         @inlinable
