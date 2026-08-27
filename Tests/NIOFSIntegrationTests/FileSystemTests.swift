@@ -70,6 +70,121 @@ final class FileSystemTests: XCTestCase {
 
     var fs: FileSystem { .shared }
 
+
+    func testSetLastAccessAndDataModificationTimes() async throws {
+        let path = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(forWritingAt: path, options: .newFile(replaceExisting: false)) { _ in }
+
+        let originalInfo = try await self.fs.info(forFileAt: path)
+        let originalLastAccessTime = originalInfo?.lastAccessTime
+        let originalLastDataModificationTime = originalInfo?.lastDataModificationTime
+
+        let newAccessTime = FileInfo.Timespec(seconds: 10, nanoseconds: 5)
+        let newDataModTime = FileInfo.Timespec(seconds: 20, nanoseconds: 25)
+
+        try await self.fs.setTimes(forFileAt: path, lastAccess: newAccessTime, lastDataModification: newDataModTime)
+
+        let newInfo = try await self.fs.info(forFileAt: path)
+        XCTAssertEqual(newInfo?.lastAccessTime, newAccessTime)
+        XCTAssertEqual(newInfo?.lastDataModificationTime, newDataModTime)
+        XCTAssertNotEqual(newInfo?.lastAccessTime, originalLastAccessTime)
+        XCTAssertNotEqual(newInfo?.lastDataModificationTime, originalLastDataModificationTime)
+
+        try await self.fs.removeItem(at: path)
+    }
+
+    func testSetLastAccessTime() async throws {
+        let path = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(forWritingAt: path, options: .newFile(replaceExisting: false)) { _ in }
+
+        let originalInfo = try await self.fs.info(forFileAt: path)
+        let originalLastDataModificationTime = originalInfo?.lastDataModificationTime
+
+        let newAccessTime = FileInfo.Timespec(seconds: 10, nanoseconds: 5)
+        try await self.fs.setLastAccessTime(forFileAt: path, to: newAccessTime)
+
+        let newInfo = try await self.fs.info(forFileAt: path)
+        XCTAssertEqual(newInfo?.lastAccessTime, newAccessTime)
+        XCTAssertEqual(newInfo?.lastDataModificationTime, originalLastDataModificationTime)
+
+        try await self.fs.removeItem(at: path)
+    }
+
+    func testSetLastDataModificationTime() async throws {
+        let path = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(forWritingAt: path, options: .newFile(replaceExisting: false)) { _ in }
+
+        let originalInfo = try await self.fs.info(forFileAt: path)
+        let originalLastAccessTime = originalInfo?.lastAccessTime
+
+        let newDataModTime = FileInfo.Timespec(seconds: 20, nanoseconds: 25)
+        try await self.fs.setLastDataModificationTime(forFileAt: path, to: newDataModTime)
+
+        let newInfo = try await self.fs.info(forFileAt: path)
+        XCTAssertEqual(newInfo?.lastDataModificationTime, newDataModTime)
+        XCTAssertEqual(newInfo?.lastAccessTime, originalLastAccessTime)
+
+        try await self.fs.removeItem(at: path)
+    }
+
+
+    func testSetLastAccessAndDataModificationTimes() async throws {
+        let path = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(forWritingAt: path, options: .newFile(replaceExisting: false)) { _ in }
+
+        let originalInfo = try await self.fs.info(forFileAt: path)
+        let originalLastAccessTime = originalInfo?.lastAccessTime
+        let originalLastDataModificationTime = originalInfo?.lastDataModificationTime
+
+        let newAccessTime = FileInfo.Timespec(seconds: 10, nanoseconds: 5)
+        let newDataModTime = FileInfo.Timespec(seconds: 20, nanoseconds: 25)
+
+        try await self.fs.setTimes(forFileAt: path, lastAccess: newAccessTime, lastDataModification: newDataModTime)
+
+        let newInfo = try await self.fs.info(forFileAt: path)
+        XCTAssertEqual(newInfo?.lastAccessTime, newAccessTime)
+        XCTAssertEqual(newInfo?.lastDataModificationTime, newDataModTime)
+        XCTAssertNotEqual(newInfo?.lastAccessTime, originalLastAccessTime)
+        XCTAssertNotEqual(newInfo?.lastDataModificationTime, originalLastDataModificationTime)
+
+        try await self.fs.removeItem(at: path)
+    }
+
+    func testSetLastAccessTime() async throws {
+        let path = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(forWritingAt: path, options: .newFile(replaceExisting: false)) { _ in }
+
+        let originalInfo = try await self.fs.info(forFileAt: path)
+        let originalLastDataModificationTime = originalInfo?.lastDataModificationTime
+
+        let newAccessTime = FileInfo.Timespec(seconds: 10, nanoseconds: 5)
+        try await self.fs.setLastAccessTime(forFileAt: path, to: newAccessTime)
+
+        let newInfo = try await self.fs.info(forFileAt: path)
+        XCTAssertEqual(newInfo?.lastAccessTime, newAccessTime)
+        XCTAssertEqual(newInfo?.lastDataModificationTime, originalLastDataModificationTime)
+
+        try await self.fs.removeItem(at: path)
+    }
+
+    func testSetLastDataModificationTime() async throws {
+        let path = try await self.fs.temporaryFilePath()
+        try await self.fs.withFileHandle(forWritingAt: path, options: .newFile(replaceExisting: false)) { _ in }
+
+        let originalInfo = try await self.fs.info(forFileAt: path)
+        let originalLastAccessTime = originalInfo?.lastAccessTime
+
+        let newDataModTime = FileInfo.Timespec(seconds: 20, nanoseconds: 25)
+        try await self.fs.setLastDataModificationTime(forFileAt: path, to: newDataModTime)
+
+        let newInfo = try await self.fs.info(forFileAt: path)
+        XCTAssertEqual(newInfo?.lastDataModificationTime, newDataModTime)
+        XCTAssertEqual(newInfo?.lastAccessTime, originalLastAccessTime)
+
+        try await self.fs.removeItem(at: path)
+    }
+
+
     func testOpenFileForReading() async throws {
         try await self.fs.withFileHandle(forReadingAt: .testDataReadme) { file in
             let info = try await file.info()
