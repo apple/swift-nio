@@ -182,7 +182,7 @@ extension ChannelOptions.Types {
 
 extension ChannelOptions {
     /// - seealso: `LocalVsockAddress`
-    public static let localVsockAddress = Types.LocalVsockAddress()
+    public static var localVsockAddress: Types.LocalVsockAddress { .init() }
 }
 
 extension ChannelOption where Self == ChannelOptions.Types.LocalVsockAddress {
@@ -191,13 +191,6 @@ extension ChannelOption where Self == ChannelOptions.Types.LocalVsockAddress {
 
 extension ChannelOptions.Types {
     /// This get-only option is used on channels backed by vsock sockets to get the local VSOCK address.
-    ///
-    /// `Channel/localAddress` cannot report a vsock address, because `SocketAddress` has no vsock
-    /// representation. This option exposes the address that `getsockname` reports for the socket
-    /// instead.
-    ///
-    /// ``LocalVsockContextID`` reports only the context ID, so it can't tell you which port a
-    /// listener bound to when it was bound to `VsockAddress/Port/any`. This option reports both.
     public struct LocalVsockAddress: ChannelOption, Sendable {
         public typealias Value = VsockAddress
         public init() {}
@@ -206,7 +199,7 @@ extension ChannelOptions.Types {
 
 extension ChannelOptions {
     /// - seealso: `RemoteVsockAddress`
-    public static let remoteVsockAddress = Types.RemoteVsockAddress()
+    public static var remoteVsockAddress: Types.RemoteVsockAddress { .init() }
 }
 
 extension ChannelOption where Self == ChannelOptions.Types.RemoteVsockAddress {
@@ -215,12 +208,6 @@ extension ChannelOption where Self == ChannelOptions.Types.RemoteVsockAddress {
 
 extension ChannelOptions.Types {
     /// This get-only option is used on channels backed by vsock sockets to get the remote peer's VSOCK address.
-    ///
-    /// `Channel/remoteAddress` cannot report a vsock peer, because `SocketAddress` has no vsock
-    /// representation. This option exposes the peer address that `getpeername` reports for the
-    /// connection instead, which is where the peer's context ID (CID) comes from.
-    ///
-    /// Only meaningful on a connected vsock channel; getting it on a listening channel fails.
     public struct RemoteVsockAddress: ChannelOption, Sendable {
         public typealias Value = VsockAddress
         public init() {}
@@ -340,9 +327,6 @@ extension BaseSocket {
     }
 
     /// Reads the local address of a vsock socket.
-    ///
-    /// ``getLocalVsockContextID()`` reports only the context ID, so it can't say which port a
-    /// listener bound to when it was bound to `VsockAddress/Port/any`. This reports both.
     func getLocalVsockAddress() throws -> VsockAddress {
         try self.getVsockAddress(NIOBSDSocket.getsockname(socket:address:address_len:))
     }
@@ -352,15 +336,8 @@ extension BaseSocket {
         try self.getVsockAddress(NIOBSDSocket.getpeername(socket:address:address_len:))
     }
 
-    /// Reads a `sockaddr_vm` from `getName`.
-    ///
-    /// `getsockname`/`getpeername` already fill a `sockaddr_vm` for `AF_VSOCK` sockets; this
-    /// reinterprets it rather than routing through `SocketAddress`, which cannot represent a vsock
-    /// address.
-    ///
-    /// The address family is validated before the result is trusted: on a non-vsock socket these
-    /// calls fill a different `sockaddr`, and reinterpreting those bytes would yield a meaningless
-    /// context ID derived from, for example, an IP address and port.
+    /// Reads a `sockaddr_vm` from `getName`, throwing `SocketAddressError/unsupported` if the
+    /// socket isn't a vsock socket.
     private func getVsockAddress(
         _ getName: (
             NIOBSDSocket.Handle, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>

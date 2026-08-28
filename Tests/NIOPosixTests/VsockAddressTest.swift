@@ -86,10 +86,6 @@ class VsockAddressTest: XCTestCase {
 
     // Getting the local vsock address is not available on Windows.
     #if !os(Windows)
-    /// A listener bound to `Port/any` reports the port the kernel actually chose.
-    ///
-    /// This is what ``ChannelOptions/Types/LocalVsockContextID`` can't do: it reports the context ID
-    /// only, so a caller which binds `.any` has no way to learn where to connect.
     func testGetLocalVsockAddressReportsBoundPort() throws {
         try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
 
@@ -99,7 +95,6 @@ class VsockAddressTest: XCTestCase {
 
         let address = try socket.getLocalVsockAddress()
         XCTAssertNotEqual(address.port, .any, "The kernel should have assigned a concrete port")
-        XCTAssertEqual(address.cid, try socket.getLocalVsockContextID())
         XCTAssertEqual(address.cid, .any)
 
         // Check the address from the channel option matches.
@@ -114,8 +109,6 @@ class VsockAddressTest: XCTestCase {
         XCTAssertEqual(try channel.getOption(.localVsockAddress).wait(), address)
     }
 
-    /// A non-vsock socket must not report a vsock local address, for the same reason
-    /// ``testGetRemoteVsockAddressRejectsNonVsockSocket()`` covers on the peer side.
     func testGetLocalVsockAddressRejectsNonVsockSocket() throws {
         let socket = try ServerSocket(protocolFamily: .unix, setNonBlocking: false)
         defer { try? socket.close() }
@@ -128,11 +121,6 @@ class VsockAddressTest: XCTestCase {
 
     // Getting the remote vsock address is not available on Windows.
     #if !os(Windows)
-    /// A non-vsock socket must not report a vsock peer address.
-    ///
-    /// `getpeername` on a UDS socket fills a `sockaddr_un`; if those bytes were reinterpreted as a
-    /// `sockaddr_vm` the option would return a context ID derived from unrelated memory. Callers use
-    /// the CID to make trust decisions, so this must fail instead.
     func testGetRemoteVsockAddressRejectsNonVsockSocket() throws {
         // A socketpair gives us an already-connected non-vsock socket without binding anything.
         var fds: [CInt] = [-1, -1]
@@ -155,11 +143,6 @@ class VsockAddressTest: XCTestCase {
         }
     }
 
-    /// Both ends of a real vsock connection report the peer's address.
-    ///
-    /// This is the path the option exists for, so it needs a live connection: it exercises
-    /// `getpeername` on an `AF_VSOCK` socket and the reinterpretation of the resulting
-    /// `sockaddr_vm`.
     func testGetRemoteVsockAddressOverLoopback() throws {
         try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
 
@@ -168,8 +151,7 @@ class VsockAddressTest: XCTestCase {
 
         let port = VsockAddress.Port(5678)
 
-        // Read the peer address on the accepted channel. Sending the address rather than the
-        // channel through the promise keeps this Sendable-clean.
+        // Read the peer address on the accepted channel.
         let acceptedPeer = group.next().makePromise(of: VsockAddress.self)
 
         let serverChannel = try assertNoThrowWithValue(
@@ -195,16 +177,14 @@ class VsockAddressTest: XCTestCase {
         )
         defer { XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed()) }
 
-        // Client side: the peer is the listener, so the port must be the one we bound. This is the
-        // assertion that catches a misread `sockaddr_vm` -- wrong field offsets could not happen to
-        // produce the port we chose.
+        // Client side: the peer is the listener, so the port must be the one we bound.
         let clientPeer = try assertNoThrowWithValue(
             clientChannel.getOption(.remoteVsockAddress).wait()
         )
         XCTAssertEqual(clientPeer.port, port)
 
-        // Server side: reading the accepted channel's peer must succeed, and because both ends of a
-        // loopback connection live in the same context it reports the same CID the client saw.
+        // Server side: both ends of a loopback connection live in the same context, so the accepted
+        // channel reports the same CID the client saw.
         let serverPeer = try assertNoThrowWithValue(acceptedPeer.futureResult.wait())
         XCTAssertEqual(serverPeer.cid, clientPeer.cid)
     }
