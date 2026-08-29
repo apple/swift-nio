@@ -143,6 +143,12 @@ final class DatagramReadRecorder<DataType: Sendable>: ChannelInboundHandler {
 }
 
 class DatagramChannelTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("Datagram channels are not yet functional on Windows")
+        #endif
+    }
+
     private var group: MultiThreadedEventLoopGroup! = nil
     private var firstChannel: Channel! = nil
     private var secondChannel: Channel! = nil
@@ -409,6 +415,9 @@ class DatagramChannelTests: XCTestCase {
         }
     }
 
+    #if !os(Windows)
+    // These tests use a mock overriding recvmsg(...storageLen: inout socklen_t...),
+    // relying on NIOCore-internal socklen_t which isn't visible on Windows.
     public func testRecvMsgFailsWithECONNREFUSED() throws {
         try assertRecvMsgFails(error: ECONNREFUSED, active: true)
     }
@@ -491,6 +500,7 @@ class DatagramChannelTests: XCTestCase {
         let ioError = try promise.futureResult.wait()
         XCTAssertEqual(error, ioError.errnoCode)
     }
+    #endif
 
     public func testRecvMmsgFailsWithECONNREFUSED() throws {
         try assertRecvMmsgFails(error: ECONNREFUSED, active: true)
@@ -605,6 +615,9 @@ class DatagramChannelTests: XCTestCase {
     }
 
     func testSettingTwoDistinctChannelOptionsWorksForDatagramChannel() throws {
+        #if os(Windows)
+        throw XCTSkip("SO_TIMESTAMP is not available on Windows")
+        #else
         let channel = try assertNoThrowWithValue(
             DatagramBootstrap(group: group)
                 .channelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -618,6 +631,7 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertTrue(try getBoolSocketOption(channel: channel, level: .socket, name: .so_reuseaddr))
         XCTAssertTrue(try getBoolSocketOption(channel: channel, level: .socket, name: .so_timestamp))
         XCTAssertFalse(try getBoolSocketOption(channel: channel, level: .socket, name: .so_keepalive))
+        #endif
     }
 
     func testUnprocessedOutboundUserEventFailsOnDatagramChannel() throws {

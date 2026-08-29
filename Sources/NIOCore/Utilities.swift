@@ -28,6 +28,7 @@ import ucrt
 import let WinSDK.RelationProcessorCore
 
 import let WinSDK.AF_UNSPEC
+import let WinSDK.ERROR_BUFFER_OVERFLOW
 import let WinSDK.ERROR_SUCCESS
 
 import func WinSDK.GetAdaptersAddresses
@@ -201,42 +202,53 @@ public enum System: Sendable {
         devices.reserveCapacity(12)  // Arbitrary choice.
 
         #if os(Windows)
-        var ulSize: ULONG = 0
-        _ = GetAdaptersAddresses(ULONG(AF_UNSPEC), 0, nil, nil, &ulSize)
+        // `GetAdaptersAddresses` writes a linked list of variably sized records into the
+        // caller's buffer, so the buffer must be sized in *bytes*, not in whole
+        // `IP_ADAPTER_ADDRESSES` records. 15KB is the initial allocation recommended by the
+        // documentation; if that is not enough (or if the adapter information grows between
+        // two calls) the call reports `ERROR_BUFFER_OVERFLOW` and updates `ulSize` with the
+        // size now required, so the enumeration is retried a small number of times.
+        var ulSize: ULONG = 15 * 1024
+        let ulBufferOverflow: ULONG = ULONG(ERROR_BUFFER_OVERFLOW)
+        var ulResult: ULONG = ulBufferOverflow
+        var attemptsRemaining: Int = 3
 
-        let stride: Int = MemoryLayout<IP_ADAPTER_ADDRESSES>.stride
-        let pBuffer: UnsafeMutableBufferPointer<IP_ADAPTER_ADDRESSES> =
-            UnsafeMutableBufferPointer.allocate(capacity: Int(ulSize) / stride)
-        defer {
-            pBuffer.deallocate()
+        while ulResult == ulBufferOverflow && attemptsRemaining > 0 {
+            attemptsRemaining -= 1
+
+            let pBuffer: UnsafeMutableRawPointer =
+                UnsafeMutableRawPointer.allocate(
+                    byteCount: Int(ulSize),
+                    alignment: MemoryLayout<IP_ADAPTER_ADDRESSES>.alignment
+                )
+            defer {
+                pBuffer.deallocate()
+            }
+
+            let pAdapters: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES> =
+                pBuffer.bindMemory(to: IP_ADAPTER_ADDRESSES.self, capacity: 1)
+
+            ulResult = GetAdaptersAddresses(ULONG(AF_UNSPEC), 0, nil, pAdapters, &ulSize)
+            guard ulResult == ERROR_SUCCESS else {
+                continue
+            }
+
+            var pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>? = pAdapters
+            while let adapter = pAdapter {
+                var pUnicastAddress: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>? =
+                    adapter.pointee.FirstUnicastAddress
+                while let unicastAddress = pUnicastAddress {
+                    if let device = NIONetworkDevice(adapter, unicastAddress) {
+                        devices.append(device)
+                    }
+                    pUnicastAddress = unicastAddress.pointee.Next
+                }
+                pAdapter = adapter.pointee.Next
+            }
         }
 
-        let ulResult: ULONG =
-            GetAdaptersAddresses(
-                ULONG(AF_UNSPEC),
-                0,
-                nil,
-                pBuffer.baseAddress,
-                &ulSize
-            )
         guard ulResult == ERROR_SUCCESS else {
             throw IOError(windows: ulResult, reason: "GetAdaptersAddresses")
-        }
-
-        var pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>? =
-            UnsafeMutablePointer(pBuffer.baseAddress)
-        while pAdapter != nil {
-            let pUnicastAddresses: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>? =
-                pAdapter!.pointee.FirstUnicastAddress
-            var pUnicastAddress: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>? =
-                pUnicastAddresses
-            while pUnicastAddress != nil {
-                if let device = NIONetworkDevice(pAdapter!, pUnicastAddress!) {
-                    devices.append(device)
-                }
-                pUnicastAddress = pUnicastAddress!.pointee.Next
-            }
-            pAdapter = pAdapter!.pointee.Next
         }
         #elseif !os(WASI)
         var interface: UnsafeMutablePointer<ifaddrs>? = nil

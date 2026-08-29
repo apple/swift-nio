@@ -26,6 +26,8 @@ import Darwin
 import Glibc
 #elseif canImport(Bionic)
 import Bionic
+#elseif os(Windows)
+import WinSDK
 #else
 #error("The Happy Eyeballs test module was unable to identify your C library.")
 #endif

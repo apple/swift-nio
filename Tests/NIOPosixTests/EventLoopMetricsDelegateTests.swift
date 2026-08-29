@@ -41,7 +41,7 @@ final class EventLoopMetricsDelegateTests: XCTestCase {
         try group.syncShutdownGracefully()
     }
 
-    func testMetricsDelegateTickInfo() {
+    func testMetricsDelegateTickInfo() throws {
         let delegate = RecorderDelegate()
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1, metricsDelegate: delegate)
         defer {

@@ -55,6 +55,9 @@ import XCTest
 
 @testable import NIOPosix
 
+// The SAL harness is built around CInt file descriptors; on Windows socket
+// handles are UInt64, which is out of scope to reconcile. Gate the whole body.
+#if !os(Windows)
 internal enum SAL {
     fileprivate static let defaultTimeout: Double = 5
     private static let debugTests: Bool = false
@@ -1146,3 +1149,4 @@ struct SyscallAssertions: @unchecked Sendable {
         try self.selector.assertParkedRightNow(file: file, line: line)
     }
 }
+#endif

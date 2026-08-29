@@ -211,6 +211,38 @@ final class IsolatedEventLoopScheduledCallbackTests: XCTestCase {
     }
 }
 
+// `SelectableEventLoop` overrides `_scheduleCallbackIsolatedUnsafeUnchecked` override; test that
+// path specifically rather than relying on the default `IsolatedEventLoopScheduledCallbackTests`.
+final class SelectableEventLoopIsolatedScheduledCallbackTests: XCTestCase {
+    func testScheduledCallbackExecutedAtDeadlineOnIsolatedEventLoop() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { try! group.syncShutdownGracefully() }
+        let loop = group.next()
+        let handler = MockScheduledCallbackHandler()
+
+        try loop.submit {
+            _ = try loop.assumeIsolated().scheduleCallback(in: .milliseconds(1), handler: handler)
+        }.wait()
+
+        try loop.scheduleTask(in: .milliseconds(10)) {}.futureResult.wait()
+        handler.assert(callbackCount: 1, cancelCount: 0)
+    }
+
+    func testCancelOnIsolatedEventLoopExecutesCancellationCallback() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { try! group.syncShutdownGracefully() }
+        let loop = group.next()
+        let handler = MockScheduledCallbackHandler()
+
+        try loop.submit {
+            let scheduledCallback = try loop.assumeIsolated().scheduleCallback(in: .hours(1), handler: handler)
+            scheduledCallback.cancel()
+        }.wait()
+
+        handler.assert(callbackCount: 0, cancelCount: 1)
+    }
+}
+
 class _BaseScheduledCallbackTests: XCTestCase {
     // EL-specific test requirements.
     var requirements: (any ScheduledCallbackTestRequirements)! = nil

@@ -24,6 +24,12 @@ import Android
 #endif
 
 final class FileTypeTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     func testFileTypeEquatable() {
         let types = FileType.allCases
         // Use indices to avoid using the `Equatable` conformance to write the tests.

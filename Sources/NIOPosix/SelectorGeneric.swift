@@ -26,7 +26,6 @@ import WinSDK
 @usableFromInline
 internal enum SelectorLifecycleState: Sendable {
     case open
-    case closing
     case closed
 }
 
@@ -420,7 +419,18 @@ extension Selector: CustomStringConvertible {
     @usableFromInline
     var description: String {
         func makeDescription() -> String {
-            "Selector { descriptor = \(self.selectorFD) }"
+            #if os(Windows)
+            // The WSAPoll backend has no descriptor standing for the selector itself, the way
+            // epoll and kqueue do. The read end of the wakeup socket pair has the same lifetime,
+            // so report that, and -1 once it has been closed, keeping the convention that -1
+            // means the selector is no longer usable.
+            let descriptor =
+                self.wakeupReadSocket == NIOBSDSocket.invalidHandle
+                ? -1 : Int(self.wakeupReadSocket)
+            #else
+            let descriptor = self.selectorFD
+            #endif
+            return "Selector { descriptor = \(descriptor) }"
         }
 
         if self.myThread.isCurrentSlow {
