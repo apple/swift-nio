@@ -128,11 +128,27 @@ if [[ -n "$branch" ]]; then
   snapshot=""
   for snapshot in $snapshots; do
     snapshot_url="https://download.swift.org/${download_path}/${os_image_sanitized}${arch_suffix}/${snapshot}/${snapshot}-${os_image}${arch_suffix}.tar.gz"
-    sdk_url="https://download.swift.org/${download_path}/${sdk_dir}/${snapshot}/${snapshot}${sdk_suffix}.artifactbundle.tar.gz"
 
     # check that the files exist
     "$CURL_BIN" -sILXGET --fail "$snapshot_url" > /dev/null; snapshot_return_code=$?
-    "$CURL_BIN" -sILXGET --fail "$sdk_url" > /dev/null; sdk_return_code=$?
+
+    if [[ "$sdk" == "static-sdk" ]]; then
+      static_sdk_versions=("0.1.0" "0.0.1")
+    else
+      static_sdk_versions=("")
+    fi
+
+    sdk_return_code=1
+    for static_sdk_version in "${static_sdk_versions[@]}"; do
+      if [[ -n "$static_sdk_version" ]]; then
+        sdk_suffix="_static-linux-${static_sdk_version}"
+      fi
+      sdk_url="https://download.swift.org/${download_path}/${sdk_dir}/${snapshot}/${snapshot}${sdk_suffix}.artifactbundle.tar.gz"
+      "$CURL_BIN" -sILXGET --fail "$sdk_url" > /dev/null; sdk_return_code=$?
+      if [[ "$sdk_return_code" -eq 0 ]]; then
+        break
+      fi
+    done
 
     if [[ ("$snapshot_return_code" -eq 0) && ("$sdk_return_code" -eq 0) ]]; then
       log "Discovered branch snapshot: $snapshot"
