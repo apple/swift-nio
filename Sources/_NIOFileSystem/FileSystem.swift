@@ -858,6 +858,77 @@ extension FileSystem {
         }
     }
 
+    internal func _readFileContents(
+        at path: FilePath,
+        maximumSizeAllowed: ByteCount
+    ) async throws -> ByteBuffer {
+        let cancelled = ManagedAtomic(false)
+
+        return try await withTaskCancellationHandler {
+            try await self.threadPool.runIfActive {
+                let handle = try self._openFile(
+                    forReadingAt: path,
+                    options: OpenOptions.Read()
+                ).get()
+                let sendableView = handle.fileHandle.systemFileHandle.sendableView
+
+                let readResult: Result<ByteBuffer, Error> = Result {
+                    if cancelled.load(ordering: .acquiring) {
+                        throw CancellationError()
+                    }
+                    return try sendableView._readToEnd(
+                        fromAbsoluteOffset: 0,
+                        maximumSizeAllowed: maximumSizeAllowed,
+                        isCancelled: { cancelled.load(ordering: .acquiring) }
+                    )
+                }
+
+                try sendableView._close(materialize: true).get()
+                return try readResult.get()
+            }
+        } onCancel: {
+            cancelled.store(true, ordering: .releasing)
+        }
+    }
+
+    internal func _writeFileContents(
+        to path: FilePath,
+        options: OpenOptions.Write,
+        write: @escaping @Sendable (SystemFileHandle.SendableView) -> Result<Int64, FileSystemError>
+    ) async throws -> Int64 {
+        let cancelled = ManagedAtomic(false)
+
+        return try await withTaskCancellationHandler {
+            try await self.threadPool.runIfActive {
+                let handle = try self._openFile(
+                    forWritingAt: path,
+                    options: options
+                ).get()
+                let sendableView = handle.fileHandle.systemFileHandle.sendableView
+
+                let writeResult: Result<Int64, Error> = Result {
+                    if cancelled.load(ordering: .acquiring) {
+                        throw CancellationError()
+                    }
+                    return try write(sendableView).get()
+                }
+
+                let materialize: Bool
+                switch writeResult {
+                case .success:
+                    materialize = true
+                case .failure:
+                    materialize = false
+                }
+
+                try sendableView._close(materialize: materialize).get()
+                return try writeResult.get()
+            }
+        } onCancel: {
+            cancelled.store(true, ordering: .releasing)
+        }
+    }
+
     /// Creates a directory at `fullPath`, potentially creating other directories along the way.
     private func _createDirectory(
         at fullPath: FilePath,

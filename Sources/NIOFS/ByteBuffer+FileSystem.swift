@@ -27,11 +27,19 @@ extension ByteBuffer {
         maximumSizeAllowed: ByteCount,
         fileSystem: some FileSystemProtocol
     ) async throws {
-        self = try await fileSystem.withFileHandle(forReadingAt: path) { handle in
-            try await handle.readToEnd(
-                fromAbsoluteOffset: 0,
+        // Larger reads are deliberately chunked so that they don't monopolise an I/O worker.
+        if let fileSystem = fileSystem as? FileSystem, maximumSizeAllowed <= .mebibytes(64) {
+            self = try await fileSystem._readFileContents(
+                at: path,
                 maximumSizeAllowed: maximumSizeAllowed
             )
+        } else {
+            self = try await fileSystem.withFileHandle(forReadingAt: path) { handle in
+                try await handle.readToEnd(
+                    fromAbsoluteOffset: 0,
+                    maximumSizeAllowed: maximumSizeAllowed
+                )
+            }
         }
     }
 

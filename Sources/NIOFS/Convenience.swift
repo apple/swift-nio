@@ -79,8 +79,17 @@ extension Sequence<UInt8> where Self: Sendable {
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         fileSystem: some FileSystemProtocol
     ) async throws -> Int64 {
-        try await fileSystem.withFileHandle(forWritingAt: path, options: options) { handle in
-            try await handle.write(contentsOf: self, toAbsoluteOffset: offset)
+        if let fileSystem = fileSystem as? FileSystem {
+            return try await fileSystem._writeFileContents(
+                to: path,
+                options: options
+            ) { sendableView in
+                sendableView._write(contentsOf: self, toAbsoluteOffset: offset)
+            }
+        } else {
+            return try await fileSystem.withFileHandle(forWritingAt: path, options: options) { handle in
+                try await handle.write(contentsOf: self, toAbsoluteOffset: offset)
+            }
         }
     }
 
