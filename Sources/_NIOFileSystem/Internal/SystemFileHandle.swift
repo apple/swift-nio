@@ -1042,51 +1042,7 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
         length: ByteCount
     ) async throws -> ByteBuffer {
         try await self.threadPool.runIfActive { [sendableView] in
-            try sendableView._withUnsafeDescriptor { descriptor in
-                try descriptor.readChunk(
-                    fromAbsoluteOffset: offset,
-                    length: length.bytes
-                ).flatMapError { error in
-                    if let errno = error as? Errno, errno == .illegalSeek || errno == .noSuchAddressOrDevice {
-                        guard offset == 0 else {
-                            return .failure(
-                                FileSystemError(
-                                    code: .unsupported,
-                                    message: "File is unseekable.",
-                                    cause: nil,
-                                    location: .here()
-                                )
-                            )
-                        }
-
-                        return descriptor.readChunk(length: length.bytes).mapError { error in
-                            FileSystemError.read(
-                                usingSyscall: .read,
-                                error: error,
-                                path: sendableView.path,
-                                location: .here()
-                            )
-                        }
-                    } else {
-                        return .failure(
-                            FileSystemError.read(
-                                usingSyscall: .pread,
-                                error: error,
-                                path: sendableView.path,
-                                location: .here()
-                            )
-                        )
-                    }
-                }
-                .get()
-            } onUnavailable: {
-                FileSystemError(
-                    code: .closed,
-                    message: "Couldn't read chunk, the file '\(sendableView.path)' is closed.",
-                    cause: nil,
-                    location: .here()
-                )
-            }
+            try sendableView._readChunk(fromAbsoluteOffset: offset, length: length).get()
         }
     }
 
@@ -1095,6 +1051,157 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
         chunkLength size: ByteCount
     ) -> FileChunks {
         FileChunks(handle: self, chunkLength: size, range: range)
+    }
+}
+
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension SystemFileHandle.SendableView {
+    internal func _readChunk(
+        fromAbsoluteOffset offset: Int64,
+        length: ByteCount
+    ) -> Result<ByteBuffer, FileSystemError> {
+        self._withUnsafeDescriptorResult { descriptor in
+            descriptor.readChunk(
+                fromAbsoluteOffset: offset,
+                length: length.bytes
+            ).flatMapError { error in
+                if let errno = error as? Errno, errno == .illegalSeek || errno == .noSuchAddressOrDevice {
+                    guard offset == 0 else {
+                        return .failure(
+                            FileSystemError(
+                                code: .unsupported,
+                                message: "File is unseekable.",
+                                cause: nil,
+                                location: .here()
+                            )
+                        )
+                    }
+
+                    return descriptor.readChunk(length: length.bytes).mapError { error in
+                        FileSystemError.read(
+                            usingSyscall: .read,
+                            error: error,
+                            path: self.path,
+                            location: .here()
+                        )
+                    }
+                } else {
+                    return .failure(
+                        FileSystemError.read(
+                            usingSyscall: .pread,
+                            error: error,
+                            path: self.path,
+                            location: .here()
+                        )
+                    )
+                }
+            }
+        } onUnavailable: {
+            FileSystemError(
+                code: .closed,
+                message: "Couldn't read chunk, the file '\(self.path)' is closed.",
+                cause: nil,
+                location: .here()
+            )
+        }
+    }
+
+    internal func _readToEnd(
+        fromAbsoluteOffset offset: Int64,
+        maximumSizeAllowed: ByteCount,
+        isCancelled: () -> Bool
+    ) throws -> ByteBuffer {
+        let maximumSizeAllowed = maximumSizeAllowed == .unlimited ? .byteBufferCapacity : maximumSizeAllowed
+        let info = try self._info().get()
+        let fileSize = Int64(info.size)
+        let readSize = max(Int(fileSize - offset), 0)
+
+        if maximumSizeAllowed > .byteBufferCapacity {
+            throw FileSystemError(
+                code: .resourceExhausted,
+                message: """
+                    The maximum size allowed (\(maximumSizeAllowed)) is more than the maximum \
+                    amount of bytes that can be written to ByteBuffer \
+                    (\(ByteCount.byteBufferCapacity)). You can read the file in smaller chunks by \
+                    calling readChunks().
+                    """,
+                cause: nil,
+                location: .here()
+            )
+        }
+
+        if readSize > maximumSizeAllowed.bytes {
+            throw FileSystemError(
+                code: .resourceExhausted,
+                message: """
+                    There are more bytes to read (\(readSize)) than the maximum size allowed \
+                    (\(maximumSizeAllowed)). Read the file in chunks or increase the maximum size \
+                    allowed.
+                    """,
+                cause: nil,
+                location: .here()
+            )
+        }
+
+        let isSeekable = !(info.type == .fifo || info.type == .socket)
+        if isSeekable, fileSize > 0, readSize == 0 {
+            return ByteBuffer()
+        }
+
+        let singleShotReadLimit = 64 * 1024 * 1024
+        if isSeekable, fileSize > 0, readSize <= singleShotReadLimit {
+            if isCancelled() {
+                throw CancellationError()
+            }
+            return try self._readChunk(
+                fromAbsoluteOffset: offset,
+                length: .bytes(Int64(readSize))
+            ).get()
+        }
+
+        guard isSeekable || offset == 0 else {
+            throw FileSystemError(
+                code: .unsupported,
+                message: "File is unseekable.",
+                cause: nil,
+                location: .here()
+            )
+        }
+
+        var accumulator = ByteBuffer()
+        accumulator.reserveCapacity(readSize)
+
+        let chunkLength = ByteCount.mebibytes(8)
+        var readOffset = offset
+        while true {
+            if isCancelled() {
+                throw CancellationError()
+            }
+
+            let chunk = try self._readChunk(
+                fromAbsoluteOffset: isSeekable ? readOffset : 0,
+                length: chunkLength
+            ).get()
+            accumulator.writeImmutableBuffer(chunk)
+
+            if accumulator.readableBytes > maximumSizeAllowed.bytes {
+                throw FileSystemError(
+                    code: .resourceExhausted,
+                    message: """
+                        There are more bytes to read than the maximum size allowed \
+                        (\(maximumSizeAllowed)). Read the file in chunks or increase the maximum size \
+                        allowed.
+                        """,
+                    cause: nil,
+                    location: .here()
+                )
+            }
+
+            if chunk.readableBytes < chunkLength.bytes {
+                return accumulator
+            }
+            readOffset += Int64(chunk.readableBytes)
+        }
     }
 }
 
@@ -1108,56 +1215,65 @@ extension SystemFileHandle: WritableFileHandleProtocol {
         toAbsoluteOffset offset: Int64
     ) async throws -> Int64 {
         try await self.threadPool.runIfActive { [sendableView] in
-            try sendableView._withUnsafeDescriptor { descriptor in
-                try descriptor.write(contentsOf: bytes, toAbsoluteOffset: offset)
-                    .flatMapError { error in
-                        if let errno = error as? Errno, errno == .illegalSeek || errno == .noSuchAddressOrDevice {
-                            guard offset == 0 else {
-                                return .failure(
-                                    FileSystemError(
-                                        code: .unsupported,
-                                        message: "File is unseekable.",
-                                        cause: nil,
-                                        location: .here()
-                                    )
-                                )
-                            }
-
-                            return descriptor.write(contentsOf: bytes)
-                                .mapError { error in
-                                    FileSystemError.write(
-                                        usingSyscall: .write,
-                                        error: error,
-                                        path: sendableView.path,
-                                        location: .here()
-                                    )
-                                }
-                        } else {
-                            return .failure(
-                                FileSystemError.write(
-                                    usingSyscall: .pwrite,
-                                    error: error,
-                                    path: sendableView.path,
-                                    location: .here()
-                                )
-                            )
-                        }
-                    }
-                    .get()
-            } onUnavailable: {
-                FileSystemError(
-                    code: .closed,
-                    message: "Couldn't write bytes, the file '\(sendableView.path)' is closed.",
-                    cause: nil,
-                    location: .here()
-                )
-            }
+            try sendableView._write(contentsOf: bytes, toAbsoluteOffset: offset).get()
         }
     }
 
     public func resize(to size: ByteCount) async throws {
         try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._resize(to: size).get()
+        }
+    }
+}
+
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension SystemFileHandle.SendableView {
+    internal func _write(
+        contentsOf bytes: some Sequence<UInt8>,
+        toAbsoluteOffset offset: Int64
+    ) -> Result<Int64, FileSystemError> {
+        self._withUnsafeDescriptorResult { descriptor in
+            descriptor.write(contentsOf: bytes, toAbsoluteOffset: offset)
+                .flatMapError { error in
+                    if let errno = error as? Errno, errno == .illegalSeek || errno == .noSuchAddressOrDevice {
+                        guard offset == 0 else {
+                            return .failure(
+                                FileSystemError(
+                                    code: .unsupported,
+                                    message: "File is unseekable.",
+                                    cause: nil,
+                                    location: .here()
+                                )
+                            )
+                        }
+
+                        return descriptor.write(contentsOf: bytes)
+                            .mapError { error in
+                                FileSystemError.write(
+                                    usingSyscall: .write,
+                                    error: error,
+                                    path: self.path,
+                                    location: .here()
+                                )
+                            }
+                    } else {
+                        return .failure(
+                            FileSystemError.write(
+                                usingSyscall: .pwrite,
+                                error: error,
+                                path: self.path,
+                                location: .here()
+                            )
+                        )
+                    }
+                }
+        } onUnavailable: {
+            FileSystemError(
+                code: .closed,
+                message: "Couldn't write bytes, the file '\(self.path)' is closed.",
+                cause: nil,
+                location: .here()
+            )
         }
     }
 }
