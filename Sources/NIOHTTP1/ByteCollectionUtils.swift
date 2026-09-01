@@ -38,7 +38,7 @@ extension Sequence where Self.Element == UInt8 {
     /// This collection could be get from applying the `UTF8View`
     ///   property on the string protocol.
     ///
-    /// - Parameter bytes: The string constant in the form of a collection of `UInt8`
+    /// - Parameter to: The string constant in the form of a collection of `UInt8`
     /// - Returns: Whether the collection contains **EXACTLY** this array or no, but by ignoring case.
     internal func compareCaseInsensitiveASCIIBytes<T: Sequence>(to: T) -> Bool
     where T.Element == UInt8 {
