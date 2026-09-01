@@ -160,8 +160,13 @@ internal final class FileHandleTests: XCTestCase {
     }
 
     func testListAttributeNames() async throws {
+        #if os(FreeBSD)
+        let expectedSystemCall = "extattr_list_fd"
+        #else
+        let expectedSystemCall = "flistxattr"
+        #endif
         let testCase = MockHandleTest(
-            expectedSystemCall: "flistxattr",
+            expectedSystemCall: expectedSystemCall,
             knownErrnos: [
                 .notSupported: .unsupported,
                 .notPermitted: .unsupported,
@@ -176,15 +181,25 @@ internal final class FileHandleTests: XCTestCase {
     }
 
     func testValueForAttribute() async throws {
-        var nonThrowingErrnos: [Errno] = [.noData]
+        var nonThrowingErrnos: [Errno] = []
         var knownErrnos: [Errno: FileSystemError.Code] = [.notSupported: .unsupported]
-        #if canImport(Darwin)
+        #if canImport(Darwin) || os(FreeBSD)
         nonThrowingErrnos.append(.attributeNotFound)
         knownErrnos[.fileNameTooLong] = .invalidArgument
         #endif
 
+        #if !os(FreeBSD)
+        nonThrowingErrnos.append(.noData)
+        #endif
+
+        #if os(FreeBSD)
+        let expectedSystemCall = "extattr_get_fd"
+        #else
+        let expectedSystemCall = "fgetxattr"
+        #endif
+
         let testCase = MockHandleTest(
-            expectedSystemCall: "fgetxattr",
+            expectedSystemCall: expectedSystemCall,
             nonThrowingErrnos: nonThrowingErrnos,
             knownErrnos: knownErrnos,
             unknownErrnos: [.deadlock, .ioError]
@@ -216,8 +231,14 @@ internal final class FileHandleTests: XCTestCase {
         knownErrnos[.fileNameTooLong] = .invalidArgument
         #endif
 
+        #if os(FreeBSD)
+        let expectedSystemCall = "extattr_set_fd"
+        #else
+        let expectedSystemCall = "fsetxattr"
+        #endif
+
         let testCase = MockHandleTest(
-            expectedSystemCall: "fsetxattr",
+            expectedSystemCall: expectedSystemCall,
             knownErrnos: knownErrnos,
             unknownErrnos: [.deadlock, .ioError]
         ) { handle in
@@ -233,8 +254,14 @@ internal final class FileHandleTests: XCTestCase {
         knownErrnos[.fileNameTooLong] = .invalidArgument
         #endif
 
+        #if os(FreeBSD)
+        let expectedSystemCall = "extattr_delete_fd"
+        #else
+        let expectedSystemCall = "fremovexattr"
+        #endif
+
         let testCase = MockHandleTest(
-            expectedSystemCall: "fremovexattr",
+            expectedSystemCall: expectedSystemCall,
             knownErrnos: knownErrnos,
             unknownErrnos: [.deadlock, .ioError]
         ) { handle in

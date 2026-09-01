@@ -524,7 +524,11 @@ extension SystemFileHandle.SendableView {
     public func _attributeNames() throws -> [String] {
         try self._withUnsafeDescriptor { descriptor in
             try descriptor.listExtendedAttributes().mapError { errno in
+                #if os(FreeBSD)
+                FileSystemError.extattr_list_fd(errno: errno, path: self.path, location: .here())
+                #else
                 FileSystemError.flistxattr(errno: errno, path: self.path, location: .here())
+                #endif
             }.get()
         } onUnavailable: {
             FileSystemError(
@@ -543,21 +547,32 @@ extension SystemFileHandle.SendableView {
                 named: name
             ).flatMapError { errno -> Result<[UInt8], FileSystemError> in
                 switch errno {
-                #if canImport(Darwin)
+                #if canImport(Darwin) || os(FreeBSD)
                 case .attributeNotFound:
                     // Okay, return empty value.
                     return .success([])
                 #endif
+                #if !os(FreeBSD)
                 case .noData:
                     // Okay, return empty value.
                     return .success([])
+                #endif
                 default:
+                    #if os(FreeBSD)
+                    let error = FileSystemError.extattr_get_fd(
+                        attribute: name,
+                        errno: errno,
+                        path: self.path,
+                        location: .here()
+                    )
+                    #else
                     let error = FileSystemError.fgetxattr(
                         attribute: name,
                         errno: errno,
                         path: self.path,
                         location: .here()
                     )
+                    #endif
                     return .failure(error)
                 }
             }.get()
@@ -590,12 +605,21 @@ extension SystemFileHandle.SendableView {
                     named: name,
                     to: rawBufferPointer
                 ).mapError { errno in
+                    #if os(FreeBSD)
+                    FileSystemError.extattr_set_fd(
+                        attribute: name,
+                        errno: errno,
+                        path: self.path,
+                        location: .here()
+                    )
+                    #else
                     FileSystemError.fsetxattr(
                         attribute: name,
                         errno: errno,
                         path: self.path,
                         location: .here()
                     )
+                    #endif
                 }.get()
             }
         } onUnavailable: {
@@ -614,12 +638,21 @@ extension SystemFileHandle.SendableView {
     public func _removeValueForAttribute(_ name: String) throws {
         try self._withUnsafeDescriptor { descriptor in
             try descriptor.removeExtendedAttribute(name).mapError { errno in
+                #if os(FreeBSD)
+                FileSystemError.extattr_delete_fd(
+                    attribute: name,
+                    errno: errno,
+                    path: self.path,
+                    location: .here()
+                )
+                #else
                 FileSystemError.fremovexattr(
                     attribute: name,
                     errno: errno,
                     path: self.path,
                     location: .here()
                 )
+                #endif
             }.get()
         } onUnavailable: {
             FileSystemError(
@@ -1363,6 +1396,8 @@ extension SystemFileHandle {
             // destination.
             #if os(Android)
             let temporaryHardLink = false
+            #elseif os(FreeBSD)
+            let temporaryHardLink = false
             #else
             let temporaryHardLink = true
             #endif
@@ -1468,7 +1503,7 @@ extension SystemFileHandle {
             }
 
             func makePath() -> FilePath {
-                #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+                #if !os(FreeBSD) && (canImport(Glibc) || canImport(Musl) || canImport(Bionic))
                 if useTemporaryFileIfPossible {
                     return currentWorkingDirectory.appending(path.components.dropLast())
                 }
@@ -1481,7 +1516,7 @@ extension SystemFileHandle {
             desiredPath = currentWorkingDirectory.appending(path.components)
         } else {
             func makePath() -> FilePath {
-                #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+                #if !os(FreeBSD) && (canImport(Glibc) || canImport(Musl) || canImport(Bionic))
                 if useTemporaryFileIfPossible {
                     return path.removingLastComponent()
                 }
@@ -1497,7 +1532,7 @@ extension SystemFileHandle {
         let materializationMode: Materialization.Mode
         let options: FileDescriptor.OpenOptions
 
-        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+        #if !os(FreeBSD) && (canImport(Glibc) || canImport(Musl) || canImport(Bionic))
         if useTemporaryFileIfPossible {
             options = [.temporaryFile]
             materializationMode = .link
@@ -1534,7 +1569,7 @@ extension SystemFileHandle {
 
             return .success(handle)
         } catch {
-            #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+            #if !os(FreeBSD) && (canImport(Glibc) || canImport(Musl) || canImport(Bionic))
             // 'O_TMPFILE' isn't supported for the current file system, try again but using
             // rename instead.
             if useTemporaryFileIfPossible, let errno = error as? Errno, errno == .notSupported {

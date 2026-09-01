@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import CNIOFreeBSD
 import NIOCore
 import XCTest
 
@@ -58,7 +59,29 @@ class SystemTest: XCTestCase {
         }
     }
 
-    #if canImport(Darwin)
+    #if os(FreeBSD)
+    // Example twin data options as laid out on FreeBSD.
+    private static let cmsghdrExample: [UInt8] = [
+        0x14, 0x00, 0x00, 0x00,  // Length 20 including header
+        0x00, 0x00, 0x00, 0x00,  // IPPROTO_IP
+        0x07, 0x00, 0x00, 0x00,  // IP_RECVDSTADDR
+        0x00, 0x00, 0x00, 0x00,  // padding to the 8-byte data alignment
+        0x7F, 0x00, 0x00, 0x01,  // 127.0.0.1
+        0x00, 0x00, 0x00, 0x00,  // padding to CMSG_SPACE(4) == 24
+        0x11, 0x00, 0x00, 0x00,  // Length 17 including header
+        0x00, 0x00, 0x00, 0x00,  // IPPROTO_IP
+        0x44, 0x00, 0x00, 0x00,  // IP_RECVTOS
+        0x00, 0x00, 0x00, 0x00,  // padding to the 8-byte data alignment
+        0x01, 0x00, 0x00, 0x00,  // ECT-1 (1 byte)
+        0x00, 0x00, 0x00, 0x00,  // padding to CMSG_SPACE(1) == 24
+    ]
+    private static let cmsghdr_secondStartPosition = 24
+    private static let cmsghdr_firstDataStart = 16
+    private static let cmsghdr_firstDataCount = 4
+    private static let cmsghdr_secondDataCount = 1
+    private static let cmsghdr_firstType = IP_RECVDSTADDR
+    private static let cmsghdr_secondType = IP_RECVTOS
+    #elseif canImport(Darwin)
     // Example twin data options captured on macOS
     private static let cmsghdrExample: [UInt8] = [
         0x10, 0x00, 0x00, 0x00,  // Length 16 including header

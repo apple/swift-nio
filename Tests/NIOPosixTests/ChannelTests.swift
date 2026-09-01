@@ -23,6 +23,8 @@ import XCTest
 
 #if os(Linux)
 import CNIOLinux
+#elseif os(FreeBSD)
+import CNIOFreeBSD
 #endif
 
 class ChannelLifecycleHandler: ChannelInboundHandler {

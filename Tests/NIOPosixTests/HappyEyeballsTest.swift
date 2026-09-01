@@ -13,6 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+#if os(FreeBSD)
+import CNIOFreeBSD
+#endif
 import NIOConcurrencyHelpers
 import NIOEmbedded
 import XCTest

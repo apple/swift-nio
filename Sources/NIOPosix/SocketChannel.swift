@@ -15,6 +15,7 @@
 #if !os(WASI)
 
 import CNIOLinux
+import CNIOFreeBSD
 import NIOCore
 
 #if os(Windows)
@@ -128,7 +129,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket>, @unchecked Sendable 
         case _ as ChannelOptions.Types.ConnectTimeoutOption:
             return connectTimeout as! Option.Value
         case _ as ChannelOptions.Types.LocalVsockContextID:
-            #if os(Windows) || os(OpenBSD)
+            #if os(Windows) || os(FreeBSD) || os(OpenBSD)
             fallthrough
             #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
@@ -164,7 +165,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket>, @unchecked Sendable 
         self.scheduleConnectTimeout()
         return false
     }
-
+#if !os(FreeBSD)
     override func connectSocket(to address: VsockAddress) throws -> Bool {
         if try self.socket.connect(to: address) {
             return true
@@ -172,7 +173,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket>, @unchecked Sendable 
         self.scheduleConnectTimeout()
         return false
     }
-
+#endif
     override func finishConnectSocket() throws {
         if let scheduled = self.connectTimeoutScheduled {
             // Connection established so cancel the previous scheduled timeout.
@@ -287,7 +288,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
         case _ as ChannelOptions.Types.BacklogOption:
             return backlog as! Option.Value
         case _ as ChannelOptions.Types.LocalVsockContextID:
-            #if os(Windows) || os(OpenBSD)
+            #if os(Windows) || os(FreeBSD) || os(OpenBSD)
             fallthrough
             #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
@@ -326,7 +327,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
             switch target {
             case .socketAddress(let address):
                 try socket.bind(to: address)
-            #if os(Windows) || os(OpenBSD)
+            #if os(Windows) || os(FreeBSD) || os(OpenBSD)
             case .vsockAddress:
                 fatalError(vsockUnimplemented)
             #else
@@ -460,8 +461,10 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
 
     override func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
         switch event {
+#if !os(FreeBSD)
         case let event as VsockChannelEvents.BindToAddress:
             self.bind0(to: .vsockAddress(event.address), promise: promise)
+#endif
         default:
             promise?.fail(ChannelError._operationUnsupported)
         }
@@ -612,11 +615,24 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             switch self.localAddress?.protocol {
             case .some(.inet):
                 self.receivePacketInfo = true
+                #if os(FreeBSD)
+                try self.socket.setOption(
+                    level: .ip,
+                    name: .ip_recv_if,
+                    value: valueAsInt
+                )
+                try self.socket.setOption(
+                    level: .ip,
+                    name: .ip_orig_dstaddr,
+                    value: valueAsInt
+                )
+                #else
                 try self.socket.setOption(
                     level: .ip,
                     name: .ip_recv_pktinfo,
                     value: valueAsInt
                 )
+                #endif
             case .some(.inet6):
                 self.receivePacketInfo = true
                 try self.socket.setOption(
@@ -694,11 +710,23 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             #else
             switch self.localAddress?.protocol {
             case .some(.inet):
+                #if os(FreeBSD)
+                return try
+                    ((self.socket.getOption(
+                        level: .ip,
+                        name: .ip_recv_if
+                    ) != 0) &&
+                    (self.socket.getOption(
+                        level: .ip,
+                        name: .ip_orig_dstaddr
+                    ) != 0)) as! Option.Value
+                #else
                 return try
                     (self.socket.getOption(
                         level: .ip,
                         name: .ip_recv_pktinfo
                     ) != 0) as! Option.Value
+                #endif
             case .some(.inet6):
                 return try
                     (self.socket.getOption(
@@ -758,11 +786,11 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             preconditionFailure("Connect of datagram socket did not complete synchronously.")
         }
     }
-
+#if !os(FreeBSD)
     override func connectSocket(to address: VsockAddress) throws -> Bool {
         throw ChannelError._operationUnsupported
     }
-
+#endif
     override func finishConnectSocket() throws {
         // This is not required for connected datagram channels connect is a synchronous operation.
         throw ChannelError._operationUnsupported

@@ -18,13 +18,15 @@ import NIOCore
 
 #if canImport(Darwin)
 import CNIODarwin
-#elseif os(Linux) || os(FreeBSD) || os(Android)
+#elseif os(Linux) || os(Android)
 import CNIOLinux
 #elseif os(OpenBSD)
 import CNIOOpenBSD
 import Glibc
 #elseif os(Windows)
 import CNIOWindows
+#elseif os(FreeBSD)
+import CNIOFreeBSD
 #endif
 
 #if os(Windows)
@@ -53,8 +55,16 @@ struct UnsafeControlMessageStorage: Collection {
         self.deallocateBuffer = deallocateBuffer
     }
 
+    #if os(FreeBSD)
+    static var bytesPerMessage: Int {
+        NIOBSDSocketControlMessage.space(payloadSize: MemoryLayout<sockaddr_dl>.stride)
+            + NIOBSDSocketControlMessage.space(payloadSize: MemoryLayout<sockaddr_in6>.stride)
+            + NIOBSDSocketControlMessage.space(payloadSize: MemoryLayout<Int32>.stride) * 2
+    }
+    #else
     // Guess that 4 Int32 payload messages is enough for anyone.
     static var bytesPerMessage: Int { NIOBSDSocketControlMessage.space(payloadSize: MemoryLayout<Int32>.stride) * 4 }
+    #endif
 
     /// Allocate new memory - Caller must call `deallocate` when no longer required.
     /// - Parameters:
@@ -202,13 +212,26 @@ struct ControlMessageParser {
     var packetInfo: NIOPacketInfo? = nil
     var segmentSize: Int? = nil
 
+    #if os(FreeBSD)
+    var destinationAddress: SocketAddress? = nil
+    var interfaceIndex: Int? = nil
+    #endif
+
     init(parsing controlMessagesReceived: UnsafeControlMessageCollection) {
         for controlMessage in controlMessagesReceived {
             self.receiveMessage(controlMessage)
         }
+        #if os(FreeBSD)
+        if let destinationAddress, let interfaceIndex {
+            self.packetInfo = NIOPacketInfo(
+                destinationAddress: destinationAddress,
+                interfaceIndex: interfaceIndex
+            )
+        }
+        #endif
     }
 
-    #if canImport(Darwin)
+    #if canImport(Darwin) || os(FreeBSD)
     private static let ipv4TosType = IP_RECVTOS
     #else
     private static let ipv4TosType = IP_TOS  // Linux
@@ -235,6 +258,30 @@ struct ControlMessageParser {
     }
 
     private mutating func receiveIPv4Message(_ controlMessage: UnsafeControlMessage) {
+#if os(FreeBSD)
+        if controlMessage.type == ControlMessageParser.ipv4TosType {
+            if let data = controlMessage.data {
+                assert(data.count == 1)
+                precondition(data.count >= 1)
+                let readValue = CInt(data[0])
+                self.ecnValue = .init(receivedValue: readValue)
+            }
+        } else if controlMessage.type == Posix.IP_ORIGDSTADDR {
+            if let data = controlMessage.data {
+                var addr = data.load(as: sockaddr_in.self)
+                // Unlike 'in_pktinfo' on other platforms, 'IP_ORIGDSTADDR' also reports the
+                // destination port. But dropping it anyway so the packet info matches other
+                // platforms :(
+                addr.sin_port = in_port_t(0)
+                self.destinationAddress = SocketAddress(addr, host: "")
+            }
+        } else if controlMessage.type == Posix.IP_RECVIF {
+            if let data = controlMessage.data {
+                let addr = data.load(as: sockaddr_dl.self)
+                self.interfaceIndex = Int(addr.sdl_index)
+            }
+        }
+#else
         if controlMessage.type == ControlMessageParser.ipv4TosType {
             if let data = controlMessage.data {
                 assert(data.count == 1)
@@ -257,6 +304,7 @@ struct ControlMessageParser {
             }
             #endif
         }
+#endif
     }
 
     private mutating func receiveIPv6Message(_ controlMessage: UnsafeControlMessage) {
@@ -340,6 +388,13 @@ struct UnsafeOutboundControlBytes {
         self.appendGenericControlMessage(level: level, type: type, payload: payload)
     }
 
+    #if os(FreeBSD)
+    /// Some FreeBSD control messages (e.g. `IP_TOS`) carry a single byte rather than a `CInt`.
+    mutating func appendControlMessage(level: CInt, type: CInt, bytePayload payload: UInt8) {
+        self.appendGenericControlMessage(level: level, type: type, payload: payload)
+    }
+    #endif
+
     /// Appends a control message.
     /// PayloadType needs to be trivial (eg CInt)
     private mutating func appendGenericControlMessage<PayloadType>(
@@ -393,11 +448,19 @@ extension UnsafeOutboundControlBytes {
 
         switch protocolFamily {
         case .some(.inet):
+            #if os(FreeBSD)
+            self.appendControlMessage(
+                level: .init(IPPROTO_IP),
+                type: IP_TOS,
+                bytePayload: UInt8(truncatingIfNeeded: CInt(ecnValue: metadata.ecnState))
+            )
+            #else
             self.appendControlMessage(
                 level: .init(IPPROTO_IP),
                 type: IP_TOS,
                 payload: CInt(ecnValue: metadata.ecnState)
             )
+            #endif
         case .some(.inet6):
             self.appendControlMessage(
                 level: .init(_IPPROTO_IPV6),
