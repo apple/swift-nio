@@ -13,10 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 import NIOConcurrencyHelpers
+@_spi(CustomByteBufferAllocator) @testable import NIOCore
 import NIOEmbedded
 import XCTest
 
-@_spi(CustomByteBufferAllocator) @testable import NIOCore
 @testable import NIOPosix
 
 private let testDecoderIsNotQuadratic_mallocs = NIOLockedValueBox(0)
