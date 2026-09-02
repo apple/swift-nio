@@ -386,7 +386,7 @@ extension BufferedStream {
         /// a `Result.failure`.
         ///
         /// - Parameters:
-        ///   - sequence: The element to write to the asynchronous stream.
+        ///   - element: The element to write to the asynchronous stream.
         ///   - onProduceMore: The callback which gets invoked once more elements should be produced. This callback might be
         ///   invoked during the call to ``write(_:onProduceMore:)``.
         internal func write(
@@ -444,7 +444,7 @@ extension BufferedStream {
         /// This method returns once more elements should be produced.
         ///
         /// - Parameters:
-        ///   - sequence: The element to write to the asynchronous stream.
+        ///   - element: The element to write to the asynchronous stream.
         internal func write(_ element: Element) async throws {
             try await self.write(contentsOf: CollectionOfOne(element))
         }

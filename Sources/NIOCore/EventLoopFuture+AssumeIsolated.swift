@@ -272,6 +272,26 @@ extension EventLoopFuture {
             self._wrapped = _wrapped
         }
 
+        /// Returns the result of this future if it's available, `nil` otherwise.
+        @inlinable
+        public var result: Result<Value, any Error>? {
+            self._wrapped._value
+        }
+
+        /// Returns the value of this future if it's available, `nil` otherwise.
+        @inlinable
+        public var value: Value? {
+            get throws {
+                try self.result?.get()
+            }
+        }
+
+        /// Returns whether the future has completed and already holds a value.
+        @inlinable
+        public var isComplete: Bool {
+            self._wrapped._value != nil
+        }
+
         /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback,
         /// which will provide a new `EventLoopFuture`.
         ///
