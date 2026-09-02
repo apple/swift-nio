@@ -30,8 +30,12 @@ nonisolated(nonsending) func withNIOUnsafeThrowingContinuation<T>(
 ) async throws -> sending T {
     try await withCheckedThrowingContinuation(fn)
 }
-#elseif compiler(>=6.1)
+#endif  // compiler 6.2
+
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+#if compiler(>=6.2)
+@available(*, deprecated, message: "Use the 'nonisolated(nonsending)' overload without an 'isolation' parameter.")
+#endif
 @inlinable
 func withNIOUnsafeThrowingContinuation<T>(
     isolation: isolated (any Actor)? = #isolation,
@@ -39,16 +43,6 @@ func withNIOUnsafeThrowingContinuation<T>(
 ) async throws -> sending T {
     try await withCheckedThrowingContinuation(isolation: isolation, fn)
 }
-#else
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-@inlinable
-func withNIOUnsafeThrowingContinuation<T: Sendable>(
-    isolation: isolated (any Actor)? = #isolation,
-    _ fn: (NIOUnsafeContinuation<T, any Error>) -> Void
-) async throws -> T {
-    try await withCheckedThrowingContinuation(isolation: isolation, fn)
-}
-#endif  // compiler 6.0
 #else
 /// A Swift Continuation that behaves like a `CheckedContinuation` in Debug mode
 /// and like a `UnsafeContinuation` in release mode.
@@ -67,8 +61,12 @@ nonisolated(nonsending) func withNIOUnsafeThrowingContinuation<T>(
 ) async throws -> sending T {
     try await withUnsafeThrowingContinuation(fn)
 }
-#elseif compiler(>=6.1)
+#endif  // compiler 6.2
+
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+#if compiler(>=6.2)
+@available(*, deprecated, message: "Use the 'nonisolated(nonsending)' overload without an 'isolation' parameter.")
+#endif
 @inlinable
 func withNIOUnsafeThrowingContinuation<T>(
     isolation: isolated (any Actor)? = #isolation,
@@ -76,16 +74,6 @@ func withNIOUnsafeThrowingContinuation<T>(
 ) async throws -> sending T {
     try await withUnsafeThrowingContinuation(isolation: isolation, fn)
 }
-#else
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-@inlinable
-func withNIOUnsafeThrowingContinuation<T: Sendable>(
-    isolation: isolated (any Actor)? = #isolation,
-    _ fn: (NIOUnsafeContinuation<T, any Error>) -> Void
-) async throws -> T {
-    try await withUnsafeThrowingContinuation(isolation: isolation, fn)
-}
-#endif  // compiler 6.0
 #endif  // release build
 
 extension EventLoopFuture {
