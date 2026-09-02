@@ -142,7 +142,7 @@ public protocol FileSystemProtocol: Sendable {
     ///        destination of the symbolic link is returned.
     /// - Returns: Information about the file at the given path or `nil` if no file exists.
     func info(
-        forFileAt path: FilePath,
+        forFileAt path: NIOFilePath,
         infoAboutSymbolicLink: Bool
     ) async throws -> FileInfo?
 
@@ -468,7 +468,7 @@ extension FileSystemProtocol {
     /// - Parameters:
     ///    - path: The path to get information about.
     /// - Returns: Information about the file at the given path or `nil` if no file exists.
-    public func info(forFileAt path: FilePath) async throws -> FileInfo? {
+    public func info(forFileAt path: NIOFilePath) async throws -> FileInfo? {
         try await self.info(forFileAt: path, infoAboutSymbolicLink: false)
     }
 
