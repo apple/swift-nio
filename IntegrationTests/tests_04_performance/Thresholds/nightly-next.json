@@ -55,5 +55,5 @@
     "submit_10000_tasks": 0,
     "submit_assume_isolated_10000_tasks": 0,
     "udp_1000_reqs_1_conn": 1006,
-    "udp_1_reqs_1000_conn": 7000,
+    "udp_1_reqs_1000_conn": 7000
 }
