@@ -43,10 +43,15 @@ extension _ByteBufferSlice: Equatable {}
 /// fits within 24 bits, otherwise the behaviour is undefined.
 @usableFromInline
 struct _ByteBufferSlice: Sendable {
-    @usableFromInline private(set) var upperBound: ByteBuffer._Index
-    @usableFromInline private(set) var _begin: _UInt24
+    /// - Note: Must only be modified by `_ByteBufferSlice` itself, use ``upperBound`` to read it.
+    @usableFromInline var _upperBound: ByteBuffer._Index
+    /// - Note: Must only be modified by `_ByteBufferSlice` itself, use ``lowerBound`` to read it.
+    @usableFromInline var _begin: _UInt24
     @inlinable var lowerBound: ByteBuffer._Index {
         UInt32(self._begin)
+    }
+    @inlinable var upperBound: ByteBuffer._Index {
+        self._upperBound
     }
     @inlinable var count: Int {
         // Safe: the only constructors that set this enforce that upperBound > lowerBound, so
@@ -55,7 +60,7 @@ struct _ByteBufferSlice: Sendable {
     }
     @inlinable init() {
         self._begin = .init(0)
-        self.upperBound = .init(0)
+        self._upperBound = .init(0)
     }
     @inlinable static var maxSupportedLowerBound: ByteBuffer._Index {
         ByteBuffer._Index(_UInt24.max)
@@ -65,7 +70,7 @@ struct _ByteBufferSlice: Sendable {
 extension _ByteBufferSlice {
     @inlinable init(_ range: Range<UInt32>) {
         self._begin = _UInt24(range.lowerBound)
-        self.upperBound = range.upperBound
+        self._upperBound = range.upperBound
     }
 }
 
@@ -189,6 +194,11 @@ public struct ByteBufferAllocator: Sendable {
 
 /// `ByteBuffer` stores contiguously allocated raw bytes. It is a random and sequential accessible sequence of zero or
 /// more bytes (octets).
+///
+/// ### Value Semantics
+/// `ByteBuffer` is a value type. The reader and writer indices can always be modified without a
+/// copy of the underlying data. Any data modification may need to copy the contents using
+/// copy-on-write if there are multiple references to the underlying data storage.
 ///
 /// ### Allocation
 /// Use `allocator.buffer(capacity: desiredCapacity)` to allocate a new `ByteBuffer`.
@@ -324,14 +334,26 @@ public struct ByteBuffer {
     // MARK: Internal _Storage for CoW
     /// Note: This class is **not** thread-safe
     @usableFromInline final class _Storage {
-        @usableFromInline private(set) var capacity: _Capacity
-        @usableFromInline private(set) var bytes: UnsafeMutableRawPointer
+        /// - Note: Must only be modified by `_Storage` itself, use ``capacity`` to read it.
+        @usableFromInline var _capacity: _Capacity
+        /// - Note: Must only be modified by `_Storage` itself, use ``bytes`` to read it.
+        @usableFromInline var _bytes: UnsafeMutableRawPointer
         @usableFromInline let allocator: ByteBufferAllocator
 
         @inlinable
+        var capacity: _Capacity {
+            self._capacity
+        }
+
+        @inlinable
+        var bytes: UnsafeMutableRawPointer {
+            self._bytes
+        }
+
+        @inlinable
         init(bytesNoCopy: UnsafeMutableRawPointer, capacity: _Capacity, allocator: ByteBufferAllocator) {
-            self.bytes = bytesNoCopy
-            self.capacity = capacity
+            self._bytes = bytesNoCopy
+            self._capacity = capacity
             self.allocator = allocator
         }
 
@@ -381,8 +403,8 @@ public struct ByteBuffer {
             let ptr = self.allocator.reallocate(self.bytes, size_t(self.capacity), size_t(newCapacity))!
             // bind the memory so we can assume it elsewhere to be bound to UInt8
             ptr.bindMemory(to: UInt8.self, capacity: Int(newCapacity))
-            self.bytes = ptr
-            self.capacity = newCapacity
+            self._bytes = ptr
+            self._capacity = newCapacity
         }
 
         private func deallocate() {
