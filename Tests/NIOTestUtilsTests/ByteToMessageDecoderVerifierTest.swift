@@ -21,7 +21,7 @@ import Testing
 typealias VerificationError = ByteToMessageDecoderVerifier.VerificationError<String>
 
 struct ByteToMessageDecoderVerifierTests {
-    @Test func wrongResults() {
+    @Test func wrongResults() throws {
         struct AlwaysProduceY: ByteToMessageDecoder {
             typealias InboundOut = String
 
@@ -41,14 +41,13 @@ struct ByteToMessageDecoderVerifierTests {
             }
         }
 
-        let error = #expect(throws: VerificationError.self) {
+        let error = try #require(throws: VerificationError.self) {
             try ByteToMessageDecoderVerifier.verifyDecoder(
                 stringInputOutputPairs: [("x", ["x"])],
                 decoderFactory: AlwaysProduceY.init
             )
         }
 
-        guard let error else { return }
         #expect(1 == error.inputs.count)
         switch error.errorCode {
         case .wrongProduction(let actual, let expected):
@@ -59,7 +58,7 @@ struct ByteToMessageDecoderVerifierTests {
         }
     }
 
-    @Test func noOutputWhenWeShouldHaveOutput() {
+    @Test func noOutputWhenWeShouldHaveOutput() throws {
         struct NeverProduce: ByteToMessageDecoder {
             typealias InboundOut = String
 
@@ -78,14 +77,13 @@ struct ByteToMessageDecoderVerifierTests {
             }
         }
 
-        let error = #expect(throws: VerificationError.self) {
+        let error = try #require(throws: VerificationError.self) {
             try ByteToMessageDecoderVerifier.verifyDecoder(
                 stringInputOutputPairs: [("x", ["x"])],
                 decoderFactory: NeverProduce.init
             )
         }
 
-        guard let error else { return }
         #expect(1 == error.inputs.count)
         switch error.errorCode {
         case .underProduction(let expected):
@@ -95,7 +93,7 @@ struct ByteToMessageDecoderVerifierTests {
         }
     }
 
-    @Test func outputWhenWeShouldNotProduceOutput() {
+    @Test func outputWhenWeShouldNotProduceOutput() throws {
         struct ProduceTooEarly: ByteToMessageDecoder {
             typealias InboundOut = String
 
@@ -114,14 +112,13 @@ struct ByteToMessageDecoderVerifierTests {
             }
         }
 
-        let error = #expect(throws: VerificationError.self) {
+        let error = try #require(throws: VerificationError.self) {
             try ByteToMessageDecoderVerifier.verifyDecoder(
                 stringInputOutputPairs: [("xxxxxx", ["Y"])],
                 decoderFactory: ProduceTooEarly.init
             )
         }
 
-        guard let error else { return }
         switch error.errorCode {
         case .overProduction(let actual):
             #expect("Y" == actual)
@@ -130,7 +127,7 @@ struct ByteToMessageDecoderVerifierTests {
         }
     }
 
-    @Test func leftovers() {
+    @Test func leftovers() throws {
         struct NeverDoAnything: ByteToMessageDecoder {
             typealias InboundOut = String
 
@@ -151,14 +148,13 @@ struct ByteToMessageDecoderVerifierTests {
             }
         }
 
-        let error = #expect(throws: VerificationError.self) {
+        let error = try #require(throws: VerificationError.self) {
             try ByteToMessageDecoderVerifier.verifyDecoder(
                 stringInputOutputPairs: [("xxxxxx", [])],
                 decoderFactory: NeverDoAnything.init
             )
         }
 
-        guard let error else { return }
         switch error.errorCode {
         case .leftOversOnDeconstructingChannel(
             let inbound,
