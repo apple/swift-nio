@@ -637,4 +637,231 @@ struct NIOSingleStepByteToMessageDecoderTests {
             try processor.process(buffer: ByteBuffer(bytes: [1, 0xFF])) { _ in }
         }
     }
+
+    @Test
+    func processorDrivesNonCopyableDecoder() throws {
+        struct NonCopyableByteToInt32Decoder: NIOSingleStepByteToMessageDecoder, ~Copyable {
+            typealias InboundOut = Int32
+
+            mutating func decode(buffer: inout ByteBuffer) throws -> InboundOut? {
+                buffer.readInteger()
+            }
+
+            mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> InboundOut? {
+                try self.decode(buffer: &buffer)
+            }
+        }
+
+        let processor = NIOSingleStepByteToMessageProcessor(NonCopyableByteToInt32Decoder())
+        var buffer = ByteBuffer()
+        buffer.writeInteger(Int32(1))
+        buffer.writeInteger(Int32(2))
+
+        var decoded: [Int32] = []
+        try processor.process(buffer: buffer) { decoded.append($0) }
+        #expect(decoded == [1, 2])
+
+        try processor.finishProcessing(seenEOF: true) { decoded.append($0) }
+        #expect(decoded == [1, 2])
+        #expect(processor.unprocessedBytes == 0)
+    }
+
+    @Test
+    func handleDecodesWithTypedThrows() {
+        struct FoundSentinelError: Error, Equatable {}
+
+        struct SentinelDecoder: NIOSingleStepByteToMessageDecoder, ~Copyable {
+            typealias InboundOut = UInt8
+            typealias DecodeError = FoundSentinelError
+
+            mutating func decode(buffer: inout ByteBuffer) throws(FoundSentinelError) -> UInt8? {
+                guard let byte = buffer.readInteger(as: UInt8.self) else {
+                    return nil
+                }
+                guard byte != 0xFF else {
+                    throw FoundSentinelError()
+                }
+                return byte
+            }
+
+            mutating func decodeLast(
+                buffer: inout ByteBuffer,
+                seenEOF: Bool
+            ) throws(FoundSentinelError) -> UInt8? {
+                try self.decode(buffer: &buffer)
+            }
+        }
+
+        var handle = NIOSingleStepByteToMessageHandle(SentinelDecoder())
+        #expect(handle.unprocessedBytes == 0)
+        handle.append(ByteBuffer(bytes: [1, 2, 0xFF]))
+        #expect(handle.unprocessedBytes == 3)
+
+        do {
+            for expected in UInt8(1)...UInt8(2) {
+                let (decoded, ended) = try handle.decodeNext(decodeMode: .normal)
+                #expect(decoded == expected)
+                #expect(!ended)
+            }
+        } catch {
+            // `error` is statically `NIOSingleStepByteToMessageHandle<SentinelDecoder>.Error`, not `any Error`.
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        do {
+            _ = try handle.decodeNext(decodeMode: .normal)
+            Issue.record("Expected the sentinel byte to make the decoder throw")
+        } catch {
+            switch error {
+            case .decoder(let error):
+                // `error` is statically `FoundSentinelError`, so this needs no dynamic cast.
+                #expect(error == FoundSentinelError())
+            case .payloadTooLarge(let error):
+                Issue.record("Unexpected error: \(error)")
+            }
+        }
+    }
+
+    @Test
+    func handleProcessesWithTypedThrows() {
+        struct FoundSentinelError: Error, Equatable {}
+        struct MessageReceiverError: Error, Equatable {}
+
+        struct SentinelDecoder: NIOSingleStepByteToMessageDecoder, ~Copyable {
+            typealias InboundOut = UInt8
+            typealias DecodeError = FoundSentinelError
+
+            mutating func decode(buffer: inout ByteBuffer) throws(FoundSentinelError) -> UInt8? {
+                guard let byte = buffer.readInteger(as: UInt8.self) else {
+                    return nil
+                }
+                guard byte != 0xFF else {
+                    throw FoundSentinelError()
+                }
+                return byte
+            }
+
+            mutating func decodeLast(
+                buffer: inout ByteBuffer,
+                seenEOF: Bool
+            ) throws(FoundSentinelError) -> UInt8? {
+                try self.decode(buffer: &buffer)
+            }
+        }
+
+        var handle = NIOSingleStepByteToMessageHandle(SentinelDecoder())
+        var messages: [UInt8] = []
+
+        do {
+            try handle.process(buffer: ByteBuffer(bytes: [1, 2, 3])) { messages.append($0) }
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+        #expect(messages == [1, 2, 3])
+
+        // A throwing message receiver stops the loop and surfaces as `.messageReceiver`. The bytes that
+        // were not consumed stay aggregated, so decoding can be resumed.
+        do {
+            try handle.process(buffer: ByteBuffer(bytes: [4, 5, 6])) { (message) throws(MessageReceiverError) in
+                guard message != 5 else {
+                    throw MessageReceiverError()
+                }
+                messages.append(message)
+            }
+            Issue.record("Expected the message receiver to throw")
+        } catch {
+            switch error {
+            case .messageReceiver(let error):
+                // `error` is statically `MessageReceiverError`, so this needs no dynamic cast.
+                #expect(error == MessageReceiverError())
+            case .decoder(let error):
+                Issue.record("Unexpected error: \(error)")
+            case .payloadTooLarge(let error):
+                Issue.record("Unexpected error: \(error)")
+            }
+        }
+        #expect(messages == [1, 2, 3, 4])
+        #expect(handle.unprocessedBytes == 1)
+
+        // Resume where we left off, and then hit the sentinel.
+        do {
+            try handle.process(buffer: ByteBuffer(bytes: [0xFF])) { messages.append($0) }
+            Issue.record("Expected the sentinel byte to make the decoder throw")
+        } catch {
+            switch error {
+            case .decoder(let error):
+                #expect(error == FoundSentinelError())
+            case .messageReceiver(let error):
+                Issue.record("Unexpected error: \(error)")
+            case .payloadTooLarge(let error):
+                Issue.record("Unexpected error: \(error)")
+            }
+        }
+        #expect(messages == [1, 2, 3, 4, 6])
+    }
+
+    @Test
+    func handleFinishProcessingCallsDecodeLastWithEmptyBuffer() {
+        final class EmptyBufferDecoder: NIOSingleStepByteToMessageDecoder {
+            typealias InboundOut = Int
+            typealias DecodeError = Never
+
+            var decodeLastCalls = 0
+
+            func decode(buffer: inout ByteBuffer) throws(Never) -> Int? {
+                nil
+            }
+
+            func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws(Never) -> Int? {
+                #expect(seenEOF)
+                #expect(buffer.readableBytes == 0)
+                self.decodeLastCalls += 1
+                return self.decodeLastCalls == 1 ? 42 : nil
+            }
+        }
+
+        let decoder = EmptyBufferDecoder()
+        var handle = NIOSingleStepByteToMessageHandle(decoder)
+        var messages: [Int] = []
+
+        do {
+            try handle.finishProcessing(seenEOF: true) { messages.append($0) }
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(messages == [42])
+        #expect(decoder.decodeLastCalls == 1)
+    }
+
+    @Test
+    func handleThrowsTypedPayloadTooLarge() {
+        struct NeverDecoder: NIOSingleStepByteToMessageDecoder, ~Copyable {
+            typealias InboundOut = Never
+            typealias DecodeError = Never
+
+            mutating func decode(buffer: inout ByteBuffer) throws(Never) -> Never? {
+                nil
+            }
+
+            mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws(Never) -> Never? {
+                nil
+            }
+        }
+
+        var handle = NIOSingleStepByteToMessageHandle(NeverDecoder(), maximumBufferSize: 4)
+        handle.append(ByteBuffer(bytes: [1, 2, 3, 4, 5]))
+
+        do {
+            _ = try handle.decodeNext(decodeMode: .normal)
+            Issue.record("Expected a payload too large error")
+        } catch {
+            switch error {
+            case .payloadTooLarge:
+                ()
+            case .decoder(let error):
+                Issue.record("Unexpected error: \(error)")
+            }
+        }
+    }
 }
