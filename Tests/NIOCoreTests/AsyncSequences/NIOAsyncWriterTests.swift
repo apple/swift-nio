@@ -242,7 +242,7 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        Task { [writer] in
+        _ = Task { [writer] in
             try await writer!.yield("message1")
         }
 
@@ -262,7 +262,7 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        Task { [writer] in
+        _ = Task { [writer] in
             try await writer!.yield("message2")
         }
 
@@ -280,7 +280,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         }
         let resumed = expectation(description: "yield completed")
 
-        Task { [writer] in
+        _ = Task { [writer] in
             try await writer!.yield("message2")
             resumed.fulfill()
         }
@@ -302,7 +302,7 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        Task { [writer] in
+        _ = Task { [writer] in
             try await writer!.yield("message1")
         }
 
@@ -323,7 +323,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         }
         let resumed = expectation(description: "yield completed")
 
-        Task { [writer] in
+        _ = Task { [writer] in
             try await writer!.yield("message1")
             resumed.fulfill()
         }
@@ -365,7 +365,7 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        Task { [writer] in
+        _ = Task { [writer] in
             try await writer!.yield("message2")
         }
 
@@ -396,7 +396,7 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        Task { [writer] in
+        _ = Task { [writer] in
             try await writer!.yield("message2")
         }
 
@@ -450,7 +450,7 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        Task { [writer] in
+        _ = Task { [writer] in
             try await writer!.yield("message1")
         }
 

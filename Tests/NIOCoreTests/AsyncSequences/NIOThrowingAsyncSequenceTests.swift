@@ -709,7 +709,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let suspended = expectation(description: "task suspended")
         sequence._storage._setDidSuspend { suspended.fulfill() }
 
-        Task {
+        _ = Task {
             // Would prefer to use async let _ here but that is not allowed yet
             _ = try await sequence.first { _ in true }
         }
@@ -727,7 +727,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let suspended = expectation(description: "task suspended")
         sequence._storage._setDidSuspend { suspended.fulfill() }
 
-        Task {
+        _ = Task {
             // Would prefer to use async let _ here but that is not allowed yet
             _ = try await sequence.first { _ in true }
         }
@@ -747,7 +747,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let suspended = expectation(description: "task suspended")
         sequence._storage._setDidSuspend { suspended.fulfill() }
 
-        Task {
+        _ = Task {
             // Would prefer to use async let _ here but that is not allowed yet
             _ = try await sequence.first { _ in true }
         }
@@ -767,7 +767,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let suspended = expectation(description: "task suspended")
         sequence._storage._setDidSuspend { suspended.fulfill() }
 
-        Task {
+        _ = Task {
             // Would prefer to use async let _ here but that is not allowed yet
             _ = try await sequence.first { _ in true }
         }
