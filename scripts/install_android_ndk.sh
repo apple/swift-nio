@@ -29,8 +29,24 @@ CURL_BIN="${CURL_BIN:-$(which curl 2> /dev/null)}"; test -n "$CURL_BIN" || fatal
 UNZIP_BIN="${UNZIP_BIN:-$(which unzip 2> /dev/null)}"; test -n "$UNZIP_BIN" || fatal "UNZIP_BIN unset and no unzip on PATH"
 SHASUM_BIN="${SHASUM_BIN:-$(which shasum 2> /dev/null)}"; test -n "$SHASUM_BIN" || fatal "SHASUM_BIN unset and no shasum on PATH"
 
+host_os="$(uname -s)"
+case "$host_os" in
+  "Linux")
+    android_ndk_host="linux"
+    ;;
+  "Darwin")
+    android_ndk_host="darwin"
+    ;;
+  MINGW*|MSYS*|CYGWIN*|"Windows_NT")
+    android_ndk_host="windows"
+    ;;
+  *)
+    fatal "Unexpected host OS: $host_os"
+    ;;
+esac
+
 # download and link the NDK
-android_ndk_url="https://dl.google.com/android/repository/android-ndk-${android_ndk_version}-$(uname -s).zip"
+android_ndk_url="https://dl.google.com/android/repository/android-ndk-${android_ndk_version}-${android_ndk_host}.zip"
 
 log "Android Native Development Kit URL: $android_ndk_url"
 "$CURL_BIN" -fsSL -o android_ndk.zip --retry 3 "$android_ndk_url"
