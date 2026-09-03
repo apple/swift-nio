@@ -39,9 +39,19 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         let loopBoundContext = context.loopBound
+        let errorCode: WebSocketErrorCode?
         if let error = error as? NIOWebSocketError {
+            errorCode = WebSocketErrorCode(error)
+        } else if error is NIOWebSocketMaskingError {
+            // A masking violation is a protocol error under RFC 6455 (§5.1).
+            errorCode = .protocolError
+        } else {
+            errorCode = nil
+        }
+
+        if let errorCode {
             var data = context.channel.allocator.buffer(capacity: 2)
-            data.write(webSocketErrorCode: WebSocketErrorCode(error))
+            data.write(webSocketErrorCode: errorCode)
             let frame = WebSocketFrame(
                 fin: true,
                 opcode: .connectionClose,
