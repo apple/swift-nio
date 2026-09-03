@@ -242,9 +242,8 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        _ = Task { [writer] in
-            try await writer!.yield("message1")
-        }
+        let writer = self.writer!
+        async let _ = writer.yield("message1")
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -262,9 +261,8 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        _ = Task { [writer] in
-            try await writer!.yield("message2")
-        }
+        let writer = self.writer!
+        async let _ = writer.yield("message2")
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -280,10 +278,11 @@ final class NIOAsyncWriterTests: XCTestCase {
         }
         let resumed = expectation(description: "yield completed")
 
-        _ = Task { [writer] in
-            try await writer!.yield("message2")
+        let writer = self.writer!
+        async let _ = {
+            try await writer.yield("message2")
             resumed.fulfill()
-        }
+        }()
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -302,9 +301,8 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        _ = Task { [writer] in
-            try await writer!.yield("message1")
-        }
+        let writer = self.writer!
+        async let _ = writer.yield("message1")
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -323,10 +321,11 @@ final class NIOAsyncWriterTests: XCTestCase {
         }
         let resumed = expectation(description: "yield completed")
 
-        _ = Task { [writer] in
-            try await writer!.yield("message1")
+        let writer = self.writer!
+        async let _ = {
+            try await writer.yield("message1")
             resumed.fulfill()
-        }
+        }()
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -365,9 +364,8 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        _ = Task { [writer] in
-            try await writer!.yield("message2")
-        }
+        let writer = self.writer!
+        async let _ = writer.yield("message2")
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -396,9 +394,8 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        _ = Task { [writer] in
-            try await writer!.yield("message2")
-        }
+        let writer = self.writer!
+        async let _ = writer.yield("message2")
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -450,9 +447,8 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        _ = Task { [writer] in
-            try await writer!.yield("message1")
-        }
+        let writer = self.writer!
+        async let _ = writer.yield("message1")
 
         await fulfillment(of: [suspended], timeout: 1)
 
