@@ -65,6 +65,7 @@ extension ByteBuffer {
         /// Calculates the minimum number of bytes needed to encode an integer using this strategy
         /// - Parameter integer: The integer to be encoded
         /// - Returns: The number of bytes needed to encode it
+        @inlinable
         public static func bytesNeededForInteger<IntegerType: FixedWidthInteger>(_ integer: IntegerType) -> Int {
             // We must cast the integer to UInt64 here
             // Otherwise, an integer can fall through to the default case
@@ -129,17 +130,17 @@ extension ByteBuffer {
 }
 
 extension NIOBinaryIntegerEncodingStrategy where Self == ByteBuffer.QUICBinaryEncodingStrategy {
-    @inlinable
     /// Encodes bytes as defined in RFC 9000 § 16
     /// - Parameter requiredBytesHint: An estimate of the bytes required to write integers using this strategy. This parameter is only relevant if calling ``ByteBuffer/writeLengthPrefixed(strategy:writeData:)``
     /// - Returns: An instance of ``ByteBuffer/QUICBinaryEncodingStrategy``
+    @inlinable
     public static func quic(
         requiredBytesHint: ByteBuffer.QUICBinaryEncodingStrategy.IntegerLength
     ) -> ByteBuffer.QUICBinaryEncodingStrategy {
         ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: requiredBytesHint)
     }
 
-    @inlinable
     /// Encodes bytes as defined in RFC 9000 § 16
+    @inlinable
     public static var quic: ByteBuffer.QUICBinaryEncodingStrategy { .quic(requiredBytesHint: .four) }
 }
