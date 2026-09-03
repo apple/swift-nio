@@ -50,6 +50,13 @@ public struct AddressedEnvelope<DataType> {
         /// (if attached).
         public var segmentSize: Int?
 
+        /// The timestamp this datagram was received by the kernel.
+        ///
+        /// When `SO_TIMESTAMP` is enabled on a `DatagramChannel`, the kernel records the time each packet arrives.
+        /// This value is expressed as the number of seconds since the Unix epoch (January 1, 1970), with
+        /// sub-second precision.
+        public var timestamp: Double?
+
         public init(ecnState: NIOExplicitCongestionNotificationState) {
             self.ecnState = ecnState
             self.packetInfo = nil
@@ -70,6 +77,18 @@ public struct AddressedEnvelope<DataType> {
             self.ecnState = ecnState
             self.packetInfo = packetInfo
             self.segmentSize = segmentSize
+        }
+
+        public init(
+            ecnState: NIOExplicitCongestionNotificationState,
+            packetInfo: NIOPacketInfo?,
+            segmentSize: Int?,
+            timestamp: Double?
+        ) {
+            self.ecnState = ecnState
+            self.packetInfo = packetInfo
+            self.segmentSize = segmentSize
+            self.timestamp = timestamp
         }
     }
 }
