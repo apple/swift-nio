@@ -66,9 +66,20 @@ public struct DirectoryEntries: AsyncSequence, Sendable {
             self.currentBatch = []
         }
 
+        @concurrent
         public mutating func next() async throws -> DirectoryEntry? {
             if self.currentBatch.isEmpty {
                 let batch = try await self.iterator.next()
+                self.currentBatch = (batch ?? [])[...]
+            }
+
+            return self.currentBatch.popFirst()
+        }
+
+        @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
+        public mutating func next(isolation actor: isolated (any Actor)?) async throws(any Error) -> DirectoryEntry? {
+            if self.currentBatch.isEmpty {
+                let batch = try await self.iterator.next(isolation: actor)
                 self.currentBatch = (batch ?? [])[...]
             }
 
@@ -128,8 +139,14 @@ extension DirectoryEntries {
                 self.iterator = iterator
             }
 
+            @concurrent
             public mutating func next() async throws -> [DirectoryEntry]? {
                 try await self.iterator.next()
+            }
+
+            @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
+            public mutating func next(isolation actor: isolated (any Actor)?) async throws(any Error) -> [DirectoryEntry]? {
+                try await self.iterator.next(isolation: actor)
             }
         }
     }

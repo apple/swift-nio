@@ -180,6 +180,7 @@ final class AsyncChannelTests: XCTestCase {
         }
     }
 
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
     func testErrorsArePropagatedButAfterReads() async throws {
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
@@ -196,7 +197,7 @@ final class AsyncChannelTests: XCTestCase {
             let first = try await iterator.next()
             XCTAssertEqual(first, "hello")
 
-            try await XCTAssertThrowsError(await iterator.next()) { error in
+            try await XCTAssertThrowsError(await iterator.next(isolation: #isolation)) { error in
                 XCTAssertEqual(error as? TestError, .bang)
             }
         }
@@ -267,6 +268,7 @@ final class AsyncChannelTests: XCTestCase {
         try await channel.closeIgnoringSuppression()
     }
 
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
     func testManagingBackPressure() async throws {
         let channel = NIOAsyncTestingChannel()
         let readCounter = ReadCounter()
@@ -330,13 +332,13 @@ final class AsyncChannelTests: XCTestCase {
             // Now consume three elements from the pipeline. This should not unbuffer the read, as 3 elements remain.
             var reader = inbound.makeAsyncIterator()
             for _ in 0..<3 {
-                try await XCTAsyncAssertNotNil(await reader.next())
+                try await XCTAsyncAssertNotNil(await reader.next(isolation: #isolation))
             }
             await channel.testingEventLoop.run()
             XCTAssertEqual(readCounter.readCount, 6)
 
             // Removing the next element should trigger an automatic read.
-            try await XCTAsyncAssertNotNil(await reader.next())
+            try await XCTAsyncAssertNotNil(await reader.next(isolation: #isolation))
             await channel.testingEventLoop.run()
             XCTAssertEqual(readCounter.readCount, 7)
 
@@ -366,7 +368,7 @@ final class AsyncChannelTests: XCTestCase {
 
             // This time we'll consume 4 more elements, and we won't find a read at all.
             for _ in 0..<4 {
-                try await XCTAsyncAssertNotNil(await reader.next())
+                try await XCTAsyncAssertNotNil(await reader.next(isolation: #isolation))
             }
             await channel.testingEventLoop.run()
             XCTAssertEqual(readCounter.readCount, 13)
