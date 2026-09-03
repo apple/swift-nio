@@ -8,7 +8,9 @@ let package = Package(
         .macOS("14")
     ],
     dependencies: [
-        .package(path: "../"),
+        // The name is set explicitly: otherwise SwiftPM infers it from the directory name of the
+        // checkout, which breaks in git worktrees (where the directory is named after the worktree).
+        .package(name: "swift-nio", path: "../"),
         .package(url: "https://github.com/ordo-one/package-benchmark.git", from: "1.29.11"),
     ],
     targets: [
