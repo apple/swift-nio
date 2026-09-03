@@ -83,6 +83,9 @@ extension EventLoopFuture {
     ///
     /// This function can be used to bridge an `EventLoopFuture` into the `async` world. Ie. if you're in an `async`
     /// function and want to get the result of this future.
+    ///
+    /// - seealso: ``getAbandoningOnCancel()`` which returns a `CancellationError` on cancellation (by abandoning this
+    ///     future) instead of ignoring cancellation altogether.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @preconcurrency
     @inlinable
@@ -97,6 +100,33 @@ extension EventLoopFuture {
                 }
             }
         }.wrappedValue
+    }
+
+    /// Get the value/error from an `EventLoopFuture` in an `async` context, abandoning the future on cancellation.
+    ///
+    /// - warning: This method still violates Structured Concurrency: Cancelling the surrounding task does _not_
+    ///     cancel the operation that this future represents, it merely _abandons_ the future. In other words, the
+    ///     operation is likely still ongoing (holding on to its resources) and its result will be dropped. Unlike
+    ///     ``get()`` however, this method _will_ return promptly on cancellation, throwing `CancellationError`.
+    ///
+    /// This function can be used to bridge an `EventLoopFuture` into the `async` world. Ie. if you're in an `async`
+    /// function and want to get the result of this future.
+    ///
+    /// If cancellation and the completion of this future race, either the future's result or a `CancellationError`
+    /// may be returned.
+    ///
+    /// - seealso: ``get()`` which ignores cancellation entirely and therefore only returns once this future completes.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @inlinable
+    public func getAbandoningOnCancel() async throws -> Value where Value: Sendable {
+        let promise = self.eventLoop.makePromise(of: Value.self)
+        self.cascade(to: promise)
+        return try await withTaskCancellationHandler {
+            try await promise.futureResult.get()
+        } onCancel: {
+            // If the future completes first, this is a no-op (first completion wins).
+            promise.fail(CancellationError())
+        }
     }
 }
 
