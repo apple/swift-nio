@@ -79,7 +79,7 @@ class Socket: BaseSocket, SocketProtocol {
     /// Create a new instance out of an already established socket.
     ///
     /// - Parameters:
-    ///   - descriptor: The existing socket descriptor.
+    ///   - socket: The existing socket descriptor.
     ///   - setNonBlocking: Set non-blocking mode on the socket.
     /// - Throws: An `IOError` if could not change the socket into non-blocking
     init(socket: NIOBSDSocket.Handle, setNonBlocking: Bool) throws {
@@ -109,7 +109,7 @@ class Socket: BaseSocket, SocketProtocol {
     /// file descriptor once it's not needed / used anymore.
     ///
     /// - Parameters:
-    ///   - descriptor: The file descriptor to wrap.
+    ///   - socket: The file descriptor to wrap.
     override init(socket: NIOBSDSocket.Handle) throws {
         try super.init(socket: socket)
     }
