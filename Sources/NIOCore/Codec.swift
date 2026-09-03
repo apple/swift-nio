@@ -140,7 +140,7 @@ extension ByteToMessageDecoderError {
 ///
 ///     channel.pipeline.addHandler(ByteToMessageHandler(MyByteToMessageDecoder()))
 ///
-public protocol ByteToMessageDecoder {
+public protocol ByteToMessageDecoder: ~Copyable {
     /// The type of the messages this `ByteToMessageDecoder` decodes to.
     associatedtype InboundOut
 
@@ -217,7 +217,7 @@ public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder {
     mutating func write(data: OutboundIn)
 }
 
-extension ByteToMessageDecoder {
+extension ByteToMessageDecoder where Self: ~Copyable {
     public mutating func decoderRemoved(context: ChannelHandlerContext) {
     }
 

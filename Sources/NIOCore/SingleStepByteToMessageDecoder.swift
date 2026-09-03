@@ -18,10 +18,13 @@
 ///
 /// Many `ByteToMessageDecoder`'s can trivially be translated to `NIOSingleStepByteToMessageDecoder`'s. You should not implement
 /// `ByteToMessageDecoder`'s `decode` and `decodeLast` methods.
-public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
+public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder, ~Copyable {
     /// The decoded type this `NIOSingleStepByteToMessageDecoder` decodes to. To conform to `ByteToMessageDecoder` it must be called
     /// `InboundOut` - see https://bugs.swift.org/browse/SR-11868.
     associatedtype InboundOut
+
+    /// The error type thrown from `decode` and `decodeLast`. Defaults to `any Error`
+    associatedtype DecodeError: Error = any Error
 
     /// Decode from a `ByteBuffer`.
     ///
@@ -32,7 +35,7 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
     /// - Parameters:
     ///   - buffer: The `ByteBuffer` from which we decode.
     /// - Returns: A message if one can be decoded or `nil` if it should be called again once more data is present in the `ByteBuffer`.
-    mutating func decode(buffer: inout ByteBuffer) throws -> InboundOut?
+    mutating func decode(buffer: inout ByteBuffer) throws(DecodeError) -> InboundOut?
 
     /// Decode from a `ByteBuffer` when no more data is incoming.
     ///
@@ -47,11 +50,11 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
     ///   - buffer: The `ByteBuffer` from which we decode.
     ///   - seenEOF: `true` if EOF has been seen.
     /// - Returns: A message if one can be decoded or `nil` if no more messages can be produced.
-    mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> InboundOut?
+    mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws(DecodeError) -> InboundOut?
 }
 
 // MARK: NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder
-extension NIOSingleStepByteToMessageDecoder {
+extension NIOSingleStepByteToMessageDecoder where Self: ~Copyable {
     public mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         if let message = try self.decode(buffer: &buffer) {
             context.fireChannelRead(Self.wrapInboundOut(message))
