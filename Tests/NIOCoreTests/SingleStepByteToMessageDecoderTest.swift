@@ -240,44 +240,14 @@ struct NIOSingleStepByteToMessageDecoderTests {
         #expect(throws: Never.self) { try processor.finishProcessing(seenEOF: false, messageReceiver.receiveMessage) }
         #expect(processor.unprocessedBytes == 1)
 
-        #expect(
-            "12"
-                == messageReceiver.retrieveMessage().map {
-                    String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
-                }
-        )
-        #expect(
-            "34"
-                == messageReceiver.retrieveMessage().map {
-                    String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
-                }
-        )
-        #expect(
-            "56"
-                == messageReceiver.retrieveMessage().map {
-                    String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
-                }
-        )
-        #expect(
-            "78"
-                == messageReceiver.retrieveMessage().map {
-                    String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
-                }
-        )
-        #expect(
-            "90"
-                == messageReceiver.retrieveMessage().map {
-                    String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
-                }
-        )
+        #expect("12" == messageReceiver.retrieveMessage().map { String(buffer: $0) })
+        #expect("34" == messageReceiver.retrieveMessage().map { String(buffer: $0) })
+        #expect("56" == messageReceiver.retrieveMessage().map { String(buffer: $0) })
+        #expect("78" == messageReceiver.retrieveMessage().map { String(buffer: $0) })
+        #expect("90" == messageReceiver.retrieveMessage().map { String(buffer: $0) })
         #expect(messageReceiver.retrieveMessage() == nil)
 
-        #expect(
-            "x"
-                == decoder.lastBuffer.map {
-                    String(decoding: $0.readableBytesView, as: Unicode.UTF8.self)
-                }
-        )
+        #expect("x" == decoder.lastBuffer.map { String(buffer: $0) })
         #expect(1 == decoder.decodeLastCalls)
     }
 
