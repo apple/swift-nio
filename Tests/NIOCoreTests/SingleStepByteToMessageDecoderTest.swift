@@ -112,10 +112,12 @@ struct NIOSingleStepByteToMessageDecoderTests {
         #expect(messageReceiver.retrieveMessage() == nil)
 
         buffer.moveWriterIndex(to: writerIndex)
-        try processor.process(
-            buffer: buffer.getSlice(at: writerIndex - 1, length: 1)!,
-            messageReceiver.receiveMessage
-        )
+        #expect(throws: Never.self) {
+            try processor.process(
+                buffer: buffer.getSlice(at: writerIndex - 1, length: 1)!,
+                messageReceiver.receiveMessage
+            )
+        }
 
         var buffer2 = allocator.buffer(capacity: 32)
         buffer2.writeInteger(Int32(2))
