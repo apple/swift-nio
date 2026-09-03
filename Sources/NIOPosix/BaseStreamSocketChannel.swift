@@ -16,7 +16,7 @@
 
 import NIOCore
 
-class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>, @unchecked Sendable {
+class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket, IOData>, @unchecked Sendable {
     internal var connectTimeoutScheduled: Optional<Scheduled<Void>>
     private var allowRemoteHalfClosure: Bool = false
     private var inputShutdown: Bool = false
@@ -291,13 +291,11 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         super.read0()
     }
 
-    final override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
+    final override func bufferPendingWrite(data: IOData, promise: EventLoopPromise<Void>?) {
         if self.outputShutdown {
             promise?.fail(ChannelError._outputClosed)
             return
         }
-
-        let data = self.unwrapData(data, as: IOData.self)
 
         if !self.pendingWrites.add(data: data, promise: promise) {
             self.pipeline.syncOperations.fireChannelWritabilityChanged()
