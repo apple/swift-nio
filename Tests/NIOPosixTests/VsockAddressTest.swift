@@ -83,4 +83,110 @@ class VsockAddressTest: XCTestCase {
         XCTAssertEqual(try channel.getOption(.localVsockContextID).wait(), localCID)
     }
     #endif
+
+    // Getting the local vsock address is not available on Windows.
+    #if !os(Windows)
+    func testGetLocalVsockAddressReportsBoundPort() throws {
+        try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
+
+        let socket = try ServerSocket(protocolFamily: .vsock, setNonBlocking: true)
+        defer { try? socket.close() }
+        try socket.bind(to: VsockAddress(cid: .any, port: .any))
+
+        let address = try socket.getLocalVsockAddress()
+        XCTAssertNotEqual(address.port, .any, "The kernel should have assigned a concrete port")
+        XCTAssertEqual(address.cid, .any)
+
+        // Check the address from the channel option matches.
+        let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully()) }
+        let eventLoop = singleThreadedELG.next()
+        let channel = try ServerSocketChannel(
+            serverSocket: socket,
+            eventLoop: eventLoop as! SelectableEventLoop,
+            group: singleThreadedELG
+        )
+        XCTAssertEqual(try channel.getOption(.localVsockAddress).wait(), address)
+    }
+
+    func testGetLocalVsockAddressRejectsNonVsockSocket() throws {
+        let socket = try ServerSocket(protocolFamily: .unix, setNonBlocking: false)
+        defer { try? socket.close() }
+
+        XCTAssertThrowsError(try socket.getLocalVsockAddress()) { error in
+            XCTAssertEqual(error as? SocketAddressError, .unsupported)
+        }
+    }
+    #endif
+
+    // Getting the remote vsock address is not available on Windows.
+    #if !os(Windows)
+    func testGetRemoteVsockAddressRejectsNonVsockSocket() throws {
+        // A socketpair gives us an already-connected non-vsock socket without binding anything.
+        var fds: [CInt] = [-1, -1]
+        try fds.withUnsafeMutableBufferPointer { ptr in
+            try Posix.socketpair(
+                domain: .unix,
+                type: .stream,
+                protocolSubtype: .default,
+                socketVector: ptr.baseAddress
+            )
+        }
+        let peer = try Socket(socket: fds[1], setNonBlocking: false)
+        defer { try? peer.close() }
+
+        let socket = try Socket(socket: fds[0], setNonBlocking: false)
+        defer { try? socket.close() }
+
+        XCTAssertThrowsError(try socket.getRemoteVsockAddress()) { error in
+            XCTAssertEqual(error as? SocketAddressError, .unsupported)
+        }
+    }
+
+    func testGetRemoteVsockAddressOverLoopback() throws {
+        try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+
+        let port = VsockAddress.Port(5678)
+
+        // Read the peer address on the accepted channel.
+        let acceptedPeer = group.next().makePromise(of: VsockAddress.self)
+
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+                .childChannelInitializer { channel in
+                    acceptedPeer.completeWith(channel.getOption(.remoteVsockAddress))
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                }
+                .bind(to: VsockAddress(cid: .any, port: port))
+                .wait()
+        )
+        defer { XCTAssertNoThrow(try serverChannel.close().wait()) }
+
+        #if canImport(Darwin)
+        let connectAddress = VsockAddress(cid: .any, port: port)
+        #elseif os(Linux) || os(Android)
+        let connectAddress = VsockAddress(cid: .local, port: port)
+        #endif
+
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group).connect(to: connectAddress).wait()
+        )
+        defer { XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed()) }
+
+        // Client side: the peer is the listener, so the port must be the one we bound.
+        let clientPeer = try assertNoThrowWithValue(
+            clientChannel.getOption(.remoteVsockAddress).wait()
+        )
+        XCTAssertEqual(clientPeer.port, port)
+
+        // Server side: both ends of a loopback connection live in the same context, so the accepted
+        // channel reports the same CID the client saw.
+        let serverPeer = try assertNoThrowWithValue(acceptedPeer.futureResult.wait())
+        XCTAssertEqual(serverPeer.cid, clientPeer.cid)
+    }
+    #endif
 }

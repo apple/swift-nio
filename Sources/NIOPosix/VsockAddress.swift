@@ -180,6 +180,40 @@ extension ChannelOptions.Types {
     }
 }
 
+extension ChannelOptions {
+    /// - seealso: `LocalVsockAddress`
+    public static var localVsockAddress: Types.LocalVsockAddress { .init() }
+}
+
+extension ChannelOption where Self == ChannelOptions.Types.LocalVsockAddress {
+    public static var localVsockAddress: Self { .init() }
+}
+
+extension ChannelOptions.Types {
+    /// This get-only option is used on channels backed by vsock sockets to get the local VSOCK address.
+    public struct LocalVsockAddress: ChannelOption, Sendable {
+        public typealias Value = VsockAddress
+        public init() {}
+    }
+}
+
+extension ChannelOptions {
+    /// - seealso: `RemoteVsockAddress`
+    public static var remoteVsockAddress: Types.RemoteVsockAddress { .init() }
+}
+
+extension ChannelOption where Self == ChannelOptions.Types.RemoteVsockAddress {
+    public static var remoteVsockAddress: Self { .init() }
+}
+
+extension ChannelOptions.Types {
+    /// This get-only option is used on channels backed by vsock sockets to get the remote peer's VSOCK address.
+    public struct RemoteVsockAddress: ChannelOption, Sendable {
+        public typealias Value = VsockAddress
+        public init() {}
+    }
+}
+
 // MARK: - Public API that might throw runtime error if not implemented on the platform.
 
 extension NIOBSDSocket.AddressFamily {
@@ -289,6 +323,40 @@ extension BaseSocket {
     func getLocalVsockContextID() throws -> VsockAddress.ContextID {
         try self.withUnsafeHandle { fd in
             try VsockAddress.ContextID.getLocalContextID(fd)
+        }
+    }
+
+    /// Reads the local address of a vsock socket.
+    func getLocalVsockAddress() throws -> VsockAddress {
+        try self.getVsockAddress(NIOBSDSocket.getsockname(socket:address:address_len:))
+    }
+
+    /// Reads the peer address of a connected vsock socket.
+    func getRemoteVsockAddress() throws -> VsockAddress {
+        try self.getVsockAddress(NIOBSDSocket.getpeername(socket:address:address_len:))
+    }
+
+    /// Reads a `sockaddr_vm` from `getName`, throwing `SocketAddressError/unsupported` if the
+    /// socket isn't a vsock socket.
+    private func getVsockAddress(
+        _ getName: (
+            NIOBSDSocket.Handle, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>
+        ) throws -> Void
+    ) throws -> VsockAddress {
+        try self.withUnsafeHandle { fd in
+            var addr = sockaddr_storage()
+            try addr.withMutableSockAddr { addrPtr, size in
+                var len = socklen_t(size)
+                try getName(fd, addrPtr, &len)
+            }
+            guard addr.ss_family == sa_family_t(NIOBSDSocket.AddressFamily.vsock.rawValue) else {
+                throw SocketAddressError.unsupported
+            }
+            let vsockAddr: sockaddr_vm = addr.convert()
+            return VsockAddress(
+                cid: VsockAddress.ContextID(rawValue: vsockAddr.svm_cid),
+                port: VsockAddress.Port(rawValue: vsockAddr.svm_port)
+            )
         }
     }
 }
