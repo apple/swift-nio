@@ -344,21 +344,18 @@ extension BaseSocket {
         ) throws -> Void
     ) throws -> VsockAddress {
         try self.withUnsafeHandle { fd in
-            var addr = sockaddr_vm()
-            var len = socklen_t(MemoryLayout<sockaddr_vm>.size)
-            try withUnsafeMutablePointer(to: &addr) { addrPtr in
-                try addrPtr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPtr in
-                    try getName(fd, sockaddrPtr, &len)
-                }
+            var addr = sockaddr_storage()
+            try addr.withMutableSockAddr { addrPtr, size in
+                var len = socklen_t(size)
+                try getName(fd, addrPtr, &len)
             }
-            guard addr.svm_family == sa_family_t(NIOBSDSocket.AddressFamily.vsock.rawValue),
-                len >= socklen_t(MemoryLayout<sockaddr_vm>.size)
-            else {
+            guard addr.ss_family == sa_family_t(NIOBSDSocket.AddressFamily.vsock.rawValue) else {
                 throw SocketAddressError.unsupported
             }
+            let vsockAddr: sockaddr_vm = addr.convert()
             return VsockAddress(
-                cid: VsockAddress.ContextID(rawValue: addr.svm_cid),
-                port: VsockAddress.Port(rawValue: addr.svm_port)
+                cid: VsockAddress.ContextID(rawValue: vsockAddr.svm_cid),
+                port: VsockAddress.Port(rawValue: vsockAddr.svm_port)
             )
         }
     }
