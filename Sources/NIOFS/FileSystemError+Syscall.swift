@@ -130,6 +130,170 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
+    public static func extattr_get_fd(
+        attribute name: String,
+        errno: Errno,
+        path: FilePath,
+        location: SourceLocation
+    ) -> Self {
+        let code: FileSystemError.Code
+        let message: String
+
+        switch errno {
+        case .badFileDescriptor:
+            code = .closed
+            message = "Could not get value for extended attribute ('\(name)'), '\(path)' is closed."
+        case .notSupported:
+            code = .unsupported
+            message = "Extended attributes are disabled or not supported by the filesystem."
+        case .fileNameTooLong:
+            code = .invalidArgument
+            #if os(FreeBSD)
+            message = """
+                Length of UTF-8 extended attribute name (\(name.utf8.count)) is greater \
+                than the limit (\(EXTATTR_MAXNAMELEN)). Use a shorter attribute name.
+                """
+            #else
+            message = """
+                Length of UTF-8 extended attribute name (\(name.utf8.count)) is too long. \
+                Use a shorter attribute name.
+                """
+            #endif
+        default:
+            code = .unknown
+            message = "Could not get value for extended attribute ('\(name)') for '\(path)'"
+        }
+
+        return FileSystemError(
+            code: code,
+            message: message,
+            systemCall: "extattr_get_fd",
+            errno: errno,
+            location: location
+        )
+    }
+
+    @_spi(Testing)
+    public static func extattr_list_fd(
+        errno: Errno,
+        path: FilePath,
+        location: SourceLocation
+    ) -> Self {
+        let code: FileSystemError.Code
+        let message: String
+
+        switch errno {
+        case .badFileDescriptor:
+            code = .closed
+            message = "Could not list extended attributes, '\(path)' is closed."
+
+        case .notSupported:
+            code = .unsupported
+            message = "Extended attributes are disabled or not supported by the filesystem."
+
+        case .notPermitted:
+            code = .unsupported
+            message = "Extended attributes are not supported by '\(path)'."
+
+        case .permissionDenied:
+            code = .permissionDenied
+            message = "Not permitted to list extended attributes for '\(path)'."
+
+        default:
+            code = .unknown
+            message = "Could not to list extended attributes for '\(path)'."
+        }
+
+        return FileSystemError(
+            code: code,
+            message: message,
+            systemCall: "extattr_list_fd",
+            errno: errno,
+            location: location
+        )
+    }
+
+    @_spi(Testing)
+    public static func extattr_set_fd(
+        attribute name: String,
+        errno: Errno,
+        path: FilePath,
+        location: SourceLocation
+    ) -> Self {
+        let code: FileSystemError.Code
+        let message: String
+
+        // See: 'man 2 extattr_set_fd'
+        switch errno {
+        case .badFileDescriptor:
+            code = .closed
+            message = """
+                Could not set value for extended attribute ('\(name)'), '\(path)' is closed.
+                """
+
+        case .notSupported:
+            code = .unsupported
+            message = """
+                Extended attributes are disabled or not supported by the filesystem.
+                """
+
+        case .invalidArgument:
+            code = .invalidArgument
+            message = """
+                Extended attribute name ('\(name)') must be a valid UTF-8 string.
+                """
+
+        default:
+            code = .unknown
+            message = """
+                Could not set value for extended attribute ('\(name)') for '\(path)'.
+                """
+        }
+
+        return FileSystemError(
+            code: code,
+            message: message,
+            systemCall: "extattr_set_fd",
+            errno: errno,
+            location: location
+        )
+    }
+
+    @_spi(Testing)
+    public static func extattr_delete_fd(
+        attribute name: String,
+        errno: Errno,
+        path: FilePath,
+        location: SourceLocation
+    ) -> Self {
+        let code: FileSystemError.Code
+        let message: String
+
+        // See: 'man 2 extattr_delete_fd'
+        switch errno {
+        case .badFileDescriptor:
+            code = .closed
+            message = "Could not remove extended attribute ('\(name)'), '\(path)' is closed."
+
+        case .notSupported:
+            code = .unsupported
+            message = "Extended attributes are disabled or not supported by the filesystem."
+
+        default:
+            code = .unknown
+            message = "Could not remove extended attribute ('\(name)') from '\(path)'"
+        }
+
+        return FileSystemError(
+            code: code,
+            message: message,
+            systemCall: "extattr_delete_fd",
+            errno: errno,
+            location: location
+        )
+    }
+
+    @_spi(Testing)
     public static func flistxattr(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
         let code: FileSystemError.Code
         let message: String
@@ -626,6 +790,15 @@ extension FileSystemError {
                     Can't open file at path '\(path)', the target is a symbolic link and \
                     'followSymbolicLinks' was set to 'false'.
                     """
+            #if os(FreeBSD)
+            case .tooManyLinks:
+                // FreeBSD treats hitting a symlink with O_NOFOLLOW as EMLINK
+                code = .invalidArgument
+                message = """
+                    Can't open file at path '\(path)', the target is a symbolic link and \
+                    'followSymbolicLinks' was set to 'false'.
+                    """
+            #endif
             default:
                 code = .unknown
                 message = "Unable to open file at path '\(path)'."
@@ -1129,6 +1302,55 @@ extension FileSystemError {
             location: location
         )
     }
+
+    #if os(FreeBSD)
+    @_spi(Testing)
+    public static func copy_file_range(
+        errno: Errno,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
+        location: SourceLocation
+    ) -> FileSystemError {
+        let code: FileSystemError.Code
+        let message: String
+
+        switch errno {
+        case .invalidArgument:
+            code = .invalidArgument
+            message = """
+            """
+        case .fileTooLarge:
+            code = .resourceExhausted
+            message = """
+                The copy exceeds process's file size limit or maximum file size for \
+                the file system '\(destinationPath)' resides on.
+                """
+        case .ioError:
+            code = .io
+            message = """
+                An I/O error occurred while reading from '\(sourcePath)', can't copy to \
+                '\(destinationPath)'.
+                """
+        case .noMemory:
+            code = .io
+            message = """
+                Insufficient memory to read from '\(sourcePath)', can't copy to \
+                '\(destinationPath)'.
+                """
+        default:
+            code = .unknown
+            message = "Can't copy file from '\(sourcePath)' to '\(destinationPath)'."
+        }
+
+        return FileSystemError(
+            code: code,
+            message: message,
+            systemCall: "copy_file_range",
+            errno: errno,
+            location: location
+        )
+    }
+    #endif
 
     @_spi(Testing)
     public static func futimens(

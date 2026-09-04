@@ -1081,6 +1081,10 @@ class DatagramChannelTests: XCTestCase {
         // This doesn't always work: ability to do this on Linux is gated behind a sysctl (net.ipv4.ping_group_range)
         // which may exclude us. So we have to tolerate this throwing EPERM as well.
 
+        #if os(FreeBSD)
+        throw XCTSkip("FreeBSD does not support ICMP over datagram sockets")
+        #endif
+
         final class EchoRequestHandler: ChannelInboundHandler {
             typealias InboundIn = AddressedEnvelope<ByteBuffer>
             typealias OutboundOut = AddressedEnvelope<ByteBuffer>
