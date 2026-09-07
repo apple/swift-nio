@@ -168,4 +168,137 @@ struct ByteToMessageDecoderVerifierTests {
             Issue.record("unexpected error: \(error)")
         }
     }
+
+    // MARK: - Non-copyable decoders
+
+    /// Decodes one byte into a one character `String`.
+    private struct NonCopyableOneByteDecoder: NIOSingleStepByteToMessageDecoder, ~Copyable {
+        typealias InboundOut = String
+
+        mutating func decode(buffer: inout ByteBuffer) throws -> String? {
+            buffer.readString(length: 1)
+        }
+
+        mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> String? {
+            try self.decode(buffer: &buffer)
+        }
+    }
+
+    @Test func nonCopyableDecoderIsVerified() throws {
+        try ByteToMessageDecoderVerifier.verifyDecoder(
+            stringInputOutputPairs: [("x", ["x"]), ("y", ["y"])],
+            decoderFactory: NonCopyableOneByteDecoder.init
+        )
+    }
+
+    @Test func nonCopyableDecoderWrongResults() throws {
+        struct AlwaysProduceY: NIOSingleStepByteToMessageDecoder, ~Copyable {
+            typealias InboundOut = String
+
+            mutating func decode(buffer: inout ByteBuffer) throws -> String? {
+                guard buffer.readableBytes > 0 else { return nil }
+                buffer.moveReaderIndex(to: buffer.writerIndex)
+                return "Y"
+            }
+
+            mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> String? {
+                try self.decode(buffer: &buffer)
+            }
+        }
+
+        let error = try #require(throws: VerificationError.self) {
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                stringInputOutputPairs: [("x", ["x"])],
+                decoderFactory: AlwaysProduceY.init
+            )
+        }
+
+        #expect(1 == error.inputs.count)
+        switch error.errorCode {
+        case .wrongProduction(let actual, let expected):
+            #expect("Y" == actual)
+            #expect("x" == expected)
+        default:
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    @Test func nonCopyableDecoderNoOutputWhenWeShouldHaveOutput() throws {
+        struct NeverProduce: NIOSingleStepByteToMessageDecoder, ~Copyable {
+            typealias InboundOut = String
+
+            mutating func decode(buffer: inout ByteBuffer) throws -> String? {
+                buffer.moveReaderIndex(to: buffer.writerIndex)
+                return nil
+            }
+
+            mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> String? {
+                try self.decode(buffer: &buffer)
+            }
+        }
+
+        let error = try #require(throws: VerificationError.self) {
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                stringInputOutputPairs: [("x", ["x"])],
+                decoderFactory: NeverProduce.init
+            )
+        }
+
+        #expect(1 == error.inputs.count)
+        switch error.errorCode {
+        case .underProduction(let expected):
+            #expect("x" == expected)
+        default:
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    @Test func nonCopyableDecoderOutputWhenWeShouldNotProduceOutput() throws {
+        let error = try #require(throws: VerificationError.self) {
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                // The decoder produces one message per byte, so it over-produces on the second byte.
+                stringInputOutputPairs: [("xy", ["x"])],
+                decoderFactory: NonCopyableOneByteDecoder.init
+            )
+        }
+
+        switch error.errorCode {
+        case .overProduction(let actual):
+            #expect("y" == actual)
+        default:
+            Issue.record("unexpected error: \(error)")
+        }
+    }
+
+    @Test func nonCopyableDecoderLeftovers() throws {
+        struct NeverDoAnything: NIOSingleStepByteToMessageDecoder, ~Copyable {
+            typealias InboundOut = String
+
+            mutating func decode(buffer: inout ByteBuffer) throws -> String? {
+                nil
+            }
+
+            mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> String? {
+                nil
+            }
+        }
+
+        let error = try #require(throws: VerificationError.self) {
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                stringInputOutputPairs: [("xxxxxx", [])],
+                decoderFactory: NeverDoAnything.init
+            )
+        }
+
+        switch error.errorCode {
+        case .leftOversOnDeconstructingChannel(let inbound, let outbound, pendingOutbound: let pending):
+            // The bytes the decoder never consumed sit in `ByteToMessageHandler`'s buffer rather than in the
+            // `Channel`, so the left overs are reported as empty.
+            #expect(0 == inbound.count)
+            #expect(0 == outbound.count)
+            #expect(0 == pending.count)
+        default:
+            Issue.record("unexpected error: \(error)")
+        }
+    }
 }
