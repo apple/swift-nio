@@ -294,7 +294,9 @@ extension NIOBSDSocket {
     ) throws -> IOResult<size_t> {
         let iResult: CInt = CNIOWindows_recv(s, buf, CInt(len), 0)
         if iResult == SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "recv")
+            let lastError = WSAGetLastError()
+            if lastError == WSAEWOULDBLOCK { return .wouldBlock(0) }
+            throw IOError(winsock: lastError, reason: "recv")
         }
         return .processed(size_t(iResult))
     }
@@ -335,7 +337,9 @@ extension NIOBSDSocket {
         var dwNumberOfBytesRecvd: DWORD = 0
         // FIXME(compnerd) is the socket guaranteed to not be overlapped?
         if WSARecvMsg(s, lpMsg, &dwNumberOfBytesRecvd, nil, nil) == SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "recvmsg")
+            let lastError = WSAGetLastError()
+            if lastError == WSAEWOULDBLOCK { return .wouldBlock(0) }
+            throw IOError(winsock: lastError, reason: "recvmsg")
         }
         return .processed(size_t(dwNumberOfBytesRecvd))
     }
@@ -410,7 +414,9 @@ extension NIOBSDSocket {
     ) throws -> IOResult<size_t> {
         let iResult: CInt = CNIOWindows_send(s, buf, CInt(len), 0)
         if iResult == SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "send")
+            let lastError = WSAGetLastError()
+            if lastError == WSAEWOULDBLOCK { return .wouldBlock(0) }
+            throw IOError(winsock: lastError, reason: "send")
         }
         return .processed(size_t(iResult))
     }
@@ -424,7 +430,9 @@ extension NIOBSDSocket {
         let ptr = UnsafeMutablePointer(mutating: iovecs.baseAddress)
         let result = WSASend(s, ptr, UInt32(iovecs.count), &bytesSent, 0, nil, nil)
         if result == SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "WSASend")
+            let lastError = WSAGetLastError()
+            if lastError == WSAEWOULDBLOCK { return .wouldBlock(0) }
+            throw IOError(winsock: lastError, reason: "WSASend")
         }
         return .processed(Int(bytesSent))
     }
