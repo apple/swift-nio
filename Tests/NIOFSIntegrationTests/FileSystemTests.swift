@@ -72,6 +72,9 @@ final class FileSystemTests: XCTestCase {
 
 
     func testSetLastAccessAndDataModificationTimes() async throws {
+        #if os(Windows)
+        throw XCTSkip("setTimes is not available on Windows")
+        #endif
         let path = try await self.fs.temporaryFilePath()
         try await self.fs.withFileHandle(forWritingAt: path, options: .newFile(replaceExisting: false)) { _ in }
 
@@ -94,6 +97,9 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testSetLastAccessTime() async throws {
+        #if os(Windows)
+        throw XCTSkip("setTimes is not available on Windows")
+        #endif
         let path = try await self.fs.temporaryFilePath()
         try await self.fs.withFileHandle(forWritingAt: path, options: .newFile(replaceExisting: false)) { _ in }
 
@@ -111,6 +117,9 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testSetLastDataModificationTime() async throws {
+        #if os(Windows)
+        throw XCTSkip("setTimes is not available on Windows")
+        #endif
         let path = try await self.fs.temporaryFilePath()
         try await self.fs.withFileHandle(forWritingAt: path, options: .newFile(replaceExisting: false)) { _ in }
 
