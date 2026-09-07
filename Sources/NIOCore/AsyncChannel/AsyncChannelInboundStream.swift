@@ -134,6 +134,7 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
         }
 
         @inlinable
+        @concurrent
         public mutating func next() async throws -> Element? {
             switch self._backing {
             case .asyncStream(var iterator):
@@ -142,6 +143,20 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
                 }
                 let value = try await iterator.next()
                 return value
+
+            case .producer(let iterator):
+                return try await iterator.next()
+            }
+        }
+
+        @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
+        mutating public func next(isolation actor: isolated (any Actor)?) async throws(any Error) -> Inbound? {
+            switch self._backing {
+            case .asyncStream(var iterator):
+                defer {
+                    self._backing = .asyncStream(iterator)
+                }
+                return try await iterator.next(isolation: actor)
 
             case .producer(let iterator):
                 return try await iterator.next()
