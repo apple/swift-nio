@@ -21,6 +21,9 @@ fatal() { error "$@"; exit 1; }
 
 # Parameter environment variables
 swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"/tmp/swiftsdks"}"
+# The Android Swift SDK bundle ships one target triple per (architecture, API level)
+# pair, so SwiftPM needs to be told which one to build for.
+android_sdk_triple="${ANDROID_SDK_TRIPLE:-"x86_64-unknown-linux-android28"}"
 
 log "Using Swift SDK directory: $swift_sdk_directory"
 
@@ -30,5 +33,5 @@ if [[ -z "$SWIFT_SDK" ]]; then
   fatal "No Android Swift SDK found. Please ensure you have the Android Swift SDK installed."
 fi
 
-log "Building using Swift SDK: $SWIFT_SDK"
-swift build --swift-sdk "$SWIFT_SDK" --swift-sdks-path "$swift_sdk_directory" --static-swift-stdlib "${@}"
+log "Building using Swift SDK: $SWIFT_SDK (triple: $android_sdk_triple)"
+swift build --swift-sdk "$SWIFT_SDK" --triple "$android_sdk_triple" --swift-sdks-path "$swift_sdk_directory" --static-swift-stdlib "${@}"
