@@ -60,7 +60,7 @@ case "$sdk" in
     ;;
   "android-sdk")
     sdk_dir="android-sdk"
-    sdk_suffix="_android-0.1"
+    sdk_suffix="_android"
     ;;
   *)
     fatal "Unexpected Swift SDK: $sdk"
