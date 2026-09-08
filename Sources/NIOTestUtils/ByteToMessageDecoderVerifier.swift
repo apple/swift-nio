@@ -18,17 +18,36 @@ public enum ByteToMessageDecoderVerifier: Sendable {
     /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
     ///
     /// Verify `ByteToMessageDecoder`s with `String` inputs
+    public static func verifyDecoder<Decoder: ByteToMessageDecoder>(
+        stringInputOutputPairs: [(String, [Decoder.InboundOut])],
+        decoderFactory: () -> Decoder
+    ) throws where Decoder.InboundOut: Equatable {
+        try ByteToMessageDecoderVerifier.verifyDecoder(
+            inputOutputPairs: Self.byteBufferPairs(from: stringInputOutputPairs),
+            decoderFactory: decoderFactory
+        )
+    }
+
+    /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
+    ///
+    /// Verify non-copyable `ByteToMessageDecoder`s with `String` inputs. See the non-copyable
+    /// `verifyDecoder(inputOutputPairs:decoderFactory:)` for why this requires macOS 15.
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     public static func verifyDecoder<Decoder: ByteToMessageDecoder & ~Copyable>(
         stringInputOutputPairs: [(String, [Decoder.InboundOut])],
         decoderFactory: () -> Decoder
     ) throws where Decoder.InboundOut: Equatable {
+        try ByteToMessageDecoderVerifier.verifyDecoder(
+            inputOutputPairs: Self.byteBufferPairs(from: stringInputOutputPairs),
+            decoderFactory: decoderFactory
+        )
+    }
+
+    private static func byteBufferPairs<Out>(from pairs: [(String, [Out])]) -> [(ByteBuffer, [Out])] {
         let alloc = ByteBufferAllocator()
-        let ioPairs = stringInputOutputPairs.map {
-            (ioPair: (String, [Decoder.InboundOut])) -> (ByteBuffer, [Decoder.InboundOut]) in
+        return pairs.map { (ioPair: (String, [Out])) -> (ByteBuffer, [Out]) in
             (alloc.buffer(string: ioPair.0), ioPair.1)
         }
-
-        try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: ioPairs, decoderFactory: decoderFactory)
     }
 
     /// Verifies a `ByteToMessageDecoder` by performing a number of tests.
@@ -44,7 +63,7 @@ public enum ByteToMessageDecoderVerifier: Sendable {
     ///  - sending each complete message in one `ByteBuffer`
     ///
     /// For `ExampleDecoder` that produces `ExampleDecoderOutput`s you would use this method the following way:
-    ///
+    /// ```swift
     ///     var exampleInput1 = channel.allocator.buffer(capacity: 16)
     ///     exampleInput1.writeString("example-in1")
     ///     var exampleInput2 = channel.allocator.buffer(capacity: 16)
@@ -52,17 +71,56 @@ public enum ByteToMessageDecoderVerifier: Sendable {
     ///     let expectedInOuts = [(exampleInput1, [ExampleDecoderOutput("1")]),
     ///                           (exampleInput2, [ExampleDecoderOutput("2")])
     ///                          ]
-    ///     XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: expectedInOuts,
-    ///                                                                     decoderFactory: { ExampleDecoder() }))
+    ///     #expect(throws: Never.self) {
+    ///         try ByteToMessageDecoderVerifier.verifyDecoder(
+    ///             inputOutputPairs: expectedInOuts,
+    ///             decoderFactory: { ExampleDecoder() }
+    ///         )
+    ///     }
+    /// ```
+    public static func verifyDecoder<Decoder: ByteToMessageDecoder>(
+        inputOutputPairs: [(ByteBuffer, [Decoder.InboundOut])],
+        decoderFactory: () -> Decoder
+    ) throws where Decoder.InboundOut: Equatable {
+        let handler = ByteToMessageHandler(decoderFactory())
+        try self.verify(
+            inputOutputPairs: inputOutputPairs,
+            handler: handler,
+            unprocessedBytes: { handler.cumulationBuffer?.readableBytes ?? 0 }
+        )
+    }
+
+    /// Verifies a non-copyable `ByteToMessageDecoder`.
     ///
-    /// Non-copyable decoders are supported too: `ByteToMessageHandler` requires a copyable decoder, so a non-copyable
-    /// one is wrapped in a class before it is added to the pipeline.
+    /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
+    ///
+    /// This requires macOS 15 (or the corresponding release of the other Apple platforms) because adding a handler to
+    /// a `ChannelPipeline` erases it to `any ChannelHandler`, and erasing a type with a non-copyable generic argument
+    /// needs the Swift runtime shipped in those releases. Non-Apple platforms bundle their Swift runtime and are
+    /// therefore unaffected.
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     public static func verifyDecoder<Decoder: ByteToMessageDecoder & ~Copyable>(
         inputOutputPairs: [(ByteBuffer, [Decoder.InboundOut])],
         decoderFactory: () -> Decoder
     ) throws where Decoder.InboundOut: Equatable {
-        typealias Out = Decoder.InboundOut
+        let handler = ByteToMessageHandler(decoderFactory())
+        try self.verify(
+            inputOutputPairs: inputOutputPairs,
+            handler: handler,
+            unprocessedBytes: { handler.cumulationBuffer?.readableBytes ?? 0 }
+        )
+    }
 
+    /// The decoder-agnostic core of the verification.
+    ///
+    /// This is generic over the decoder's output type only, not over the decoder, so that the copyable and the
+    /// non-copyable entry points above can share it: by the time we get here the decoder is hidden behind
+    /// `any ChannelHandler`.
+    private static func verify<Out: Equatable>(
+        inputOutputPairs: [(ByteBuffer, [Out])],
+        handler: ChannelHandler,
+        unprocessedBytes: () -> Int
+    ) throws {
         func verifySimple(channel: RecordingChannel) throws {
             for (input, expectedOutputs) in inputOutputPairs.shuffled() {
                 try channel.writeInbound(input)
@@ -164,10 +222,7 @@ public enum ByteToMessageDecoderVerifier: Sendable {
             }
         }
 
-        // The decoder is boxed into a class so that non-copyable decoders can be driven through
-        // `ByteToMessageHandler` (and therefore a real `ChannelPipeline`) too.
-        let box = DecoderBox<Decoder>(decoderFactory())
-        let channel = RecordingChannel(EmbeddedChannel(handler: ByteToMessageHandler(box)))
+        let channel = RecordingChannel(EmbeddedChannel(handler: handler))
 
         try verifySimple(channel: channel)
         try verifyDripFeed(channel: channel)
@@ -186,75 +241,12 @@ public enum ByteToMessageDecoderVerifier: Sendable {
 
         // Bytes the decoder never consumed are buffered inside `ByteToMessageHandler` and therefore invisible to
         // `finish()` above, so they are reported separately with empty left overs.
-        if box.unprocessedBytes > 0 {
+        if unprocessedBytes() > 0 {
             throw VerificationError<Out>(
                 inputs: channel.inboundWrites,
                 errorCode: .leftOversOnDeconstructingChannel(inbound: [], outbound: [], pendingOutbound: [])
             )
         }
-    }
-}
-
-// MARK: Driving non-copyable decoders through a `ChannelPipeline`
-extension ByteToMessageDecoderVerifier {
-    /// Wraps a (potentially non-copyable) `ByteToMessageDecoder` in a class, forwarding all protocol requirements to
-    /// the wrapped decoder.
-    ///
-    /// `ByteToMessageHandler` requires its decoder to be copyable, so a non-copyable decoder cannot be put into a
-    /// `ChannelPipeline` directly. A class is copyable regardless of what it stores, so boxing the decoder makes the
-    /// pipeline machinery — and with it the whole verification below — work for non-copyable decoders too.
-    ///
-    /// This is only safe here because the box never escapes: it is created for, and owned by, exactly one
-    /// `ByteToMessageHandler` in one `EmbeddedChannel`.
-    fileprivate final class DecoderBox<Decoder: ByteToMessageDecoder & ~Copyable>: ByteToMessageDecoder {
-        typealias InboundOut = Decoder.InboundOut
-
-        private var decoder: Decoder
-
-        /// The number of bytes the decoder had left unconsumed when `decodeLast` last returned.
-        ///
-        /// `ByteToMessageHandler` buffers the bytes the decoder didn't consume internally and drops them silently on
-        /// teardown, so `EmbeddedChannel.finish()` cannot report them. Observing the buffer here is the only way to
-        /// notice a decoder which never consumes its input.
-        private(set) var unprocessedBytes: Int = 0
-
-        init(_ decoder: consuming Decoder) {
-            self.decoder = decoder
-        }
-
-        func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-            try self.decoder.decode(context: context, buffer: &buffer)
-        }
-
-        func decodeLast(
-            context: ChannelHandlerContext,
-            buffer: inout ByteBuffer,
-            seenEOF: Bool
-        ) throws -> DecodingState {
-            defer { self.unprocessedBytes = buffer.readableBytes }
-            return try self.decoder.decodeLast(context: context, buffer: &buffer, seenEOF: seenEOF)
-        }
-
-        func decoderAdded(context: ChannelHandlerContext) {
-            self.decoder.decoderAdded(context: context)
-        }
-
-        func decoderRemoved(context: ChannelHandlerContext) {
-            self.decoder.decoderRemoved(context: context)
-        }
-
-        func shouldReclaimBytes(buffer: ByteBuffer) -> Bool {
-            self.decoder.shouldReclaimBytes(buffer: buffer)
-        }
-    }
-}
-
-extension ByteToMessageDecoderVerifier.DecoderBox: WriteObservingByteToMessageDecoder
-where Decoder: WriteObservingByteToMessageDecoder {
-    typealias OutboundIn = Decoder.OutboundIn
-
-    func write(data: OutboundIn) {
-        self.decoder.write(data: data)
     }
 }
 

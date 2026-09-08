@@ -199,6 +199,25 @@ public protocol ByteToMessageDecoder: ~Copyable {
     ///   - buffer: The `ByteBuffer` to check
     /// - return: `true` if memory should be reclaimed, `false` otherwise.
     mutating func shouldReclaimBytes(buffer: ByteBuffer) -> Bool
+
+    /// Deliver a write that `ByteToMessageHandler` had to queue because it arrived re-entrantly, i.e. whilst the
+    /// decoder was being used to decode.
+    ///
+    /// This requirement lives here, rather than on `WriteObservingByteToMessageDecoder`, because the code that drains
+    /// the queue (`ByteToMessageHandler.tryDecodeWrites`) only knows its decoder as a `ByteToMessageDecoder`. Putting
+    /// it here lets that code dispatch through the witness table it already has, instead of needing a dynamic cast or
+    /// a stored closure to reach the refinement. Decoders which don't observe writes get the default no-op, and never
+    /// have writes queued for them in the first place.
+    ///
+    /// - warning: This is not intended to be implemented or called by users.
+    mutating func _deliverQueuedWrite(data: NIOAny)
+}
+
+extension ByteToMessageDecoder where Self: ~Copyable {
+    public mutating func _deliverQueuedWrite(data: NIOAny) {
+        // This decoder doesn't observe writes, so there is nothing to deliver. `ByteToMessageHandler` only ever queues
+        // writes for decoders that do observe them, so this should not be reachable in practice.
+    }
 }
 
 /// Some `ByteToMessageDecoder`s need to observe `write`s (which are outbound events). `ByteToMessageDecoder`s which
@@ -206,7 +225,7 @@ public protocol ByteToMessageDecoder: ~Copyable {
 ///
 /// `WriteObservingByteToMessageDecoder` may only observe a `write` and must not try to transform or block it in any
 /// way. After the `write` method returns the `write` will be forwarded to the next outbound handler.
-public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder {
+public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder, ~Copyable {
     /// The type of `write`s.
     associatedtype OutboundIn
 
@@ -215,6 +234,12 @@ public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder {
     /// - Parameters:
     ///    - data: The data that was written.
     mutating func write(data: OutboundIn)
+}
+
+extension WriteObservingByteToMessageDecoder where Self: ~Copyable {
+    public mutating func _deliverQueuedWrite(data: NIOAny) {
+        self.write(data: data.forceAs(type: OutboundIn.self))
+    }
 }
 
 extension ByteToMessageDecoder where Self: ~Copyable {
@@ -385,7 +410,7 @@ extension B2MDBuffer {
 ///
 /// Most importantly, `ByteToMessageHandler` handles the tricky buffer management for you and flattens out all
 /// re-entrancy on `channelRead` that may happen in the `ChannelPipeline`.
-public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
+public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder & ~Copyable> {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = Decoder.InboundOut
 
@@ -474,10 +499,9 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     // sadly to construct a B2MDBuffer we need an empty ByteBuffer which we can only get from the allocator, so IUO.
     private var buffer: B2MDBuffer!
     private var seenEOF: Bool = false
-    private var selfAsCanDequeueWrites: CanDequeueWrites? = nil
 
     /// @see: ByteToMessageHandler.init(_:maximumBufferSize)
-    public convenience init(_ decoder: Decoder) {
+    public convenience init(_ decoder: consuming Decoder) {
         self.init(decoder, maximumBufferSize: nil)
     }
 
@@ -486,8 +510,8 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     /// - Parameters:
     ///   - decoder: The `ByteToMessageDecoder` to decode the bytes into message.
     ///   - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
-    public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
-        self.decoder = decoder
+    public init(_ decoder: consuming Decoder, maximumBufferSize: Int? = nil) {
+        self.decoder = consume decoder
         self.maximumBufferSize = maximumBufferSize
     }
 
@@ -504,30 +528,17 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
 }
 
 @available(*, unavailable)
-extension ByteToMessageHandler: Sendable {}
+extension ByteToMessageHandler: Sendable where Decoder: ~Copyable {}
 
 // MARK: ByteToMessageHandler: Test Helpers
-extension ByteToMessageHandler {
-    internal var cumulationBuffer: ByteBuffer? {
+extension ByteToMessageHandler where Decoder: ~Copyable {
+    package var cumulationBuffer: ByteBuffer? {
         self.buffer._testOnlyOneBuffer()
     }
 }
 
-private protocol CanDequeueWrites {
-    func dequeueWrites()
-}
-
-extension ByteToMessageHandler: CanDequeueWrites where Decoder: WriteObservingByteToMessageDecoder {
-    fileprivate func dequeueWrites() {
-        while self.queuedWrites.count > 0 {
-            // self.decoder can't be `nil`, this is only allowed to be called when we're not already on the stack
-            self.decoder!.write(data: ByteToMessageHandler.unwrapOutboundIn(self.queuedWrites.removeFirst()))
-        }
-    }
-}
-
 // MARK: ByteToMessageHandler's Main API
-extension ByteToMessageHandler {
+extension ByteToMessageHandler where Decoder: ~Copyable {
     @inline(__always)  // allocations otherwise (reconsider with Swift 5.1)
     private func withNextBuffer(
         allowEmptyBuffer: Bool,
@@ -584,9 +595,11 @@ extension ByteToMessageHandler {
     }
 
     private func tryDecodeWrites() {
-        if self.queuedWrites.count > 0 {
-            // this must succeed because unless we implement `CanDequeueWrites`, `queuedWrites` must always be empty.
-            self.selfAsCanDequeueWrites!.dequeueWrites()
+        while self.queuedWrites.count > 0 {
+            // self.decoder can't be `nil`, this is only allowed to be called when we're not already on the stack.
+            // Only write-observing decoders ever have writes queued for them; for anything else
+            // `_deliverQueuedWrite` is the default no-op, but then `queuedWrites` is always empty anyway.
+            self.decoder!._deliverQueuedWrite(data: self.queuedWrites.removeFirst())
         }
     }
 
@@ -633,7 +646,7 @@ extension ByteToMessageHandler {
 }
 
 // MARK: ByteToMessageHandler: ChannelInboundHandler
-extension ByteToMessageHandler: ChannelInboundHandler {
+extension ByteToMessageHandler: ChannelInboundHandler where Decoder: ~Copyable {
 
     public func handlerAdded(context: ChannelHandlerContext) {
         guard self.removalState == .notAddedToPipeline else {
@@ -641,8 +654,6 @@ extension ByteToMessageHandler: ChannelInboundHandler {
         }
         self.removalState = .notBeingRemoved
         self.buffer = B2MDBuffer(emptyByteBuffer: context.channel.allocator.buffer(capacity: 0))
-        // here we can force it because we know that the decoder isn't in use if we're just adding this handler
-        self.selfAsCanDequeueWrites = self as? CanDequeueWrites  // we need to cache this as it allocates.
         self.decoder!.decoderAdded(context: context)
     }
 
@@ -653,8 +664,6 @@ extension ByteToMessageHandler: ChannelInboundHandler {
         if !self.state.isFinalState {
             self.state = .done
         }
-
-        self.selfAsCanDequeueWrites = nil
 
         // here we can force it because we know that the decoder isn't in use because the removal is always
         // eventLoop.execute'd
@@ -717,7 +726,7 @@ extension ByteToMessageHandler: ChannelInboundHandler {
 }
 
 extension ByteToMessageHandler: ChannelOutboundHandler, _ChannelOutboundHandler
-where Decoder: WriteObservingByteToMessageDecoder {
+where Decoder: WriteObservingByteToMessageDecoder & ~Copyable {
     public typealias OutboundIn = Decoder.OutboundIn
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         if self.decoder != nil {
@@ -745,7 +754,7 @@ public protocol MessageToByteEncoder {
     func encode(data: OutboundIn, out: inout ByteBuffer) throws
 }
 
-extension ByteToMessageHandler: RemovableChannelHandler {
+extension ByteToMessageHandler: RemovableChannelHandler where Decoder: ~Copyable {
     public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
         precondition(self.removalState == .notBeingRemoved)
         self.removalState = .removalStarted

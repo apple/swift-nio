@@ -184,6 +184,7 @@ struct ByteToMessageDecoderVerifierTests {
         }
     }
 
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     @Test func nonCopyableDecoderIsVerified() throws {
         try ByteToMessageDecoderVerifier.verifyDecoder(
             stringInputOutputPairs: [("x", ["x"]), ("y", ["y"])],
@@ -191,6 +192,7 @@ struct ByteToMessageDecoderVerifierTests {
         )
     }
 
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     @Test func nonCopyableDecoderWrongResults() throws {
         struct AlwaysProduceY: NIOSingleStepByteToMessageDecoder, ~Copyable {
             typealias InboundOut = String
@@ -223,6 +225,7 @@ struct ByteToMessageDecoderVerifierTests {
         }
     }
 
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     @Test func nonCopyableDecoderNoOutputWhenWeShouldHaveOutput() throws {
         struct NeverProduce: NIOSingleStepByteToMessageDecoder, ~Copyable {
             typealias InboundOut = String
@@ -253,6 +256,7 @@ struct ByteToMessageDecoderVerifierTests {
         }
     }
 
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     @Test func nonCopyableDecoderOutputWhenWeShouldNotProduceOutput() throws {
         let error = try #require(throws: VerificationError.self) {
             try ByteToMessageDecoderVerifier.verifyDecoder(
@@ -270,6 +274,7 @@ struct ByteToMessageDecoderVerifierTests {
         }
     }
 
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     @Test func nonCopyableDecoderLeftovers() throws {
         struct NeverDoAnything: NIOSingleStepByteToMessageDecoder, ~Copyable {
             typealias InboundOut = String
