@@ -21,7 +21,8 @@ fatal() { error "$@"; exit 1; }
 
 # Parameter environment variables
 swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"/tmp/swiftsdks"}"
-# The Android Swift SDK bundle ships one target triple per (architecture, API level)
+
+# The Android Swift SDK bundle ships one target triple per (architecture, API version)
 # pair, so SwiftPM needs to be told which one to build for.
 android_sdk_triple="${ANDROID_SDK_TRIPLE:-"x86_64-unknown-linux-android28"}"
 
@@ -34,7 +35,8 @@ if [[ -z "$SWIFT_SDK" ]]; then
 fi
 
 log "Building using Swift SDK: $SWIFT_SDK (triple: $android_sdk_triple)"
-# Pin the native build system: SwiftPM now defaults to swiftbuild, whose Android
+
+# Pin the native build system for now: SwiftPM now defaults to swiftbuild, whose Android
 # support expects a locally installed NDK found via ANDROID_NDK_ROOT/ANDROID_NDK_HOME
 # rather than the one the Swift SDK links into its sysroot.
 swift build --build-system native --swift-sdk "$SWIFT_SDK" --triple "$android_sdk_triple" --swift-sdks-path "$swift_sdk_directory" --static-swift-stdlib "${@}"
