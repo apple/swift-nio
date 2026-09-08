@@ -203,17 +203,15 @@ public protocol ByteToMessageDecoder: ~Copyable {
     /// Deliver a write that `ByteToMessageHandler` had to queue because it arrived re-entrantly, i.e. whilst the
     /// decoder was being used to decode.
     ///
-    /// This requirement lives here, rather than on `WriteObservingByteToMessageDecoder`, because the code that drains
-    /// the queue (`ByteToMessageHandler.tryDecodeWrites`) only knows its decoder as a `ByteToMessageDecoder`. Putting
-    /// it here lets that code dispatch through the witness table it already has, instead of needing a dynamic cast or
-    /// a stored closure to reach the refinement. Decoders which don't observe writes get the default no-op, and never
-    /// have writes queued for them in the first place.
+    /// This protocol requirement lives here, as ``ByteToMessageHandler`` invokes this from its
+    /// `ByteToMessageHandler.tryDecodeWrites` method, which is not dependent on the handler's decoder.
     ///
     /// - warning: This is not intended to be implemented or called by users.
     mutating func _deliverQueuedWrite(data: NIOAny)
 }
 
 extension ByteToMessageDecoder where Self: ~Copyable {
+    @inlinable
     public mutating func _deliverQueuedWrite(data: NIOAny) {
         // This decoder doesn't observe writes, so there is nothing to deliver. `ByteToMessageHandler` only ever queues
         // writes for decoders that do observe them, so this should not be reachable in practice.
@@ -237,6 +235,7 @@ public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder, ~Copya
 }
 
 extension WriteObservingByteToMessageDecoder where Self: ~Copyable {
+    @inlinable
     public mutating func _deliverQueuedWrite(data: NIOAny) {
         self.write(data: data.forceAs(type: OutboundIn.self))
     }
