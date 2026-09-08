@@ -47,7 +47,7 @@ jobs:
                 "platform":"Linux",
                 "runner":"ubuntu-latest",
                 "image":"ubuntu:jammy",
-                "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/czechboy0/swift-nio/hd-fix-android-sdk-installation/scripts/install_swift_sdk.sh | INSTALL_SWIFT_BRANCH=main INSTALL_SWIFT_ARCH=x86_64 INSTALL_SWIFT_SDK=android-sdk bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_android_ndk.sh | bash && hash -r",
+                "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/hd-fix-android-sdk-installation/scripts/install_swift_sdk.sh | INSTALL_SWIFT_BRANCH=main INSTALL_SWIFT_ARCH=x86_64 INSTALL_SWIFT_SDK=android-sdk bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_android_ndk.sh | bash && hash -r",
                 "command":"curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/swift-build-with-android-sdk.sh | bash -s --",
                 "command_arguments":"'"$INPUT_ADDITIONAL_COMMAND_ARGUMENTS"'",
                 "env":'"$env_vars_json"'
