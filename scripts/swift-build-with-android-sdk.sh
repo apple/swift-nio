@@ -21,10 +21,11 @@ fatal() { error "$@"; exit 1; }
 
 # Parameter environment variables
 swift_sdk_directory="${SWIFT_SDK_DIRECTORY:-"/tmp/swiftsdks"}"
+arch="${INSTALL_SWIFT_ARCH:-"aarch64"}"
 
 # The Android Swift SDK bundle ships one target triple per (architecture, API version)
 # pair, so SwiftPM needs to be told which one to build for.
-android_sdk_triple="${ANDROID_SDK_TRIPLE:-"x86_64-unknown-linux-android28"}"
+android_sdk_triple="${ANDROID_SDK_TRIPLE:-"${arch}-unknown-linux-android28"}"
 
 log "Using Swift SDK directory: $swift_sdk_directory"
 
