@@ -40,4 +40,4 @@ log "Building using Swift SDK: $SWIFT_SDK (triple: $android_sdk_triple)"
 # Pin the native build system for now: SwiftPM now defaults to swiftbuild, whose Android
 # support expects a locally installed NDK found via ANDROID_NDK_ROOT/ANDROID_NDK_HOME
 # rather than the one the Swift SDK links into its sysroot.
-swift build --build-system native --swift-sdk "$SWIFT_SDK" --triple "$android_sdk_triple" --swift-sdks-path "$swift_sdk_directory" --static-swift-stdlib "${@}"
+swift build --build-system native --swift-sdk "$SWIFT_SDK" --triple "$android_sdk_triple" --swift-sdks-path "$swift_sdk_directory" "${@}"
