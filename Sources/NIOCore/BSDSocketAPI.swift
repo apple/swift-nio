@@ -567,6 +567,12 @@ extension NIOBSDSocket.Option {
     public static var so_timestamp: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: SO_TIMESTAMP)
     }
+
+    /// Allows multiple sockets to be bound to an identical address and port.
+    @inlinable
+    public static var so_reuseport: NIOBSDSocket.Option {
+        NIOBSDSocket.Option(rawValue: SO_REUSEPORT)
+    }
 }
 #endif
 
