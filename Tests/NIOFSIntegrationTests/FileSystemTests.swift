@@ -136,9 +136,6 @@ final class FileSystemTests: XCTestCase {
         try await self.fs.removeItem(at: path)
     }
 
-
-
-
     func testOpenFileForReading() async throws {
         try await self.fs.withFileHandle(forReadingAt: .testDataReadme) { file in
             let info = try await file.info()
