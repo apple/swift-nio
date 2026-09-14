@@ -202,6 +202,44 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
         try f.wait()
     }
 
+    func _synchronousInspection(loop: any EventLoop) throws {
+        struct TestError: Error {}
+
+        let f = loop.submit {
+            // Pending: nothing is available yet.
+            let pendingPromise = loop.makePromise(of: SuperNotSendable.self)
+            let pending = pendingPromise.futureResult.assumeIsolated()
+            XCTAssertFalse(pending.isComplete)
+            XCTAssertNil(pending.result)
+            XCTAssertNil(try pending.value)
+
+            // Succeeded: the same future now reports the value it was completed with.
+            let value = SuperNotSendable()
+            pendingPromise.assumeIsolated().succeed(value)
+            XCTAssertTrue(pending.isComplete)
+            XCTAssertIdentical(try pending.result?.get(), value)
+            XCTAssertIdentical(try pending.value, value)
+
+            // Failed: 'result' holds the failure, 'value' rethrows it.
+            let failedPromise = loop.makePromise(of: SuperNotSendable.self)
+            let failed = failedPromise.futureResult.assumeIsolated()
+            failedPromise.fail(TestError())
+            XCTAssertTrue(failed.isComplete)
+            XCTAssertThrowsError(try failed.result?.get()) { XCTAssertTrue($0 is TestError) }
+            XCTAssertThrowsError(try failed.value) { XCTAssertTrue($0 is TestError) }
+
+            // A future which is complete on creation is complete on first inspection.
+            let succeeded = loop.assumeIsolated().makeSucceededFuture(SuperNotSendable()).assumeIsolated()
+            XCTAssertTrue(succeeded.isComplete)
+            XCTAssertNotNil(succeeded.result)
+            XCTAssertNotNil(try succeeded.value)
+        }
+        if let runnable = loop as? RunnableEventLoop {
+            runnable.runForTests()
+        }
+        try f.wait()
+    }
+
     func _futureChaining(loop: any EventLoop) throws {
         enum TestError: Error {
             case error
@@ -503,6 +541,11 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
         try self._backAndForthUnwrappingUnchecked(loop: loop)
     }
 
+    func testSynchronousInspection_SelectableEL() throws {
+        let loop = MultiThreadedEventLoopGroup.singleton.next()
+        try self._synchronousInspection(loop: loop)
+    }
+
     func testFutureChaining_SelectableEL() throws {
         let loop = MultiThreadedEventLoopGroup.singleton.next()
         try self._futureChaining(loop: loop)
@@ -547,6 +590,11 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
     func testBackAndForthUnwrappingUnchecked_EmbeddedEL() throws {
         let loop = EmbeddedEventLoop()
         try self._backAndForthUnwrappingUnchecked(loop: loop)
+    }
+
+    func testSynchronousInspection_EmbeddedEL() throws {
+        let loop = EmbeddedEventLoop()
+        try self._synchronousInspection(loop: loop)
     }
 
     func testFutureChaining_EmbeddedEL() throws {
@@ -595,6 +643,11 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
         try self._backAndForthUnwrappingUnchecked(loop: loop)
     }
 
+    func testSynchronousInspection_AsyncTestingEL() throws {
+        let loop = NIOAsyncTestingEventLoop()
+        try self._synchronousInspection(loop: loop)
+    }
+
     func testFutureChaining_AsyncTestingEL() throws {
         let loop = NIOAsyncTestingEventLoop()
         try self._futureChaining(loop: loop)
@@ -639,6 +692,11 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
     func testBackAndForthUnwrappingUnchecked_Fallback() throws {
         let loop = FallbackEventLoop()
         try self._backAndForthUnwrappingUnchecked(loop: loop)
+    }
+
+    func testSynchronousInspection_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._synchronousInspection(loop: loop)
     }
 
     func testFutureChaining_Fallback() throws {
