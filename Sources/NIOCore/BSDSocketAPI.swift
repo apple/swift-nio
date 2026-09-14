@@ -569,6 +569,12 @@ extension NIOBSDSocket.Option {
     }
 
     /// Allows multiple sockets to be bound to an identical address and port.
+    ///
+    /// - Important: The behavior of this socket option is platform-specific. See platform documentation for details.
+    ///
+    /// - Seealso: `man 2 socket` (Linux)
+    /// - Seealso: `man 2 setsockopt` (Darwin)
+    /// - Seealso: https://stackoverflow.com/questions/14388706/how-do-so-reuseaddr-and-so-reuseport-differ
     @inlinable
     public static var so_reuseport: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: SO_REUSEPORT)
