@@ -16,6 +16,7 @@ import XCTest
 @testable import NIOCore
 @testable import NIOPosix
 
+#if !os(FreeBSD)
 class VsockAddressTest: XCTestCase {
 
     func testDescriptionWorks() throws {
@@ -84,3 +85,4 @@ class VsockAddressTest: XCTestCase {
     }
     #endif
 }
+#endif

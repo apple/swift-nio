@@ -13,12 +13,17 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import CNIOFreeBSD
 @_spi(Testing) import NIOFS
 import SystemPackage
 import XCTest
 
 #if ENABLE_MOCKING
 final class SyscallTests: XCTestCase {
+    #if os(FreeBSD)
+    private let extattrNamespaceUser = CInt(EXTATTR_NAMESPACE_USER)
+    #endif
+
     override func setUpWithError() throws {
         #if os(Windows)
         throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
@@ -146,6 +151,12 @@ final class SyscallTests: XCTestCase {
         let fd1 = FileDescriptor(rawValue: 13)
         let fd2 = FileDescriptor(rawValue: 42)
 
+        #if os(FreeBSD)
+        let atEmptyPath: CInt = 0x4000
+        #else
+        let atEmptyPath: CInt = 4096
+        #endif
+
         let testCases = [
             MockTestCase(name: "linkat", .noInterrupt, 13, "src", 42, "dst", 0) { _ in
                 try Syscall.linkAt(
@@ -156,7 +167,7 @@ final class SyscallTests: XCTestCase {
                     flags: []
                 ).get()
             },
-            MockTestCase(name: "linkat", .noInterrupt, 13, "src", 42, "dst", 4096) { _ in
+            MockTestCase(name: "linkat", .noInterrupt, 13, "src", 42, "dst", atEmptyPath) { _ in
                 try Syscall.linkAt(
                     from: "src",
                     relativeTo: fd1,
@@ -254,6 +265,31 @@ final class SyscallTests: XCTestCase {
         let buffer = UnsafeMutableBufferPointer<CChar>.allocate(capacity: 1024)
         defer { buffer.deallocate() }
 
+        #if os(FreeBSD)
+        let testCases: [MockTestCase] = [
+            MockTestCase(
+                name: "extattr_list_fd",
+                .noInterrupt,
+                42,
+                extattrNamespaceUser,
+                "nil",
+                0
+            ) { _ in
+                _ = try fd.listExtendedAttributes(nil).get()
+            },
+
+            MockTestCase(
+                name: "extattr_list_fd",
+                .noInterrupt,
+                42,
+                extattrNamespaceUser,
+                "<buffer>",
+                1024
+            ) { _ in
+                _ = try fd.listExtendedAttributes(buffer).get()
+            },
+        ]
+        #else
         let testCases: [MockTestCase] = [
             MockTestCase(name: "flistxattr", .noInterrupt, 42, "nil", 0) { _ in
                 _ = try fd.listExtendedAttributes(nil).get()
@@ -263,6 +299,7 @@ final class SyscallTests: XCTestCase {
                 _ = try fd.listExtendedAttributes(buffer).get()
             },
         ]
+        #endif
 
         testCases.run()
     }
@@ -272,6 +309,33 @@ final class SyscallTests: XCTestCase {
         let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 1024, alignment: 1)
         defer { buffer.deallocate() }
 
+        #if os(FreeBSD)
+        let testCases: [MockTestCase] = [
+            MockTestCase(
+                name: "extattr_get_fd",
+                .noInterrupt,
+                42,
+                extattrNamespaceUser,
+                "an attribute",
+                "nil",
+                0
+            ) { _ in
+                _ = try fd.getExtendedAttribute(named: "an attribute", buffer: nil).get()
+            },
+
+            MockTestCase(
+                name: "extattr_get_fd",
+                .noInterrupt,
+                42,
+                extattrNamespaceUser,
+                "an attribute",
+                "<buffer>",
+                1024
+            ) { _ in
+                _ = try fd.getExtendedAttribute(named: "an attribute", buffer: buffer).get()
+            },
+        ]
+        #else
         let testCases: [MockTestCase] = [
             MockTestCase(name: "fgetxattr", .noInterrupt, 42, "an attribute", "nil", 0) { _ in
                 _ = try fd.getExtendedAttribute(named: "an attribute", buffer: nil).get()
@@ -282,6 +346,7 @@ final class SyscallTests: XCTestCase {
                 _ = try fd.getExtendedAttribute(named: "an attribute", buffer: buffer).get()
             },
         ]
+        #endif
 
         testCases.run()
     }
@@ -291,6 +356,33 @@ final class SyscallTests: XCTestCase {
         let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 1024, alignment: 1)
         defer { buffer.deallocate() }
 
+        #if os(FreeBSD)
+        let testCases: [MockTestCase] = [
+            MockTestCase(
+                name: "extattr_set_fd",
+                .noInterrupt,
+                42,
+                extattrNamespaceUser,
+                "attr name",
+                "nil",
+                0
+            ) { _ in
+                _ = try fd.setExtendedAttribute(named: "attr name", to: nil).get()
+            },
+
+            MockTestCase(
+                name: "extattr_set_fd",
+                .noInterrupt,
+                42,
+                extattrNamespaceUser,
+                "attr name",
+                "<buffer>",
+                1024
+            ) { _ in
+                _ = try fd.setExtendedAttribute(named: "attr name", to: .init(buffer)).get()
+            },
+        ]
+        #else
         let testCases: [MockTestCase] = [
             MockTestCase(name: "fsetxattr", .noInterrupt, 42, "attr name", "nil", 0) { _ in
                 _ = try fd.setExtendedAttribute(named: "attr name", to: nil).get()
@@ -300,17 +392,32 @@ final class SyscallTests: XCTestCase {
                 _ = try fd.setExtendedAttribute(named: "attr name", to: .init(buffer)).get()
             },
         ]
+        #endif
 
         testCases.run()
     }
 
     func test_fremovexattr() throws {
         let fd = FileDescriptor(rawValue: 42)
+        #if os(FreeBSD)
+        let testCases: [MockTestCase] = [
+            MockTestCase(
+                name: "extattr_delete_fd",
+                .noInterrupt,
+                42,
+                extattrNamespaceUser,
+                "attr name"
+            ) { _ in
+                _ = try fd.removeExtendedAttribute("attr name").get()
+            }
+        ]
+        #else
         let testCases: [MockTestCase] = [
             MockTestCase(name: "fremovexattr", .noInterrupt, 42, "attr name") { _ in
                 _ = try fd.removeExtendedAttribute("attr name").get()
             }
         ]
+        #endif
         testCases.run()
     }
 
@@ -389,7 +496,7 @@ final class SyscallTests: XCTestCase {
     }
 
     func test_renameat2() throws {
-        #if canImport(Glibc) || canImport(Bionic)
+        #if !os(FreeBSD) && (canImport(Glibc) || canImport(Bionic))
         let fd1 = FileDescriptor(rawValue: 13)
         let fd2 = FileDescriptor(rawValue: 42)
 
@@ -438,7 +545,7 @@ final class SyscallTests: XCTestCase {
     }
 
     func test_sendfile() throws {
-        #if canImport(Glibc) || canImport(Bionic)
+        #if !os(FreeBSD) && (canImport(Glibc) || canImport(Bionic))
         let input = FileDescriptor(rawValue: 42)
         let output = FileDescriptor(rawValue: 1)
 

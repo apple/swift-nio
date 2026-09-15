@@ -16,6 +16,7 @@
 
 import Atomics
 import CNIOLinux
+import CNIOFreeBSD
 import CNIOOpenBSD
 import NIOCore
 
