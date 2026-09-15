@@ -29,7 +29,7 @@ public protocol RecvByteBufferAllocator: _NIOPreconcurrencySendable {
 }
 
 extension RecvByteBufferAllocator {
-    // Default implementation to maintain API compatability.
+    // Default implementation to maintain API compatibility.
     public func nextBufferSize() -> Int? {
         nil
     }
