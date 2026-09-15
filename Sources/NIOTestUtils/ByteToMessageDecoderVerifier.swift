@@ -22,13 +22,31 @@ public enum ByteToMessageDecoderVerifier: Sendable {
         stringInputOutputPairs: [(String, [Decoder.InboundOut])],
         decoderFactory: () -> Decoder
     ) throws where Decoder.InboundOut: Equatable {
+        try ByteToMessageDecoderVerifier.verifyDecoder(
+            inputOutputPairs: Self.byteBufferPairs(from: stringInputOutputPairs),
+            decoderFactory: decoderFactory
+        )
+    }
+
+    /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
+    ///
+    /// Verify non-copyable `ByteToMessageDecoder`s with `String` inputs.
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
+    public static func verifyDecoder<Decoder: ByteToMessageDecoder & ~Copyable>(
+        stringInputOutputPairs: [(String, [Decoder.InboundOut])],
+        decoderFactory: () -> Decoder
+    ) throws where Decoder.InboundOut: Equatable {
+        try ByteToMessageDecoderVerifier.verifyDecoder(
+            inputOutputPairs: Self.byteBufferPairs(from: stringInputOutputPairs),
+            decoderFactory: decoderFactory
+        )
+    }
+
+    private static func byteBufferPairs<Out>(from pairs: [(String, [Out])]) -> [(ByteBuffer, [Out])] {
         let alloc = ByteBufferAllocator()
-        let ioPairs = stringInputOutputPairs.map {
-            (ioPair: (String, [Decoder.InboundOut])) -> (ByteBuffer, [Decoder.InboundOut]) in
+        return pairs.map { (ioPair: (String, [Out])) -> (ByteBuffer, [Out]) in
             (alloc.buffer(string: ioPair.0), ioPair.1)
         }
-
-        try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: ioPairs, decoderFactory: decoderFactory)
     }
 
     /// Verifies a `ByteToMessageDecoder` by performing a number of tests.
@@ -44,7 +62,7 @@ public enum ByteToMessageDecoderVerifier: Sendable {
     ///  - sending each complete message in one `ByteBuffer`
     ///
     /// For `ExampleDecoder` that produces `ExampleDecoderOutput`s you would use this method the following way:
-    ///
+    /// ```swift
     ///     var exampleInput1 = channel.allocator.buffer(capacity: 16)
     ///     exampleInput1.writeString("example-in1")
     ///     var exampleInput2 = channel.allocator.buffer(capacity: 16)
@@ -52,14 +70,51 @@ public enum ByteToMessageDecoderVerifier: Sendable {
     ///     let expectedInOuts = [(exampleInput1, [ExampleDecoderOutput("1")]),
     ///                           (exampleInput2, [ExampleDecoderOutput("2")])
     ///                          ]
-    ///     XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: expectedInOuts,
-    ///                                                                     decoderFactory: { ExampleDecoder() }))
+    ///     #expect(throws: Never.self) {
+    ///         try ByteToMessageDecoderVerifier.verifyDecoder(
+    ///             inputOutputPairs: expectedInOuts,
+    ///             decoderFactory: { ExampleDecoder() }
+    ///         )
+    ///     }
+    /// ```
     public static func verifyDecoder<Decoder: ByteToMessageDecoder>(
         inputOutputPairs: [(ByteBuffer, [Decoder.InboundOut])],
         decoderFactory: () -> Decoder
     ) throws where Decoder.InboundOut: Equatable {
-        typealias Out = Decoder.InboundOut
+        let handler = ByteToMessageHandler(decoderFactory())
+        try self.verify(
+            inputOutputPairs: inputOutputPairs,
+            handler: handler,
+            erasedHandler: handler
+        )
+    }
 
+    /// Verifies a non-copyable `ByteToMessageDecoder`.
+    ///
+    /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
+    public static func verifyDecoder<Decoder: ByteToMessageDecoder & ~Copyable>(
+        inputOutputPairs: [(ByteBuffer, [Decoder.InboundOut])],
+        decoderFactory: () -> Decoder
+    ) throws where Decoder.InboundOut: Equatable {
+        let handler = ByteToMessageHandler(decoderFactory())
+        try self.verify(
+            inputOutputPairs: inputOutputPairs,
+            handler: handler,
+            erasedHandler: handler
+        )
+    }
+
+    /// The decoder-agnostic core of the verification.
+    ///
+    /// The handler is passed twice: once with its concrete type, so that we can inspect the bytes it has buffered,
+    /// and once erased to `any ChannelHandler`. The erasure has to happen in the callers because erasing a type with
+    /// a non-copyable generic argument requires a newer Swift runtime than the copyable entry point demands.
+    private static func verify<Out: Equatable, Decoder: ByteToMessageDecoder & ~Copyable>(
+        inputOutputPairs: [(ByteBuffer, [Out])],
+        handler: ByteToMessageHandler<Decoder>,
+        erasedHandler: any ChannelHandler
+    ) throws {
         func verifySimple(channel: RecordingChannel) throws {
             for (input, expectedOutputs) in inputOutputPairs.shuffled() {
                 try channel.writeInbound(input)
@@ -161,8 +216,7 @@ public enum ByteToMessageDecoderVerifier: Sendable {
             }
         }
 
-        let decoder: Decoder = decoderFactory()
-        let channel = RecordingChannel(EmbeddedChannel(handler: ByteToMessageHandler<Decoder>(decoder)))
+        let channel = RecordingChannel(EmbeddedChannel(handler: erasedHandler))
 
         try verifySimple(channel: channel)
         try verifyDripFeed(channel: channel)
@@ -176,6 +230,16 @@ public enum ByteToMessageDecoderVerifier: Sendable {
                     outbound: ob,
                     pendingOutbound: pob
                 )
+            )
+        }
+
+        // Bytes the decoder never consumed are buffered inside `ByteToMessageHandler` and therefore invisible to
+        // `finish()` above, so they are reported separately with empty left overs.
+        let unprocessedBytes = handler.cumulationBuffer?.readableBytes ?? 0
+        if unprocessedBytes > 0 {
+            throw VerificationError<Out>(
+                inputs: channel.inboundWrites,
+                errorCode: .leftOversOnDeconstructingChannel(inbound: [], outbound: [], pendingOutbound: [])
             )
         }
     }
