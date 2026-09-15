@@ -892,6 +892,10 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
 
     private func shouldCloseOnErrnoCode(_ errnoCode: CInt) -> Bool {
         switch errnoCode {
+        // ECONNREFUSED can happen on linux if the previous sendto(...) failed.
+        // See also:
+        // -    https://bugzilla.redhat.com/show_bug.cgi?id=1375
+        // -    https://lists.gt.net/linux/kernel/39575
         case ECONNREFUSED, ENOMEM:
             // These are errors we may be able to recover from.
             return false
@@ -900,37 +904,28 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
         }
     }
 
-    private func shouldCloseOnError(_ error: IOError.Error) -> Bool {
-        switch error {
-        // ECONNREFUSED can happen on linux if the previous sendto(...) failed.
-        // See also:
-        // -    https://bugzilla.redhat.com/show_bug.cgi?id=1375
-        // -    https://lists.gt.net/linux/kernel/39575
-        case .errno(let code):
-            return self.shouldCloseOnErrnoCode(code)
-        #if os(Windows)
-        default:
-            return true
-        #endif
-        }
+    private func shouldCloseOnError(_ error: IOError) -> Bool {
+        // Reading `errnoCode` rather than matching on the error's domain matters on Windows, where
+        // this error usually carries a Winsock code: `errnoCode` reports the `errno` that
+        // corresponds to it, so the comparisons above hold there too.
+        self.shouldCloseOnErrnoCode(error.errnoCode)
     }
 
     override func shouldCloseOnReadError(_ err: Error) -> Bool {
         guard let err = err as? IOError else { return true }
-        return self.shouldCloseOnError(err.error)
+        return self.shouldCloseOnError(err)
     }
 
     override func error() -> ErrorResult {
         // Assume we can get the error from the socket.
         do {
-            let errnoCode: CInt = try self.socket.getOption(level: .socket, name: .so_error)
-            if self.shouldCloseOnErrnoCode(errnoCode) {
+            let socketError: CInt = try self.socket.getOption(level: .socket, name: .so_error)
+            let error = IOError(socketError: socketError, reason: "so_error")
+            if self.shouldCloseOnError(error) {
                 self.reset()
                 return .fatal
             } else {
-                self.pipeline.syncOperations.fireErrorCaught(
-                    IOError(errnoCode: errnoCode, reason: "so_error")
-                )
+                self.pipeline.syncOperations.fireErrorCaught(error)
                 return .nonFatal
             }
         } catch {
