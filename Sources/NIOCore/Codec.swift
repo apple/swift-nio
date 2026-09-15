@@ -464,15 +464,8 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder & ~Copyabl
     private let maximumBufferSize: Int?
     // queues writes received whilst we're already decoding (re-entrant write)
     private var queuedWrites = CircularBuffer<NIOAny>(initialCapacity: 1)
-    // Delivers a write that was queued because it arrived re-entrantly. Formed by `write` the first time it queues
-    // such a write, so it is non-`nil` whenever `queuedWrites` is non-empty.
-    //
-    // This is a closure rather than a `ByteToMessageDecoder` protocol requirement because decoders may conform to
-    // `WriteObservingByteToMessageDecoder` *conditionally* whilst conforming to `ByteToMessageDecoder`
-    // unconditionally (`HTTPDecoder` does exactly this). All generic instantiations of such a decoder share one
-    // `ByteToMessageDecoder` witness table, so the requirement could only ever be witnessed by a non-observing
-    // default and the write would be silently dropped. It also can't be recovered from `self` with an `as?` cast the
-    // way a copyable `Decoder` allows, because casting a type with noncopyable generic arguments needs macOS 15.
+    // Delivers a write that was queued because it arrived re-entrantly. Set in the ChannelHandler's write conformance
+    // the first time a write arrives re-entrently.
     private var deliverQueuedWrite: ((inout Decoder, NIOAny) -> Void)?
     private var state: State = .active {
         willSet {
@@ -592,11 +585,13 @@ extension ByteToMessageHandler where Decoder: ~Copyable {
 
     @inline(never)
     private func dequeueWrites() {
-        while self.queuedWrites.count > 0 {
-            // Both force unwraps are safe: `self.decoder` is only `nil` whilst we're on the stack and this is only
-            // called when we're not, and `queuedWrites` is only ever non-empty if we have a delivery function.
-            self.deliverQueuedWrite!(&self.decoder!, self.queuedWrites.removeFirst())
-        }
+        assert(!self.queuedWrites.isEmpty, "This must be called with a non empty queue")
+        // `queuedWrites` is only ever non-empty if we have a delivery function.
+        let deliverQueuedWrite = self.deliverQueuedWrite!
+        repeat {
+            // `self.decoder` is only `nil` whilst we're on the stack and this is only called when we're not.
+            deliverQueuedWrite(&self.decoder!, self.queuedWrites.removeFirst())
+        } while self.queuedWrites.count > 0
     }
 
     private func decodeLoop(
