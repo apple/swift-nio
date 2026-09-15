@@ -199,23 +199,6 @@ public protocol ByteToMessageDecoder: ~Copyable {
     ///   - buffer: The `ByteBuffer` to check
     /// - return: `true` if memory should be reclaimed, `false` otherwise.
     mutating func shouldReclaimBytes(buffer: ByteBuffer) -> Bool
-
-    /// Deliver a write that `ByteToMessageHandler` had to queue because it arrived re-entrantly, i.e. whilst the
-    /// decoder was being used to decode.
-    ///
-    /// This protocol requirement lives here, as ``ByteToMessageHandler`` invokes this from its
-    /// `ByteToMessageHandler.tryDecodeWrites` method, which is not dependent on the handler's decoder.
-    ///
-    /// - warning: This is not intended to be implemented or called by users.
-    mutating func _deliverQueuedWrite(data: NIOAny)
-}
-
-extension ByteToMessageDecoder where Self: ~Copyable {
-    @inlinable
-    public mutating func _deliverQueuedWrite(data: NIOAny) {
-        // This decoder doesn't observe writes, so there is nothing to deliver. `ByteToMessageHandler` only ever queues
-        // writes for decoders that do observe them, so this should not be reachable in practice.
-    }
 }
 
 /// Some `ByteToMessageDecoder`s need to observe `write`s (which are outbound events). `ByteToMessageDecoder`s which
@@ -232,13 +215,6 @@ public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder, ~Copya
     /// - Parameters:
     ///    - data: The data that was written.
     mutating func write(data: OutboundIn)
-}
-
-extension WriteObservingByteToMessageDecoder where Self: ~Copyable {
-    @inlinable
-    public mutating func _deliverQueuedWrite(data: NIOAny) {
-        self.write(data: data.forceAs(type: OutboundIn.self))
-    }
 }
 
 extension ByteToMessageDecoder where Self: ~Copyable {
@@ -488,6 +464,16 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder & ~Copyabl
     private let maximumBufferSize: Int?
     // queues writes received whilst we're already decoding (re-entrant write)
     private var queuedWrites = CircularBuffer<NIOAny>(initialCapacity: 1)
+    // Delivers a write that was queued because it arrived re-entrantly. Formed by `write` the first time it queues
+    // such a write, so it is non-`nil` whenever `queuedWrites` is non-empty.
+    //
+    // This is a closure rather than a `ByteToMessageDecoder` protocol requirement because decoders may conform to
+    // `WriteObservingByteToMessageDecoder` *conditionally* whilst conforming to `ByteToMessageDecoder`
+    // unconditionally (`HTTPDecoder` does exactly this). All generic instantiations of such a decoder share one
+    // `ByteToMessageDecoder` witness table, so the requirement could only ever be witnessed by a non-observing
+    // default and the write would be silently dropped. It also can't be recovered from `self` with an `as?` cast the
+    // way a copyable `Decoder` allows, because casting a type with noncopyable generic arguments needs macOS 15.
+    private var deliverQueuedWrite: ((inout Decoder, NIOAny) -> Void)?
     private var state: State = .active {
         willSet {
             // we can never leave final states
@@ -595,10 +581,9 @@ extension ByteToMessageHandler where Decoder: ~Copyable {
 
     private func tryDecodeWrites() {
         while self.queuedWrites.count > 0 {
-            // self.decoder can't be `nil`, this is only allowed to be called when we're not already on the stack.
-            // Only write-observing decoders ever have writes queued for them; for anything else
-            // `_deliverQueuedWrite` is the default no-op, but then `queuedWrites` is always empty anyway.
-            self.decoder!._deliverQueuedWrite(data: self.queuedWrites.removeFirst())
+            // Both force unwraps are safe: `self.decoder` is only `nil` whilst we're on the stack and this is only
+            // called when we're not, and `queuedWrites` is only ever non-empty if we have a delivery function.
+            self.deliverQueuedWrite!(&self.decoder!, self.queuedWrites.removeFirst())
         }
     }
 
@@ -733,6 +718,18 @@ where Decoder: WriteObservingByteToMessageDecoder & ~Copyable {
             assert(self.queuedWrites.isEmpty)
             self.decoder!.write(data: data)
         } else {
+            // We're re-entered, so the decoder is on the stack and we have to queue the write. This is the only
+            // context in which `Decoder`'s write observing conformance is statically known, so it is also where we
+            // have to form the function that delivers the queued write.
+            //
+            // Forming it allocates (the closure captures `Decoder.OutboundIn`'s metadata), so only do it once per
+            // handler. That matches `ByteToMessageHandler`'s previous cost, which was one allocation per handler for
+            // the cached `self as? CanDequeueWrites` existential.
+            if self.deliverQueuedWrite == nil {
+                self.deliverQueuedWrite = { decoder, data in
+                    decoder.write(data: data.forceAs(type: Decoder.OutboundIn.self))
+                }
+            }
             self.queuedWrites.append(data)
         }
         context.write(data, promise: promise)
