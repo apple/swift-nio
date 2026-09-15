@@ -634,6 +634,33 @@ class DatagramChannelTests: XCTestCase {
         #endif
     }
 
+    func testSettingSoReuseportAllowsTwoChannelsToBindTheSamePort() throws {
+        #if os(Windows)
+        throw XCTSkip("SO_REUSEPORT is not available on Windows")
+        #else
+        let first = try assertNoThrowWithValue(
+            DatagramBootstrap(group: group)
+                .channelOption(.socketOption(.so_reuseport), value: 1)
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+        )
+        defer {
+            XCTAssertNoThrow(try first.close().wait())
+        }
+        let second = try assertNoThrowWithValue(
+            DatagramBootstrap(group: group)
+                .channelOption(.socketOption(.so_reuseport), value: 1)
+                .bind(to: first.localAddress!)
+                .wait()
+        )
+        defer {
+            XCTAssertNoThrow(try second.close().wait())
+        }
+        XCTAssertTrue(try getBoolSocketOption(channel: first, level: .socket, name: .so_reuseport))
+        XCTAssertTrue(try getBoolSocketOption(channel: second, level: .socket, name: .so_reuseport))
+        #endif
+    }
+
     func testUnprocessedOutboundUserEventFailsOnDatagramChannel() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
