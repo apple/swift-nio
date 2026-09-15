@@ -14,14 +14,14 @@
 
 import NIOPosix
 import NIOTestUtils
-import XCTest
+import Testing
 
 @testable import NIOCore
 
 typealias VerificationError = ByteToMessageDecoderVerifier.VerificationError<String>
 
-class ByteToMessageDecoderVerifierTest: XCTestCase {
-    func testWrongResults() {
+struct ByteToMessageDecoderVerifierTests {
+    @Test func wrongResults() throws {
         struct AlwaysProduceY: ByteToMessageDecoder {
             typealias InboundOut = String
 
@@ -41,30 +41,24 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
             }
         }
 
-        XCTAssertThrowsError(
+        let error = try #require(throws: VerificationError.self) {
             try ByteToMessageDecoderVerifier.verifyDecoder(
                 stringInputOutputPairs: [("x", ["x"])],
                 decoderFactory: AlwaysProduceY.init
             )
-        ) {
-            error in
-            switch error {
-            case let error as VerificationError:
-                XCTAssertEqual(1, error.inputs.count)
-                switch error.errorCode {
-                case .wrongProduction(let actual, let expected):
-                    XCTAssertEqual("Y", actual)
-                    XCTAssertEqual("x", expected)
-                default:
-                    XCTFail("unexpected error: \(error)")
-                }
-            default:
-                XCTFail("unexpected error: \(error)")
-            }
+        }
+
+        #expect(1 == error.inputs.count)
+        switch error.errorCode {
+        case .wrongProduction(let actual, let expected):
+            #expect("Y" == actual)
+            #expect("x" == expected)
+        default:
+            Issue.record("unexpected error: \(error)")
         }
     }
 
-    func testNoOutputWhenWeShouldHaveOutput() {
+    @Test func noOutputWhenWeShouldHaveOutput() throws {
         struct NeverProduce: ByteToMessageDecoder {
             typealias InboundOut = String
 
@@ -83,29 +77,23 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
             }
         }
 
-        XCTAssertThrowsError(
+        let error = try #require(throws: VerificationError.self) {
             try ByteToMessageDecoderVerifier.verifyDecoder(
                 stringInputOutputPairs: [("x", ["x"])],
                 decoderFactory: NeverProduce.init
             )
-        ) {
-            error in
-            switch error {
-            case let error as VerificationError:
-                XCTAssertEqual(1, error.inputs.count)
-                switch error.errorCode {
-                case .underProduction(let expected):
-                    XCTAssertEqual("x", expected)
-                default:
-                    XCTFail("unexpected error: \(error)")
-                }
-            default:
-                XCTFail("unexpected error: \(error)")
-            }
+        }
+
+        #expect(1 == error.inputs.count)
+        switch error.errorCode {
+        case .underProduction(let expected):
+            #expect("x" == expected)
+        default:
+            Issue.record("unexpected error: \(error)")
         }
     }
 
-    func testOutputWhenWeShouldNotProduceOutput() {
+    @Test func outputWhenWeShouldNotProduceOutput() throws {
         struct ProduceTooEarly: ByteToMessageDecoder {
             typealias InboundOut = String
 
@@ -124,28 +112,22 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
             }
         }
 
-        XCTAssertThrowsError(
+        let error = try #require(throws: VerificationError.self) {
             try ByteToMessageDecoderVerifier.verifyDecoder(
                 stringInputOutputPairs: [("xxxxxx", ["Y"])],
                 decoderFactory: ProduceTooEarly.init
             )
-        ) {
-            error in
-            switch error {
-            case let error as VerificationError:
-                switch error.errorCode {
-                case .overProduction(let actual):
-                    XCTAssertEqual("Y", actual)
-                default:
-                    XCTFail("unexpected error: \(error)")
-                }
-            default:
-                XCTFail("unexpected error: \(error)")
-            }
+        }
+
+        switch error.errorCode {
+        case .overProduction(let actual):
+            #expect("Y" == actual)
+        default:
+            Issue.record("unexpected error: \(error)")
         }
     }
 
-    func testLeftovers() {
+    @Test func leftovers() throws {
         struct NeverDoAnything: ByteToMessageDecoder {
             typealias InboundOut = String
 
@@ -166,30 +148,24 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
             }
         }
 
-        XCTAssertThrowsError(
+        let error = try #require(throws: VerificationError.self) {
             try ByteToMessageDecoderVerifier.verifyDecoder(
                 stringInputOutputPairs: [("xxxxxx", [])],
                 decoderFactory: NeverDoAnything.init
             )
-        ) {
-            error in
-            switch error {
-            case let error as VerificationError:
-                switch error.errorCode {
-                case .leftOversOnDeconstructingChannel(
-                    let inbound,
-                    let outbound,
-                    pendingOutbound: let pending
-                ):
-                    XCTAssertEqual(0, outbound.count)
-                    XCTAssertEqual(["leftover"], inbound.map { $0.tryAs(type: String.self) })
-                    XCTAssertEqual(0, pending.count)
-                default:
-                    XCTFail("unexpected error: \(error)")
-                }
-            default:
-                XCTFail("unexpected error: \(error)")
-            }
+        }
+
+        switch error.errorCode {
+        case .leftOversOnDeconstructingChannel(
+            let inbound,
+            let outbound,
+            pendingOutbound: let pending
+        ):
+            #expect(0 == outbound.count)
+            #expect(["leftover"] == inbound.map { $0.tryAs(type: String.self) })
+            #expect(0 == pending.count)
+        default:
+            Issue.record("unexpected error: \(error)")
         }
     }
 }

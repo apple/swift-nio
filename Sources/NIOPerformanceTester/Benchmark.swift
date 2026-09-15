@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import NIOConcurrencyHelpers
 
 protocol Benchmark: AnyObject {
     func setUp() throws
@@ -41,6 +42,7 @@ protocol AsyncBenchmark: AnyObject, Sendable {
 func measureAndPrint<B: AsyncBenchmark>(desc: String, benchmark bench: B) throws {
     let group = DispatchGroup()
     group.enter()
+    let caughtError = NIOLockedValueBox<Error?>(nil)
     Task {
         do {
             try await bench.setUp()
@@ -50,9 +52,15 @@ func measureAndPrint<B: AsyncBenchmark>(desc: String, benchmark bench: B) throws
             try await measureAndPrint(desc: desc) {
                 try await bench.run()
             }
+        } catch {
+            caughtError.withLockedValue { $0 = error }
         }
         group.leave()
     }
 
     group.wait()
+
+    if let error = caughtError.withLockedValue({ $0 }) {
+        throw error
+    }
 }

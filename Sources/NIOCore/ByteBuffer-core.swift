@@ -334,9 +334,29 @@ public struct ByteBuffer {
     // MARK: Internal _Storage for CoW
     /// Note: This class is **not** thread-safe
     @usableFromInline final class _Storage {
+        // `_capacity` and `_bytes` are marked `@exclusivity(unchecked)` because the dynamic
+        // exclusivity check the compiler would otherwise emit for them can never fire.
+        //
+        // Both are only ever written by `_Storage.init` and `_Storage.reallocStorage(capacity:)`.
+        // Every caller of `reallocStorage` has already established that the storage is uniquely
+        // referenced (see `_ensureAvailableCapacity(_:at:)` and `clear(minimumCapacity:)`), which
+        // is the copy-on-write invariant `ByteBuffer` is built on. A uniquely referenced storage
+        // has, by construction, exactly one owner, so reads can never overlap writes. Read/read
+        // overlap is not an exclusivity violation. (Nor would the check catch a cross-thread race:
+        // Swift's dynamic exclusivity enforcement is per-thread.)]
+        //
+        // Without this, every out-of-line function that reads through `bytes` or `capacity` pays a
+        // `swift_beginAccess` call.
+
         /// - Note: Must only be modified by `_Storage` itself, use ``capacity`` to read it.
+        #if !DEBUG
+        @exclusivity(unchecked)
+        #endif
         @usableFromInline var _capacity: _Capacity
         /// - Note: Must only be modified by `_Storage` itself, use ``bytes`` to read it.
+        #if !DEBUG
+        @exclusivity(unchecked)
+        #endif
         @usableFromInline var _bytes: UnsafeMutableRawPointer
         @usableFromInline let allocator: ByteBufferAllocator
 
