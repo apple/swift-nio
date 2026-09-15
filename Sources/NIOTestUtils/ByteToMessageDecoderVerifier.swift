@@ -30,8 +30,7 @@ public enum ByteToMessageDecoderVerifier: Sendable {
 
     /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
     ///
-    /// Verify non-copyable `ByteToMessageDecoder`s with `String` inputs. See the non-copyable
-    /// `verifyDecoder(inputOutputPairs:decoderFactory:)` for why this requires macOS 15.
+    /// Verify non-copyable `ByteToMessageDecoder`s with `String` inputs.
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     public static func verifyDecoder<Decoder: ByteToMessageDecoder & ~Copyable>(
         stringInputOutputPairs: [(String, [Decoder.InboundOut])],
@@ -86,18 +85,13 @@ public enum ByteToMessageDecoderVerifier: Sendable {
         try self.verify(
             inputOutputPairs: inputOutputPairs,
             handler: handler,
-            unprocessedBytes: { handler.cumulationBuffer?.readableBytes ?? 0 }
+            erasedHandler: handler
         )
     }
 
     /// Verifies a non-copyable `ByteToMessageDecoder`.
     ///
     /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
-    ///
-    /// This requires macOS 15 (or the corresponding release of the other Apple platforms) because adding a handler to
-    /// a `ChannelPipeline` erases it to `any ChannelHandler`, and erasing a type with a non-copyable generic argument
-    /// needs the Swift runtime shipped in those releases. Non-Apple platforms bundle their Swift runtime and are
-    /// therefore unaffected.
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     public static func verifyDecoder<Decoder: ByteToMessageDecoder & ~Copyable>(
         inputOutputPairs: [(ByteBuffer, [Decoder.InboundOut])],
@@ -107,19 +101,19 @@ public enum ByteToMessageDecoderVerifier: Sendable {
         try self.verify(
             inputOutputPairs: inputOutputPairs,
             handler: handler,
-            unprocessedBytes: { handler.cumulationBuffer?.readableBytes ?? 0 }
+            erasedHandler: handler
         )
     }
 
     /// The decoder-agnostic core of the verification.
     ///
-    /// This is generic over the decoder's output type only, not over the decoder, so that the copyable and the
-    /// non-copyable entry points above can share it: by the time we get here the decoder is hidden behind
-    /// `any ChannelHandler`.
-    private static func verify<Out: Equatable>(
+    /// The handler is passed twice: once with its concrete type, so that we can inspect the bytes it has buffered,
+    /// and once erased to `any ChannelHandler`. The erasure has to happen in the callers because erasing a type with
+    /// a non-copyable generic argument requires a newer Swift runtime than the copyable entry point demands.
+    private static func verify<Out: Equatable, Decoder: ByteToMessageDecoder & ~Copyable>(
         inputOutputPairs: [(ByteBuffer, [Out])],
-        handler: ChannelHandler,
-        unprocessedBytes: () -> Int
+        handler: ByteToMessageHandler<Decoder>,
+        erasedHandler: any ChannelHandler
     ) throws {
         func verifySimple(channel: RecordingChannel) throws {
             for (input, expectedOutputs) in inputOutputPairs.shuffled() {
@@ -222,7 +216,7 @@ public enum ByteToMessageDecoderVerifier: Sendable {
             }
         }
 
-        let channel = RecordingChannel(EmbeddedChannel(handler: handler))
+        let channel = RecordingChannel(EmbeddedChannel(handler: erasedHandler))
 
         try verifySimple(channel: channel)
         try verifyDripFeed(channel: channel)
@@ -241,7 +235,8 @@ public enum ByteToMessageDecoderVerifier: Sendable {
 
         // Bytes the decoder never consumed are buffered inside `ByteToMessageHandler` and therefore invisible to
         // `finish()` above, so they are reported separately with empty left overs.
-        if unprocessedBytes() > 0 {
+        let unprocessedBytes = handler.cumulationBuffer?.readableBytes ?? 0
+        if unprocessedBytes > 0 {
             throw VerificationError<Out>(
                 inputs: channel.inboundWrites,
                 errorCode: .leftOversOnDeconstructingChannel(inbound: [], outbound: [], pendingOutbound: [])
