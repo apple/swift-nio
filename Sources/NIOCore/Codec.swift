@@ -579,7 +579,19 @@ extension ByteToMessageHandler where Decoder: ~Copyable {
         }
     }
 
+    // `decodeLoop` calls this on every iteration, so the (overwhelmingly common) no-queued-writes case has to stay
+    // cheap. Delivering the writes is kept out of line because it force-unwraps an optional closure and takes an
+    // `inout` borrow of the optional decoder; inlined here that bloats this function to the point where the empty
+    // check itself stops being cheap.
     private func tryDecodeWrites() {
+        if self.queuedWrites.isEmpty {
+            return
+        }
+        self.dequeueWrites()
+    }
+
+    @inline(never)
+    private func dequeueWrites() {
         while self.queuedWrites.count > 0 {
             // Both force unwraps are safe: `self.decoder` is only `nil` whilst we're on the stack and this is only
             // called when we're not, and `queuedWrites` is only ever non-empty if we have a delivery function.
