@@ -210,6 +210,29 @@ class HTTPHeadersTest: XCTestCase {
         XCTAssertNil(headers.first(name: "not-present"))
     }
 
+    func testHeaderNamesDifferingOnlyByPunctuationThatSharesTheCaseBitAreDistinct() {
+        // Both ^ and ~ are valid in header names. Their only difference is bit
+        // 0x20, which must be preserved when comparing non-letter bytes.
+        var headers = HTTPHeaders()
+        headers.add(name: "X-Foo^Bar", value: "caret-value")
+
+        XCTAssertEqual(headers.first(name: "X-Foo^Bar"), "caret-value")
+        XCTAssertNil(headers.first(name: "X-Foo~Bar"))
+        XCTAssertTrue(headers.contains(name: "X-Foo^Bar"))
+        XCTAssertFalse(headers.contains(name: "X-Foo~Bar"))
+        XCTAssertEqual(headers[canonicalForm: "X-Foo~Bar"], [])
+
+        headers.remove(name: "X-Foo~Bar")
+        XCTAssertEqual(
+            headers.first(name: "X-Foo^Bar"),
+            "caret-value",
+            "removing a distinct header must not remove this one"
+        )
+
+        headers.remove(name: "X-Foo^Bar")
+        XCTAssertNil(headers.first(name: "X-Foo^Bar"))
+    }
+
     func testKeepAliveStateStartsWithClose() {
         var headers = HTTPHeaders([("Connection", "close")])
 

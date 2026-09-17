@@ -16,6 +16,20 @@ import NIOCore
 
 private let defaultWhitespaces = [" ", "\t"].map({ $0.utf8.first! })
 
+/// Uppercases `byte` if, and only if, it is an ASCII lowercase letter (`a`...`z`).
+///
+/// Clearing bit `0x20` unconditionally also folds distinct punctuation bytes.
+/// For example, `^` and `~` are both valid in HTTP header names and must remain distinct.
+@inline(__always)
+private func uppercaseASCIILetter(_ byte: UInt8) -> UInt8 {
+    switch byte {
+    case UInt8(ascii: "a")...UInt8(ascii: "z"):
+        return byte & 0xdf
+    default:
+        return byte
+    }
+}
+
 extension ByteBufferView {
     internal func trim(limitingElements: [UInt8]) -> ByteBufferView {
         guard let lastNonWhitespaceIndex = self.lastIndex(where: { !limitingElements.contains($0) }),
@@ -51,7 +65,7 @@ extension Sequence where Self.Element == UInt8 {
 
                 for idx in 0..<lhsBuffer.count {
                     // let's hope this gets vectorised ;)
-                    if lhsBuffer[idx] & 0xdf != rhsBuffer[idx] & 0xdf {
+                    if uppercaseASCIILetter(lhsBuffer[idx]) != uppercaseASCIILetter(rhsBuffer[idx]) {
                         return false
                     }
                 }
@@ -62,7 +76,7 @@ extension Sequence where Self.Element == UInt8 {
         if let maybeResult = maybeMaybeResult, let result = maybeResult {
             return result
         } else {
-            return self.elementsEqual(to, by: { ($0 & 0xdf) == ($1 & 0xdf) })
+            return self.elementsEqual(to, by: { uppercaseASCIILetter($0) == uppercaseASCIILetter($1) })
         }
     }
 }
