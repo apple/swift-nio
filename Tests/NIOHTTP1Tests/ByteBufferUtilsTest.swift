@@ -73,12 +73,8 @@ class ByteBufferUtilsTest: XCTestCase {
     }
 
     func testComparatorsDoNotFoldNonAlphaPunctuationThatSharesTheCaseBit() {
-        // These punctuation pairs only differ from one another in bit 0x20 (the
-        // same bit that separates an ASCII lowercase letter from its uppercase
-        // form), so a naive `byte & 0xdf` case-fold incorrectly treats them as
-        // equal. All of these bytes are legal `tchar` characters in HTTP header
-        // field names (RFC 7230 §3.2.6), so they must never compare as equal to
-        // one another.
+        // Each pair differs only in bit 0x20. Both ^ and ~ are valid in header
+        // names; the remaining pairs exercise the general byte comparator.
         let collidingPairs: [(String, String)] = [
             ("^", "~"),
             ("[", "{"),
@@ -91,8 +87,8 @@ class ByteBufferUtilsTest: XCTestCase {
             let buffer = ByteBuffer(string: "X-Foo\(lhs)Bar")
             XCTAssertFalse(
                 buffer.readableBytesView.compareCaseInsensitiveASCIIBytes(to: "X-Foo\(rhs)Bar".utf8),
-                "'\(lhs)' (0x\(String(lhs.utf8.first!, radix: 16))) incorrectly compared equal to " +
-                    "'\(rhs)' (0x\(String(rhs.utf8.first!, radix: 16)))"
+                "'\(lhs)' (0x\(String(lhs.utf8.first!, radix: 16))) incorrectly compared equal to "
+                    + "'\(rhs)' (0x\(String(rhs.utf8.first!, radix: 16)))"
             )
             // The identical byte must still compare equal to itself.
             XCTAssertTrue(
