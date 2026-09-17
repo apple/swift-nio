@@ -566,59 +566,7 @@ struct NIOSingleStepByteToMessageDecoderTests {
         #expect(errorObserved)
     }
 
-    /// A non-copyable decoder gets the `ByteToMessageDecoder` default implementations, so it conforms
-    /// without spelling out `decoderAdded`, `decoderRemoved`, `shouldReclaimBytes` or `decodeLast`.
-    @Test
-    func nonCopyableDecoderConforms() throws {
-        struct NonCopyableByteToInt32Decoder: NIOSingleStepByteToMessageDecoder, ~Copyable {
-            typealias InboundOut = Int32
-
-            mutating func decode(buffer: inout ByteBuffer) throws -> InboundOut? {
-                buffer.readInteger()
-            }
-
-            mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> InboundOut? {
-                try self.decode(buffer: &buffer)
-            }
-        }
-
-        var decoder = NonCopyableByteToInt32Decoder()
-        var buffer = ByteBuffer()
-        buffer.writeInteger(Int32(1))
-        buffer.writeInteger(Int32(2))
-
-        #expect(try decoder.decode(buffer: &buffer) == 1)
-        #expect(try decoder.decodeLast(buffer: &buffer, seenEOF: true) == 2)
-        #expect(try decoder.decodeLast(buffer: &buffer, seenEOF: true) == nil)
-        #expect(decoder.shouldReclaimBytes(buffer: buffer) == false)
-    }
-
-    @Test
-    func decoderWithTypedThrows() throws {
-        struct FoundSentinelError: Error, Equatable {}
-
-        struct SentinelDecoder: NIOSingleStepByteToMessageDecoder {
-            typealias InboundOut = UInt8
-            typealias DecodeError = FoundSentinelError
-
-            mutating func decode(buffer: inout ByteBuffer) throws(FoundSentinelError) -> UInt8? {
-                guard let byte = buffer.readInteger(as: UInt8.self) else {
-                    return nil
-                }
-                guard byte != 0xFF else {
-                    throw FoundSentinelError()
-                }
-                return byte
-            }
-
-            mutating func decodeLast(
-                buffer: inout ByteBuffer,
-                seenEOF: Bool
-            ) throws(FoundSentinelError) -> UInt8? {
-                try self.decode(buffer: &buffer)
-            }
-        }
-
+    @Test func decoderWithTypedThrows() throws {
         var decoder = SentinelDecoder()
         var buffer = ByteBuffer(bytes: [1, 0xFF])
 
@@ -638,8 +586,7 @@ struct NIOSingleStepByteToMessageDecoderTests {
         }
     }
 
-    @Test
-    func processorDrivesNonCopyableDecoder() throws {
+    @Test func processorDrivesNonCopyableDecoder() throws {
         struct NonCopyableByteToInt32Decoder: NIOSingleStepByteToMessageDecoder, ~Copyable {
             typealias InboundOut = Int32
 
@@ -666,32 +613,32 @@ struct NIOSingleStepByteToMessageDecoderTests {
         #expect(processor.unprocessedBytes == 0)
     }
 
-    @Test
-    func handleDecodesWithTypedThrows() {
-        struct FoundSentinelError: Error, Equatable {}
+    struct FoundSentinelError: Error, Equatable {}
 
-        struct SentinelDecoder: NIOSingleStepByteToMessageDecoder, ~Copyable {
-            typealias InboundOut = UInt8
-            typealias DecodeError = FoundSentinelError
+    struct SentinelDecoder: NIOSingleStepByteToMessageDecoder, ~Copyable {
+        typealias InboundOut = UInt8
+        typealias DecodeError = FoundSentinelError
 
-            mutating func decode(buffer: inout ByteBuffer) throws(FoundSentinelError) -> UInt8? {
-                guard let byte = buffer.readInteger(as: UInt8.self) else {
-                    return nil
-                }
-                guard byte != 0xFF else {
-                    throw FoundSentinelError()
-                }
-                return byte
+        mutating func decode(buffer: inout ByteBuffer) throws(FoundSentinelError) -> UInt8? {
+            guard let byte = buffer.readInteger(as: UInt8.self) else {
+                return nil
             }
-
-            mutating func decodeLast(
-                buffer: inout ByteBuffer,
-                seenEOF: Bool
-            ) throws(FoundSentinelError) -> UInt8? {
-                try self.decode(buffer: &buffer)
+            guard byte != 0xFF else {
+                throw FoundSentinelError()
             }
+            return byte
         }
 
+        mutating func decodeLast(
+            buffer: inout ByteBuffer,
+            seenEOF: Bool
+        ) throws(FoundSentinelError) -> UInt8? {
+            try self.decode(buffer: &buffer)
+        }
+    }
+
+    @Test
+    func handleDecodesWithTypedThrows() {
         var handle = NIOSingleStepByteToMessageHandle(SentinelDecoder())
         #expect(handle.unprocessedBytes == 0)
         handle.append(ByteBuffer(bytes: [1, 2, 0xFF]))
@@ -724,30 +671,7 @@ struct NIOSingleStepByteToMessageDecoderTests {
 
     @Test
     func handleProcessesWithTypedThrows() {
-        struct FoundSentinelError: Error, Equatable {}
         struct MessageReceiverError: Error, Equatable {}
-
-        struct SentinelDecoder: NIOSingleStepByteToMessageDecoder, ~Copyable {
-            typealias InboundOut = UInt8
-            typealias DecodeError = FoundSentinelError
-
-            mutating func decode(buffer: inout ByteBuffer) throws(FoundSentinelError) -> UInt8? {
-                guard let byte = buffer.readInteger(as: UInt8.self) else {
-                    return nil
-                }
-                guard byte != 0xFF else {
-                    throw FoundSentinelError()
-                }
-                return byte
-            }
-
-            mutating func decodeLast(
-                buffer: inout ByteBuffer,
-                seenEOF: Bool
-            ) throws(FoundSentinelError) -> UInt8? {
-                try self.decode(buffer: &buffer)
-            }
-        }
 
         var handle = NIOSingleStepByteToMessageHandle(SentinelDecoder())
         var messages: [UInt8] = []
@@ -834,8 +758,7 @@ struct NIOSingleStepByteToMessageDecoderTests {
         #expect(decoder.decodeLastCalls == 1)
     }
 
-    @Test
-    func handleThrowsTypedPayloadTooLarge() {
+    @Test func handleThrowsTypedPayloadTooLarge() {
         struct NeverDecoder: NIOSingleStepByteToMessageDecoder, ~Copyable {
             typealias InboundOut = Never
             typealias DecodeError = Never

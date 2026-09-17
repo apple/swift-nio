@@ -79,7 +79,7 @@ extension NIOSingleStepByteToMessageDecoder where Self: ~Copyable {
 }
 
 /// Whether a decode step should decode a normal chunk of the stream, or the last one.
-public enum NIODecodeMode: Sendable {
+public enum NIOSingleStepDecodeMode: Sendable {
     /// This is a usual decode, ie. not the last chunk
     case normal
     /// Last chunk
@@ -197,32 +197,29 @@ public enum NIODecodeMode: Sendable {
 ///     let channelFuture = bootstrap.bind(host: "127.0.0.1", port: 0)
 ///
 public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMessageDecoder & ~Copyable> {
-    @usableFromInline
-    typealias DecodeMode = NIODecodeMode
-
     /// The ``NIOSingleStepByteToMessageHandle`` this processor is implemented on top of.
     ///
     /// - Note: All decoding here is driven one step at a time, rather than by handing `messageReceiver`
     ///   to the handle. The handle requires exclusive access while decoding, so an access to it must
     ///   never be live while `messageReceiver` runs: that closure is allowed to re-enter this processor.
     @usableFromInline
-    var handle: NIOSingleStepByteToMessageHandle<Decoder>
+    var _handle: NIOSingleStepByteToMessageHandle<Decoder>
 
     @inlinable
     internal var decoder: Decoder {
         // A `_read` accessor borrows the decoder instead of returning a copy, which a non-copyable
         // `Decoder` could not provide.
-        _read { yield self.handle._decoder }
+        _read { yield self._handle._decoder }
     }
 
     @inlinable
     internal var maximumBufferSize: Int? {
-        self.handle.maximumBufferSize
+        self._handle.maximumBufferSize
     }
 
     @inlinable
     internal var _buffer: ByteBuffer? {
-        self.handle._buffer
+        self._handle._buffer
     }
 
     /// Initialize a `NIOSingleStepByteToMessageProcessor`.
@@ -233,43 +230,43 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     ///     An error will be thrown if after decoding elements there is more aggregated data than this amount.
     @inlinable
     public init(_ decoder: consuming Decoder, maximumBufferSize: Int? = nil) {
-        self.handle = NIOSingleStepByteToMessageHandle(decoder, maximumBufferSize: maximumBufferSize)
+        self._handle = NIOSingleStepByteToMessageHandle(decoder, maximumBufferSize: maximumBufferSize)
     }
 
     /// Append a new buffer to this processor.
     @inlinable
     func append(_ buffer: ByteBuffer) {
-        self.handle.append(buffer)
+        self._handle.append(buffer)
     }
 
-    /// The processor's own decode loop.
-    ///
-    /// This deliberately does *not* call ``NIOSingleStepByteToMessageHandle/process(buffer:_:)``. Handing
-    /// `messageReceiver` to the handle keeps an exclusive access to `self.handle` alive for the whole
-    /// loop, and `messageReceiver` is allowed to re-enter this processor. Driving the handle one step at
-    /// a time keeps every access to it short lived, so no access is live while `messageReceiver` runs.
     @inlinable
     func _decodeLoop(
-        decodeMode: DecodeMode,
+        decodeMode: NIOSingleStepDecodeMode,
         seenEOF: Bool = false,
         _ messageReceiver: (Decoder.InboundOut) throws -> Void
     ) throws {
+        // This deliberately does *not* call ``NIOSingleStepByteToMessageHandle/process(buffer:_:)``. Handing
+        // `messageReceiver` to the handle would keep the exclusive access to `self.handle` alive for the whole
+        // loop: But this type allows re-entrency in `messageReceiver`. By driving the decode loop from this
+        // class type one decode a time keeps every access to the underlying handle short lived, so no access
+        // is live while `messageReceiver` runs.
+
         // we want to call decodeLast once with an empty buffer if we have nothing
-        if decodeMode == .last && self.handle._isBufferEmpty {
-            if let message = try self.handle._decodeLastWithEmptyBuffer(seenEOF: seenEOF) {
+        if decodeMode == .last && self._handle._isBufferEmpty {
+            if let message = try self._handle._decodeLastWithEmptyBuffer(seenEOF: seenEOF) {
                 try messageReceiver(message)
             }
             return
         }
 
         // buffer can only be nil if we're called from finishProcessing which is handled above
-        assert(self.handle._buffer != nil)
+        assert(self._handle._buffer != nil)
 
-        while let message = try self.handle._decodeOnce(decodeMode: decodeMode, seenEOF: seenEOF) {
+        while let message = try self._handle._decodeOnce(decodeMode: decodeMode, seenEOF: seenEOF) {
             try messageReceiver(message)
         }
 
-        try self.handle._postDecodeCheck()
+        try self._handle._postDecodeCheck()
     }
 
     /// Decode the next message from the `NIOSingleStepByteToMessageProcessor`
@@ -302,13 +299,13 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     /// - Returns: A tuple containing the decoded message and a boolean indicating whether the decoding has ended.
     @inlinable
     func decodeNext(
-        decodeMode: DecodeMode,
+        decodeMode: NIOSingleStepDecodeMode,
         seenEOF: Bool = false
     ) throws -> (decoded: Decoder.InboundOut?, ended: Bool) {
         // Unlike the handle, this method has always thrown the decoder's and the buffer management's
         // errors directly, so unwrap the handle's typed error again.
         do {
-            return try self.handle.decodeNext(decodeMode: decodeMode, seenEOF: seenEOF)
+            return try self._handle.decodeNext(decodeMode: decodeMode, seenEOF: seenEOF)
         } catch {
             switch error {
             case .decoder(let error):
@@ -328,7 +325,7 @@ extension NIOSingleStepByteToMessageProcessor where Decoder: ~Copyable {
     /// The number of bytes that are currently not processed by the ``process(buffer:_:)`` method. Having unprocessed
     /// bytes may result from receiving only partial messages or from receiving multiple messages at once.
     public var unprocessedBytes: Int {
-        self.handle.unprocessedBytes
+        self._handle.unprocessedBytes
     }
 
     /// Feed data into the `NIOSingleStepByteToMessageProcessor` and process it
@@ -446,10 +443,6 @@ public struct NIOSingleStepByteToMessageHandle<Decoder: NIOSingleStepByteToMessa
     /// ``ProcessError/messageReceiver(_:)``. Any bytes that have not been consumed yet stay aggregated,
     /// so decoding can be resumed by calling this method again.
     ///
-    /// - Note: You must not call any method on this handle from within `messageReceiver`: the handle
-    ///   requires exclusive access for the duration of the call. Use ``append(_:)`` together with
-    ///   ``decodeNext(decodeMode:seenEOF:)`` if you need to drive the loop yourself.
-    ///
     /// - Parameters:
     ///   - buffer: The `ByteBuffer` containing the next data in the stream
     ///   - messageReceiver: A closure called for each message produced by the `Decoder`
@@ -468,10 +461,6 @@ public struct NIOSingleStepByteToMessageHandle<Decoder: NIOSingleStepByteToMessa
     /// This function will decode as many `Decoder.InboundOut` messages from the
     /// `NIOSingleStepByteToMessageHandle` as possible, and call the `messageReceiver` closure for each
     /// message.
-    ///
-    /// - Note: You must not call any method on this handle from within `messageReceiver`: the handle
-    ///   requires exclusive access for the duration of the call. Use ``append(_:)`` together with
-    ///   ``decodeNext(decodeMode:seenEOF:)`` if you need to drive the loop yourself.
     ///
     /// - Parameters:
     ///   - seenEOF: Whether an EOF was seen on the stream.
@@ -513,7 +502,7 @@ public struct NIOSingleStepByteToMessageHandle<Decoder: NIOSingleStepByteToMessa
     /// - Returns: A tuple containing the decoded message and a boolean indicating whether the decoding has ended.
     @inlinable
     public mutating func decodeNext(
-        decodeMode: NIODecodeMode,
+        decodeMode: NIOSingleStepDecodeMode,
         seenEOF: Bool = false
     ) throws(Error) -> (decoded: Decoder.InboundOut?, ended: Bool) {
         // we want to call decodeLast once with an empty buffer if we have nothing
@@ -553,7 +542,7 @@ public struct NIOSingleStepByteToMessageHandle<Decoder: NIOSingleStepByteToMessa
 
     @inlinable
     mutating func _decodeLoop<MessageReceiverError>(
-        decodeMode: NIODecodeMode,
+        decodeMode: NIOSingleStepDecodeMode,
         seenEOF: Bool = false,
         _ messageReceiver: (Decoder.InboundOut) throws(MessageReceiverError) -> Void
     ) throws(ProcessError<MessageReceiverError>) {
@@ -623,7 +612,7 @@ public struct NIOSingleStepByteToMessageHandle<Decoder: NIOSingleStepByteToMessa
     /// also means we never have two overlapping accesses to `self`.
     @inlinable
     mutating func _decodeOnce(
-        decodeMode: NIODecodeMode,
+        decodeMode: NIOSingleStepDecodeMode,
         seenEOF: Bool
     ) throws(Decoder.DecodeError) -> Decoder.InboundOut? {
         guard var buffer = self._buffer, buffer.readableBytes > 0 else {
@@ -654,6 +643,8 @@ public struct NIOSingleStepByteToMessageHandle<Decoder: NIOSingleStepByteToMessa
         }
     }
 }
+
+extension NIOSingleStepByteToMessageHandle: Copyable where Decoder: Copyable {}
 
 @available(*, unavailable)
 extension NIOSingleStepByteToMessageHandle: Sendable where Decoder: ~Copyable {}
