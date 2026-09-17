@@ -16,7 +16,7 @@ import NIOEmbedded
 
 public enum ByteToMessageDecoderVerifier: Sendable {
     /// Verify `ByteToMessageDecoder`s with `String` inputs
-    /// 
+    ///
     /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
     public static func verifyDecoder<Decoder: ByteToMessageDecoder>(
         stringInputOutputPairs: [(String, [Decoder.InboundOut])],
@@ -27,7 +27,6 @@ public enum ByteToMessageDecoderVerifier: Sendable {
             decoderFactory: decoderFactory
         )
     }
-
 
     /// Verify non-copyable `ByteToMessageDecoder`s with `String` inputs.
     ///

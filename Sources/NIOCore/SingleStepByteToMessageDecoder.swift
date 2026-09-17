@@ -23,12 +23,8 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder, ~Copyab
     /// `InboundOut` - see https://bugs.swift.org/browse/SR-11868.
     associatedtype InboundOut
 
-    /// The error type thrown from `decode` and `decodeLast`.
-    ///
-    /// Declare this as a concrete error type to get existential free error handling. If you don't declare
-    /// it, it defaults to `any Error`, which makes `decode` and `decodeLast` behave like untyped throwing
-    /// methods.
-    associatedtype DecodeError: Swift.Error = any Swift.Error
+    /// The error type thrown from `decode` and `decodeLast`. Defaults to `any Error`
+    associatedtype DecodeError: Error = any Error
 
     /// Decode from a `ByteBuffer`.
     ///
