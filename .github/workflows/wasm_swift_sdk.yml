@@ -13,7 +13,7 @@ on:
       nightly_next_enabled:
         type: boolean
         description: "Boolean to enable the nightly-next WASM Swift SDK matrix job. Defaults to true."
-        default: false
+        default: true
       release_6_3_enabled:
         type: boolean
         description: "Boolean to enable the 6.3 release WASM Swift SDK matrix job. Defaults to true."
@@ -99,7 +99,7 @@ jobs:
           INPUT_ENV_VARS: ${{ inputs.env_vars }}
           INPUT_ADDITIONAL_COMMAND_ARGUMENTS: ${{ inputs.additional_command_arguments }}
           NIGHTLY_NEXT_VERSION: nightly-6.4
-          NIGHTLY_NEXT_BRANCH: swift-6.4-branch
+          NIGHTLY_NEXT_BRANCH: 6.4.x
 
   wasm-swift-sdk:
     name: WebAssembly Swift SDK
