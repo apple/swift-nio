@@ -142,6 +142,78 @@ final class NIOLoopBoundTests: XCTestCase {
         XCTAssertEqual(10, loopBound.value, "Ensure value is set even if we throw")
     }
 
+    func testUncheckedOnEventLoopInit() {
+        let nonSendable = NotSendable()
+        let sendable = NIOLoopBound(uncheckedOnEventLoop: nonSendable, eventLoop: self.loop)
+        let sendableBox = NIOLoopBoundBox(uncheckedOnEventLoop: nonSendable, eventLoop: self.loop)
+
+        XCTAssert(sendable.uncheckedUnsafeValue === nonSendable)
+        XCTAssert(sendableBox.uncheckedUnsafeValue === nonSendable)
+
+        sendableBlackhole(sendable)
+        sendableBlackhole(sendableBox)
+    }
+
+    func testUncheckedUnsafeValue() {
+        var loopBound = NIOLoopBound(CoWValue(), eventLoop: loop)
+        XCTAssertTrue(loopBound.uncheckedUnsafeValue.mutateInPlace())
+
+        let loopBoundBox = NIOLoopBoundBox(CoWValue(), eventLoop: loop)
+        XCTAssertTrue(loopBoundBox.uncheckedUnsafeValue.mutateInPlace())
+    }
+
+    func testWithUncheckedUnsafeValue() {
+        var expectedValue = 0
+        let loopBound = NIOLoopBoundBox(expectedValue, eventLoop: loop)
+        for value in 1...100 {
+            loopBound.withUncheckedUnsafeValue { boundValue in
+                XCTAssertEqual(boundValue, expectedValue)
+                boundValue = value
+                expectedValue = value
+            }
+        }
+        XCTAssertEqual(100, loopBound.value)
+    }
+
+    func testWithUncheckedUnsafeValueRethrows() {
+        struct TestError: Error {}
+
+        let loopBound = NIOLoopBoundBox(0, eventLoop: loop)
+        XCTAssertThrowsError(
+            try loopBound.withUncheckedUnsafeValue { boundValue in
+                XCTAssertEqual(0, boundValue)
+                boundValue = 10
+                throw TestError()
+            }
+        )
+
+        XCTAssertEqual(10, loopBound.value, "Ensure value is set even if we throw")
+    }
+
+    func testUncheckedUnsafeValueSetter() {
+        var loopBound = NIOLoopBound(0, eventLoop: loop)
+        loopBound.uncheckedUnsafeValue = 42
+        XCTAssertEqual(loopBound.value, 42)
+
+        let loopBoundBox = NIOLoopBoundBox(0, eventLoop: loop)
+        loopBoundBox.uncheckedUnsafeValue = 99
+        XCTAssertEqual(loopBoundBox.value, 99)
+    }
+
+    func testUncheckedAndCheckedProduceSameResultOnEventLoop() {
+        var checked = NIOLoopBound(CoWValue(), eventLoop: loop)
+        var unchecked = NIOLoopBound(CoWValue(), eventLoop: loop)
+
+        XCTAssertTrue(checked.value.mutateInPlace())
+        XCTAssertTrue(unchecked.uncheckedUnsafeValue.mutateInPlace())
+
+        let checkedBox = NIOLoopBoundBox(CoWValue(), eventLoop: loop)
+        let uncheckedBox = NIOLoopBoundBox(CoWValue(), eventLoop: loop)
+
+        XCTAssertTrue(checkedBox.value.mutateInPlace())
+        XCTAssertTrue(uncheckedBox.uncheckedUnsafeValue.mutateInPlace())
+    }
+
     // MARK: - Helpers
     func sendableBlackhole<S: Sendable>(_ sendableThing: S) {}
 
