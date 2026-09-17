@@ -18,12 +18,8 @@ private let defaultWhitespaces = [" ", "\t"].map({ $0.utf8.first! })
 
 /// Uppercases `byte` if, and only if, it is an ASCII lowercase letter (`a`...`z`).
 ///
-/// A naive `byte & 0xdf` mask clears bit `0x20` unconditionally, which also folds
-/// several *distinct* punctuation bytes into the same value because they only
-/// differ from one another in that bit: `^`(0x5e)/`~`(0x7e), `[`(0x5b)/`{`(0x7b),
-/// `]`(0x5d)/`}`(0x7d), `\`(0x5c)/`|`(0x7c), and `@`(0x40)/`` ` ``(0x60). All of
-/// these are legal `tchar` bytes in HTTP header field names (RFC 7230 §3.2.6), so
-/// masking them collapses otherwise-distinct header names into the same identity.
+/// Clearing bit `0x20` unconditionally also folds distinct punctuation bytes.
+/// For example, `^` and `~` are both valid in HTTP header names and must remain distinct.
 @inline(__always)
 private func uppercaseASCIILetter(_ byte: UInt8) -> UInt8 {
     switch byte {
