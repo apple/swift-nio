@@ -15,9 +15,9 @@ import NIOCore
 import NIOEmbedded
 
 public enum ByteToMessageDecoderVerifier: Sendable {
-    /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
-    ///
     /// Verify `ByteToMessageDecoder`s with `String` inputs
+    /// 
+    /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
     public static func verifyDecoder<Decoder: ByteToMessageDecoder>(
         stringInputOutputPairs: [(String, [Decoder.InboundOut])],
         decoderFactory: () -> Decoder
@@ -28,9 +28,10 @@ public enum ByteToMessageDecoderVerifier: Sendable {
         )
     }
 
-    /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
-    ///
+
     /// Verify non-copyable `ByteToMessageDecoder`s with `String` inputs.
+    ///
+    /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     public static func verifyDecoder<Decoder: ByteToMessageDecoder & ~Copyable>(
         stringInputOutputPairs: [(String, [Decoder.InboundOut])],
