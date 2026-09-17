@@ -730,8 +730,7 @@ where Decoder: WriteObservingByteToMessageDecoder & ~Copyable {
             // have to form the function that delivers the queued write.
             //
             // Forming it allocates (the closure captures `Decoder.OutboundIn`'s metadata), so only do it once per
-            // handler. That matches `ByteToMessageHandler`'s previous cost, which was one allocation per handler for
-            // the cached `self as? CanDequeueWrites` existential.
+            // handler.
             if self.deliverQueuedWrite == nil {
                 self.deliverQueuedWrite = { decoder, data in
                     decoder.write(data: data.forceAs(type: Decoder.OutboundIn.self))
