@@ -61,6 +61,19 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         }
     }
 
+    /// Create a `HTTPServerPipelineHandler` with a `maximumGracefulShutdownDuration`, which determines the maximum
+    /// duration to wait for the connection to quiesce before the connection is forcefully closed.
+    ///
+    /// - Parameter maximumGracefulShutdownDuration: The longest this handler will wait after receiving a
+    ///   `ChannelShouldQuiesceEvent` before forcefully closing the `Channel`. Use ``init()`` if you do not want to
+    ///   enable a graceful shutdown timeout.
+    ///
+    /// - Note: The deadline only applies if the connection cannot be closed as soon as the quiescing event is received.
+    public convenience init(maximumGracefulShutdownDuration: TimeAmount) {
+        self.init()
+        self.maximumGracefulShutdownDuration = maximumGracefulShutdownDuration
+    }
+
     private enum ConnectionStateAction {
         /// A precondition has been violated. Should send an error down the pipeline
         case warnPreconditionViolated(message: String)
@@ -257,13 +270,22 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         case acceptingEvents
 
         /// Quiescing but we're still waiting for the request's `.end` which means we still need to process input.
-        case quiescingWaitingForRequestEnd
-
         /// Quiescing and the last request's `.end` has been seen which means we no longer accept any input.
-        case quiescingLastRequestEndReceived
+        case quiescing(receivedRequestEnd: Bool, timeoutCallback: NIOScheduledCallback?)
 
         /// Quiescing and we have issued a channel close. Further I/O here is not expected, and won't be managed.
         case quiescingCompleted
+
+        /// Whether we are in the `.acceptingEvents` state.
+        var isAcceptingEvents: Bool {
+            switch self {
+            case .acceptingEvents:
+                true
+
+            case .quiescing, .quiescingCompleted:
+                false
+            }
+        }
     }
 
     private var lifecycleState: LifecycleState = .acceptingEvents
@@ -272,13 +294,16 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     private var nextExpectedInboundMessage: Optional<NextExpectedMessageType>
     // always `nil` in release builds, never `nil` in debug builds
     private var nextExpectedOutboundMessage: Optional<NextExpectedMessageType>
+    // The longest we will wait after receiving a `ChannelShouldQuiesceEvent` before forcefully closing the `Channel`.
+    // If set to `nil`, there is no timeout.
+    private var maximumGracefulShutdownDuration: TimeAmount?
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         switch self.lifecycleState {
-        case .quiescingLastRequestEndReceived, .quiescingCompleted:
+        case .quiescing(receivedRequestEnd: true, _), .quiescingCompleted:
             // We're done, no more data for you.
             return
-        case .acceptingEvents, .quiescingWaitingForRequestEnd:
+        case .acceptingEvents, .quiescing(receivedRequestEnd: false, _):
             // Still accepting I/O
             ()
         }
@@ -298,10 +323,14 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     }
 
     private func deliverOneMessage(context: ChannelHandlerContext, data: NIOAny) -> ConnectionStateAction {
-        self.checkAssertion(
-            self.lifecycleState != .quiescingLastRequestEndReceived && self.lifecycleState != .quiescingCompleted,
-            "deliverOneMessage called in lifecycle illegal state \(self.lifecycleState)"
-        )
+        switch self.lifecycleState {
+        case .quiescing(receivedRequestEnd: true, _), .quiescingCompleted:
+            self.assertionFailed("deliverOneMessage called in lifecycle illegal state \(self.lifecycleState)")
+
+        case .acceptingEvents, .quiescing(receivedRequestEnd: false, _):
+            ()
+        }
+
         let msg = self.unwrapInboundIn(data)
 
         debugOnly {
@@ -325,12 +354,13 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             // New request is complete. We don't want any more data from now on.
             action = self.state.requestEndReceived()
 
-            if self.lifecycleState == .quiescingWaitingForRequestEnd {
-                self.lifecycleState = .quiescingLastRequestEndReceived
+            if case .quiescing(receivedRequestEnd: false, let timeoutCallback) = self.lifecycleState {
+                self.lifecycleState = .quiescing(receivedRequestEnd: true, timeoutCallback: timeoutCallback)
                 self.eventBuffer.removeAll()
             }
-            if self.lifecycleState == .quiescingLastRequestEndReceived && self.state == .idle {
+            if case .quiescing(receivedRequestEnd: true, let timeoutCallback) = self.lifecycleState, self.state == .idle {
                 self.lifecycleState = .quiescingCompleted
+                timeoutCallback?.cancel()
                 context.close(promise: nil)
             }
         case .body:
@@ -352,17 +382,35 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         context.fireErrorCaught(error)
     }
 
+    /// Schedule the forceful channel close.
+    ///
+    /// - Returns: The scheduled callback, or `nil` if no `maximumGracefulShutdownDuration` was configured or if there
+    ///   was an error when scheduling the callback.
+    private func scheduleGracefulShutdownTimeout(context: ChannelHandlerContext) -> NIOScheduledCallback? {
+        guard let gracefulShutdownTimeout = self.maximumGracefulShutdownDuration else {
+            return nil
+        }
+
+        return try? context.eventLoop.scheduleCallback(
+            in: gracefulShutdownTimeout,
+            handler: ChannelCloseCallbackHandler(context: context)
+        )
+    }
+
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case is ChannelShouldQuiesceEvent:
             self.checkAssertion(
-                self.lifecycleState == .acceptingEvents,
+                self.lifecycleState.isAcceptingEvents,
                 "unexpected lifecycle state when receiving ChannelShouldQuiesceEvent: \(self.lifecycleState)"
             )
             switch self.state {
             case .responseEndPending:
                 // we're not in the middle of a request, let's just shut the door
-                self.lifecycleState = .quiescingLastRequestEndReceived
+                self.lifecycleState = .quiescing(
+                    receivedRequestEnd: true,
+                    timeoutCallback: self.scheduleGracefulShutdownTimeout(context: context)
+                )
                 self.eventBuffer.removeAll()
             case .preconditionFailed,
                 // An invariant has been violated already, this time we close the connection
@@ -374,7 +422,10 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             case .requestEndPending, .requestAndResponseEndPending, .sentCloseOutputRequestEndPending:
                 // we're in the middle of a request, we'll need to keep accepting events until we see the .end.
                 // It's ok for us to forget we saw close output here, the lifecycle event will close for us.
-                self.lifecycleState = .quiescingWaitingForRequestEnd
+                self.lifecycleState = .quiescing(
+                    receivedRequestEnd: false,
+                    timeoutCallback: self.scheduleGracefulShutdownTimeout(context: context)
+                )
             }
         case ChannelEvent.inputClosed:
             // We only buffer half-close if there are request parts we're waiting to send.
@@ -426,7 +477,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         var startReadingAgain = false
 
         switch HTTPServerPipelineHandler.unwrapOutboundIn(data) {
-        case .head(var head) where self.lifecycleState != .acceptingEvents:
+        case .head(var head) where !self.lifecycleState.isAcceptingEvents:
             if head.isKeepAlive {
                 head.headers.replaceOrAdd(name: "connection", value: "close")
             }
@@ -435,17 +486,18 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             startReadingAgain = true
 
             switch self.lifecycleState {
-            case .quiescingWaitingForRequestEnd where self.state == .responseEndPending:
+            case .quiescing(receivedRequestEnd: false, let forcefulShutdownCallback) where self.state == .responseEndPending:
                 // we just received the .end that we're missing so we can fall through to closing the connection
                 fallthrough
-            case .quiescingLastRequestEndReceived:
+            case .quiescing(receivedRequestEnd: true, let forcefulShutdownCallback):
                 let loopBoundContext = context.loopBound
                 self.lifecycleState = .quiescingCompleted
+                forcefulShutdownCallback?.cancel()
                 context.write(data).flatMap {
                     let context = loopBoundContext.value
                     return context.close()
                 }.cascade(to: promise)
-            case .acceptingEvents, .quiescingWaitingForRequestEnd:
+            case .acceptingEvents, .quiescing(receivedRequestEnd: false, _):
                 context.write(data, promise: promise)
             case .quiescingCompleted:
                 // Uh, why are we writing more data here? We'll write it, but it should be guaranteed
@@ -469,10 +521,10 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
 
     public func read(context: ChannelHandlerContext) {
         switch self.lifecycleState {
-        case .quiescingLastRequestEndReceived, .quiescingCompleted:
+        case .quiescing(receivedRequestEnd: true, _), .quiescingCompleted:
             // We swallow all reads now, as we're going to close the connection.
             ()
-        case .acceptingEvents, .quiescingWaitingForRequestEnd:
+        case .acceptingEvents, .quiescing(receivedRequestEnd: false, _):
             if case .responseEndPending = self.state {
                 self.readPending = true
             } else {
@@ -510,7 +562,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         }
 
         switch self.lifecycleState {
-        case .quiescingLastRequestEndReceived, .quiescingWaitingForRequestEnd:
+        case .quiescing:
             context.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
         case .acceptingEvents, .quiescingCompleted:
             // Either we haven't quiesced, or we succeeded in doing it.
@@ -580,6 +632,11 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
                 "The connection has been forcefully closed because further IO was attempted after a precondition was violated"
             let error = ConnectionStateError.preconditionViolated(message: message)
             promise?.fail(error)
+
+            if case .quiescing(_, let shutdownCallback) = self.lifecycleState {
+                shutdownCallback?.cancel()
+            }
+
             self.close(context: context, mode: .all, promise: nil)
             return true
         case .none:
@@ -593,10 +650,10 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     private func startReading(context: ChannelHandlerContext) {
         if self.readPending && self.state != .responseEndPending {
             switch self.lifecycleState {
-            case .quiescingLastRequestEndReceived, .quiescingCompleted:
+            case .quiescing(receivedRequestEnd: true, _), .quiescingCompleted:
                 // No more reads in these states.
                 ()
-            case .acceptingEvents, .quiescingWaitingForRequestEnd:
+            case .acceptingEvents, .quiescing(receivedRequestEnd: false, _):
                 self.readPending = false
                 context.read()
             }
@@ -706,3 +763,16 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
 
 @available(*, unavailable)
 extension HTTPServerPipelineHandler: Sendable {}
+
+private struct ChannelCloseCallbackHandler: Sendable, NIOScheduledCallbackHandler {
+    let loopBoundContext: NIOLoopBound<ChannelHandlerContext>
+
+    init(context: ChannelHandlerContext) {
+        self.loopBoundContext = context.loopBound
+    }
+
+    func handleScheduledCallback(eventLoop: some EventLoop) {
+        // Close the channel.
+        self.loopBoundContext.value.close(promise: nil)
+    }
+}
