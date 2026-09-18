@@ -117,12 +117,20 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
     fileprivate var pipelineHandler: HTTPServerPipelineHandler! = nil
     fileprivate var quiesceEventRecorder: QuiesceEventRecorder! = nil
 
+    fileprivate var shutdownTimeoutSeconds: Int64? = nil
+
     override func setUp() {
+        self.setUpPipeline()
+    }
+
+    private func setUpPipeline() {
         self.channel = EmbeddedChannel()
         self.readRecorder = ReadRecorder()
         self.readCounter = ReadCountingHandler()
         self.writeRecorder = WriteRecorder()
-        self.pipelineHandler = HTTPServerPipelineHandler()
+        var pipelineHandlerConfiguration = HTTPServerPipelineHandlerConfiguration()
+        pipelineHandlerConfiguration.maximumGracefulShutdownDuration = self.shutdownTimeoutSeconds.map { .seconds($0) }
+        self.pipelineHandler = HTTPServerPipelineHandler(configuration: pipelineHandlerConfiguration)
         self.quiesceEventRecorder = QuiesceEventRecorder()
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(CloseOutputSuppressor()))
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.readCounter))
@@ -140,6 +148,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         // this activates the channel
         XCTAssertNoThrow(try self.channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 1)).wait())
+    }
+
+    /// Discard the pipeline built by `setUp` and build a fresh one with a different graceful shutdown timeout.
+    private func reconfigurePipeline(shutdownTimeoutSeconds: Int64?) {
+        XCTAssertNoThrow(try self.channel.finish(acceptAlreadyClosed: true))
+        self.shutdownTimeoutSeconds = shutdownTimeoutSeconds
+        self.setUpPipeline()
     }
 
     override func tearDown() {
@@ -853,6 +868,147 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         XCTAssertFalse(self.channel.isActive)
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+    }
+
+    func testNoForcefulShutdownTimeoutIsConfigured() throws {
+        // Only write a request head.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+
+        // Trigger graceful shutdown.
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+
+        // No timeout is configured, so the channel will never close if the request end never arrives.
+        self.channel.embeddedEventLoop.advanceTime(by: .hours(2))
+        XCTAssertTrue(self.channel.isActive)
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+    }
+
+    func testNoForcefulShutdownTimeoutIsScheduledWhenQuiescingWhileIdle() throws {
+        self.reconfigurePipeline(shutdownTimeoutSeconds: 5)
+
+        // We're completely idle, so quiescing should close the connection immediately.
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertFalse(self.channel.isActive)
+
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+    }
+
+    func testForcefulShutdownTimeoutFiresWhenQuiescingAndRequestEndNeverArrives() throws {
+        self.reconfigurePipeline(shutdownTimeoutSeconds: 5)
+
+        // Only write a request head. The connection should eventually forcefully shutdown when graceful shutdown is
+        // triggered, because the request end part will never be sent.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+
+        // Check that only one request head came through.
+        XCTAssertEqual(self.readRecorder.reads, [.channelRead(HTTPServerRequestPart.head(self.requestHead))])
+
+        // Trigger graceful shutdown.
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        // The channel should still be open so the connection can quiesce (the request end hasn't arrived yet).
+        XCTAssertTrue(self.channel.isActive)
+
+        // Now wait for 3 seconds (2 seconds less than the timeout period).
+        self.channel.embeddedEventLoop.advanceTime(by: .seconds(3))
+
+        // The channel should still be open as the timeout hasn't been reached.
+        XCTAssertTrue(self.channel.isActive)
+
+        // Now wait for 2 seconds to hit the timeout.
+        self.channel.embeddedEventLoop.advanceTime(by: .seconds(2))
+
+        // The channel should have closed as a result of the timeout firing.
+        XCTAssertFalse(self.channel.isActive)
+    }
+
+    func testForcefulShutdownTimeoutFiresWhenQuiescingAndResponseEndNeverArrives() throws {
+        self.reconfigurePipeline(shutdownTimeoutSeconds: 5)
+
+        // Write a full request.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // Check that only one request came through.
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [.channelRead(HTTPServerRequestPart.head(self.requestHead)), .channelRead(HTTPServerRequestPart.end(nil))]
+        )
+
+        // Trigger graceful shutdown.
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        // The channel should still be open so the connection can quiesce (the response end hasn't arrived yet).
+        XCTAssertTrue(self.channel.isActive)
+
+        // Now wait for 3 seconds (2 seconds less than the timeout period).
+        self.channel.embeddedEventLoop.advanceTime(by: .seconds(2))
+
+        // The channel should still be open as the timeout hasn't been reached.
+        XCTAssertTrue(self.channel.isActive)
+
+        // Now wait for 2 seconds to hit the timeout.
+        self.channel.embeddedEventLoop.advanceTime(by: .seconds(2))
+
+        // The channel should have closed as a result of the timeout firing.
+        XCTAssertFalse(self.channel.isActive)
+    }
+
+    func testForcefulShutdownTimeoutFiresWhenQuiescingAfterCloseOutputMidRequest() throws {
+        self.reconfigurePipeline(shutdownTimeoutSeconds: 5)
+
+        // Send just a request head.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+
+        // The server closes output midway through the request.
+        XCTAssertNoThrow(try self.channel.close(mode: .output).wait())
+        XCTAssertTrue(self.channel.isActive)
+
+        // Trigger graceful shutdown. The channel should stay open while we wait for the request end.
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+
+        // Now wait for 3 seconds (2 seconds less than the timeout period).
+        self.channel.embeddedEventLoop.advanceTime(by: .seconds(3))
+        XCTAssertTrue(self.channel.isActive)
+
+        // The request end never arrives, so the timeout forcefully closes the channel.
+        self.channel.embeddedEventLoop.advanceTime(by: .seconds(2))
+        XCTAssertFalse(self.channel.isActive)
+    }
+
+    func testBufferedRequestsAreNotDeliveredAfterForcefulShutdown() throws {
+        self.reconfigurePipeline(shutdownTimeoutSeconds: 5)
+
+        // Send through a full request and buffer a few more.
+        for _ in 0..<3 {
+            XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+            XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        }
+
+        // Check that only one request came through.
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [.channelRead(HTTPServerRequestPart.head(self.requestHead)), .channelRead(HTTPServerRequestPart.end(nil))]
+        )
+
+        // Trigger graceful shutdown, then never respond.
+        XCTAssertTrue(self.channel.isActive)
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        self.channel.embeddedEventLoop.advanceTime(by: .seconds(5))
+        XCTAssertFalse(self.channel.isActive)
+
+        // The buffered requests must not be replayed to the rest of the pipeline as we're removed.
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
     }
 
     func testParserErrorOnly() throws {
