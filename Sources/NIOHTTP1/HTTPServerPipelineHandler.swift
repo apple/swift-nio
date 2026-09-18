@@ -774,8 +774,8 @@ private struct ChannelCloseCallbackHandler: Sendable, NIOScheduledCallbackHandle
 
 /// Configuration for the ``HTTPServerPipelineHandler``.
 public struct HTTPServerPipelineHandlerConfiguration: Sendable, Hashable {
-    /// The maximum duration to wait for the connection to quiesce (when receiving a ``ChannelShouldQuiesceEvent``)
-    /// before the connection is forcefully closed.
+    /// The maximum duration to wait for the connection to quiesce (when receiving a `ChannelShouldQuiesceEvent`) before
+    /// the connection is forcefully closed.
     ///
     /// Defaults to `nil`, i.e. there is no timeout for the connection to quiesce.
     ///
