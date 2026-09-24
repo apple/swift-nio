@@ -116,11 +116,13 @@ private func serverHTTPChannelWithAutoremoval(
         .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
         .childChannelInitializer { channel in
             p.succeed(channel)
-            let upgradeConfig = (upgraders: upgraders, completionHandler: upgradeCompletionHandler)
-            return channel.pipeline.configureHTTPServerPipeline(
-                withPipeliningAssistance: pipelining,
-                withServerUpgrade: upgradeConfig
-            ).flatMap {
+            var configuration = NIOHTTPServerPipelineConfiguration.defaults
+            configuration.pipeliningAssistance = pipelining
+            configuration.serverUpgrade = .init(
+                upgraders: upgraders,
+                completionHandler: upgradeCompletionHandler
+            )
+            return channel.pipeline.configureHTTPServerPipeline(configuration: configuration).flatMap {
                 let futureResults = extraHandlers.map { channel.pipeline.addHandler($0) }
                 return EventLoopFuture.andAllSucceed(futureResults, on: channel.eventLoop)
             }
@@ -1021,11 +1023,9 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             return delayedPromise.futureResult
         }
 
-        XCTAssertNoThrow(
-            try channel.pipeline.configureHTTPServerPipeline(
-                withServerUpgrade: (upgraders: [delayedUpgrader], completionHandler: { context in })
-            ).wait()
-        )
+        var configuration = NIOHTTPServerPipelineConfiguration.defaults
+        configuration.serverUpgrade = .init(upgraders: [delayedUpgrader], completionHandler: { _ in })
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(configuration: configuration).wait())
 
         // Let's send in an upgrade request.
         let request =
@@ -1080,13 +1080,12 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             return myprotoPromise.futureResult
         }
 
-        XCTAssertNoThrow(
-            try channel.pipeline.configureHTTPServerPipeline(
-                withServerUpgrade: (
-                    upgraders: [myprotoUpgrader, failingProtocolUpgrader], completionHandler: { context in }
-                )
-            ).wait()
+        var configuration = NIOHTTPServerPipelineConfiguration.defaults
+        configuration.serverUpgrade = .init(
+            upgraders: [myprotoUpgrader, failingProtocolUpgrader],
+            completionHandler: { _ in }
         )
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(configuration: configuration).wait())
 
         // Let's send in an upgrade request.
         let request =
@@ -1139,11 +1138,9 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             return delayedPromise.futureResult
         }
 
-        XCTAssertNoThrow(
-            try channel.pipeline.configureHTTPServerPipeline(
-                withServerUpgrade: (upgraders: [delayedUpgrader], completionHandler: { context in })
-            ).wait()
-        )
+        var configuration = NIOHTTPServerPipelineConfiguration.defaults
+        configuration.serverUpgrade = .init(upgraders: [delayedUpgrader], completionHandler: { _ in })
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(configuration: configuration).wait())
 
         // Let's send in an upgrade request.
         let request =
@@ -1203,13 +1200,11 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             return delayedPromise.futureResult
         }
 
+        var configuration = NIOHTTPServerPipelineConfiguration.defaults
         // Here we're disabling the pipeline handler, because otherwise it makes this test case impossible to reach.
-        XCTAssertNoThrow(
-            try channel.pipeline.configureHTTPServerPipeline(
-                withPipeliningAssistance: false,
-                withServerUpgrade: (upgraders: [delayedUpgrader], completionHandler: { context in })
-            ).wait()
-        )
+        configuration.pipeliningAssistance = false
+        configuration.serverUpgrade = .init(upgraders: [delayedUpgrader], completionHandler: { _ in })
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(configuration: configuration).wait())
 
         // Let's send in an upgrade request.
         let request =
@@ -1466,11 +1461,10 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         defer {
             delayer.unblockUpgrade()
         }
-        XCTAssertNoThrow(
-            try channel.pipeline.configureHTTPServerPipeline(
-                withServerUpgrade: (upgraders: [delayer], completionHandler: { context in })
-            ).wait()
-        )
+
+        var configuration = NIOHTTPServerPipelineConfiguration.defaults
+        configuration.serverUpgrade = .init(upgraders: [delayer], completionHandler: { _ in })
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(configuration: configuration).wait())
 
         // Let's send in an upgrade request.
         let request =
@@ -1529,11 +1523,9 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             delayer.unblockUpgrade()
         }
 
-        XCTAssertNoThrow(
-            try channel.pipeline.configureHTTPServerPipeline(
-                withServerUpgrade: (upgraders: [delayer], completionHandler: { context in })
-            ).wait()
-        )
+        var configuration = NIOHTTPServerPipelineConfiguration.defaults
+        configuration.serverUpgrade = .init(upgraders: [delayer], completionHandler: { _ in })
+        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(configuration: configuration).wait())
 
         // Let's send in an upgrade request.
         let request =

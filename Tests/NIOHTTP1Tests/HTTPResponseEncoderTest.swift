@@ -269,7 +269,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         }
 
         XCTAssertNoThrow(
-            try channel.pipeline.configureHTTPServerPipeline(withEncoderConfiguration: .noFramingTransformation).wait()
+            try channel.pipeline.configureHTTPServerPipeline(configuration: .noFramingTransformation).wait()
         )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
@@ -292,9 +292,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         }
 
         XCTAssertNoThrow(
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(
-                withEncoderConfiguration: .noFramingTransformation
-            )
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noFramingTransformation)
         )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
@@ -317,9 +315,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         }
 
         XCTAssertNoThrow(
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(
-                withEncoderConfiguration: .noFramingTransformation
-            )
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noFramingTransformation)
         )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
@@ -357,9 +353,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         }
 
         XCTAssertNoThrow(
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(
-                withEncoderConfiguration: .noFramingTransformation
-            )
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noFramingTransformation)
         )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
@@ -559,7 +553,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         // request-method queue advances correctly and the response stream isn't corrupted.
         let channel = EmbeddedChannel()
         defer { XCTAssertNoThrow(try channel.finish()) }
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline()
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .defaults)
 
         func readAllOutbound() throws -> String {
             var all = channel.allocator.buffer(capacity: 128)
@@ -613,5 +607,13 @@ class HTTPResponseEncoderTests: XCTestCase {
         XCTAssertEqual(queue.popFirst(), .GET)
         XCTAssertEqual(queue.popFirst(), .CONNECT)
         XCTAssertNil(queue.popFirst())
+    }
+}
+
+extension NIOHTTPServerPipelineConfiguration {
+    static var noFramingTransformation: Self {
+        var configuration = Self.defaults
+        configuration.encoderConfiguration = .noFramingTransformation
+        return configuration
     }
 }

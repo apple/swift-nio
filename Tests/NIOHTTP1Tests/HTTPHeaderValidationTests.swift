@@ -274,7 +274,7 @@ import Testing
             "!#$%&'*+-.^_`|~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
         let channel = EmbeddedChannel()
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noErrorHandling)
         try channel.primeForResponse()
 
         let headers = HTTPHeaders([("Content-Length", "0"), (weirdAllowedFieldName, "present")])
@@ -294,7 +294,7 @@ import Testing
             let forbiddenFieldName = weirdAllowedFieldName + String(decoding: [byte], as: UTF8.self)
 
             let channel = EmbeddedChannel()
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noErrorHandling)
             try channel.primeForResponse()
 
             let headers = HTTPHeaders([("Content-Length", "0"), (forbiddenFieldName, "present")])
@@ -328,7 +328,7 @@ import Testing
             "!#$%&'*+-.^_`|~0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
         let channel = EmbeddedChannel()
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noErrorHandling)
         try channel.primeForResponse()
 
         let headers = HTTPHeaders([("Transfer-Encoding", "chunked")])
@@ -353,7 +353,7 @@ import Testing
             let forbiddenFieldName = weirdAllowedFieldName + String(decoding: [byte], as: UTF8.self)
 
             let channel = EmbeddedChannel()
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noErrorHandling)
             try channel.primeForResponse()
 
             try channel.writeOutbound(HTTPServerResponsePart.head(goodResponse))
@@ -375,7 +375,7 @@ import Testing
             "!\" \t#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 
         let channel = EmbeddedChannel()
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noErrorHandling)
         try channel.primeForResponse()
 
         let headers = HTTPHeaders([("Content-Length", "0"), ("Weird-Value", weirdAllowedFieldValue)])
@@ -396,7 +396,7 @@ import Testing
             let forbiddenFieldValue = weirdAllowedFieldValue + String(decoding: [byte], as: UTF8.self)
 
             let channel = EmbeddedChannel()
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noErrorHandling)
             try channel.primeForResponse()
 
             let headers = HTTPHeaders([("Content-Length", "0"), ("Weird-Value", forbiddenFieldValue)])
@@ -417,7 +417,7 @@ import Testing
             let evenWeirderAllowedValue = weirdAllowedFieldValue + String(decoding: [byte], as: UTF8.self)
 
             let channel = EmbeddedChannel()
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noErrorHandling)
             try channel.primeForResponse()
 
             let headers = HTTPHeaders([("Content-Length", "0"), ("Weird-Value", evenWeirderAllowedValue)])
@@ -439,7 +439,7 @@ import Testing
             "!\" \t#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 
         let channel = EmbeddedChannel()
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noErrorHandling)
         try channel.primeForResponse()
 
         let headers = HTTPHeaders([("Transfer-Encoding", "chunked")])
@@ -464,7 +464,7 @@ import Testing
             let forbiddenFieldValue = weirdAllowedFieldValue + String(decoding: [byte], as: UTF8.self)
 
             let channel = EmbeddedChannel()
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noErrorHandling)
             try channel.primeForResponse()
 
             try channel.writeOutbound(HTTPServerResponsePart.head(goodResponse))
@@ -484,7 +484,7 @@ import Testing
             let evenWeirderAllowedValue = weirdAllowedFieldValue + String(decoding: [byte], as: UTF8.self)
 
             let channel = EmbeddedChannel()
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noErrorHandling)
             try channel.primeForResponse()
 
             let weirdGoodTrailers = ByteBuffer(string: "0\r\nWeird-Value: \(evenWeirderAllowedValue)\r\n\r\n")
@@ -692,7 +692,7 @@ import Testing
             let testReason = base + literalByteCanBeRepresented
 
             let channel = EmbeddedChannel()
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noErrorHandling)
             try channel.primeForResponse()
 
             let response = HTTPResponseHead(
@@ -732,7 +732,7 @@ import Testing
 
     @Test func responseIsDroppedIfHeadersInvalid() throws {
         let channel = EmbeddedChannel()
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noErrorHandling)
         try channel.primeForResponse()
 
         // Read the first request.
@@ -801,10 +801,10 @@ import Testing
         let invalidHeaderValue = "HeaderValueWith\rCR"
 
         let channel = EmbeddedChannel()
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline(
-            withErrorHandling: false,
-            withOutboundHeaderValidation: false
-        )
+        var configuration = NIOHTTPServerPipelineConfiguration.defaults
+        configuration.errorHandling = false
+        configuration.outboundHeaderValidation = false
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: configuration)
         try channel.primeForResponse()
 
         let headers = HTTPHeaders([
@@ -882,5 +882,13 @@ extension EmbeddedChannel {
     fileprivate func primeForResponse() throws {
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n")
         try self.writeInbound(request)
+    }
+}
+
+extension NIOHTTPServerPipelineConfiguration {
+    static var noErrorHandling: Self {
+        var configuration = Self.defaults
+        configuration.errorHandling = false
+        return configuration
     }
 }
