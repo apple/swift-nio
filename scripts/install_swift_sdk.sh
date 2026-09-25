@@ -176,6 +176,16 @@ elif [[ -n "$version" ]]; then
     log "Discovered latest Swift version: $version"
 
   else
+    # From Swift 6.4 onwards, release tags and download paths always include the patch version (e.g. 6.4.0)
+    if [[ "$version" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+      major="${BASH_REMATCH[1]}"
+      minor="${BASH_REMATCH[2]}"
+      if (( major > 6 || (major == 6 && minor >= 4) )); then
+        version="${version}.0"
+        log "Normalized version to $version"
+      fi
+    fi
+
     # For specific versions, we need to fetch the release info
     log "Getting release information for version $version"
     # shellcheck disable=SC2016  # Our use of JQ_BIN means that shellcheck can't tell this is a `jq` invocation

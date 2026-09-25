@@ -18,6 +18,10 @@ on:
         type: boolean
         description: "Boolean to enable the 6.3 release WASM Swift SDK matrix job. Defaults to true."
         default: true
+      release_6_4_enabled:
+        type: boolean
+        description: "Boolean to enable the 6.4 release WASM Swift SDK matrix job. Defaults to true."
+        default: true
       env_vars:
         type: string
         description: "Environment variables for jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
@@ -64,8 +68,8 @@ jobs:
                 "platform": "Linux",
                 "runner": "ubuntu-latest",
                 "image": "ubuntu:jammy",
-                "setup_command": ("apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_sdk.sh | " + $install_env + " INSTALL_SWIFT_ARCH=x86_64 INSTALL_SWIFT_SDK=wasm-sdk bash && hash -r"),
-                "command": "curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/swift-build-with-wasm-sdk.sh | bash -s --",
+                "setup_command": ("apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/6.4/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/6.4/scripts/install_swift_sdk.sh | " + $install_env + " INSTALL_SWIFT_ARCH=x86_64 INSTALL_SWIFT_SDK=wasm-sdk bash && hash -r"),
+                "command": "curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/6.4/scripts/swift-build-with-wasm-sdk.sh | bash -s --",
                 "command_arguments": $command_arguments,
                 "env": $env
               }'
@@ -86,6 +90,11 @@ jobs:
             entries="${entries:+${entries},}${entry}"
           fi
 
+          if [[ "$INPUT_RELEASE_6_4_ENABLED" == "true" ]]; then
+            entry=$(make_entry "6.4" "INSTALL_SWIFT_VERSION=6.4")
+            entries="${entries:+${entries},}${entry}"
+          fi
+
           if [[ -z "$entries" ]]; then
             echo "Error: No WASM Swift SDK matrix jobs enabled"
             exit 1
@@ -96,6 +105,7 @@ jobs:
           INPUT_NIGHTLY_MAIN_ENABLED: ${{ inputs.nightly_main_enabled }}
           INPUT_NIGHTLY_NEXT_ENABLED: ${{ inputs.nightly_next_enabled }}
           INPUT_RELEASE_6_3_ENABLED: ${{ inputs.release_6_3_enabled }}
+          INPUT_RELEASE_6_4_ENABLED: ${{ inputs.release_6_4_enabled }}
           INPUT_ENV_VARS: ${{ inputs.env_vars }}
           INPUT_ADDITIONAL_COMMAND_ARGUMENTS: ${{ inputs.additional_command_arguments }}
           NIGHTLY_NEXT_VERSION: nightly-6.4
@@ -105,7 +115,7 @@ jobs:
     name: WebAssembly Swift SDK
     needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@6.4
     with:
       name: "WebAssembly Swift SDK"
       matrix_string: '${{ needs.construct-matrix.outputs.wasm-swift-sdk-matrix }}'

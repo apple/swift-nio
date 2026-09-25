@@ -55,6 +55,10 @@ on:
         type: boolean
         description: "Boolean to enable the macOS Swift 6.3 benchmark job. Defaults to false."
         default: false
+      macos_swift_6_4_enabled:
+        type: boolean
+        description: "Boolean to enable the macOS Swift 6.4 benchmark job. Defaults to false."
+        default: false
 
       macos_runner_pool:
         type: string
@@ -84,7 +88,8 @@ jobs:
       inputs.macos_xcode_latest_beta_enabled ||
       inputs.macos_swift_6_1_enabled ||
       inputs.macos_swift_6_2_enabled ||
-      inputs.macos_swift_6_3_enabled
+      inputs.macos_swift_6_3_enabled ||
+      inputs.macos_swift_6_4_enabled
     outputs:
       macos-matrix: '${{ steps.generate-matrix.outputs.macos-matrix }}'
     steps:
@@ -112,6 +117,7 @@ jobs:
           swift_6_1_enabled="${MACOS_SWIFT_6_1_ENABLED}"
           swift_6_2_enabled="${MACOS_SWIFT_6_2_ENABLED}"
           swift_6_3_enabled="${MACOS_SWIFT_6_3_ENABLED}"
+          swift_6_4_enabled="${MACOS_SWIFT_6_4_ENABLED}"
 
           # Create matrix from inputs
           matrix='{"config": []}'
@@ -179,6 +185,13 @@ jobs:
               '.config[.config| length] |= . + { "name": "macOS (Swift 6.3)", "xcode_version": "swift 6.3", "xcode_app": "Xcode_swift_6.3.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
           fi
 
+          if [[ "$swift_6_4_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+              --arg runner_pool "$runner_pool" \
+              --argjson env_vars "$macos_env_vars_json" \
+              '.config[.config| length] |= . + { "name": "macOS (Swift 6.4)", "xcode_version": "swift 6.4", "xcode_app": "Xcode_swift_6.4.app", "os": "tahoe", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
+          fi
+
           echo "macos-matrix=$matrix" >> "$GITHUB_OUTPUT"
         env:
           INPUT_MACOS_ENV_VARS: ${{ inputs.macos_env_vars }}
@@ -192,6 +205,7 @@ jobs:
           MACOS_SWIFT_6_1_ENABLED: ${{ inputs.macos_swift_6_1_enabled }}
           MACOS_SWIFT_6_2_ENABLED: ${{ inputs.macos_swift_6_2_enabled }}
           MACOS_SWIFT_6_3_ENABLED: ${{ inputs.macos_swift_6_3_enabled }}
+          MACOS_SWIFT_6_4_ENABLED: ${{ inputs.macos_swift_6_4_enabled }}
 
   benchmarks-macos:
     name: ${{ matrix.config.name }}
@@ -220,7 +234,7 @@ jobs:
           MATRIX_ENV_JSON: ${{ toJSON(matrix.config.env) }}
       - name: Run benchmarks script
         run: |
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check_benchmark_thresholds.sh | bash -s -- --disable-sandbox --allow-writing-to-package-directory
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/6.4/scripts/check_benchmark_thresholds.sh | bash -s -- --disable-sandbox --allow-writing-to-package-directory
         env:
           BENCHMARK_PACKAGE_PATH: ${{ inputs.benchmark_package_path }}
           BENCHMARK_PACKAGE_PATHS: ${{ inputs.benchmark_package_paths }}

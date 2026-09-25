@@ -46,6 +46,14 @@ on:
         type: string
         description: "The arguments passed to swift test in the Linux 6.3 Swift version matrix job."
         default: ""
+      linux_6_4_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux 6.4 Swift version matrix job. Defaults to true."
+        default: true
+      linux_6_4_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Linux 6.4 Swift version matrix job."
+        default: ""
       linux_nightly_next_enabled:
         type: boolean
         description: "Boolean to enable the Linux matrix job using the nightly build for the next Swift version. Defaults to true."
@@ -94,6 +102,14 @@ on:
       windows_6_3_arguments_override:
         type: string
         description: "The arguments passed to swift test in the Windows 6.3 Swift version matrix job."
+        default: ""
+      windows_6_4_enabled:
+        type: boolean
+        description: "Boolean to enable the Windows 6.4 Swift version matrix job. Defaults to false."
+        default: false
+      windows_6_4_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Windows 6.4 Swift version matrix job."
         default: ""
       windows_nightly_next_enabled:
         type: boolean
@@ -153,7 +169,7 @@ jobs:
             exit 1
           fi
 
-          echo "release-build-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | MATRIX_LINUX_ENV_VARS_JSON="${linux_env_vars_json}" MATRIX_WINDOWS_ENV_VARS_JSON="${windows_env_vars_json}" bash)" >> "$GITHUB_OUTPUT"
+          echo "release-build-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/6.4/scripts/generate_matrix.sh | MATRIX_LINUX_ENV_VARS_JSON="${linux_env_vars_json}" MATRIX_WINDOWS_ENV_VARS_JSON="${windows_env_vars_json}" bash)" >> "$GITHUB_OUTPUT"
         env:
           INPUT_LINUX_ENV_VARS: ${{ inputs.linux_env_vars }}
           INPUT_WINDOWS_ENV_VARS: ${{ inputs.windows_env_vars }}
@@ -170,6 +186,8 @@ jobs:
           MATRIX_LINUX_6_2_COMMAND_ARGUMENTS: ${{ inputs.linux_6_2_arguments_override }}
           MATRIX_LINUX_6_3_ENABLED: ${{ inputs.linux_6_3_enabled }}
           MATRIX_LINUX_6_3_COMMAND_ARGUMENTS: ${{ inputs.linux_6_3_arguments_override }}
+          MATRIX_LINUX_6_4_ENABLED: ${{ inputs.linux_6_4_enabled }}
+          MATRIX_LINUX_6_4_COMMAND_ARGUMENTS: ${{ inputs.linux_6_4_arguments_override }}
           MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_next_enabled }}
           MATRIX_LINUX_NIGHTLY_NEXT_COMMAND_ARGUMENTS: ${{ inputs.linux_nightly_next_arguments_override }}
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
@@ -183,6 +201,8 @@ jobs:
           MATRIX_WINDOWS_6_2_COMMAND_ARGUMENTS: ${{ inputs.windows_6_2_arguments_override }}
           MATRIX_WINDOWS_6_3_ENABLED: ${{ inputs.windows_6_3_enabled }}
           MATRIX_WINDOWS_6_3_COMMAND_ARGUMENTS: ${{ inputs.windows_6_3_arguments_override }}
+          MATRIX_WINDOWS_6_4_ENABLED: ${{ inputs.windows_6_4_enabled }}
+          MATRIX_WINDOWS_6_4_COMMAND_ARGUMENTS: ${{ inputs.windows_6_4_arguments_override }}
           MATRIX_WINDOWS_NIGHTLY_NEXT_ENABLED: ${{ inputs.windows_nightly_next_enabled }}
           MATRIX_WINDOWS_NIGHTLY_NEXT_COMMAND_ARGUMENTS: ${{ inputs.windows_nightly_next_arguments_override }}
           MATRIX_WINDOWS_NIGHTLY_MAIN_ENABLED: ${{ inputs.windows_nightly_main_enabled }}
@@ -192,7 +212,7 @@ jobs:
     name: Release builds
     needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@6.4
     with:
       name: "Release builds"
       matrix_string: '${{ needs.construct-matrix.outputs.release-build-matrix }}'
