@@ -140,7 +140,7 @@ extension ByteToMessageDecoderError {
 ///
 ///     channel.pipeline.addHandler(ByteToMessageHandler(MyByteToMessageDecoder()))
 ///
-public protocol ByteToMessageDecoder {
+public protocol ByteToMessageDecoder: ~Copyable {
     /// The type of the messages this `ByteToMessageDecoder` decodes to.
     associatedtype InboundOut
 
@@ -206,7 +206,7 @@ public protocol ByteToMessageDecoder {
 ///
 /// `WriteObservingByteToMessageDecoder` may only observe a `write` and must not try to transform or block it in any
 /// way. After the `write` method returns the `write` will be forwarded to the next outbound handler.
-public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder {
+public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder, ~Copyable {
     /// The type of `write`s.
     associatedtype OutboundIn
 
@@ -217,7 +217,7 @@ public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder {
     mutating func write(data: OutboundIn)
 }
 
-extension ByteToMessageDecoder {
+extension ByteToMessageDecoder where Self: ~Copyable {
     public mutating func decoderRemoved(context: ChannelHandlerContext) {
     }
 
@@ -385,7 +385,7 @@ extension B2MDBuffer {
 ///
 /// Most importantly, `ByteToMessageHandler` handles the tricky buffer management for you and flattens out all
 /// re-entrancy on `channelRead` that may happen in the `ChannelPipeline`.
-public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
+public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder & ~Copyable> {
     public typealias InboundIn = ByteBuffer
     public typealias InboundOut = Decoder.InboundOut
 
@@ -464,6 +464,9 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     private let maximumBufferSize: Int?
     // queues writes received whilst we're already decoding (re-entrant write)
     private var queuedWrites = CircularBuffer<NIOAny>(initialCapacity: 1)
+    // Delivers a write that was queued because it arrived re-entrantly. Set in the ChannelHandler's write conformance
+    // the first time a write arrives re-entrently.
+    private var deliverQueuedWrite: ((inout Decoder, NIOAny) -> Void)?
     private var state: State = .active {
         willSet {
             // we can never leave final states
@@ -474,10 +477,9 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     // sadly to construct a B2MDBuffer we need an empty ByteBuffer which we can only get from the allocator, so IUO.
     private var buffer: B2MDBuffer!
     private var seenEOF: Bool = false
-    private var selfAsCanDequeueWrites: CanDequeueWrites? = nil
 
     /// @see: ByteToMessageHandler.init(_:maximumBufferSize)
-    public convenience init(_ decoder: Decoder) {
+    public convenience init(_ decoder: consuming Decoder) {
         self.init(decoder, maximumBufferSize: nil)
     }
 
@@ -486,8 +488,8 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     /// - Parameters:
     ///   - decoder: The `ByteToMessageDecoder` to decode the bytes into message.
     ///   - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
-    public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
-        self.decoder = decoder
+    public init(_ decoder: consuming Decoder, maximumBufferSize: Int? = nil) {
+        self.decoder = consume decoder
         self.maximumBufferSize = maximumBufferSize
     }
 
@@ -504,30 +506,17 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
 }
 
 @available(*, unavailable)
-extension ByteToMessageHandler: Sendable {}
+extension ByteToMessageHandler: Sendable where Decoder: ~Copyable {}
 
 // MARK: ByteToMessageHandler: Test Helpers
-extension ByteToMessageHandler {
-    internal var cumulationBuffer: ByteBuffer? {
+extension ByteToMessageHandler where Decoder: ~Copyable {
+    package var cumulationBuffer: ByteBuffer? {
         self.buffer._testOnlyOneBuffer()
     }
 }
 
-private protocol CanDequeueWrites {
-    func dequeueWrites()
-}
-
-extension ByteToMessageHandler: CanDequeueWrites where Decoder: WriteObservingByteToMessageDecoder {
-    fileprivate func dequeueWrites() {
-        while self.queuedWrites.count > 0 {
-            // self.decoder can't be `nil`, this is only allowed to be called when we're not already on the stack
-            self.decoder!.write(data: ByteToMessageHandler.unwrapOutboundIn(self.queuedWrites.removeFirst()))
-        }
-    }
-}
-
 // MARK: ByteToMessageHandler's Main API
-extension ByteToMessageHandler {
+extension ByteToMessageHandler where Decoder: ~Copyable {
     @inline(__always)  // allocations otherwise (reconsider with Swift 5.1)
     private func withNextBuffer(
         allowEmptyBuffer: Bool,
@@ -583,11 +572,26 @@ extension ByteToMessageHandler {
         }
     }
 
+    // `decodeLoop` calls this on every iteration, so the (overwhelmingly common) no-queued-writes case has to stay
+    // cheap. Delivering the writes is kept out of line because it force-unwraps an optional closure and takes an
+    // `inout` borrow of the optional decoder; inlined here that bloats this function to the point where the empty
+    // check itself stops being cheap.
     private func tryDecodeWrites() {
-        if self.queuedWrites.count > 0 {
-            // this must succeed because unless we implement `CanDequeueWrites`, `queuedWrites` must always be empty.
-            self.selfAsCanDequeueWrites!.dequeueWrites()
+        if self.queuedWrites.isEmpty {
+            return
         }
+        self.dequeueWrites()
+    }
+
+    @inline(never)
+    private func dequeueWrites() {
+        assert(!self.queuedWrites.isEmpty, "This must be called with a non empty queue")
+        // `queuedWrites` is only ever non-empty if we have a delivery function.
+        let deliverQueuedWrite = self.deliverQueuedWrite!
+        repeat {
+            // `self.decoder` is only `nil` whilst we're on the stack and this is only called when we're not.
+            deliverQueuedWrite(&self.decoder!, self.queuedWrites.removeFirst())
+        } while self.queuedWrites.count > 0
     }
 
     private func decodeLoop(
@@ -633,7 +637,7 @@ extension ByteToMessageHandler {
 }
 
 // MARK: ByteToMessageHandler: ChannelInboundHandler
-extension ByteToMessageHandler: ChannelInboundHandler {
+extension ByteToMessageHandler: ChannelInboundHandler where Decoder: ~Copyable {
 
     public func handlerAdded(context: ChannelHandlerContext) {
         guard self.removalState == .notAddedToPipeline else {
@@ -641,8 +645,6 @@ extension ByteToMessageHandler: ChannelInboundHandler {
         }
         self.removalState = .notBeingRemoved
         self.buffer = B2MDBuffer(emptyByteBuffer: context.channel.allocator.buffer(capacity: 0))
-        // here we can force it because we know that the decoder isn't in use if we're just adding this handler
-        self.selfAsCanDequeueWrites = self as? CanDequeueWrites  // we need to cache this as it allocates.
         self.decoder!.decoderAdded(context: context)
     }
 
@@ -653,8 +655,6 @@ extension ByteToMessageHandler: ChannelInboundHandler {
         if !self.state.isFinalState {
             self.state = .done
         }
-
-        self.selfAsCanDequeueWrites = nil
 
         // here we can force it because we know that the decoder isn't in use because the removal is always
         // eventLoop.execute'd
@@ -717,7 +717,7 @@ extension ByteToMessageHandler: ChannelInboundHandler {
 }
 
 extension ByteToMessageHandler: ChannelOutboundHandler, _ChannelOutboundHandler
-where Decoder: WriteObservingByteToMessageDecoder {
+where Decoder: WriteObservingByteToMessageDecoder & ~Copyable {
     public typealias OutboundIn = Decoder.OutboundIn
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         if self.decoder != nil {
@@ -725,6 +725,17 @@ where Decoder: WriteObservingByteToMessageDecoder {
             assert(self.queuedWrites.isEmpty)
             self.decoder!.write(data: data)
         } else {
+            // We're re-entered, so the decoder is on the stack and we have to queue the write. This is the only
+            // context in which `Decoder`'s write observing conformance is statically known, so it is also where we
+            // have to form the function that delivers the queued write.
+            //
+            // Forming it allocates (the closure captures `Decoder.OutboundIn`'s metadata), so only do it once per
+            // handler.
+            if self.deliverQueuedWrite == nil {
+                self.deliverQueuedWrite = { decoder, data in
+                    decoder.write(data: data.forceAs(type: Decoder.OutboundIn.self))
+                }
+            }
             self.queuedWrites.append(data)
         }
         context.write(data, promise: promise)
@@ -745,7 +756,7 @@ public protocol MessageToByteEncoder {
     func encode(data: OutboundIn, out: inout ByteBuffer) throws
 }
 
-extension ByteToMessageHandler: RemovableChannelHandler {
+extension ByteToMessageHandler: RemovableChannelHandler where Decoder: ~Copyable {
     public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
         precondition(self.removalState == .notBeingRemoved)
         self.removalState = .removalStarted

@@ -93,20 +93,15 @@ import Testing
         }
     }
 
-    @Test(
-        // Allocating ~4GB is slow, so this test is opt-in via a truthy SWIFTNIO_RUN_SLOW_TESTS.
-        .disabled(
-            if: !slowTestsEnabled(),
-            "Set SWIFTNIO_RUN_SLOW_TESTS to run this slow (~4GB of memory written) test"
-        ),
-        .disabled(if: MemoryLayout<Int>.size < 8, "Doesn't work on 32-bit machines")
-    )
+    @Test(.disabled(if: MemoryLayout<Int>.size < 8, "Doesn't work on 32-bit machines"))
     func setBytesWithoutContigiousStorageMoreThanUInt32MaxBytes() async {
         await #expect(processExitsWith: .failure) {
-            let circularBuffer = CircularBuffer<UInt8>(repeating: 0, count: Int(UInt32.max) + 1)
+            // `Repeated` doesn't offer contiguous storage, so this takes the slow path in
+            // `setBytes` without actually having to materialise more than `UInt32.max` bytes.
+            let bytes = repeatElement(UInt8(0), count: Int(UInt32.max) + 1)
             var bb = ByteBuffer()
             bb.reserveCapacity(64)
-            bb.setBytes(circularBuffer, at: bb.writerIndex)
+            bb.setBytes(bytes, at: bb.writerIndex)
         }
     }
 
@@ -211,16 +206,5 @@ private func isDebugAssertConfiguration() -> Bool {
         }()
     )
     return isDebugAssert
-}
-
-/// Whether opt-in slow tests should run, gated on a truthy `SWIFTNIO_RUN_SLOW_TESTS`
-/// environment variable. Unset (the default) means slow tests do not run.
-private func slowTestsEnabled() -> Bool {
-    switch ProcessInfo.processInfo.environment["SWIFTNIO_RUN_SLOW_TESTS"]?.lowercased() {
-    case "true", "y", "yes", "on", "1":
-        return true
-    default:
-        return false
-    }
 }
 #endif

@@ -26,7 +26,7 @@ jobs:
       linux_6_3_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_nightly_next_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_nightly_main_arguments_override: "--explicit-target-dependency-import-check error"
-      linux_env_vars: '{"SWIFTNIO_RUN_SLOW_TESTS": "1", "SWIFTNIO_CI": "1"}'
+      linux_env_vars: '{"SWIFTNIO_CI": "1"}'
       windows_6_3_enabled: true
       windows_nightly_next_enabled: true
       windows_nightly_main_enabled: true
@@ -94,7 +94,7 @@ jobs:
     with:
       runner_pool: general
       build_scheme: swift-nio-Package
-      env_vars: '{"SWIFTNIO_RUN_SLOW_TESTS": "1", "SWIFTNIO_CI": "1"}'
+      env_vars: '{"SWIFTNIO_CI": "1"}'
 
   static-sdk:
     name: Static Linux Swift SDK

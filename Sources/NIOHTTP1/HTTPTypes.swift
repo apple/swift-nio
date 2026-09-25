@@ -530,7 +530,7 @@ extension ByteBuffer {
 
     /// Serializes this HTTP header block to bytes suitable for writing to the wire.
     ///
-    /// - Parameter buffer: A buffer to write the serialized bytes into. Will increment
+    /// - Parameter headers: The header block to serialize. Writing it will increment
     ///     the writer index of this buffer.
     mutating func write(headers: HTTPHeaders) {
         for header in headers.headers {
