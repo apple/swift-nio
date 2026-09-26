@@ -64,7 +64,7 @@ final class ContentLengthTests: XCTestCase {
     /// Server receives a request longer than the content-length header
     func testRequestContentTooLong() throws {
         let channel = EmbeddedChannel()
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline()
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .defaults)
         defer {
             _ = try? channel.finish()
         }
@@ -84,7 +84,7 @@ final class ContentLengthTests: XCTestCase {
     /// Server receives a request shorter than the content-length header
     func testRequestContentTooShort() throws {
         let channel = EmbeddedChannel()
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline()
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .defaults)
         defer {
             _ = try? channel.finish()
         }

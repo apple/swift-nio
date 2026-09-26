@@ -151,14 +151,10 @@ class WebSocketServerEndToEndTests: XCTestCase {
                 upgradePipelineHandler: $0.upgradePipelineHandler
             )
         }
-        XCTAssertNoThrow(
-            try serverChannel.pipeline.configureHTTPServerPipeline(
-                withServerUpgrade: (
-                    upgraders: upgraders,
-                    completionHandler: { (context: ChannelHandlerContext) in }
-                )
-            ).wait()
-        )
+
+        var configuration = NIOHTTPServerPipelineConfiguration.defaults
+        configuration.serverUpgrade = .init(upgraders: upgraders, completionHandler: { _ in })
+        XCTAssertNoThrow(try serverChannel.pipeline.configureHTTPServerPipeline(configuration: configuration).wait())
         let clientChannel = EmbeddedChannel(loop: loop)
         return (loop: loop, serverChannel: serverChannel, clientChannel: clientChannel)
     }

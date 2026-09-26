@@ -190,7 +190,7 @@ let serverChannel = try ServerBootstrap(group: group)
     .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
     .childChannelInitializer { channel in
         channel.eventLoop.makeCompletedFuture {
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(withPipeliningAssistance: true)
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .defaults)
             try channel.pipeline.syncOperations.addHandler(SimpleHTTPServer())
         }
     }.bind(host: "127.0.0.1", port: 0).wait()
@@ -675,10 +675,7 @@ try measureAndPrint(desc: "no-net_http1_1k_reqs_1_conn") {
     }
 
     let sync = channel.pipeline.syncOperations
-    try sync.configureHTTPServerPipeline(
-        withPipeliningAssistance: true,
-        withErrorHandling: true
-    )
+    try sync.configureHTTPServerPipeline(configuration: .defaults)
 
     try sync.addHandler(SimpleHTTPServer())
     try sync.addHandler(measuringHandler, position: .first)
