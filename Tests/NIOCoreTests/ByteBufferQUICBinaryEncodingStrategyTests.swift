@@ -147,6 +147,74 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
         }
     }
 
+    func testRoundtripWithNonPowerOfTwoReservedCapacity() {
+        for reservedCapacity in [3, 5, 6, 7] {
+            let testNumbers: [Int64] = [0, 63, 15293, 494_878_333, 151_288_809_941_952_652]
+            for testNumber in testNumbers {
+                var buffer = ByteBuffer()
+                let strategy = ByteBuffer.QUICBinaryEncodingStrategy.quic
+                let bytesWritten = strategy.writeInteger(
+                    testNumber,
+                    reservedCapacity: reservedCapacity,
+                    to: &buffer
+                )
+                let minRequiredBytes = ByteBuffer.QUICBinaryEncodingStrategy.bytesNeededForInteger(testNumber)
+                let wanted = max(minRequiredBytes, reservedCapacity)
+                let expectedUsedBytes = wanted <= 2 ? wanted : (wanted <= 4 ? 4 : 8)
+                XCTAssertEqual(bytesWritten, expectedUsedBytes)
+                XCTAssertEqual(strategy.readInteger(as: UInt64.self, from: &buffer), UInt64(testNumber))
+                XCTAssertEqual(buffer.readableBytes, 0)
+            }
+        }
+    }
+
+    @available(*, deprecated, message: "Tests the deprecated requiredBytesHint setter")
+    private func setHint(_ strategy: inout ByteBuffer.QUICBinaryEncodingStrategy, _ value: Int) {
+        strategy.requiredBytesHint = value
+    }
+
+    @available(*, deprecated, message: "Tests the deprecated requiredBytesHint setter")
+    func testRequiredBytesHintSetterRoundsUpToAValidLength() {
+        var strategy = ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: .one)
+
+        for (input, expected) in [
+            (1, ByteBuffer.QUICBinaryEncodingStrategy.IntegerLength.one),
+            (2, .two), (4, .four), (8, .eight),
+        ] {
+            self.setHint(&strategy, input)
+            XCTAssertEqual(strategy.requiredBytesIntegerLength, expected)
+            XCTAssertEqual(strategy.requiredBytesHint, input)
+        }
+
+        for (input, expected) in [
+            (3, ByteBuffer.QUICBinaryEncodingStrategy.IntegerLength.four),
+            (5, .eight), (6, .eight), (7, .eight),
+        ] {
+            self.setHint(&strategy, input)
+            XCTAssertEqual(strategy.requiredBytesIntegerLength, expected)
+        }
+
+        self.setHint(&strategy, 9)
+        XCTAssertEqual(strategy.requiredBytesIntegerLength, .eight)
+
+        self.setHint(&strategy, 0)
+        XCTAssertEqual(strategy.requiredBytesIntegerLength, .one)
+    }
+
+    @available(*, deprecated, message: "Tests the deprecated requiredBytesHint setter")
+    func testWriteLengthPrefixedWithRoundedHintDoesNotTrap() {
+        var strategy = ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: .one)
+        self.setHint(&strategy, 3)
+
+        var buffer = ByteBuffer()
+        buffer.writeLengthPrefixed(strategy: strategy) { buffer in
+            buffer.writeString("hello")
+        }
+
+        XCTAssertEqual(buffer.readLengthPrefixedSlice(strategy: strategy).map { String(buffer: $0) }, "hello")
+        XCTAssertEqual(buffer.readableBytes, 0)
+    }
+
     // MARK: - readEncodedInteger tests
 
     func testReadEmptyQUICVariableLengthInteger() {

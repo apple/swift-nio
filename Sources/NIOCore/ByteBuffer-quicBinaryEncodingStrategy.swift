@@ -21,15 +21,54 @@ extension ByteBuffer {
             case two = 2
             case four = 4
             case eight = 8
+
+            /// The smallest QUIC integer length that is at least `value`, saturating at
+            /// ``IntegerLength/eight``.
+            ///
+            /// A QUIC variable-length integer occupies 1, 2, 4 or 8 bytes, so a value such as
+            /// 3 has no exact representation and is rounded up to the next valid length.
+            @inlinable
+            init(roundingUp value: Int) {
+                switch value {
+                case ...1: self = .one
+                case 2: self = .two
+                case 3, 4: self = .four
+                default: self = .eight
+                }
+            }
         }
+
+        /// The number of bytes used to write integers with this strategy.
+        ///
+        /// This is only relevant when calling ``ByteBuffer/writeLengthPrefixed(strategy:writeData:)``.
+        public var requiredBytesIntegerLength: IntegerLength
+
         /// An estimate of the bytes required to write integers using this strategy
-        public var requiredBytesHint: Int
+        ///
+        /// A QUIC variable-length integer is 1, 2, 4 or 8 bytes long, so only those values are
+        /// representable. Prefer ``requiredBytesIntegerLength``, which can only hold a valid
+        /// length. Assigning a value here rounds up to the next valid length.
+        @inlinable
+        public var requiredBytesHint: Int {
+            get {
+                self.requiredBytesIntegerLength.rawValue
+            }
+            @available(
+                *,
+                deprecated,
+                message:
+                    "Set requiredBytesIntegerLength instead: a QUIC integer is 1, 2, 4 or 8 bytes long, so other values cannot be represented exactly."
+            )
+            set {
+                self.requiredBytesIntegerLength = IntegerLength(roundingUp: newValue)
+            }
+        }
 
         /// Note: Prefer to use the APIs directly on ByteBuffer such as ``ByteBuffer/writeEncodedInteger(_:strategy:)`` and pass `.quic` rather than directly initialising an instance of this strategy
         /// - Parameter requiredBytesHint: An estimate of the bytes required to write integers using this strategy. This parameter is only relevant if calling ``ByteBuffer/writeLengthPrefixed(strategy:writeData:)``
         @inlinable
         public init(requiredBytesHint: IntegerLength) {
-            self.requiredBytesHint = requiredBytesHint.rawValue
+            self.requiredBytesIntegerLength = requiredBytesHint
         }
 
         @inlinable
@@ -114,11 +153,11 @@ extension ByteBuffer {
                 // Set the top two bit mask, then write the value.
                 let value = UInt16(truncatingIfNeeded: integer) | (0x40 << 8)
                 return buffer.writeInteger(value)
-            case 4:
+            case 3, 4:
                 // Set the top two bit mask, then write the value.
                 let value = UInt32(truncatingIfNeeded: integer) | (0x80 << 24)
                 return buffer.writeInteger(value)
-            case 8:
+            case 5, 6, 7, 8:
                 // Set the top two bit mask, then write the value.
                 let value = UInt64(truncatingIfNeeded: integer) | (0xC0 << 56)
                 return buffer.writeInteger(value)
