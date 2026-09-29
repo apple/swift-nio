@@ -81,7 +81,7 @@ linux_6_0_container_image="swift:6.0-jammy"
 linux_6_1_container_image="swift:6.1-jammy"
 linux_6_2_container_image="swift:6.2-noble"
 linux_6_3_container_image="swift:6.3-noble"
-linux_6_4_container_image="swift:6.4-noble"
+linux_6_4_container_image="swift:6.4-resolute"
 linux_nightly_next_container_image="swiftlang/swift:nightly-6.4.x-noble"
 linux_nightly_main_container_image="swiftlang/swift:nightly-main-noble"
 
