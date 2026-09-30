@@ -105,8 +105,8 @@ on:
 
       swift_6_1_enabled:
         type: boolean
-        description: "Boolean to enable the Swift 6.1 jobs. Defaults to true."
-        default: true
+        description: "Boolean to enable the Swift 6.1 jobs. Defaults to false."
+        default: false
       swift_6_1_build_arguments_override:
         type: string
         description: "The arguments passed to swift build in the Swift 6.1 job."
@@ -264,7 +264,7 @@ jobs:
             xcode_latest_beta_build_arguments_override="${MATRIX_MACOS_LATEST_BETA_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_latest_beta_test_arguments_override="${MATRIX_MACOS_LATEST_BETA_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_latest_beta_setup_command="${MATRIX_MACOS_LATEST_BETA_SETUP_COMMAND:=""}"
-            swift_6_1_enabled="${MATRIX_SWIFT_6_1_ENABLED:=true}"
+            swift_6_1_enabled="${MATRIX_SWIFT_6_1_ENABLED:=false}"
             swift_6_1_build_arguments_override="${MATRIX_SWIFT_6_1_BUILD_ARGUMENTS_OVERRIDE:=""}"
             swift_6_1_test_arguments_override="${MATRIX_SWIFT_6_1_TEST_ARGUMENTS_OVERRIDE:=""}"
             swift_6_1_setup_command="${MATRIX_SWIFT_6_1_SETUP_COMMAND:=""}"
