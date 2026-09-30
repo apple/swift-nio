@@ -72,6 +72,38 @@ class ByteBufferUtilsTest: XCTestCase {
         )
     }
 
+    func testComparatorsDoNotFoldNonAlphaPunctuationThatSharesTheCaseBit() {
+        // Each pair differs only in bit 0x20. Both ^ and ~ are valid in header
+        // names; the remaining pairs exercise the general byte comparator.
+        let collidingPairs: [(String, String)] = [
+            ("^", "~"),
+            ("[", "{"),
+            ("]", "}"),
+            ("\\", "|"),
+            ("@", "`"),
+        ]
+
+        for (lhs, rhs) in collidingPairs {
+            let buffer = ByteBuffer(string: "X-Foo\(lhs)Bar")
+            XCTAssertFalse(
+                buffer.readableBytesView.compareCaseInsensitiveASCIIBytes(to: "X-Foo\(rhs)Bar".utf8),
+                "'\(lhs)' (0x\(String(lhs.utf8.first!, radix: 16))) incorrectly compared equal to "
+                    + "'\(rhs)' (0x\(String(rhs.utf8.first!, radix: 16)))"
+            )
+            // The identical byte must still compare equal to itself.
+            XCTAssertTrue(
+                buffer.readableBytesView.compareCaseInsensitiveASCIIBytes(to: "X-Foo\(lhs)Bar".utf8)
+            )
+        }
+
+        // Sanity check: real ASCII letters must still fold correctly.
+        XCTAssertTrue(
+            ByteBuffer(string: "X-Foo^Bar").readableBytesView.compareCaseInsensitiveASCIIBytes(
+                to: "x-foo^bar".utf8
+            )
+        )
+    }
+
     private func byteBufferView(string: String) -> ByteBufferView {
         let byteBufferAllocator = ByteBufferAllocator()
         var buffer = byteBufferAllocator.buffer(capacity: string.lengthOfBytes(using: .utf8))
