@@ -114,7 +114,7 @@ func doRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> I
             var configuration = NIOHTTPServerPipelineConfiguration.defaults
             configuration.pipeliningAssistance = true
             configuration.errorHandling = false
-            channel.pipeline.configureHTTPServerPipeline(configuration: configuration).flatMap {
+            return channel.pipeline.configureHTTPServerPipeline(configuration: configuration).flatMap {
                 channel.pipeline.addHandler(SimpleHTTPServer())
             }
         }.bind(to: localhostPickPort).wait()
