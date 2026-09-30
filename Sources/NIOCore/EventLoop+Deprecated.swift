@@ -26,8 +26,8 @@ extension EventLoop {
     @preconcurrency
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func makeSucceededFuture<Success: Sendable>(
-        _ value: Success,
+    public func makeSucceededFuture<Success>(
+        _ value: sending Success,
         file: StaticString = #fileID,
         line: UInt = #line
     ) -> EventLoopFuture<Success> {
