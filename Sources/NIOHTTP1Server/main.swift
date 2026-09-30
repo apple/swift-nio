@@ -637,7 +637,7 @@ default:
 let fileIO = NonBlockingFileIO(threadPool: .singleton)
 
 func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
-    channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMapThrowing {
+    channel.pipeline.configureHTTPServerPipeline(configuration: .defaults).flatMapThrowing {
         try channel.pipeline.syncOperations.addHandler(HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
     }
 }

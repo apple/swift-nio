@@ -264,7 +264,7 @@ public final class NIOHTTP1TestServer {
             return
         }
         do {
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline()
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .defaults)
             if self.aggregateBody {
                 try channel.pipeline.syncOperations.addHandler(AggregateBodyHandler())
             }

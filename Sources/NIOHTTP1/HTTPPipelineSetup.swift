@@ -229,17 +229,20 @@ extension ChannelPipeline {
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     @preconcurrency
+    @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
         withServerUpgrade upgrade: NIOHTTPServerUpgradeSendableConfiguration? = nil,
         withErrorHandling errorHandling: Bool = true
     ) -> EventLoopFuture<Void> {
-        self._configureHTTPServerPipeline(
+        self.configureHTTPServerPipeline(
             position: position,
-            withPipeliningAssistance: pipelining,
-            withServerUpgrade: upgrade,
-            withErrorHandling: errorHandling
+            configuration: .init(
+                pipeliningAssistance: pipelining,
+                serverUpgrade: upgrade.map { NIOHTTPServerPipelineConfiguration.UpgradeConfiguration($0) },
+                errorHandling: errorHandling
+            )
         )
     }
 
@@ -273,6 +276,7 @@ extension ChannelPipeline {
     ///         spec compliance. Defaults to `true`.
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     @preconcurrency
+    @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -280,12 +284,14 @@ extension ChannelPipeline {
         withErrorHandling errorHandling: Bool = true,
         withOutboundHeaderValidation headerValidation: Bool = true
     ) -> EventLoopFuture<Void> {
-        self._configureHTTPServerPipeline(
+        self.configureHTTPServerPipeline(
             position: position,
-            withPipeliningAssistance: pipelining,
-            withServerUpgrade: upgrade,
-            withErrorHandling: errorHandling,
-            withOutboundHeaderValidation: headerValidation
+            configuration: .init(
+                pipeliningAssistance: pipelining,
+                serverUpgrade: upgrade.map { NIOHTTPServerPipelineConfiguration.UpgradeConfiguration($0) },
+                errorHandling: errorHandling,
+                outboundHeaderValidation: headerValidation
+            )
         )
     }
 
@@ -320,6 +326,7 @@ extension ChannelPipeline {
     ///   - encoderConfiguration: The configuration for the ``HTTPResponseEncoder``.
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     @preconcurrency
+    @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -328,13 +335,15 @@ extension ChannelPipeline {
         withOutboundHeaderValidation headerValidation: Bool = true,
         withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration = .init()
     ) -> EventLoopFuture<Void> {
-        self._configureHTTPServerPipeline(
+        self.configureHTTPServerPipeline(
             position: position,
-            withPipeliningAssistance: pipelining,
-            withServerUpgrade: upgrade,
-            withErrorHandling: errorHandling,
-            withOutboundHeaderValidation: headerValidation,
-            withEncoderConfiguration: encoderConfiguration
+            configuration: .init(
+                pipeliningAssistance: pipelining,
+                serverUpgrade: upgrade.map { NIOHTTPServerPipelineConfiguration.UpgradeConfiguration($0) },
+                errorHandling: errorHandling,
+                outboundHeaderValidation: headerValidation,
+                encoderConfiguration: encoderConfiguration
+            )
         )
     }
 
@@ -370,6 +379,7 @@ extension ChannelPipeline {
     ///   - decoderLimitConfiguration: The limit configuration for the ``HTTPDecoder``.
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     @preconcurrency
+    @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -379,58 +389,52 @@ extension ChannelPipeline {
         withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration = .init(),
         withDecoderLimitConfiguration decoderLimitConfiguration: NIOHTTPDecoderLimitConfiguration = .init()
     ) -> EventLoopFuture<Void> {
-        self._configureHTTPServerPipeline(
+        self.configureHTTPServerPipeline(
             position: position,
-            withPipeliningAssistance: pipelining,
-            withServerUpgrade: upgrade,
-            withErrorHandling: errorHandling,
-            withOutboundHeaderValidation: headerValidation,
-            withEncoderConfiguration: encoderConfiguration,
-            withDecoderLimitConfiguration: decoderLimitConfiguration
+            configuration: .init(
+                pipeliningAssistance: pipelining,
+                serverUpgrade: upgrade.map { NIOHTTPServerPipelineConfiguration.UpgradeConfiguration($0) },
+                errorHandling: errorHandling,
+                outboundHeaderValidation: headerValidation,
+                encoderConfiguration: encoderConfiguration,
+                decoderLimitConfiguration: decoderLimitConfiguration
+            )
         )
     }
 
-    private func _configureHTTPServerPipeline(
+    /// Configure a `ChannelPipeline` for use as a HTTP server.
+    ///
+    /// This function knows how to set up all first-party HTTP channel handlers appropriately for server use. It
+    /// supports the following features, depending on the provided `configuration`:
+    ///
+    /// 1. Providing assistance handling clients that pipeline HTTP requests, using the ``HTTPServerPipelineHandler``.
+    /// 2. Supporting HTTP upgrade, using the ``HTTPServerUpgradeHandler``.
+    /// 3. Providing assistance handling protocol errors.
+    /// 4. Validating outbound header fields to protect against response splitting attacks.
+    ///
+    /// - Parameters:
+    ///   - position: Where in the pipeline to add the HTTP server handlers. Defaults to `.last`.
+    ///   - configuration: The configuration for the HTTP server pipeline.
+    /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
-        withPipeliningAssistance pipelining: Bool = true,
-        withServerUpgrade upgrade: NIOHTTPServerUpgradeSendableConfiguration? = nil,
-        withErrorHandling errorHandling: Bool = true,
-        withOutboundHeaderValidation headerValidation: Bool = true,
-        withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration = .init(),
-        withDecoderLimitConfiguration decoderLimitConfiguration: NIOHTTPDecoderLimitConfiguration = .init()
+        configuration: NIOHTTPServerPipelineConfiguration
     ) -> EventLoopFuture<Void> {
-        let future: EventLoopFuture<Void>
-
         if self.eventLoop.inEventLoop {
-            let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
-            let result = Result<Void, Error> {
+            return self.eventLoop.makeCompletedFuture {
                 try self.syncOperations.configureHTTPServerPipeline(
-                    position: syncPosition,
-                    withPipeliningAssistance: pipelining,
-                    withServerUpgrade: upgrade,
-                    withErrorHandling: errorHandling,
-                    withOutboundHeaderValidation: headerValidation,
-                    withEncoderConfiguration: encoderConfiguration,
-                    withDecoderLimitConfiguration: decoderLimitConfiguration
-                )
-            }
-            future = self.eventLoop.makeCompletedFuture(result)
-        } else {
-            future = self.eventLoop.submit {
-                let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
-                try self.syncOperations.configureHTTPServerPipeline(
-                    position: syncPosition,
-                    withPipeliningAssistance: pipelining,
-                    withServerUpgrade: upgrade,
-                    withErrorHandling: errorHandling,
-                    withOutboundHeaderValidation: headerValidation,
-                    withEncoderConfiguration: encoderConfiguration,
-                    withDecoderLimitConfiguration: decoderLimitConfiguration
+                    position: .init(position),
+                    configuration: configuration
                 )
             }
         }
 
-        return future
+        return self.eventLoop.submit {
+            try self.syncOperations.configureHTTPServerPipeline(
+                position: .init(position),
+                configuration: configuration
+            )
+        }
     }
 }
 
@@ -1052,6 +1056,37 @@ extension ChannelPipeline.SynchronousOperations {
         )
     }
 
+    /// Configure a `ChannelPipeline` for use as a HTTP server.
+    ///
+    /// This function knows how to set up all first-party HTTP channel handlers appropriately for server use. It
+    /// supports the following features, depending on the provided `configuration`:
+    ///
+    /// 1. Providing assistance handling clients that pipeline HTTP requests, using the `HTTPServerPipelineHandler`.
+    /// 2. Supporting HTTP upgrade, using the `HTTPServerUpgradeHandler`.
+    /// 3. Providing assistance handling protocol errors.
+    /// 4. Validating outbound header fields to protect against response splitting attacks.
+    ///
+    /// - Important: This **must** be called on the Channel's event loop.
+    ///
+    /// - Parameters:
+    ///   - position: Where in the pipeline to add the HTTP server handlers. Defaults to `.last`.
+    ///   - configuration: The configuration for the HTTP server pipeline.
+    /// - Throws: If the pipeline could not be configured.
+    public func configureHTTPServerPipeline(
+        position: ChannelPipeline.SynchronousOperations.Position = .last,
+        configuration: NIOHTTPServerPipelineConfiguration
+    ) throws {
+        try self._configureHTTPServerPipeline(
+            position: position,
+            withPipeliningAssistance: configuration.pipeliningAssistance,
+            withServerUpgrade: configuration.serverUpgrade.map { ($0.upgraders, $0.completionHandler) },
+            withErrorHandling: configuration.errorHandling,
+            withOutboundHeaderValidation: configuration.outboundHeaderValidation,
+            withEncoderConfiguration: configuration.encoderConfiguration,
+            withDecoderLimitConfiguration: configuration.decoderLimitConfiguration
+        )
+    }
+
     private func _configureHTTPServerPipeline(
         position: ChannelPipeline.SynchronousOperations.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -1097,5 +1132,86 @@ extension ChannelPipeline.SynchronousOperations {
         }
 
         try self.addHandlers(handlers, position: position)
+    }
+}
+
+/// The configuration for a HTTP server pipeline.
+public struct NIOHTTPServerPipelineConfiguration: Sendable {
+    /// Whether to provide assistance handling HTTP clients that pipeline their requests. Defaults to `true`. If
+    /// `false`, users will need to handle clients that pipeline themselves.
+    public var pipeliningAssistance: Bool = true
+
+    /// Whether to add a ``HTTPServerUpgradeHandler`` to the pipeline, configured for HTTP upgrade. Defaults to `nil`,
+    /// which will not add the handler to the pipeline. See the documentation on ``HTTPServerUpgradeHandler`` for more
+    /// details.
+    public var serverUpgrade: UpgradeConfiguration? = nil
+
+    /// Whether to provide assistance handling protocol errors (e.g. failure to parse the HTTP request) by sending
+    /// 400 errors. Defaults to `true`.
+    public var errorHandling: Bool = true
+
+    /// Whether to validate outbound response headers to confirm that they meet spec compliance. Defaults to `true`.
+    public var outboundHeaderValidation: Bool = true
+
+    /// The configuration for the ``HTTPResponseEncoder``.
+    public var encoderConfiguration: HTTPResponseEncoder.Configuration = .init()
+
+    /// The limit configuration for the ``HTTPDecoder``.
+    public var decoderLimitConfiguration: NIOHTTPDecoderLimitConfiguration = .init()
+
+    /// The configuration for HTTP upgrade.
+    public struct UpgradeConfiguration: Sendable {
+        /// The upgraders the server supports, in order of preference.
+        public var upgraders: [HTTPServerProtocolUpgrader & Sendable]
+
+        /// Called once the upgrade is complete, with the context of the handler performing the upgrade.
+        public var completionHandler: @Sendable (ChannelHandlerContext) -> Void
+
+        /// Creates an upgrade configuration.
+        ///
+        /// - Parameters:
+        ///   - upgraders: The upgraders the server supports, in order of preference.
+        ///   - completionHandler: Called once the upgrade is complete, with the context of the handler performing
+        ///     the upgrade.
+        public init(
+            upgraders: [HTTPServerProtocolUpgrader & Sendable],
+            completionHandler: @escaping @Sendable (ChannelHandlerContext) -> Void
+        ) {
+            self.upgraders = upgraders
+            self.completionHandler = completionHandler
+        }
+
+        fileprivate init(_ configuration: NIOHTTPServerUpgradeSendableConfiguration) {
+            self.init(upgraders: configuration.upgraders, completionHandler: configuration.completionHandler)
+        }
+    }
+
+    /// The default configuration.
+    ///
+    /// Uses the following values:
+    /// - ``pipeliningAssistance``: `true`
+    /// - ``serverUpgrade``: `nil`
+    /// - ``errorHandling``: `true`
+    /// - ``outboundHeaderValidation``: `true`
+    /// - ``encoderConfiguration``: ``HTTPResponseEncoder/Configuration/init()``
+    /// - ``decoderLimitConfiguration``: ``NIOHTTPDecoderLimitConfiguration/init()``
+    public static var defaults: Self {
+        Self()
+    }
+
+    fileprivate init(
+        pipeliningAssistance: Bool = true,
+        serverUpgrade: UpgradeConfiguration? = nil,
+        errorHandling: Bool = true,
+        outboundHeaderValidation: Bool = true,
+        encoderConfiguration: HTTPResponseEncoder.Configuration = .init(),
+        decoderLimitConfiguration: NIOHTTPDecoderLimitConfiguration = .init()
+    ) {
+        self.pipeliningAssistance = pipeliningAssistance
+        self.serverUpgrade = serverUpgrade
+        self.errorHandling = errorHandling
+        self.outboundHeaderValidation = outboundHeaderValidation
+        self.encoderConfiguration = encoderConfiguration
+        self.decoderLimitConfiguration = decoderLimitConfiguration
     }
 }
