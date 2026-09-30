@@ -12,6 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 import CNIOLinux
+#if os(FreeBSD)
+import CNIOFreeBSD
+#endif
 import NIOCore
 import NIOPosix
 import XCTest
@@ -51,6 +54,12 @@ final class MulticastTest: XCTestCase {
     struct MulticastInterfaceMismatchError: Error {}
 
     struct ReceivedDatagramError: Error {}
+
+    private func skipIfIPv6MulticastOverLoopbackUnsupported() throws {
+        #if os(FreeBSD)
+        throw XCTSkip("FreeBSD does not support IPv6 multicast over the loopback interface")
+        #endif
+    }
 
     @available(*, deprecated)
     private func interfaceForAddress(address: String) throws -> NIONetworkInterface {
@@ -344,6 +353,7 @@ final class MulticastTest: XCTestCase {
 
     @available(*, deprecated)
     func testCanJoinBasicMulticastGroupIPv6() throws {
+        try self.skipIfIPv6MulticastOverLoopbackUnsupported()
         guard System.supportsIPv6 else {
             // Skip on non-IPv6 systems
             return
@@ -480,6 +490,7 @@ final class MulticastTest: XCTestCase {
 
     @available(*, deprecated)
     func testCanLeaveAnIPv6MulticastGroup() throws {
+        try self.skipIfIPv6MulticastOverLoopbackUnsupported()
         guard System.supportsIPv6 else {
             // Skip on non-IPv6 systems
             return
@@ -615,6 +626,7 @@ final class MulticastTest: XCTestCase {
     }
 
     func testCanJoinBasicMulticastGroupIPv6WithDevice() throws {
+        try self.skipIfIPv6MulticastOverLoopbackUnsupported()
         guard System.supportsIPv6 else {
             // Skip on non-IPv6 systems
             return
@@ -746,6 +758,7 @@ final class MulticastTest: XCTestCase {
     }
 
     func testCanLeaveAnIPv6MulticastGroupWithDevice() throws {
+        try self.skipIfIPv6MulticastOverLoopbackUnsupported()
         guard System.supportsIPv6 else {
             // Skip on non-IPv6 systems
             return

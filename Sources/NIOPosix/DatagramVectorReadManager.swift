@@ -15,6 +15,7 @@
 #if !os(WASI)
 
 import CNIODarwin
+import CNIOFreeBSD
 import CNIOLinux
 import CNIOOpenBSD
 import NIOCore

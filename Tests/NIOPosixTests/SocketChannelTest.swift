@@ -719,7 +719,12 @@ final class SocketChannelTest: XCTestCase {
 
         // Wait for the server to have something
         XCTAssertThrowsError(try serverPromise.futureResult.wait()) { error in
+            // On FreeBSD an RST arriving before `accept()` fails with ECONNABORTED
+            #if os(FreeBSD)
+            XCTAssertEqual((error as? IOError)?.errnoCode, ECONNABORTED, "unexpected error: \(error)")
+            #else
             XCTAssert(error is NIOFcntlFailedError)
+            #endif
         }
         #endif
     }
