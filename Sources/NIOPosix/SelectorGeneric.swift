@@ -222,15 +222,18 @@ internal class Selector<R: Registration> {
     /// Reverse lookup map from file-descriptor handle to the entry's index in `pollFDs`. Maintained
     /// alongside `pollFDs` so that `reregister0`/`deregister0` can update the relevant `pollfd` in O(1)
     /// instead of linearly scanning the array. The indexes are kept in sync as entries are removed:
-    /// `whenReady0` compacts `pollFDs` in place after processing events and updates this map for every
+    /// `whenReady0` compacts `pollFDs` in place before polling and updates this map for every
     /// surviving entry that shifts position.
     @usableFromInline
     var pollFDIndexes = [NIOBSDSocket.Handle: Int]()
-    /// Tracks indexes of file descriptors pending removal from `pollFDs`. We defer removal until after
-    /// processing all events in `whenReady0` to avoid invalidating indexes during iteration. Stored as
-    /// indexes rather than a parallel boolean array for O(1) lookup during cleanup.
+    /// Whether `pollFDs` holds entries that have been deregistered and are awaiting removal.
+    ///
+    /// `deregister0` cannot remove an entry outright, because it may be called while `whenReady0`
+    /// is iterating `pollFDs` to deliver events. It replaces the handle with
+    /// `NIOBSDSocket.invalidHandle` instead, and `whenReady0` drops those entries on its next pass,
+    /// before it polls.
     @usableFromInline
-    var deregisteredFDs = Set<Int>()
+    var pollFDsNeedCompaction = false
     /// The read end of the wakeup socket pair. This is monitored in WSAPoll to allow waking up the event loop.
     @usableFromInline
     var wakeupReadSocket: NIOBSDSocket.Handle = NIOBSDSocket.invalidHandle
