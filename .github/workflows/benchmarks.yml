@@ -37,6 +37,10 @@ on:
         type: boolean
         description: "Boolean to enable the Linux 6.3 Swift version matrix job. Defaults to true."
         default: true
+      linux_6_4_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux 6.4 Swift version matrix job. Defaults to true."
+        default: true
       linux_nightly_6_0_enabled:
         type: boolean
         description: "⚠️  Deprecated, we no longer run against 6.0 nightly."
@@ -69,6 +73,10 @@ on:
       windows_6_3_enabled:
         type: boolean
         description: "Boolean to enable the Windows 6.3 Swift version matrix job. Currently has no effect!"  # TODO: implement Windows benchmarking
+        default: false
+      windows_6_4_enabled:
+        type: boolean
+        description: "Boolean to enable the Windows 6.4 Swift version matrix job. Currently has no effect!"  # TODO: implement Windows benchmarking
         default: false
       windows_nightly_6_0_enabled:
         type: boolean
@@ -122,6 +130,7 @@ jobs:
           MATRIX_LINUX_6_1_ENABLED: ${{ inputs.linux_6_1_enabled }}
           MATRIX_LINUX_6_2_ENABLED: ${{ inputs.linux_6_2_enabled }}
           MATRIX_LINUX_6_3_ENABLED: ${{ inputs.linux_6_3_enabled }}
+          MATRIX_LINUX_6_4_ENABLED: ${{ inputs.linux_6_4_enabled }}
           MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_next_enabled  }}
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
 
