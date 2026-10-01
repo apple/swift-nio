@@ -691,7 +691,7 @@ extension FileSystemProtocol {
     /// Sets the file's last access and last data modification times to the given times.
     ///
     /// - Parameters:
-    ///   - path: The path of the file to modify.
+    ///   - path: The NIOFilePath of the file to modify.
     ///   - lastAccess: The new value of the file's last access time, as time elapsed since the Epoch.
     ///   - lastDataModification: The new value of the file's last data modification time, as time elapsed since the Epoch.
     public func setTimes(
@@ -707,7 +707,7 @@ extension FileSystemProtocol {
     /// Sets the file's last access time to the given time.
     ///
     /// - Parameters:
-    ///   - path: The path of the file to modify.
+    ///   - path: The NIOFilePath of the file to modify.
     ///   - time: The time to which the file's last access time should be set.
     public func setLastAccessTime(
         forFileAt path: NIOFilePath,
@@ -719,7 +719,7 @@ extension FileSystemProtocol {
     /// Sets the file's last data modification time to the given time.
     ///
     /// - Parameters:
-    ///   - path: The path of the file to modify.
+    ///   - path: The NIOFilePath of the file to modify.
     ///   - time: The time to which the file's last data modification time should be set.
     public func setLastDataModificationTime(
         forFileAt path: NIOFilePath,
