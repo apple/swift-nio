@@ -293,8 +293,9 @@ extension ByteBuffer {
         result += separator
 
         // Dump the back maxBytes/2 bytes.
-        bufferOffset = buffer.writerIndex - maxBytes / 2
-        buffer.moveReaderIndex(to: bufferOffset)
+        // `bufferOffset` is relative to the readerIndex, like the offsets of the front part.
+        bufferOffset = self.readableBytes - maxBytes / 2
+        buffer.moveReaderIndex(to: buffer.writerIndex - maxBytes / 2)
         var back = buffer.readSlice(length: buffer.readableBytes)!
 
         // On the first line of the back part, we might want less than 16 bytes, with padding on the left.

@@ -2151,6 +2151,20 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, actual)
     }
 
+    func testHexDumpDetailedWithMaxBytesAndOffset() {
+        var buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
+        let _ = buf.readBytes(length: 5)
+        let expected = """
+            00000000  79 65 2c 20 77 6f 72 6c                           |ye, worl        |
+            ........  .. .. .. .. .. .. .. ..  .. .. .. .. .. .. .. ..  ..................
+            00000010                                       6e 67 20 79  |            ng y|
+            00000020  6f 75 2e 0a                                       |ou..|
+            00000024
+            """
+        let actual = buf.hexDump(format: .detailed(maxBytes: 16))
+        XCTAssertEqual(expected, actual)
+    }
+
     func testHexDumpLongEmptyBuffer() {
         let buf = ByteBuffer()
         let expected = ""
