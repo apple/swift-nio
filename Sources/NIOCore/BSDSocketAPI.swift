@@ -102,6 +102,7 @@ private let sysInet_ntop:
         inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
 #elseif canImport(Darwin)
+import CNIODarwin
 import Darwin
 
 private let sysInet_ntop:
@@ -407,6 +408,28 @@ extension NIOBSDSocket.Option {
     }
 }
 
+#if canImport(Darwin)
+extension NIOBSDSocket.Option {
+    /// Set the don't fragment bit on outgoing IPv4 packets.
+    @inlinable
+    public static var ip_dontfrag: NIOBSDSocket.Option {
+        NIOBSDSocket.Option(rawValue: IP_DONTFRAG)
+    }
+}
+#endif
+
+#if os(Linux)
+extension NIOBSDSocket.Option {
+    /// Set the path MTU discovery mode for IPv4, one of the `IP_PMTUDISC_*` values.
+    ///
+    /// - Seealso: `man 7 ip` (Linux)
+    @inlinable
+    public static var ip_mtu_discover: NIOBSDSocket.Option {
+        NIOBSDSocket.Option(rawValue: IP_MTU_DISCOVER)
+    }
+}
+#endif
+
 // IPv6 Options
 extension NIOBSDSocket.Option {
     /// Add an IPv6 group membership.
@@ -446,6 +469,34 @@ extension NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IPV6_V6ONLY)
     }
 }
+
+#if canImport(Darwin) || os(Linux)
+extension NIOBSDSocket.Option {
+    /// Don't fragment outgoing IPv6 packets.
+    ///
+    /// - Seealso: https://datatracker.ietf.org/doc/html/rfc3542#section-11.2
+    @inlinable
+    public static var ipv6_dontfrag: NIOBSDSocket.Option {
+        #if canImport(Darwin)
+        NIOBSDSocket.Option(rawValue: CNIODarwin_IPV6_DONTFRAG)
+        #else
+        NIOBSDSocket.Option(rawValue: IPV6_DONTFRAG)
+        #endif
+    }
+}
+#endif
+
+#if os(Linux)
+extension NIOBSDSocket.Option {
+    /// Set the path MTU discovery mode for IPv6, one of the `IPV6_PMTUDISC_*` values.
+    ///
+    /// - Seealso: `man 7 ipv6` (Linux)
+    @inlinable
+    public static var ipv6_mtu_discover: NIOBSDSocket.Option {
+        NIOBSDSocket.Option(rawValue: IPV6_MTU_DISCOVER)
+    }
+}
+#endif
 
 // TCP Options
 extension NIOBSDSocket.Option {
