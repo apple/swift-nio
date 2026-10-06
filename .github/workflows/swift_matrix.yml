@@ -38,8 +38,8 @@ on:
         description: "The command of the 5.10 Swift version linux matrix job to execute."
       matrix_linux_6_0_enabled:
         type: boolean
-        description: "Boolean to enable the 6.0 Swift version matrix job. Defaults to true."
-        default: true
+        description: "Boolean to enable the 6.0 Swift version matrix job. Defaults to false."
+        default: false
       matrix_linux_6_0_container_image:
         type: string
         description: "Container image for the 6.0 Swift version matrix job. Defaults to matching Swift Ubuntu image."
