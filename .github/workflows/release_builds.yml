@@ -24,8 +24,8 @@ on:
         default: ""
       linux_6_1_enabled:
         type: boolean
-        description: "Boolean to enable the Linux 6.1 Swift version matrix job. Defaults to false."
-        default: false
+        description: "Boolean to enable the Linux 6.1 Swift version matrix job. Defaults to true."
+        default: true
       linux_6_1_arguments_override:
         type: string
         description: "The arguments passed to swift test in the Linux 6.1 Swift version matrix job."
