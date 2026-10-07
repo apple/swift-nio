@@ -827,6 +827,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     internal var _channelOptions: ChannelOptions.Storage
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
     private var resolver: Optional<Resolver & Sendable>
+    private var resolverFactory: Optional<@Sendable (EventLoop) -> (Resolver & Sendable)>
     private var bindTarget: Optional<SocketAddress>
     private var enableMPTCP: Bool
 
@@ -863,6 +864,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         self._channelInitializer = { channel in channel.eventLoop.makeSucceededFuture(()) }
         self.protocolHandlers = nil
         self.resolver = nil
+        self.resolverFactory = nil
         self.bindTarget = nil
         self.enableMPTCP = false
     }
@@ -930,7 +932,33 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     @preconcurrency
     public func resolver(_ resolver: (Resolver & Sendable)?) -> Self {
         self.resolver = resolver
+        self.resolverFactory = nil
         return self
+    }
+
+    /// Specifies a resolver factory to use for hostname connections.
+    ///
+    /// A fresh resolver is created for each call to ``connect(host:port:)``. This
+    /// is useful for resolvers that can only perform one resolution, while still
+    /// allowing the ``ClientBootstrap`` to be reused for multiple connections.
+    ///
+    /// - Parameter resolver: The dynamic resolver factory to use.
+    public func resolver(_ resolver: NIODynamicResolver) -> Self {
+        self.resolver = nil
+        self.resolverFactory = { eventLoop in
+            resolver.makeResolver(for: eventLoop)
+        }
+        return self
+    }
+
+    private func makeResolver(for eventLoop: EventLoop) -> Resolver & Sendable {
+        self.resolverFactory?(eventLoop)
+            ?? self.resolver
+            ?? GetaddrinfoResolver(
+                loop: eventLoop,
+                aiSocktype: .stream,
+                aiProtocol: .tcp
+            )
     }
 
     /// Enables multi-path TCP support.
@@ -1001,13 +1029,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     /// - Returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
         let loop = self.group.next()
-        let resolver =
-            self.resolver
-            ?? GetaddrinfoResolver(
-                loop: loop,
-                aiSocktype: .stream,
-                aiProtocol: .tcp
-            )
+        let resolver = self.makeResolver(for: loop)
         let enableMPTCP = self.enableMPTCP
         let channelInitializer = self.channelInitializer
         let channelOptions = self._channelOptions
@@ -1416,13 +1438,7 @@ extension ClientBootstrap {
                 PostRegistrationTransformationResult
             >
     ) async throws -> PostRegistrationTransformationResult {
-        let resolver =
-            self.resolver
-            ?? GetaddrinfoResolver(
-                loop: eventLoop,
-                aiSocktype: .stream,
-                aiProtocol: .tcp
-            )
+        let resolver = self.makeResolver(for: eventLoop)
 
         let enableMPTCP = self.enableMPTCP
         let bootstrapChannelInitializer = self.channelInitializer
