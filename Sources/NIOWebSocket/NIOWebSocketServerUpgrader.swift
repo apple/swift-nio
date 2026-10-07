@@ -78,6 +78,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, Senda
     private let upgradePipelineHandler: UpgradePipelineHandler
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
+    private let enforceMaskingRules: Bool
 
     /// Create a new `NIOWebSocketServerUpgrader`.
     ///
@@ -102,8 +103,9 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, Senda
         upgradePipelineHandler: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
     ) {
         self.init(
-            maxFrameSize: 1 << 14,
+            _maxFrameSize: 1 << 14,
             automaticErrorHandling: automaticErrorHandling,
+            enforceMaskingRules: true,
             shouldUpgrade: shouldUpgrade,
             upgradePipelineHandler: upgradePipelineHandler
         )
@@ -139,6 +141,47 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, Senda
         self.init(
             _maxFrameSize: maxFrameSize,
             automaticErrorHandling: automaticErrorHandling,
+            enforceMaskingRules: true,
+            shouldUpgrade: shouldUpgrade,
+            upgradePipelineHandler: upgradePipelineHandler
+        )
+    }
+
+    /// Create a new `NIOWebSocketServerUpgrader`.
+    ///
+    /// - Parameters:
+    ///   - maxFrameSize: The maximum frame size the decoder is willing to tolerate from the
+    ///         remote peer. WebSockets in principle allows frame sizes up to `2**64` bytes, but
+    ///         this is an objectively unreasonable maximum value (on AMD64 systems it is not
+    ///         possible to even. Users may set this to any value up to `UInt32.max`.
+    ///   - automaticErrorHandling: Whether the pipeline should automatically handle protocol
+    ///         errors by sending error responses and closing the connection. Defaults to `true`,
+    ///         may be set to `false` if the user wishes to handle their own errors.
+    ///   - enforceMaskingRules: Whether the decoder should reject unmasked frames from the client,
+    ///         as required by RFC 6455 (§5.1). Set to `false` to tolerate non-compliant clients
+    ///         that send unmasked frames.
+    ///   - shouldUpgrade: A callback that determines whether the websocket request should be
+    ///         upgraded. This callback is responsible for creating a `HTTPHeaders` object with
+    ///         any headers that it needs on the response *except for* the `Upgrade`, `Connection`,
+    ///         and `Sec-WebSocket-Accept` headers, which this upgrader will handle. Should return
+    ///         an `EventLoopFuture` containing `nil` if the upgrade should be refused.
+    ///   - upgradePipelineHandler: A function that will be called once the upgrade response is
+    ///         flushed, and that is expected to mutate the `Channel` appropriately to handle the
+    ///         websocket protocol. This only needs to add the user handlers: the
+    ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
+    ///         pipeline automatically.
+    @preconcurrency
+    public convenience init(
+        maxFrameSize: Int = 1 << 14,
+        automaticErrorHandling: Bool = true,
+        enforceMaskingRules: Bool,
+        shouldUpgrade: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
+        upgradePipelineHandler: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
+    ) {
+        self.init(
+            _maxFrameSize: maxFrameSize,
+            automaticErrorHandling: automaticErrorHandling,
+            enforceMaskingRules: enforceMaskingRules,
             shouldUpgrade: shouldUpgrade,
             upgradePipelineHandler: upgradePipelineHandler
         )
@@ -147,6 +190,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, Senda
     private init(
         _maxFrameSize maxFrameSize: Int,
         automaticErrorHandling: Bool,
+        enforceMaskingRules: Bool,
         shouldUpgrade: @escaping ShouldUpgrade,
         upgradePipelineHandler: @escaping UpgradePipelineHandler
     ) {
@@ -155,6 +199,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, Senda
         self.upgradePipelineHandler = upgradePipelineHandler
         self.maxFrameSize = maxFrameSize
         self.automaticErrorHandling = automaticErrorHandling
+        self.enforceMaskingRules = enforceMaskingRules
     }
 
     public func buildUpgradeResponse(
@@ -176,6 +221,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, Senda
             upgradeRequest: upgradeRequest,
             maxFrameSize: self.maxFrameSize,
             automaticErrorHandling: self.automaticErrorHandling,
+            maskingVerification: self.enforceMaskingRules ? .serverExpectsMaskedFrames : .disabled,
             upgradePipelineHandler: self.upgradePipelineHandler
         )
     }
@@ -209,6 +255,7 @@ public final class NIOTypedWebSocketServerUpgrader<UpgradeResult: Sendable>: NIO
     private let upgradePipelineHandler: UpgradePipelineHandler
     private let maxFrameSize: Int
     private let enableAutomaticErrorHandling: Bool
+    private let enforceMaskingRules: Bool
 
     /// Create a new ``NIOTypedWebSocketServerUpgrader``.
     ///
@@ -228,9 +275,46 @@ public final class NIOTypedWebSocketServerUpgrader<UpgradeResult: Sendable>: NIO
     ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
     ///         pipeline automatically.to WebSocket protocol errors. Default is true.
     ///   - upgradePipelineHandler: called once the upgrade was successful.
+    public convenience init(
+        maxFrameSize: Int = 1 << 14,
+        enableAutomaticErrorHandling: Bool = true,
+        shouldUpgrade: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
+        upgradePipelineHandler: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<UpgradeResult>
+    ) {
+        self.init(
+            maxFrameSize: maxFrameSize,
+            enableAutomaticErrorHandling: enableAutomaticErrorHandling,
+            enforceMaskingRules: true,
+            shouldUpgrade: shouldUpgrade,
+            upgradePipelineHandler: upgradePipelineHandler
+        )
+    }
+
+    /// Create a new ``NIOTypedWebSocketServerUpgrader``.
+    ///
+    /// - Parameters:
+    ///   - maxFrameSize: The maximum frame size the decoder is willing to tolerate from the
+    ///         remote peer. WebSockets in principle allows frame sizes up to `2**64` bytes, but
+    ///         this is an objectively unreasonable maximum value (on AMD64 systems it is not
+    ///         possible to even. Users may set this to any value up to `UInt32.max`.
+    ///   - enableAutomaticErrorHandling: Whether the pipeline should automatically handle protocol
+    ///         errors by sending error responses and closing the connection. Defaults to `true`,
+    ///         may be set to `false` if the user wishes to handle their own errors.
+    ///   - enforceMaskingRules: Whether the decoder should reject unmasked frames from the client,
+    ///         as required by RFC 6455 (§5.1). Set to `false` to tolerate non-compliant clients
+    ///         that send unmasked frames.
+    ///   - shouldUpgrade: A callback that determines whether the websocket request should be
+    ///         upgraded. This callback is responsible for creating a `HTTPHeaders` object with
+    ///         any headers that it needs on the response *except for* the `Upgrade`, `Connection`,
+    ///         and `Sec-WebSocket-Accept` headers, which this upgrader will handle. Should return
+    ///         an `EventLoopFuture` containing `nil` if the upgrade should be refused.
+    ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
+    ///         pipeline automatically.to WebSocket protocol errors. Default is true.
+    ///   - upgradePipelineHandler: called once the upgrade was successful.
     public init(
         maxFrameSize: Int = 1 << 14,
         enableAutomaticErrorHandling: Bool = true,
+        enforceMaskingRules: Bool,
         shouldUpgrade: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
         upgradePipelineHandler: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<UpgradeResult>
     ) {
@@ -239,6 +323,7 @@ public final class NIOTypedWebSocketServerUpgrader<UpgradeResult: Sendable>: NIO
         self.upgradePipelineHandler = upgradePipelineHandler
         self.maxFrameSize = maxFrameSize
         self.enableAutomaticErrorHandling = enableAutomaticErrorHandling
+        self.enforceMaskingRules = enforceMaskingRules
     }
 
     public func buildUpgradeResponse(
@@ -260,6 +345,7 @@ public final class NIOTypedWebSocketServerUpgrader<UpgradeResult: Sendable>: NIO
             upgradeRequest: upgradeRequest,
             maxFrameSize: self.maxFrameSize,
             automaticErrorHandling: self.enableAutomaticErrorHandling,
+            maskingVerification: self.enforceMaskingRules ? .serverExpectsMaskedFrames : .disabled,
             upgradePipelineHandler: self.upgradePipelineHandler
         )
     }
@@ -315,6 +401,7 @@ private func _upgrade<UpgradeResult: Sendable>(
     upgradeRequest: HTTPRequestHead,
     maxFrameSize: Int,
     automaticErrorHandling: Bool,
+    maskingVerification: WebSocketMaskingVerification,
     upgradePipelineHandler: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<UpgradeResult>
 ) -> EventLoopFuture<UpgradeResult> {
     /// We never use the automatic error handling feature of the WebSocketFrameDecoder: we always use the separate channel
@@ -322,7 +409,9 @@ private func _upgrade<UpgradeResult: Sendable>(
     channel.eventLoop.makeCompletedFuture {
         try channel.pipeline.syncOperations.addHandler(WebSocketFrameEncoder())
         try channel.pipeline.syncOperations.addHandler(
-            ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: maxFrameSize))
+            ByteToMessageHandler(
+                WebSocketFrameDecoder(maxFrameSize: maxFrameSize, maskingVerification: maskingVerification)
+            )
         )
 
         if automaticErrorHandling {

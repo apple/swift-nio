@@ -27,6 +27,31 @@ public enum NIOWebSocketError: Error {
     case multiByteControlFrameLength
 }
 
+/// An error thrown when an inbound WebSocket frame violates RFC 6455 (§5.1) masking rules.
+///
+/// A ``WebSocketFrameDecoder`` only produces this error when it has been configured with a
+/// ``WebSocketMaskingVerification`` other than ``WebSocketMaskingVerification/disabled``.
+public struct NIOWebSocketMaskingError: Error, Hashable {
+    private enum Base {
+        case maskedFrame
+        case unmaskedFrame
+    }
+
+    private var base: Base
+
+    private init(_ base: Base) {
+        self.base = base
+    }
+
+    /// A masked frame was received when an unmasked frame was expected. RFC 6455 (§5.1)
+    /// requires that a server not mask any frames that it sends to the client.
+    public static let maskedFrame = NIOWebSocketMaskingError(.maskedFrame)
+
+    /// An unmasked frame was received when a masked frame was expected. RFC 6455 (§5.1)
+    /// requires that a client mask all frames that it sends to the server.
+    public static let unmaskedFrame = NIOWebSocketMaskingError(.unmaskedFrame)
+}
+
 extension WebSocketErrorCode {
     init(_ error: NIOWebSocketError) {
         switch error {
@@ -197,7 +222,7 @@ struct WSParser {
 
     /// Apply a number of validations to the incremental state, ensuring that the frame we're
     /// receiving is valid.
-    func validateState(maxFrameSize: Int) throws {
+    func validateState(maxFrameSize: Int, maskingVerification: WebSocketMaskingVerification) throws {
         switch self.state {
         case .waitingForMask(let firstByte, let length), .waitingForData(let firstByte, let length, _):
             if length > maxFrameSize {
@@ -213,11 +238,54 @@ struct WSParser {
             if isControlFrame && length > 125 {
                 throw NIOWebSocketError.multiByteControlFrameLength
             }
+
+            try self.validateMasking(maskingVerification)
         case .idle, .firstByteReceived, .waitingForLengthWord, .waitingForLengthQWord:
             // No validation necessary in this state as we have no length to validate.
             break
         }
     }
+
+    /// Enforce RFC 6455 (§5.1) masking rules on the frame currently being parsed, if requested.
+    private func validateMasking(_ maskingVerification: WebSocketMaskingVerification) throws {
+        switch maskingVerification {
+        case .disabled:
+            break
+        case .serverExpectsMaskedFrames:
+            // A client must mask every frame it sends to a server. An unmasked frame reaches the
+            // `.waitingForData` state with no masking key.
+            if case .waitingForData(_, _, .none) = self.state {
+                throw NIOWebSocketMaskingError.unmaskedFrame
+            }
+        case .clientExpectsUnmaskedFrames:
+            // A server must not mask frames it sends to a client. A masked frame passes through
+            // the `.waitingForMask` state.
+            if case .waitingForMask = self.state {
+                throw NIOWebSocketMaskingError.maskedFrame
+            }
+        }
+    }
+}
+
+/// The masking validation that a ``WebSocketFrameDecoder`` applies to inbound frames.
+///
+/// RFC 6455 (§5.1) requires that a client mask every frame it sends to a server, and that a
+/// server never mask frames it sends to a client. By default the decoder does not enforce these
+/// rules, preserving its historic behaviour. A server or client that wishes to reject a
+/// non-compliant peer can opt in to the relevant verification.
+public enum WebSocketMaskingVerification: Sendable {
+    /// Do not verify the masking of inbound frames.
+    case disabled
+
+    /// Verify that inbound frames are masked, as a server requires of its clients.
+    ///
+    /// Unmasked frames are rejected with ``NIOWebSocketMaskingError/unmaskedFrame``.
+    case serverExpectsMaskedFrames
+
+    /// Verify that inbound frames are not masked, as a client requires of its server.
+    ///
+    /// Masked frames are rejected with ``NIOWebSocketMaskingError/maskedFrame``.
+    case clientExpectsUnmaskedFrames
 }
 
 /// An inbound `ChannelHandler` that deserializes websocket frames into a structured
@@ -240,6 +308,9 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     /// The maximum frame size the decoder is willing to tolerate from the remote peer.
     let maxFrameSize: Int
 
+    /// The masking rules the decoder enforces on inbound frames.
+    let maskingVerification: WebSocketMaskingVerification
+
     /// Our parser state.
     private var parser = WSParser()
 
@@ -258,6 +329,31 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     public init(maxFrameSize: Int = 1 << 14) {
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
         self.maxFrameSize = maxFrameSize
+        self.maskingVerification = .disabled
+    }
+
+    /// Construct a new `WebSocketFrameDecoder`
+    ///
+    /// - Parameters:
+    ///   - maxFrameSize: The maximum frame size the decoder is willing to tolerate from the
+    ///         remote peer. WebSockets in principle allows frame sizes up to `2**64` bytes, but
+    ///         this is an objectively unreasonable maximum value (on AMD64 systems it is not
+    ///         possible to even allocate a buffer large enough to handle this size), so we
+    ///         set a lower one. The default value is the same as the default HTTP/2 max frame
+    ///         size, `2**14` bytes. Users may override this to any value up to `UInt32.max`.
+    ///         Users are strongly encouraged not to increase this value unless they absolutely
+    ///         must, as the decoder will not produce partial frames, meaning that it will hold
+    ///         on to data until the *entire* body is received.
+    ///   - maskingVerification: The masking rules to enforce on inbound frames, per RFC 6455
+    ///         (§5.1). Use ``WebSocketMaskingVerification/disabled`` to preserve the decoder's
+    ///         historic behaviour of accepting both masked and unmasked frames.
+    public init(
+        maxFrameSize: Int = 1 << 14,
+        maskingVerification: WebSocketMaskingVerification
+    ) {
+        precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
+        self.maxFrameSize = maxFrameSize
+        self.maskingVerification = maskingVerification
     }
 
     public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
@@ -270,7 +366,10 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
                 context.fireChannelRead(WebSocketFrameDecoder.wrapInboundOut(frame))
                 return .continue
             case .continueParsing:
-                try self.parser.validateState(maxFrameSize: self.maxFrameSize)
+                try self.parser.validateState(
+                    maxFrameSize: self.maxFrameSize,
+                    maskingVerification: self.maskingVerification
+                )
             // loop again, might be 'waiting' for 0 bytes
             case .insufficientData:
                 return .needMoreData
