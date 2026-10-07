@@ -210,7 +210,7 @@ public struct EventLoopPromise<Value> {
     ///   - value: The successful result of the operation.
     @preconcurrency
     @inlinable
-    public func succeed(_ value: Value) where Value: Sendable {
+    public func succeed(_ value: sending Value) {
         self._resolve(value: .success(value))
     }
 
@@ -262,7 +262,7 @@ public struct EventLoopPromise<Value> {
     ///   - result: The result which will be used to succeed or fail this promise.
     @preconcurrency
     @inlinable
-    public func completeWith(_ result: Result<Value, Error>) where Value: Sendable {
+    public func completeWith(_ result: sending Result<Value, Error>) {
         self._resolve(value: result)
     }
 
@@ -275,12 +275,13 @@ public struct EventLoopPromise<Value> {
     /// - Parameters:
     ///   - value: The value to fire the future with.
     @inlinable
-    internal func _resolve(value: Result<Value, Error>) where Value: Sendable {
+    internal func _resolve(value: sending Result<Value, Error>) {
         if self.futureResult.eventLoop.inEventLoop {
             self._setValue(value: value)._run()
         } else {
+            let box = NIOLoopBound(sending: value, eventLoop: self.futureResult.eventLoop)
             self.futureResult.eventLoop.execute {
-                self._setValue(value: value)._run()
+                self._setValue(value: box.value)._run()
             }
         }
     }
@@ -448,7 +449,7 @@ public final class EventLoopFuture<Value> {
 
     /// A EventLoopFuture<Value> that has already succeeded
     @inlinable
-    internal init(eventLoop: EventLoop, value: Value) where Value: Sendable {
+    internal init(eventLoop: EventLoop, value: sending Value) {
         self.eventLoop = eventLoop
         self._value = .success(value)
         self._callbacks = .init()

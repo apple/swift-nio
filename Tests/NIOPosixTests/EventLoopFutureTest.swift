@@ -1901,6 +1901,132 @@ class EventLoopFutureTest {
         #expect(promise1 != promise2)
         #expect(promise3 != promise2)
     }
+
+    // MARK: - Sending non-Sendable values into promises and futures
+
+    @Test
+    func testSucceedPromiseBySendingNonSendableValue() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+        let eventLoop = group.next()
+
+        let promise = eventLoop.makePromise(of: NonSendableObject.self)
+        let value = promise.futureResult.map { $0.value }
+        // `succeed` takes a `sending` value, so a non-`Sendable` value can be sent in
+        // from off the `EventLoop` without needing `assumeIsolated`.
+        promise.succeed(NonSendableObject(value: 42))
+        #expect(try value.wait() == 42)
+    }
+
+    @Test
+    func testCompleteWithBySendingNonSendableResult() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+        let eventLoop = group.next()
+
+        let successPromise = eventLoop.makePromise(of: NonSendableObject.self)
+        let value = successPromise.futureResult.map { $0.value }
+        successPromise.completeWith(.success(NonSendableObject(value: 42)))
+        #expect(try value.wait() == 42)
+
+        let failurePromise = eventLoop.makePromise(of: NonSendableObject.self)
+        failurePromise.completeWith(.failure(EventLoopFutureTestError.example))
+        #expect(throws: EventLoopFutureTestError.example) {
+            try failurePromise.futureResult.map { $0.value }.wait()
+        }
+    }
+
+    @Test
+    func testMakeSucceededFutureBySendingNonSendableValue() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+        let eventLoop = group.next()
+
+        let future = eventLoop.makeSucceededFuture(NonSendableObject(value: 42))
+        #expect(try future.map { $0.value }.wait() == 42)
+    }
+
+    @Test
+    func testMakeCompletedFutureBySendingNonSendableResult() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+        let eventLoop = group.next()
+
+        let successFuture = eventLoop.makeCompletedFuture(.success(NonSendableObject(value: 42)))
+        #expect(try successFuture.map { $0.value }.wait() == 42)
+
+        let failureFuture = eventLoop.makeCompletedFuture(
+            Result<NonSendableObject, Error>.failure(EventLoopFutureTestError.example)
+        )
+        #expect(throws: EventLoopFutureTestError.example) {
+            try failureFuture.map { $0.value }.wait()
+        }
+    }
+
+    @Test
+    func testMakeCompletedFutureSendingWithResultOf() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+        let eventLoop = group.next()
+
+        let successFuture = eventLoop.makeCompletedFutureSending {
+            NonSendableObject(value: 42)
+        }
+        #expect(try successFuture.map { $0.value }.wait() == 42)
+
+        let failureFuture = eventLoop.makeCompletedFutureSending { () throws -> NonSendableObject in
+            throw EventLoopFutureTestError.example
+        }
+        #expect(throws: EventLoopFutureTestError.example) {
+            try failureFuture.map { $0.value }.wait()
+        }
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @Test
+    func testCompleteWithTaskSendingSuccess() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+        let eventLoop = group.next()
+
+        let promise = eventLoop.makePromise(of: NonSendableObject.self)
+        promise.completeWithTaskSending {
+            try await Task.sleep(nanoseconds: 37)
+            return NonSendableObject(value: 42)
+        }
+        #expect(try promise.futureResult.map { $0.value }.wait() == 42)
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @Test
+    func testCompleteWithTaskSendingFailure() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            #expect(throws: Never.self) { try group.syncShutdownGracefully() }
+        }
+        let eventLoop = group.next()
+
+        let promise = eventLoop.makePromise(of: NonSendableObject.self)
+        promise.completeWithTaskSending {
+            try await Task.sleep(nanoseconds: 37)
+            throw EventLoopFutureTestError.example
+        }
+        #expect(throws: EventLoopFutureTestError.example) {
+            try promise.futureResult.map { $0.value }.wait()
+        }
+    }
 }
 
 class NonSendableObject: Equatable {
