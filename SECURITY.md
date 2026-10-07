@@ -1,6 +1,31 @@
-# Security
+# Report a security vulnerability
 
-This document specifies the security process for the SwiftNIO project.
+## How to report a security vulnerability
+
+Apple prioritizes the security of its open source projects and values the contributions of the security research community.
+If you believe that you have discovered a security vulnerability in our open source software,
+  please report it to us using the [GitHub private vulnerability feature](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/privately-reporting-a-security-vulnerability).
+This can be done by navigating to the "Security" tab of the specific repository where you found the issue.
+For other Apple software, please report a security or privacy vulnerability on [Apple Security Research](https://security.apple.com/).
+
+Reports should include specific software version(s) that you believe are affected;
+ a technical description of the behavior that you observed and the behavior that you expected;
+ the steps required to reproduce the issue;
+ and a proof of concept or exploit.
+
+## How these reports are handled
+
+Our goal is to confirm all security reports. This is neither an acceptance nor a rejection of the report.
+We may follow up with further questions while working through the details of your report.
+We may prioritize vulnerability remediation, and resolution times may vary according to several factors, such as complexity, severity, and active maintenance of a project.
+
+For the development of secure product and the protection of our users, the project will not disclose or discuss security issues until the investigation is complete and any necessary updates are generally available, unless required by law.
+After updates are made available, reports will be published as GitHub Security Advisories.
+
+## Additional guidelines
+
+Output from automated security scans or fuzzers must include additional context demonstrating the vulnerability with a proof of concept or working exploit.
+Please include enough information to allow us to reproduce the issue. We will credit you in the public advisory if the report is accepted.
 
 ## Versions
 
@@ -25,18 +50,5 @@ team would create the following patch releases:
   Swift 5.7 and later
 
 SwiftNIO 1.x is considered end of life and will not receive any security patches.
-
-## Disclosures
-
-If you believe that you have discovered a security or privacy vulnerability in our open source software, please report it to us using the GitHub private vulnerability feature. Reports should include specific product and software version(s) that you believe are affected; a technical description of the behavior that you observed and the behavior that you expected; the steps required to reproduce the issue; and a proof of concept or exploit.
-
-The project team will do their best to acknowledge receiving all security reports within 7 days of submission. This initial acknowledgment is neither acceptance nor rejection of your report. The project team may come back to you with further questions or invite you to collaborate while working through the details of your report.
-
-Keep these additional guidelines in mind when submitting your report:
-
-* Reports concerning known, publicly disclosed CVEs can be submitted as normal issues to this project.
-* Output from automated security scans or fuzzers MUST include additional context demonstrating the vulnerability with a proof of concept or working exploit.
-* Application crashes due to malformed inputs are typically not treated as security vulnerabilities, unless they are shown to also impact other processes on the system.
-
 
 While we welcome reports for open source software projects, they are not eligible for Apple Security Bounties.
