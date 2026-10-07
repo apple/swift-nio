@@ -22,8 +22,6 @@ We may prioritize vulnerability remediation, and resolution times may vary accor
 For the development of secure product and the protection of our users, the project will not disclose or discuss security issues until the investigation is complete and any necessary updates are generally available, unless required by law.
 After updates are made available, reports will be published as GitHub Security Advisories.
 
-Some projects have additional security pages with further details or aggregated findings - consult project specific documentation for details.
-
 ## Additional guidelines
 
 Output from automated security scans or fuzzers must include additional context demonstrating the vulnerability with a proof of concept or working exploit.
