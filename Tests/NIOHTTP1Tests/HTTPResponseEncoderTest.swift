@@ -553,7 +553,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         // request-method queue advances correctly and the response stream isn't corrupted.
         let channel = EmbeddedChannel()
         defer { XCTAssertNoThrow(try channel.finish()) }
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .defaults)
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .init())
 
         func readAllOutbound() throws -> String {
             var all = channel.allocator.buffer(capacity: 128)
@@ -612,7 +612,7 @@ class HTTPResponseEncoderTests: XCTestCase {
 
 extension NIOHTTPServerPipelineConfiguration {
     static var noFramingTransformation: Self {
-        var configuration = Self.defaults
+        var configuration = Self()
         configuration.encoderConfiguration = .noFramingTransformation
         return configuration
     }

@@ -260,7 +260,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
 
 extension NIOHTTPServerPipelineConfiguration {
     static var withErrorHandling: Self {
-        var configuration = Self.defaults
+        var configuration = Self()
         configuration.errorHandling = true
         return configuration
     }
