@@ -103,6 +103,7 @@ let package = Package(
                 "CNIOOpenBSD",
                 "CNIOLinux",
                 "CNIODarwin",
+                "CNIOFreeBSD",
                 "CNIOWindows",
                 "NIOConcurrencyHelpers",
                 "NIOCore",
@@ -286,6 +287,7 @@ let package = Package(
                 "NIOPosix",
                 "CNIOLinux",
                 "CNIODarwin",
+                "CNIOFreeBSD",
                 "CNIOWindows",
                 swiftAtomics,
                 swiftCollections,
@@ -501,6 +503,7 @@ let package = Package(
                 "CNIOOpenBSD",
                 "CNIOLinux",
                 "CNIODarwin",
+                "CNIOFreeBSD",
                 "NIOTLS",
             ],
             swiftSettings: swiftSettings

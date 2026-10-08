@@ -1536,7 +1536,11 @@ extension FileSystem {
             return .failure(error)
         }
 
+        #if os(FreeBSD)
+        var copyResult: Result<Void, FileSystemError>
+        #else
         let copyResult: Result<Void, FileSystemError>
+        #endif
         copyResult = source.fileHandle.systemFileHandle.sendableView._withUnsafeDescriptorResult { sourceFD in
             destination.fileHandle.systemFileHandle.sendableView._withUnsafeDescriptorResult { destinationFD in
                 var offset = 0
@@ -1544,6 +1548,25 @@ extension FileSystem {
                 while offset < sourceInfo.size {
                     // sendfile(2) limits writes to 0x7ffff000 in size
                     let size = min(Int(sourceInfo.size) - offset, 0x7fff_f000)
+                    #if os(FreeBSD)
+                    var _offset: Int? = offset
+                    var _dOffset: Int? = nil
+                    let result = Syscall.copy_file_range(
+                        from: sourceFD,
+                        offset: &_offset,
+                        to: destinationFD,
+                        destOffset: &_dOffset,
+                        size: size,
+                        flags: 0
+                    ).mapError { errno in
+                        FileSystemError.copy_file_range(
+                            errno: errno,
+                            from: sourcePath,
+                            to: destinationPath,
+                            location: .here()
+                        )
+                    }
+                    #else
                     let result = Syscall.sendfile(
                         to: destinationFD,
                         from: sourceFD,
@@ -1557,7 +1580,7 @@ extension FileSystem {
                             location: .here()
                         )
                     }
-
+                    #endif
                     switch result {
                     case let .success(bytesCopied):
                         offset += bytesCopied
@@ -1572,6 +1595,34 @@ extension FileSystem {
         } onUnavailable: {
             makeOnUnavailableError(path: sourcePath, location: .here())
         }
+
+        #if os(FreeBSD)
+        copyResult = copyResult.flatMap {
+            let sourceView = source.fileHandle.systemFileHandle.sendableView
+            let destinationView = destination.fileHandle.systemFileHandle.sendableView
+
+            do {
+                for attribute in try sourceView._attributeNames() {
+                    let value = try sourceView._valueForAttribute(attribute)
+                    try destinationView._updateValueForAttribute(value, attribute: attribute)
+                }
+                return .success(())
+            } catch let error as FileSystemError where error.code == .unsupported {
+                return .success(())
+            } catch let error as FileSystemError {
+                return .failure(error)
+            } catch {
+                return .failure(
+                    FileSystemError(
+                        code: .unknown,
+                        message: "Couldn't copy extended attributes.",
+                        cause: error,
+                        location: .here()
+                    )
+                )
+            }
+        }
+        #endif
 
         let closeResult = destination.fileHandle.systemFileHandle.sendableView._close(materialize: true)
         return copyResult.flatMap { closeResult }

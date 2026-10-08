@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIODarwin
+import CNIOFreeBSD
 import CNIOLinux
 @_spi(CustomByteBufferAllocator) @testable import NIOCore
 import NIOEmbedded
