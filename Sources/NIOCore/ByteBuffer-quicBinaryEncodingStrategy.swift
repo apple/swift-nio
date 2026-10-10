@@ -22,13 +22,16 @@ extension ByteBuffer {
             case four = 4
             case eight = 8
 
-            /// The smallest QUIC integer length that is at least `value`, saturating at
-            /// ``IntegerLength/eight``.
+            /// The QUIC integer length closest to `value`.
             ///
             /// A QUIC variable-length integer occupies 1, 2, 4 or 8 bytes, so a value such as
-            /// 3 has no exact representation and is rounded up to the next valid length.
+            /// 3 has no exact representation. Values below eight round up to the next valid
+            /// length; values above it saturate at ``IntegerLength/eight``.
+            ///
+            /// Unlike `init?(rawValue:)` this always produces a length, which makes it the
+            /// way to migrate an `Int` onto ``QUICBinaryEncodingStrategy/requiredBytesIntegerLength``.
             @inlinable
-            init(roundingUp value: Int) {
+            public init(roundingFrom value: Int) {
                 switch value {
                 case ...1: self = .one
                 case 2: self = .two
@@ -60,7 +63,7 @@ extension ByteBuffer {
                     "Set requiredBytesIntegerLength instead: a QUIC integer is 1, 2, 4 or 8 bytes long, so other values cannot be represented exactly."
             )
             set {
-                self.requiredBytesIntegerLength = IntegerLength(roundingUp: newValue)
+                self.requiredBytesIntegerLength = IntegerLength(roundingFrom: newValue)
             }
         }
 
@@ -145,24 +148,22 @@ extension ByteBuffer {
             // Use more space than necessary in order to fill the reserved space
             // This will avoid a memmove
             // If the needed space is more than the reserved, we can't avoid the move
-            switch max(reservedCapacity, Self.bytesNeededForInteger(integer)) {
-            case 1:
+            switch IntegerLength(roundingFrom: max(reservedCapacity, Self.bytesNeededForInteger(integer))) {
+            case .one:
                 // Easy, store the value. The top two bits are 0 so we don't need to do any masking.
                 return buffer.writeInteger(UInt8(truncatingIfNeeded: integer))
-            case 2:
+            case .two:
                 // Set the top two bit mask, then write the value.
                 let value = UInt16(truncatingIfNeeded: integer) | (0x40 << 8)
                 return buffer.writeInteger(value)
-            case 3, 4:
+            case .four:
                 // Set the top two bit mask, then write the value.
                 let value = UInt32(truncatingIfNeeded: integer) | (0x80 << 24)
                 return buffer.writeInteger(value)
-            case 5, 6, 7, 8:
+            case .eight:
                 // Set the top two bit mask, then write the value.
                 let value = UInt64(truncatingIfNeeded: integer) | (0xC0 << 56)
                 return buffer.writeInteger(value)
-            default:
-                fatalError("Unreachable")
             }
         }
     }
