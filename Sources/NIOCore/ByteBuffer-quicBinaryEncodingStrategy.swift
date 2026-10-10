@@ -50,7 +50,7 @@ extension ByteBuffer {
         ///
         /// A QUIC variable-length integer is 1, 2, 4 or 8 bytes long, so only those values are
         /// representable. Prefer ``requiredBytesIntegerLength``, which can only hold a valid
-        /// length. Assigning a value here rounds up to the next valid length.
+        /// length. Assigning a value here rounds to the closest valid length.
         @inlinable
         public var requiredBytesHint: Int {
             get {
