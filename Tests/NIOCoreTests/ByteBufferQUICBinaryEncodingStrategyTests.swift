@@ -147,6 +147,83 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
         }
     }
 
+    // The typed `requiredBytesIntegerLength` closes the route through the strategy, but
+    // `writeInteger(_:reservedCapacity:to:)` is public and still takes a plain `Int`, so a
+    // caller can hand it a 3 directly. This covers that remaining entry point.
+    func testRoundtripWithNonPowerOfTwoReservedCapacity() {
+        for reservedCapacity in [3, 5, 6, 7] {
+            let testNumbers: [Int64] = [0, 63, 15293, 494_878_333, 151_288_809_941_952_652]
+            for testNumber in testNumbers {
+                var buffer = ByteBuffer()
+                let strategy = ByteBuffer.QUICBinaryEncodingStrategy.quic
+                let bytesWritten = strategy.writeInteger(
+                    testNumber,
+                    reservedCapacity: reservedCapacity,
+                    to: &buffer
+                )
+                let minRequiredBytes = ByteBuffer.QUICBinaryEncodingStrategy.bytesNeededForInteger(testNumber)
+                let wanted = max(minRequiredBytes, reservedCapacity)
+                let expectedUsedBytes = wanted <= 2 ? wanted : (wanted <= 4 ? 4 : 8)
+                XCTAssertEqual(bytesWritten, expectedUsedBytes)
+                XCTAssertEqual(strategy.readInteger(as: UInt64.self, from: &buffer), UInt64(testNumber))
+                XCTAssertEqual(buffer.readableBytes, 0)
+            }
+        }
+    }
+
+    @available(*, deprecated, message: "Tests the deprecated requiredBytesHint setter")
+    private func setHint(_ strategy: inout ByteBuffer.QUICBinaryEncodingStrategy, _ value: Int) {
+        strategy.requiredBytesHint = value
+    }
+
+    @available(*, deprecated, message: "Tests the deprecated requiredBytesHint setter")
+    func testRequiredBytesHintSetterRoundsToAValidLength() {
+        typealias Length = ByteBuffer.QUICBinaryEncodingStrategy.IntegerLength
+
+        // Grouped by expected length, and the strategy starts each case at a different
+        // length, so an assertion cannot pass on a value the setter never wrote.
+        let cases: [(expected: Length, inputs: [Int], startingFrom: Length)] = [
+            (.one, [0, 1], .eight),
+            (.two, [2], .eight),
+            (.four, [3, 4], .one),
+            (.eight, [5, 6, 7, 8, 9, 64], .one),
+        ]
+
+        for (expected, inputs, start) in cases {
+            for input in inputs {
+                var strategy = ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: start)
+                XCTAssertNotEqual(
+                    strategy.requiredBytesIntegerLength,
+                    expected,
+                    "input \(input) starts at its expected value"
+                )
+                self.setHint(&strategy, input)
+                XCTAssertEqual(strategy.requiredBytesIntegerLength, expected, "input \(input)")
+            }
+        }
+
+        // A value that is already a valid length reads back unchanged.
+        for length in [Length.one, .two, .four, .eight] {
+            var strategy = ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: .one)
+            self.setHint(&strategy, length.rawValue)
+            XCTAssertEqual(strategy.requiredBytesHint, length.rawValue)
+        }
+    }
+
+    @available(*, deprecated, message: "Tests the deprecated requiredBytesHint setter")
+    func testWriteLengthPrefixedWithRoundedHintDoesNotTrap() {
+        var strategy = ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: .one)
+        self.setHint(&strategy, 3)
+
+        var buffer = ByteBuffer()
+        buffer.writeLengthPrefixed(strategy: strategy) { buffer in
+            buffer.writeString("hello")
+        }
+
+        XCTAssertEqual(buffer.readLengthPrefixedSlice(strategy: strategy).map { String(buffer: $0) }, "hello")
+        XCTAssertEqual(buffer.readableBytes, 0)
+    }
+
     // MARK: - readEncodedInteger tests
 
     func testReadEmptyQUICVariableLengthInteger() {
