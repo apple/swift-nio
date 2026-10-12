@@ -1148,7 +1148,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                     // we have a socket error, let's forward
                     // this path will be executed on Linux (EPOLLERR) & Darwin (ev.fflags != 0) for
                     // stream sockets, and most (but not all) errors on datagram sockets
-                    error = IOError(errnoCode: result, reason: "connection reset (error set)")
+                    error = IOError(socketError: result, reason: "connection reset (error set)")
                 } else {
                     // we don't have a socket error, this must be connection reset without an error then
                     // this path should only be executed on Linux (EPOLLHUP, no EPOLLERR)
