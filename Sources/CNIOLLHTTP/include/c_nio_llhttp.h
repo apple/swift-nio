@@ -6,8 +6,8 @@
 #define INCLUDE_LLHTTP_H_
 
 #define LLHTTP_VERSION_MAJOR 9
-#define LLHTTP_VERSION_MINOR 3
-#define LLHTTP_VERSION_PATCH 0
+#define LLHTTP_VERSION_MINOR 4
+#define LLHTTP_VERSION_PATCH 3
 
 #ifndef INCLUDE_LLHTTP_ITSELF_H_
 #define INCLUDE_LLHTTP_ITSELF_H_
@@ -66,10 +66,8 @@ enum llhttp_errno {
   HPE_OK = 0,
   HPE_INTERNAL = 1,
   HPE_STRICT = 2,
-  HPE_CR_EXPECTED = 25,
   HPE_LF_EXPECTED = 3,
   HPE_UNEXPECTED_CONTENT_LENGTH = 4,
-  HPE_UNEXPECTED_SPACE = 30,
   HPE_CLOSED_CONNECTION = 5,
   HPE_INVALID_METHOD = 6,
   HPE_INVALID_URL = 7,
@@ -90,15 +88,17 @@ enum llhttp_errno {
   HPE_PAUSED_UPGRADE = 22,
   HPE_PAUSED_H2_UPGRADE = 23,
   HPE_USER = 24,
+  HPE_CR_EXPECTED = 25,
   HPE_CB_URL_COMPLETE = 26,
   HPE_CB_STATUS_COMPLETE = 27,
-  HPE_CB_METHOD_COMPLETE = 32,
-  HPE_CB_VERSION_COMPLETE = 33,
   HPE_CB_HEADER_FIELD_COMPLETE = 28,
   HPE_CB_HEADER_VALUE_COMPLETE = 29,
+  HPE_UNEXPECTED_SPACE = 30,
+  HPE_CB_RESET = 31,
+  HPE_CB_METHOD_COMPLETE = 32,
+  HPE_CB_VERSION_COMPLETE = 33,
   HPE_CB_CHUNK_EXTENSION_NAME_COMPLETE = 34,
   HPE_CB_CHUNK_EXTENSION_VALUE_COMPLETE = 35,
-  HPE_CB_RESET = 31,
   HPE_CB_PROTOCOL_COMPLETE = 38
 };
 typedef enum llhttp_errno llhttp_errno_t;
@@ -126,7 +126,8 @@ enum llhttp_lenient_flags {
   LENIENT_OPTIONAL_LF_AFTER_CR = 0x40,
   LENIENT_OPTIONAL_CRLF_AFTER_CHUNK = 0x80,
   LENIENT_OPTIONAL_CR_BEFORE_LF = 0x100,
-  LENIENT_SPACES_AFTER_CHUNK_SIZE = 0x200
+  LENIENT_SPACES_AFTER_CHUNK_SIZE = 0x200,
+  LENIENT_HEADER_VALUE_RELAXED = 0x400
 };
 typedef enum llhttp_lenient_flags llhttp_lenient_flags_t;
 
@@ -302,10 +303,8 @@ typedef enum llhttp_status llhttp_status_t;
   XX(0, OK, OK) \
   XX(1, INTERNAL, INTERNAL) \
   XX(2, STRICT, STRICT) \
-  XX(25, CR_EXPECTED, CR_EXPECTED) \
   XX(3, LF_EXPECTED, LF_EXPECTED) \
   XX(4, UNEXPECTED_CONTENT_LENGTH, UNEXPECTED_CONTENT_LENGTH) \
-  XX(30, UNEXPECTED_SPACE, UNEXPECTED_SPACE) \
   XX(5, CLOSED_CONNECTION, CLOSED_CONNECTION) \
   XX(6, INVALID_METHOD, INVALID_METHOD) \
   XX(7, INVALID_URL, INVALID_URL) \
@@ -326,15 +325,17 @@ typedef enum llhttp_status llhttp_status_t;
   XX(22, PAUSED_UPGRADE, PAUSED_UPGRADE) \
   XX(23, PAUSED_H2_UPGRADE, PAUSED_H2_UPGRADE) \
   XX(24, USER, USER) \
+  XX(25, CR_EXPECTED, CR_EXPECTED) \
   XX(26, CB_URL_COMPLETE, CB_URL_COMPLETE) \
   XX(27, CB_STATUS_COMPLETE, CB_STATUS_COMPLETE) \
-  XX(32, CB_METHOD_COMPLETE, CB_METHOD_COMPLETE) \
-  XX(33, CB_VERSION_COMPLETE, CB_VERSION_COMPLETE) \
   XX(28, CB_HEADER_FIELD_COMPLETE, CB_HEADER_FIELD_COMPLETE) \
   XX(29, CB_HEADER_VALUE_COMPLETE, CB_HEADER_VALUE_COMPLETE) \
+  XX(30, UNEXPECTED_SPACE, UNEXPECTED_SPACE) \
+  XX(31, CB_RESET, CB_RESET) \
+  XX(32, CB_METHOD_COMPLETE, CB_METHOD_COMPLETE) \
+  XX(33, CB_VERSION_COMPLETE, CB_VERSION_COMPLETE) \
   XX(34, CB_CHUNK_EXTENSION_NAME_COMPLETE, CB_CHUNK_EXTENSION_NAME_COMPLETE) \
   XX(35, CB_CHUNK_EXTENSION_VALUE_COMPLETE, CB_CHUNK_EXTENSION_VALUE_COMPLETE) \
-  XX(31, CB_RESET, CB_RESET) \
   XX(38, CB_PROTOCOL_COMPLETE, CB_PROTOCOL_COMPLETE) \
 
 
@@ -905,6 +906,23 @@ void c_nio_llhttp_set_lenient_optional_crlf_after_chunk(llhttp_t* parser, int en
  */
 LLHTTP_EXPORT
 void c_nio_llhttp_set_lenient_spaces_after_chunk_size(llhttp_t* parser, int enabled);
+
+/* Enables/disables relaxed handling of unusual characters in header values.
+ *
+ * RFC 9110 describes NULL, CR and LF as 'dangerous' and says they MUST be
+ * rejected, while other control characters are merely 'invalid' and discouraged,
+ * and are explicitly allowed by other standards (e.g. WHATWG Fetch) and
+ * in surprisingly common use on the web.
+ *
+ * This flag enables these 'invalid but common' characters, aiming to
+ * maximize compatibility without enabling any potentially dangerous scenarios.
+ *
+ * Unlike `c_nio_llhttp_set_lenient_headers()`, this does NOT enable any other
+ * potentially unsafe behaviors (like accepting whitespace before colons
+ * or after the start line).
+ */
+LLHTTP_EXPORT
+void c_nio_llhttp_set_lenient_header_value_relaxed(llhttp_t* parser, int enabled);
 
 #ifdef __cplusplus
 }  /* extern "C" */
