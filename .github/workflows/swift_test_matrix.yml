@@ -14,6 +14,10 @@ on:
         type: string
         description: "The test matrix definition."
         required: true
+      timeout_minutes:
+        type: number
+        description: "The maximum time in minutes each matrix job may run before it is cancelled."
+        default: 120
 
 # We will cancel previously triggered workflow runs
 concurrency:
@@ -24,6 +28,7 @@ jobs:
   execute-matrix:
     name: ${{ matrix.config.platform }} (${{ matrix.config.name }})
     runs-on: ${{ matrix.config.runner }}
+    timeout-minutes: ${{ inputs.timeout_minutes }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_string) }}
