@@ -17,6 +17,7 @@
 import CNIOLinux
 import CNIOOpenBSD
 import CNIOWindows
+import CNIOFreeBSD
 import NIOConcurrencyHelpers
 import NIOCore
 
@@ -847,7 +848,7 @@ public struct NonBlockingFileIO: Sendable {
                         let ptr = pointer.baseAddress!.assumingMemoryBound(to: CChar.self)
                         return String(cString: ptr)
                     }
-                    #if os(OpenBSD)
+                    #if os(FreeBSD) || os(OpenBSD)
                     let ino = entry.pointee.d_fileno
                     #else
                     let ino = entry.pointee.d_ino
@@ -1309,7 +1310,7 @@ extension NonBlockingFileIO {
                         let ptr = pointer.baseAddress!.assumingMemoryBound(to: CChar.self)
                         return String(cString: ptr)
                     }
-                    #if os(OpenBSD)
+                    #if os(FreeBSD) || os(OpenBSD)
                     let ino = entry.pointee.d_fileno
                     #else
                     let ino = entry.pointee.d_ino
