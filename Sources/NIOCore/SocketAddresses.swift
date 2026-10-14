@@ -57,6 +57,9 @@ import Darwin
 #else
 #error("The Socket Addresses module was unable to identify your C library.")
 #endif
+#if os(FreebSD) && canImport(CNIOFreeBSD)
+import CNIOFreeBSD
+#endif
 
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
 public enum SocketAddressError: Error, Equatable, Hashable {
