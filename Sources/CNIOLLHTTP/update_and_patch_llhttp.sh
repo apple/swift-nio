@@ -3,7 +3,7 @@
 ##
 ## This source file is part of the SwiftNIO open source project
 ##
-## Copyright (c) 2017-2025 Apple Inc. and the SwiftNIO project authors
+## Copyright (c) 2017-2026 Apple Inc. and the SwiftNIO project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -93,6 +93,7 @@ for f in *.{c,h}; do
         -e 's/\b\(llhttp_set_lenient_optional_crlf_after_chunk\)/c_nio_\1/g' \
         -e 's/\b\(llhttp_set_lenient_optional_lf_after_cr\)/c_nio_\1/g' \
         -e 's/\b\(llhttp_set_lenient_transfer_encoding\)/c_nio_\1/g' \
+        -e 's/\b\(llhttp_set_lenient_header_value_relaxed\)/c_nio_\1/g' \
         -e 's/\b\(llhttp_set_lenient_version\)/c_nio_\1/g' \
         -e 's/\b\(llhttp_settings_init\)/c_nio_\1/g' \
         -e 's/\b\(llhttp_should_keep_alive\)/c_nio_\1/g' \

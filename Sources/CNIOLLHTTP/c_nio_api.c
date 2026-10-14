@@ -319,6 +319,14 @@ void c_nio_llhttp_set_lenient_spaces_after_chunk_size(llhttp_t* parser, int enab
   }
 }
 
+void c_nio_llhttp_set_lenient_header_value_relaxed(llhttp_t* parser, int enabled) {
+  if (enabled) {
+    parser->lenient_flags |= LENIENT_HEADER_VALUE_RELAXED;
+  } else {
+    parser->lenient_flags &= ~LENIENT_HEADER_VALUE_RELAXED;
+  }
+}
+
 /* Callbacks */
 
 
