@@ -27,9 +27,6 @@ extension ByteBuffer {
             /// A QUIC variable-length integer occupies 1, 2, 4 or 8 bytes, so a value such as
             /// 3 has no exact representation. Values below eight round up to the next valid
             /// length; values above it saturate at ``IntegerLength/eight``.
-            ///
-            /// Unlike `init?(rawValue:)` this always produces a length, which makes it the
-            /// way to migrate an `Int` onto ``QUICBinaryEncodingStrategy/requiredBytesIntegerLength``.
             @inlinable
             public init(roundingFrom value: Int) {
                 switch value {
