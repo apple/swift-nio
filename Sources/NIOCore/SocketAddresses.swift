@@ -57,7 +57,7 @@ import Darwin
 #else
 #error("The Socket Addresses module was unable to identify your C library.")
 #endif
-#if os(FreebSD) && canImport(CNIOFreeBSD)
+#if os(FreeBSD) && canImport(CNIOFreeBSD)
 import CNIOFreeBSD
 #endif
 
