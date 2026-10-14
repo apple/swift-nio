@@ -172,11 +172,6 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
     }
 
     @available(*, deprecated, message: "Tests the deprecated requiredBytesHint setter")
-    private func setHint(_ strategy: inout ByteBuffer.QUICBinaryEncodingStrategy, _ value: Int) {
-        strategy.requiredBytesHint = value
-    }
-
-    @available(*, deprecated, message: "Tests the deprecated requiredBytesHint setter")
     func testRequiredBytesHintSetterRoundsToAValidLength() {
         typealias Length = ByteBuffer.QUICBinaryEncodingStrategy.IntegerLength
 
@@ -197,7 +192,7 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
                     expected,
                     "input \(input) starts at its expected value"
                 )
-                self.setHint(&strategy, input)
+                strategy.requiredBytesHint = input
                 XCTAssertEqual(strategy.requiredBytesIntegerLength, expected, "input \(input)")
             }
         }
@@ -205,7 +200,7 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
         // A value that is already a valid length reads back unchanged.
         for length in [Length.one, .two, .four, .eight] {
             var strategy = ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: .one)
-            self.setHint(&strategy, length.rawValue)
+            strategy.requiredBytesHint = length.rawValue
             XCTAssertEqual(strategy.requiredBytesHint, length.rawValue)
         }
     }
@@ -213,7 +208,7 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
     @available(*, deprecated, message: "Tests the deprecated requiredBytesHint setter")
     func testWriteLengthPrefixedWithRoundedHintDoesNotTrap() {
         var strategy = ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: .one)
-        self.setHint(&strategy, 3)
+        strategy.requiredBytesHint = 3
 
         var buffer = ByteBuffer()
         buffer.writeLengthPrefixed(strategy: strategy) { buffer in
