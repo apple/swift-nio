@@ -60,7 +60,7 @@ case "$sdk" in
     ;;
   "android-sdk")
     sdk_dir="android-sdk"
-    sdk_suffix="_android-0.1"
+    sdk_suffix="_android"
     ;;
   *)
     fatal "Unexpected Swift SDK: $sdk"
@@ -128,11 +128,27 @@ if [[ -n "$branch" ]]; then
   snapshot=""
   for snapshot in $snapshots; do
     snapshot_url="https://download.swift.org/${download_path}/${os_image_sanitized}${arch_suffix}/${snapshot}/${snapshot}-${os_image}${arch_suffix}.tar.gz"
-    sdk_url="https://download.swift.org/${download_path}/${sdk_dir}/${snapshot}/${snapshot}${sdk_suffix}.artifactbundle.tar.gz"
 
     # check that the files exist
     "$CURL_BIN" -sILXGET --fail "$snapshot_url" > /dev/null; snapshot_return_code=$?
-    "$CURL_BIN" -sILXGET --fail "$sdk_url" > /dev/null; sdk_return_code=$?
+
+    if [[ "$sdk" == "static-sdk" ]]; then
+      static_sdk_versions=("0.1.0" "0.0.1")
+    else
+      static_sdk_versions=("")
+    fi
+
+    sdk_return_code=1
+    for static_sdk_version in "${static_sdk_versions[@]}"; do
+      if [[ -n "$static_sdk_version" ]]; then
+        sdk_suffix="_static-linux-${static_sdk_version}"
+      fi
+      sdk_url="https://download.swift.org/${download_path}/${sdk_dir}/${snapshot}/${snapshot}${sdk_suffix}.artifactbundle.tar.gz"
+      "$CURL_BIN" -sILXGET --fail "$sdk_url" > /dev/null; sdk_return_code=$?
+      if [[ "$sdk_return_code" -eq 0 ]]; then
+        break
+      fi
+    done
 
     if [[ ("$snapshot_return_code" -eq 0) && ("$sdk_return_code" -eq 0) ]]; then
       log "Discovered branch snapshot: $snapshot"
@@ -160,6 +176,16 @@ elif [[ -n "$version" ]]; then
     log "Discovered latest Swift version: $version"
 
   else
+    # From Swift 6.4 onwards, release tags and download paths always include the patch version (e.g. 6.4.0)
+    if [[ "$version" =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+      major="${BASH_REMATCH[1]}"
+      minor="${BASH_REMATCH[2]}"
+      if (( major > 6 || (major == 6 && minor >= 4) )); then
+        version="${version}.0"
+        log "Normalized version to $version"
+      fi
+    fi
+
     # For specific versions, we need to fetch the release info
     log "Getting release information for version $version"
     # shellcheck disable=SC2016  # Our use of JQ_BIN means that shellcheck can't tell this is a `jq` invocation

@@ -133,6 +133,18 @@ final class SocketChannel: BaseStreamSocketChannel<Socket>, @unchecked Sendable 
             #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
             #endif
+        case _ as ChannelOptions.Types.LocalVsockAddress:
+            #if os(Windows) || os(OpenBSD)
+            fallthrough
+            #else
+            return try self.socket.getLocalVsockAddress() as! Option.Value
+            #endif
+        case _ as ChannelOptions.Types.RemoteVsockAddress:
+            #if os(Windows) || os(OpenBSD)
+            fallthrough
+            #else
+            return try self.socket.getRemoteVsockAddress() as! Option.Value
+            #endif
         default:
             return try super.getOption0(option)
         }
@@ -292,6 +304,12 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
             #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
             #endif
+        case _ as ChannelOptions.Types.LocalVsockAddress:
+            #if os(Windows) || os(OpenBSD)
+            fallthrough
+            #else
+            return try self.socket.getLocalVsockAddress() as! Option.Value
+            #endif
         default:
             return try super.getOption0(option)
         }
@@ -390,12 +408,12 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
         }
         guard let err = err as? IOError else { return true }
 
-        switch err.errnoCode {
-        case ECONNABORTED,
-            EMFILE,
-            ENFILE,
-            ENOBUFS,
-            ENOMEM:
+        switch err.error {
+        case .errno(ECONNABORTED),
+            .errno(EMFILE),
+            .errno(ENFILE),
+            .errno(ENOBUFS),
+            .errno(ENOMEM):
             // These are errors we may be able to recover from. The user may just want to stop accepting connections for example
             // or provide some other means of back-pressure. This could be achieved by a custom ChannelDuplexHandler.
             return false
@@ -892,12 +910,7 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
 
     private func shouldCloseOnErrnoCode(_ errnoCode: CInt) -> Bool {
         switch errnoCode {
-        // ECONNREFUSED can happen on linux if the previous sendto(...) failed.
-        // See also:
-        // -    https://bugzilla.redhat.com/show_bug.cgi?id=1375
-        // -    https://lists.gt.net/linux/kernel/39575
-        case ECONNREFUSED,
-            ENOMEM:
+        case ECONNREFUSED, ENOMEM:
             // These are errors we may be able to recover from.
             return false
         default:
@@ -905,9 +918,24 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
         }
     }
 
+    private func shouldCloseOnError(_ error: IOError.Error) -> Bool {
+        switch error {
+        // ECONNREFUSED can happen on linux if the previous sendto(...) failed.
+        // See also:
+        // -    https://bugzilla.redhat.com/show_bug.cgi?id=1375
+        // -    https://lists.gt.net/linux/kernel/39575
+        case .errno(let code):
+            return self.shouldCloseOnErrnoCode(code)
+        #if os(Windows)
+        default:
+            return true
+        #endif
+        }
+    }
+
     override func shouldCloseOnReadError(_ err: Error) -> Bool {
         guard let err = err as? IOError else { return true }
-        return self.shouldCloseOnErrnoCode(err.errnoCode)
+        return self.shouldCloseOnError(err.error)
     }
 
     override func error() -> ErrorResult {

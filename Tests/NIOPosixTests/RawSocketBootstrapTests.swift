@@ -41,6 +41,12 @@ func XCTSkipIfUserHasNotEnoughRightsForRawSocketAPI(file: StaticString = #filePa
 }
 
 final class RawSocketBootstrapTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("Raw sockets are not yet supported on Windows")
+        #endif
+    }
+
     func testBindWithRecevMmsg() throws {
         try XCTSkipIfUserHasNotEnoughRightsForRawSocketAPI()
 

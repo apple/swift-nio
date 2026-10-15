@@ -17,6 +17,10 @@ import NIOCore
 import NIOPosix
 import XCTest
 
+#if os(Windows)
+import WinSDK
+#endif
+
 final class SocketOptionProviderTest: XCTestCase {
     var group: MultiThreadedEventLoopGroup!
     var serverChannel: Channel!
@@ -181,10 +185,25 @@ final class SocketOptionProviderTest: XCTestCase {
         // we just abandon the other tests: this is sufficient to prove that the error path works.
         let provider = try assertNoThrowWithValue(self.convertedChannel())
 
+        #if os(Windows)
+        // Winsock's `SO_RCVTIMEO` takes a `DWORD` rather than a `timeval`, so the `Int` used
+        // below is (more than) large enough and would be accepted. A single byte is too small
+        // for any option, and Winsock reports that as `WSAEFAULT`.
+        XCTAssertThrowsError(
+            try provider.unsafeSetSocketOption(level: .socket, name: .so_rcvtimeo, value: UInt8(1)).wait()
+        ) { error in
+            guard case .winsock(let code)? = (error as? IOError)?.error else {
+                XCTFail("Expected a winsock-domain IOError, got \(error)")
+                return
+            }
+            XCTAssertEqual(WSAEFAULT, code)
+        }
+        #else
         XCTAssertThrowsError(try provider.unsafeSetSocketOption(level: .socket, name: .so_rcvtimeo, value: 1).wait()) {
             error in
             XCTAssertEqual(EINVAL, (error as? IOError)?.errnoCode)
         }
+        #endif
     }
 
     // MARK: Tests for the safe helper functions.
@@ -203,6 +222,9 @@ final class SocketOptionProviderTest: XCTestCase {
     }
 
     func testSoIpMulticastIf() throws {
+        #if os(Windows)
+        throw XCTSkip("in_addr.s_addr is not available on Windows")
+        #else
         guard let channel = self.ipv4DatagramChannel else {
             // no multicast support
             return
@@ -225,6 +247,7 @@ final class SocketOptionProviderTest: XCTestCase {
                 XCTAssertEqual($0.s_addr, address.s_addr)
             }.wait()
         )
+        #endif
     }
 
     func testIpMulticastTtl() throws {

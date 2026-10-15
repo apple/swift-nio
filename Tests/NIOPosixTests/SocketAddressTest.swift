@@ -18,6 +18,10 @@ import XCTest
 @testable import NIOCore
 @testable import NIOPosix
 
+#if os(Windows)
+import WinSDK
+#endif
+
 class SocketAddressTest: XCTestCase {
 
     func testDescriptionWorks() throws {
@@ -82,7 +86,7 @@ class SocketAddressTest: XCTestCase {
         ]
 
         var address = sockaddr_in6()
-        #if os(Linux) || os(Android)  // no sin6_len on Linux/Android
+        #if os(Linux) || os(Android) || os(Windows)  // no sin6_len on Linux/Android/Windows
         #else
         address.sin6_len = UInt8(MemoryLayout<sockaddr_in6>.size)
         #endif

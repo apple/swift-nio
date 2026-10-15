@@ -20,6 +20,12 @@ import XCTest
 
 @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
 final class FileHandleTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     static let thisFile = FilePath(#filePath)
     static let testData = FilePath(#filePath)
         .removingLastComponent()  // FileHandleTests.swift
@@ -302,6 +308,8 @@ final class FileHandleTests: XCTestCase {
         }
     }
 
+    // These tests create FIFOs via `mkfifo`, which is unavailable on Windows.
+    #if !os(Windows)
     func testWriteAndReadUnseekableFile() async throws {
         let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
@@ -384,6 +392,7 @@ final class FileHandleTests: XCTestCase {
             }
         }
     }
+    #endif  // !os(Windows)
 
     func testReadWholeFileWithOffsets() async throws {
         try await self.withHandle(forFileAtPath: Self.thisFile) { handle in

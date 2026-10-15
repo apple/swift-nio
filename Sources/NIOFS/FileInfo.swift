@@ -77,6 +77,17 @@ public struct FileInfo: Hashable, Sendable {
     /// Creates a ``FileInfo`` by deriving values from a platform-specific value.
     public init(platformSpecificStatus: CInterop.Stat) {
         self._platformSpecificStatus = Stat(platformSpecificStatus)
+        #if os(Windows)
+        self.type = FileType(platformSpecificMode: platformSpecificStatus.nioMode)
+        self.permissions = FilePermissions(masking: platformSpecificStatus.nioMode)
+        self.size = platformSpecificStatus.nioSize
+        // Windows has no POSIX owner/group; report the defaults.
+        self.userID = UserID(rawValue: 0)
+        self.groupID = GroupID(rawValue: 0)
+        self.lastAccessTime = platformSpecificStatus.nioLastAccessTime
+        self.lastDataModificationTime = platformSpecificStatus.nioLastDataModificationTime
+        self.lastStatusChangeTime = platformSpecificStatus.nioLastStatusChangeTime
+        #else
         self.type = FileType(platformSpecificMode: CInterop.Mode(platformSpecificStatus.st_mode))
         self.permissions = FilePermissions(masking: CInterop.Mode(platformSpecificStatus.st_mode))
         self.size = Int64(platformSpecificStatus.st_size)
@@ -91,6 +102,7 @@ public struct FileInfo: Hashable, Sendable {
         self.lastAccessTime = Timespec(platformSpecificStatus.st_atim)
         self.lastDataModificationTime = Timespec(platformSpecificStatus.st_mtim)
         self.lastStatusChangeTime = Timespec(platformSpecificStatus.st_ctim)
+        #endif
         #endif
     }
 
@@ -149,7 +161,7 @@ extension FileInfo {
 
     /// A time interval consisting of whole seconds and nanoseconds.
     public struct Timespec: Hashable, Sendable {
-        #if canImport(Darwin)
+        #if canImport(Darwin) || os(Windows)
         private static let utimeOmit = Int(UTIME_OMIT)
         private static let utimeNow = Int(UTIME_NOW)
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
@@ -200,6 +212,9 @@ private struct Stat: Hashable {
 
     func hash(into hasher: inout Hasher) {
         let stat = self.stat
+        #if os(Windows)
+        stat.nioHash(into: &hasher)
+        #else
         // Different platforms have different underlying values; these are
         // common between Darwin and Glibc.
         hasher.combine(stat.st_dev)
@@ -225,6 +240,7 @@ private struct Stat: Hashable {
         hasher.combine(FileInfo.Timespec(stat.st_mtim))
         hasher.combine(FileInfo.Timespec(stat.st_ctim))
         #endif
+        #endif
 
     }
 
@@ -232,6 +248,9 @@ private struct Stat: Hashable {
         let lStat = lhs.stat
         let rStat = rhs.stat
 
+        #if os(Windows)
+        return CInterop.Stat.nioIsEqual(lStat, rStat)
+        #else
         // Different platforms have different underlying values; these are
         // common between Darwin and Glibc.
         var isEqual = lStat.st_dev == rStat.st_dev
@@ -268,6 +287,7 @@ private struct Stat: Hashable {
         #endif
 
         return isEqual
+        #endif
     }
 }
 

@@ -20,6 +20,12 @@ import XCTest
 @testable import NIOPosix
 
 final class PipeChannelTest: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
+    }
+
     var group: MultiThreadedEventLoopGroup! = nil
     var channel: Channel! = nil
     var toChannel: FileHandle! = nil
@@ -31,6 +37,11 @@ final class PipeChannelTest: XCTestCase {
     }
 
     override func setUp() {
+        #if os(Windows)
+        // Pipe channels are unsupported on Windows (see `setUpWithError`); avoid
+        // running the pipe setup, which would trap, before the tests are skipped.
+        return
+        #else
         self.group = .init(numberOfThreads: 1)
 
         XCTAssertNoThrow(
@@ -61,9 +72,13 @@ final class PipeChannelTest: XCTestCase {
             }
         )
         self.buffer = self.channel.allocator.buffer(capacity: 128)
+        #endif
     }
 
     override func tearDown() {
+        #if os(Windows)
+        return
+        #else
         self.buffer = nil
         self.toChannel.closeFile()
         self.fromChannel.closeFile()
@@ -71,6 +86,7 @@ final class PipeChannelTest: XCTestCase {
         self.fromChannel = nil
         XCTAssertNoThrow(try self.channel.syncCloseAcceptingAlreadyClosed())
         XCTAssertNoThrow(try self.group.syncShutdownGracefully())
+        #endif
     }
 
     func testBasicIO() throws {
@@ -152,6 +168,9 @@ final class PipeChannelTest: XCTestCase {
     }
 
     func testWeWorkFineWithASingleFileDescriptor() throws {
+        #if os(Windows)
+        throw XCTSkip("socketpair is not available on Windows")
+        #else
         final class EchoHandler: ChannelInboundHandler, Sendable {
             typealias InboundIn = ByteBuffer
             typealias OutboundOut = ByteBuffer
@@ -205,6 +224,7 @@ final class PipeChannelTest: XCTestCase {
             }
         )
         XCTAssertEqual(UInt8(ascii: "X"), spaceForX)
+        #endif
     }
 
     func testWriteEndGoingAway() throws {

@@ -76,7 +76,7 @@ class ServerSocket: BaseSocket, ServerSocketProtocol {
     /// Create a new instance.
     ///
     /// - Parameters:
-    ///   - descriptor: The _Unix file descriptor_ representing the bound socket.
+    ///   - socket: The _Unix file descriptor_ representing the bound socket.
     ///   - setNonBlocking: Set non-blocking mode on the socket.
     /// - Throws: An `IOError` if socket is invalid.
     init(socket: NIOBSDSocket.Handle, setNonBlocking: Bool = false) throws {

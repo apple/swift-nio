@@ -1327,6 +1327,49 @@ final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
     }
 
+    func testWriteObservingByteToMessageDecoderWithConditionalConformance() {
+        let decoder = ConditionallyWriteObservingDecoder<String>()
+        self.assertObservesReentrantWrites(decoder, handler: ByteToMessageHandler(decoder))
+    }
+
+    func testWriteObservingByteToMessageDecoderConstructedGenerically() {
+        // Constructing the handler where `Decoder`'s write observing conformance isn't statically known means
+        // `ByteToMessageHandler`'s unconstrained initialiser runs. The writes must still be observed.
+        func makeHandler<Decoder: ByteToMessageDecoder>(_ decoder: Decoder) -> ByteToMessageHandler<Decoder> {
+            ByteToMessageHandler(decoder)
+        }
+
+        let decoder = ConditionallyWriteObservingDecoder<String>()
+        self.assertObservesReentrantWrites(decoder, handler: makeHandler(decoder))
+    }
+
+    private func assertObservesReentrantWrites(
+        _ decoder: ConditionallyWriteObservingDecoder<String>,
+        handler: ByteToMessageHandler<ConditionallyWriteObservingDecoder<String>>,
+        line: UInt = #line
+    ) {
+        let channel = EmbeddedChannel(handler: handler)
+        XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait(), line: line)
+
+        // A non-re-entrant write: delivered straight to the decoder.
+        XCTAssertNoThrow(try channel.writeOutbound("direct"), line: line)
+
+        var buffer = channel.allocator.buffer(capacity: 2)
+        buffer.writeStaticString("ab")
+        // Each decoded byte writes re-entrantly, so both of those writes get queued and must still be observed.
+        XCTAssertNoThrow(try channel.writeInbound(buffer), line: line)
+
+        XCTAssertEqual(["direct", "reentrant-1", "reentrant-2"], decoder.allObservedWrites, line: line)
+        XCTAssertNoThrow(XCTAssertEqual("a", try channel.readInbound(), line: line), line: line)
+        XCTAssertNoThrow(XCTAssertEqual("b", try channel.readInbound(), line: line), line: line)
+        XCTAssertNoThrow(XCTAssertNil(try channel.readInbound(), line: line), line: line)
+        XCTAssertNoThrow(XCTAssertEqual("direct", try channel.readOutbound(), line: line), line: line)
+        XCTAssertNoThrow(XCTAssertEqual("reentrant-1", try channel.readOutbound(), line: line), line: line)
+        XCTAssertNoThrow(XCTAssertEqual("reentrant-2", try channel.readOutbound(), line: line), line: line)
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(), line: line), line: line)
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean), line: line)
+    }
+
     func testDecodeMethodsNoLongerCalledIfErrorInDecode() {
         class Decoder: ByteToMessageDecoder {
             typealias InboundOut = Never
@@ -1959,6 +2002,45 @@ final class MessageToByteEncoderTest: XCTestCase {
         createAndReleaseIt()
     }
 
+}
+
+/// A decoder which - like `HTTPDecoder` - conforms to `ByteToMessageDecoder` unconditionally but to
+/// `WriteObservingByteToMessageDecoder` only *conditionally*.
+///
+/// This shape is load bearing: there is only one `ByteToMessageDecoder` witness table shared by every generic
+/// instantiation, so any mechanism which delivers queued writes through a `ByteToMessageDecoder` protocol requirement
+/// can only ever bind that requirement to the non-observing default and would silently drop re-entrantly queued
+/// writes.
+private final class ConditionallyWriteObservingDecoder<Marker>: ByteToMessageDecoder {
+    typealias InboundOut = String
+
+    var allObservedWrites: [String] = []
+    private var decodeRun = 0
+
+    func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        guard let string = buffer.readString(length: 1) else {
+            return .needMoreData
+        }
+        self.decodeRun += 1
+        context.fireChannelRead(Self.wrapInboundOut(string))
+        // Write re-entrantly, i.e. whilst the decoder is on the stack. This forces `ByteToMessageHandler` to queue
+        // the write and deliver it once we return.
+        XCTAssertNoThrow(try (context.channel as! EmbeddedChannel).writeOutbound("reentrant-\(self.decodeRun)"))
+        return .continue
+    }
+
+    func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+        while case .continue = try self.decode(context: context, buffer: &buffer) {}
+        return .needMoreData
+    }
+}
+
+extension ConditionallyWriteObservingDecoder: WriteObservingByteToMessageDecoder where Marker == String {
+    typealias OutboundIn = String
+
+    func write(data: String) {
+        self.allObservedWrites.append(data)
+    }
 }
 
 private class PairOfBytesDecoder: ByteToMessageDecoder {

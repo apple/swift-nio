@@ -18,6 +18,10 @@ on:
         type: boolean
         description: "Boolean to enable the 6.3 release WASM Swift SDK matrix job. Defaults to true."
         default: true
+      release_6_4_enabled:
+        type: boolean
+        description: "Boolean to enable the 6.4 release WASM Swift SDK matrix job. Defaults to true."
+        default: true
       env_vars:
         type: string
         description: "Environment variables for jobs as JSON (e.g., '{\"DEBUG\":\"1\",\"LOG_LEVEL\":\"info\"}')."
@@ -86,6 +90,11 @@ jobs:
             entries="${entries:+${entries},}${entry}"
           fi
 
+          if [[ "$INPUT_RELEASE_6_4_ENABLED" == "true" ]]; then
+            entry=$(make_entry "6.4" "INSTALL_SWIFT_VERSION=6.4")
+            entries="${entries:+${entries},}${entry}"
+          fi
+
           if [[ -z "$entries" ]]; then
             echo "Error: No WASM Swift SDK matrix jobs enabled"
             exit 1
@@ -96,6 +105,7 @@ jobs:
           INPUT_NIGHTLY_MAIN_ENABLED: ${{ inputs.nightly_main_enabled }}
           INPUT_NIGHTLY_NEXT_ENABLED: ${{ inputs.nightly_next_enabled }}
           INPUT_RELEASE_6_3_ENABLED: ${{ inputs.release_6_3_enabled }}
+          INPUT_RELEASE_6_4_ENABLED: ${{ inputs.release_6_4_enabled }}
           INPUT_ENV_VARS: ${{ inputs.env_vars }}
           INPUT_ADDITIONAL_COMMAND_ARGUMENTS: ${{ inputs.additional_command_arguments }}
           NIGHTLY_NEXT_VERSION: nightly-6.4

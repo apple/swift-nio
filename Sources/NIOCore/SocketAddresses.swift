@@ -44,21 +44,14 @@ private typealias in_port_t = WinSDK.u_short
 private typealias sa_family_t = WinSDK.ADDRESS_FAMILY
 #elseif canImport(Darwin)
 import Darwin
-#elseif os(Linux) || os(Android)
+#elseif os(Linux) || os(Android) || os(FreeBSD) || os(OpenBSD)
 #if canImport(Glibc)
 @preconcurrency import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
 #elseif canImport(Android)
 @preconcurrency import Android
-#endif
-import CNIOLinux
-#elseif os(FreeBSD)
-@preconcurrency import Glibc
-import CNIOFreeBSD
-#elseif os(OpenBSD)
-@preconcurrency import Glibc
-import CNIOOpenBSD
+#endif  // canImport(Glibc)
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
 #else
@@ -765,9 +758,8 @@ internal func descriptionForAddress(
     bytes: UnsafeRawPointer,
     length byteCount: Int
 ) throws -> String {
-    var addressBytes: [Int8] = Array(repeating: 0, count: byteCount)
-    return try addressBytes.withUnsafeMutableBufferPointer {
-        (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
+    try withUnsafeTemporaryAllocation(of: Int8.self, capacity: byteCount) {
+        (addressBytesPtr: UnsafeMutableBufferPointer<Int8>) -> String in
         try NIOBSDSocket.inet_ntop(
             addressFamily: family,
             addressBytes: bytes,

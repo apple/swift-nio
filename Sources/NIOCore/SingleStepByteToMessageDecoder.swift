@@ -18,10 +18,13 @@
 ///
 /// Many `ByteToMessageDecoder`'s can trivially be translated to `NIOSingleStepByteToMessageDecoder`'s. You should not implement
 /// `ByteToMessageDecoder`'s `decode` and `decodeLast` methods.
-public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
+public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder, ~Copyable {
     /// The decoded type this `NIOSingleStepByteToMessageDecoder` decodes to. To conform to `ByteToMessageDecoder` it must be called
     /// `InboundOut` - see https://bugs.swift.org/browse/SR-11868.
     associatedtype InboundOut
+
+    /// The error type thrown from `decode` and `decodeLast`. Defaults to `any Error`
+    associatedtype DecodeError: Error = any Error
 
     /// Decode from a `ByteBuffer`.
     ///
@@ -32,7 +35,7 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
     /// - Parameters:
     ///   - buffer: The `ByteBuffer` from which we decode.
     /// - Returns: A message if one can be decoded or `nil` if it should be called again once more data is present in the `ByteBuffer`.
-    mutating func decode(buffer: inout ByteBuffer) throws -> InboundOut?
+    mutating func decode(buffer: inout ByteBuffer) throws(DecodeError) -> InboundOut?
 
     /// Decode from a `ByteBuffer` when no more data is incoming.
     ///
@@ -47,11 +50,11 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
     ///   - buffer: The `ByteBuffer` from which we decode.
     ///   - seenEOF: `true` if EOF has been seen.
     /// - Returns: A message if one can be decoded or `nil` if no more messages can be produced.
-    mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> InboundOut?
+    mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws(DecodeError) -> InboundOut?
 }
 
 // MARK: NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder
-extension NIOSingleStepByteToMessageDecoder {
+extension NIOSingleStepByteToMessageDecoder where Self: ~Copyable {
     public mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         if let message = try self.decode(buffer: &buffer) {
             context.fireChannelRead(Self.wrapInboundOut(message))
@@ -194,12 +197,18 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
         case last
     }
 
+    /// - Note: Must only be modified by `NIOSingleStepByteToMessageProcessor` itself, use ``decoder`` to read it.
     @usableFromInline
-    internal private(set) var decoder: Decoder
+    internal var _decoder: Decoder
+
+    @inlinable
+    internal var decoder: Decoder {
+        self._decoder
+    }
     @usableFromInline
     let maximumBufferSize: Int?
     @usableFromInline
-    internal private(set) var _buffer: ByteBuffer?
+    internal var _buffer: ByteBuffer?
 
     /// Initialize a `NIOSingleStepByteToMessageProcessor`.
     ///
@@ -209,7 +218,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     ///     An error will be thrown if after decoding elements there is more aggregated data than this amount.
     @inlinable
     public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
-        self.decoder = decoder
+        self._decoder = decoder
         self.maximumBufferSize = maximumBufferSize
     }
 
@@ -250,7 +259,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
         // we want to call decodeLast once with an empty buffer if we have nothing
         if decodeMode == .last && (self._buffer == nil || self._buffer!.readableBytes == 0) {
             var emptyBuffer = self._buffer ?? ByteBuffer()
-            if let message = try self.decoder.decodeLast(buffer: &emptyBuffer, seenEOF: seenEOF) {
+            if let message = try self._decoder.decodeLast(buffer: &emptyBuffer, seenEOF: seenEOF) {
                 try messageReceiver(message)
             }
             return
@@ -261,9 +270,9 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
 
         func decodeOnce(buffer: inout ByteBuffer) throws -> Decoder.InboundOut? {
             if decodeMode == .normal {
-                return try self.decoder.decode(buffer: &buffer)
+                return try self._decoder.decode(buffer: &buffer)
             } else {
-                return try self.decoder.decodeLast(buffer: &buffer, seenEOF: seenEOF)
+                return try self._decoder.decodeLast(buffer: &buffer, seenEOF: seenEOF)
             }
         }
 
@@ -310,7 +319,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
         // we want to call decodeLast once with an empty buffer if we have nothing
         if decodeMode == .last && (self._buffer == nil || self._buffer!.readableBytes == 0) {
             var emptyBuffer = self._buffer ?? ByteBuffer()
-            let message = try self.decoder.decodeLast(buffer: &emptyBuffer, seenEOF: seenEOF)
+            let message = try self._decoder.decodeLast(buffer: &emptyBuffer, seenEOF: seenEOF)
             return (message, true)
         }
 
@@ -320,9 +329,9 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
 
         func decodeOnce(buffer: inout ByteBuffer) throws -> Decoder.InboundOut? {
             if decodeMode == .normal {
-                return try self.decoder.decode(buffer: &buffer)
+                return try self._decoder.decode(buffer: &buffer)
             } else {
-                return try self.decoder.decodeLast(buffer: &buffer, seenEOF: seenEOF)
+                return try self._decoder.decodeLast(buffer: &buffer, seenEOF: seenEOF)
             }
         }
 
@@ -340,7 +349,7 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
         }
 
         if let readerIndex = self._buffer?.readerIndex, readerIndex > 0,
-            self.decoder.shouldReclaimBytes(buffer: self._buffer!)
+            self._decoder.shouldReclaimBytes(buffer: self._buffer!)
         {
             self._buffer!.discardReadBytes()
         }

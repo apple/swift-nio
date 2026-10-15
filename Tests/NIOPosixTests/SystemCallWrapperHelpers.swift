@@ -46,6 +46,9 @@ enum TestError: Error {
     case wouldBlock
 }
 
+// These syscall-wrapper performance helpers are POSIX-only: they open
+// `/dev/null` and issue raw `write`/`close` calls to compare wrapper overhead.
+#if !os(Windows)
 func runStandalone() {
     func assertFun(
         condition: @autoclosure () -> Bool,
@@ -136,3 +139,4 @@ func runSystemCallWrapperPerformanceTest(
         #line
     )
 }
+#endif  // !os(Windows)

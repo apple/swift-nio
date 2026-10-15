@@ -18,6 +18,9 @@ import XCTest
 
 @testable import NIOPosix
 
+// See SyscallAbstractionLayer.swift: the SAL harness is CInt-fd based and gated
+// off on Windows.
+#if !os(Windows)
 struct SALContext {
     let eventLoop: SelectableEventLoop
     private let wakeups: LockedBox<Void>
@@ -167,3 +170,4 @@ func withSALContext<R>(body: (SALContext) throws -> R) throws -> R {
     let result = try body(context)
     return result
 }
+#endif

@@ -197,7 +197,11 @@ extension NIOBSDSocket {
     ) throws -> NIOBSDSocket.Handle? {
         let socket: NIOBSDSocket.Handle = WinSDK.accept(s, addr, addrlen)
         if socket == WinSDK.INVALID_SOCKET {
-            throw IOError(winsock: WSAGetLastError(), reason: "accept")
+            let lastError = WSAGetLastError()
+            if lastError == WSAEWOULDBLOCK {
+                return nil
+            }
+            throw IOError(winsock: lastError, reason: "accept")
         }
         return socket
     }
@@ -228,7 +232,7 @@ extension NIOBSDSocket {
     ) throws -> Bool {
         if WinSDK.connect(s, name, namelen) == SOCKET_ERROR {
             let iResult = WSAGetLastError()
-            if iResult == WSAEWOULDBLOCK { return true }
+            if iResult == WSAEWOULDBLOCK { return false }
             throw IOError(winsock: WSAGetLastError(), reason: "connect")
         }
         return true
@@ -342,6 +346,31 @@ extension NIOBSDSocket {
         msgHdr lpMsg: UnsafePointer<msghdr>,
         flags dwFlags: CInt
     ) throws -> IOResult<size_t> {
+        let WSASendMsg = try Self.lookupWSASendMsg(socket: Handle)
+
+        let lpMsg: LPWSAMSG = UnsafeMutablePointer<WSAMSG>(mutating: lpMsg)
+        var NumberOfBytesSent: DWORD = 0
+        // FIXME(compnerd) is the socket guaranteed to not be overlapped?
+        if WSASendMsg(
+            Handle,
+            lpMsg,
+            DWORD(dwFlags),
+            &NumberOfBytesSent,
+            nil,
+            nil
+        ) == SOCKET_ERROR {
+            throw IOError(winsock: WSAGetLastError(), reason: "sendmsg")
+        }
+        return .processed(size_t(NumberOfBytesSent))
+    }
+
+    /// Resolves the `WSASendMsg` extension function for the given socket.
+    ///
+    /// Winsock does not export `WSASendMsg` for direct linking, it has to be looked up per
+    /// socket through `WSAIoctl`.
+    private static func lookupWSASendMsg(
+        socket Handle: NIOBSDSocket.Handle
+    ) throws -> LPFN_WSASENDMSG {
         // TODO(compnerd) see comment above
         var InBuffer = WSAID_WSASENDMSG
         var pfnWSASendMsg: LPFN_WSASENDMSG?
@@ -366,21 +395,7 @@ extension NIOBSDSocket {
                 reason: "sendmsg"
             )
         }
-
-        let lpMsg: LPWSAMSG = UnsafeMutablePointer<WSAMSG>(mutating: lpMsg)
-        var NumberOfBytesSent: DWORD = 0
-        // FIXME(compnerd) is the socket guaranteed to not be overlapped?
-        if WSASendMsg(
-            Handle,
-            lpMsg,
-            DWORD(dwFlags),
-            &NumberOfBytesSent,
-            nil,
-            nil
-        ) == SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "sendmsg")
-        }
-        return .processed(size_t(NumberOfBytesSent))
+        return WSASendMsg
     }
 
     @inline(never)
@@ -471,7 +486,41 @@ extension NIOBSDSocket {
     )
         throws -> IOResult<Int>
     {
-        .processed(Int(CNIOWindows_sendmmsg(socket, msgvec, vlen, flags)))
+        // Winsock has no `sendmmsg`, so send the messages one at a time, in the same way the
+        // Darwin shim does. The `WSASendMsg` extension function is resolved once for the whole
+        // batch rather than once per message.
+        guard vlen > 0 else {
+            return .processed(0)
+        }
+        let WSASendMsg = try Self.lookupWSASendMsg(socket: socket)
+
+        for i in 0..<Int(vlen) {
+            var dwNumberOfBytesSent: DWORD = 0
+            // FIXME(compnerd) is the socket guaranteed to not be overlapped?
+            let iResult = withUnsafeMutablePointer(to: &msgvec[i].msg_hdr) { lpMsg in
+                WSASendMsg(socket, lpMsg, DWORD(flags), &dwNumberOfBytesSent, nil, nil)
+            }
+
+            if iResult == SOCKET_ERROR {
+                let error = WSAGetLastError()
+                guard i > 0 else {
+                    // Nothing was sent at all. Report a blocking socket as such, which is what
+                    // the POSIX implementation's `syscall(blocking: true)` wrapper does, and
+                    // report anything else as an error.
+                    if error == WSAEWOULDBLOCK {
+                        return .wouldBlock(0)
+                    }
+                    throw IOError(winsock: error, reason: "sendmmsg")
+                }
+                // Earlier messages were sent successfully, so report a short send and leave the
+                // caller to retry the rest, as the Darwin shim does.
+                return .processed(i)
+            }
+
+            msgvec[i].msg_len = CUnsignedInt(dwNumberOfBytesSent)
+        }
+
+        return .processed(Int(vlen))
     }
 
     // NOTE: this should return a `ssize_t`, however, that is not a standard

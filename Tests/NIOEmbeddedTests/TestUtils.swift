@@ -19,6 +19,16 @@ import XCTest
 
 #if canImport(Android)
 import Android
+#elseif os(Windows)
+import WinSDK
+
+// Windows has no `usleep`; approximate it with `Sleep`, which takes whole
+// milliseconds. The coarse precision is fine for these test poll loops.
+@discardableResult
+func usleep(_ microseconds: UInt32) -> CInt {
+    Sleep(microseconds / 1000)
+    return 0
+}
 #endif
 
 // FIXME: Duplicated with NIO

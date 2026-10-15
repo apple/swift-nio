@@ -108,7 +108,7 @@ public final class SystemFileHandle: Sendable {
     /// - Parameters:
     ///   - descriptor: The open file descriptor.
     ///   - path: The path to the file used to open the descriptor.
-    ///   - executor: The executor which system calls will be performed on.
+    ///   - threadPool: The thread pool on which system calls will be performed.
     @_spi(Testing)
     public init(
         takingOwnershipOf descriptor: FileDescriptor,
@@ -848,6 +848,8 @@ extension SystemFileHandle.SendableView {
                         flags: materialization.exclusive ? [.exclusive] : []
                     )
                 }
+                #elseif os(Windows)
+                fatalError("file materialization via rename is unavailable on Windows")
                 #endif
 
                 if materialization.exclusive {
@@ -1045,7 +1047,7 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
                     fromAbsoluteOffset: offset,
                     length: length.bytes
                 ).flatMapError { error in
-                    if let errno = error as? Errno, errno == .illegalSeek {
+                    if let errno = error as? Errno, errno == .illegalSeek || errno == .noSuchAddressOrDevice {
                         guard offset == 0 else {
                             return .failure(
                                 FileSystemError(
@@ -1109,7 +1111,7 @@ extension SystemFileHandle: WritableFileHandleProtocol {
             try sendableView._withUnsafeDescriptor { descriptor in
                 try descriptor.write(contentsOf: bytes, toAbsoluteOffset: offset)
                     .flatMapError { error in
-                        if let errno = error as? Errno, errno == .illegalSeek {
+                        if let errno = error as? Errno, errno == .illegalSeek || errno == .noSuchAddressOrDevice {
                             guard offset == 0 else {
                                 return .failure(
                                     FileSystemError(

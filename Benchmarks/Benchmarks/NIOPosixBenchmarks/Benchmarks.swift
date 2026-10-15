@@ -132,6 +132,51 @@ let benchmarks: @Sendable () -> Void = {
     }
 
     Benchmark(
+        "MTELG.assumeIsolated().scheduleTask(in:_:)",
+        configuration: Benchmark.Configuration(
+            metrics: defaultMetrics,
+            scalingFactor: .mega,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
+        )
+    ) { benchmark in
+        let iterations = benchmark.scaledIterations.count
+        try! eventLoop.submit {
+            benchmark.startMeasurement()
+            let isolatedEventLoop = eventLoop.assumeIsolated()
+            for _ in 0..<iterations {
+                isolatedEventLoop.scheduleTask(in: .hours(1), {})
+            }
+            benchmark.stopMeasurement()
+        }.wait()
+    }
+
+    Benchmark(
+        "MTELG.assumeIsolated().scheduleCallback(in:_:)",
+        configuration: Benchmark.Configuration(
+            metrics: defaultMetrics,
+            scalingFactor: .mega,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
+        )
+    ) { benchmark in
+        final class Timer: NIOScheduledCallbackHandler, Sendable {
+            func handleScheduledCallback(eventLoop: some EventLoop) {}
+        }
+        let timer = Timer()
+        let iterations = benchmark.scaledIterations.count
+
+        try! eventLoop.submit {
+            benchmark.startMeasurement()
+            let isolatedEventLoop = eventLoop.assumeIsolated()
+            for _ in 0..<iterations {
+                let handle = try! isolatedEventLoop.scheduleCallback(in: .hours(1), handler: timer)
+            }
+            benchmark.stopMeasurement()
+        }.wait()
+    }
+
+    Benchmark(
         "Jump to EL and back using execute and unsafecontinuation",
         configuration: .init(
             metrics: defaultMetrics,

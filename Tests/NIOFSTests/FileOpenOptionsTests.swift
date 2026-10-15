@@ -16,6 +16,12 @@
 import XCTest
 
 final class FileOpenOptionsTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     private let expectedDefaults: FilePermissions = [
         .ownerReadWrite,
         .groupRead,

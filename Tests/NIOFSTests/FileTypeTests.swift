@@ -24,6 +24,12 @@ import Android
 #endif
 
 final class FileTypeTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     func testFileTypeEquatable() {
         let types = FileType.allCases
         // Use indices to avoid using the `Equatable` conformance to write the tests.
@@ -56,6 +62,8 @@ final class FileTypeTests: XCTestCase {
     }
 
     func testConversionFromModeT() {
+        // `S_IFSOCK`/`S_IFLNK`/`S_IFBLK` don't exist on Windows.
+        #if !os(Windows)
         XCTAssertEqual(FileType(platformSpecificMode: S_IFIFO), .fifo)
         XCTAssertEqual(FileType(platformSpecificMode: S_IFCHR), .character)
         XCTAssertEqual(FileType(platformSpecificMode: S_IFDIR), .directory)
@@ -66,9 +74,12 @@ final class FileTypeTests: XCTestCase {
         #if canImport(Darwin)
         XCTAssertEqual(FileType(platformSpecificMode: S_IFWHT), .whiteout)
         #endif
+        #endif
     }
 
     func testConversionFromDirentType() {
+        // The `DT_*` constants aren't available on Windows.
+        #if !os(Windows)
         XCTAssertEqual(FileType(direntType: numericCast(DT_FIFO)), .fifo)
         XCTAssertEqual(FileType(direntType: numericCast(DT_CHR)), .character)
         XCTAssertEqual(FileType(direntType: numericCast(DT_DIR)), .directory)
@@ -78,6 +89,7 @@ final class FileTypeTests: XCTestCase {
         XCTAssertEqual(FileType(direntType: numericCast(DT_SOCK)), .socket)
         #if canImport(Darwin)
         XCTAssertEqual(FileType(direntType: numericCast(DT_WHT)), .whiteout)
+        #endif
         #endif
     }
 }

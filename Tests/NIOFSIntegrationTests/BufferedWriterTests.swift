@@ -18,6 +18,12 @@ import XCTest
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class BufferedWriterTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     func testBufferedWriter() async throws {
         let fs = FileSystem.shared
         let path = try await fs.temporaryFilePath()

@@ -2367,6 +2367,9 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
 
     /// Test that send a request and closing immediately performs a successful upgrade
     func testSendRequestCloseImmediately() throws {
+        #if os(Windows)
+        throw XCTSkip("Half-closing the connection immediately races the upgrade and is unreliable on Windows")
+        #endif
         let upgradePerformed = UnsafeMutableTransferBox<Bool>(false)
 
         let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: ["kafkaesque"]) { _ in

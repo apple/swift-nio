@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Darwin) || os(Linux) || os(Android)
+#if canImport(Darwin) || os(Linux) || os(Android) || os(Windows)
 import NIOCore
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)

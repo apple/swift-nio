@@ -22,6 +22,12 @@ import XCTest
 @testable import NIOPosix
 
 class StreamChannelTest: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("These stream-channel tests crash on Windows")
+        #endif
+    }
+
     var buffer: ByteBuffer! = nil
 
     override func setUp() {

@@ -19,7 +19,16 @@ import XCTest
 
 #if ENABLE_MOCKING
 final class SyscallTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     func test_openat() throws {
+        // Asserts POSIX `oflag` bit values; the Windows `OpenOptions` bits are
+        // placeholders, so this doesn't apply as written.
+        #if !os(Windows)
         let fd = FileDescriptor(rawValue: 42)
         let testCases = [
             MockTestCase(
@@ -60,6 +69,7 @@ final class SyscallTests: XCTestCase {
         ]
 
         testCases.run()
+        #endif
     }
 
     func test_stat() throws {
@@ -239,7 +249,9 @@ final class SyscallTests: XCTestCase {
 
     func test_flistxattr() throws {
         let fd = FileDescriptor(rawValue: 42)
-        let buffer = UnsafeMutableBufferPointer<CInterop.PlatformChar>.allocate(capacity: 1024)
+        // `flistxattr` takes a `CChar` buffer (equivalent to `PlatformChar` off
+        // Windows, where `PlatformChar` is `UInt16`).
+        let buffer = UnsafeMutableBufferPointer<CChar>.allocate(capacity: 1024)
         defer { buffer.deallocate() }
 
         let testCases: [MockTestCase] = [

@@ -62,23 +62,17 @@ map_version() {
     check_line=$1
 
     case "$check_line" in
-        *"(5.8)"*)
-            echo "5.8"
-            ;;
-        *"(5.10)"*)
-            echo "5.10"
-            ;;
-        *"(6.0)"*)
-            echo "6.0"
-            ;;
         *"(6.1)"*)
             echo "6.1"
             ;;
         *"(6.2)"*)
             echo "6.2"
             ;;
-        *"(nightly-6.1)"*)
-            echo "nightly-6.1"
+        *"(6.3)"*)
+            echo "6.3"
+            ;;
+        *"(6.4)"*)
+            echo "6.4"
             ;;
         *"(nightly-next)"*)
             echo "nightly-next"

@@ -19,6 +19,10 @@ import XCTest
 @testable import NIOCore
 @testable import NIOPosix
 
+#if os(Windows)
+import ucrt
+#endif
+
 private final class IPHeaderRemoverHandler: ChannelInboundHandler {
     typealias InboundIn = AddressedEnvelope<ByteBuffer>
     typealias InboundOut = AddressedEnvelope<ByteBuffer>
@@ -601,6 +605,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testServerClientBootstrap_withAsyncChannel_clientConnectedSocket() async throws {
+        #if os(Windows)
+        throw XCTSkip("Creating a channel from a pre-connected socket is not supported on Windows")
+        #else
         let eventLoopGroup = self.group!
 
         let channel = try await ServerBootstrap(group: eventLoopGroup)
@@ -658,11 +665,15 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
             group.cancelAll()
         }
+        #endif
     }
 
     // MARK: Datagram Bootstrap
 
     func testDatagramBootstrap_withAsyncChannel_andHostPort() async throws {
+        #if os(Windows)
+        throw XCTSkip("Datagram channels are not yet functional on Windows")
+        #endif
         let eventLoopGroup = self.group!
 
         let serverChannel = try await self.makeUDPServerChannel(eventLoopGroup: eventLoopGroup)
@@ -685,6 +696,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testDatagramBootstrap_withProtocolNegotiation_andHostPort() async throws {
+        #if os(Windows)
+        throw XCTSkip("Datagram channels are not yet functional on Windows")
+        #endif
         let eventLoopGroup = self.group!
 
         // We are creating a channel here to get a random port from the system
@@ -767,6 +781,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     // MARK: - Pipe Bootstrap
 
     func testPipeBootstrap() async throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         let eventLoopGroup = self.group!
         let (pipe1ReadFD, pipe1WriteFD, pipe2ReadFD, pipe2WriteFD) = self.makePipeFileDescriptors()
         let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
@@ -840,6 +857,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testPipeBootstrap_whenInputNil() async throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         let eventLoopGroup = self.group!
         let (pipe1ReadFD, pipe1WriteFD) = self.makePipeFileDescriptors()
         let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
@@ -892,6 +912,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testPipeBootstrap_whenOutputNil() async throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         let eventLoopGroup = self.group!
         let (pipe1ReadFD, pipe1WriteFD) = self.makePipeFileDescriptors()
         let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
@@ -946,6 +969,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testPipeBootstrap_withProtocolNegotiation() async throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         let eventLoopGroup = self.group!
         let (pipe1ReadFD, pipe1WriteFD, pipe2ReadFD, pipe2WriteFD) = self.makePipeFileDescriptors()
         let negotiationResult: EventLoopFuture<NegotiationResult>
@@ -1034,6 +1060,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testPipeBootstrap_callsChannelInitializer() async throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         let eventLoopGroup = self.group!
         let (pipe1ReadFD, pipe1WriteFD, pipe2ReadFD, pipe2WriteFD) = self.makePipeFileDescriptors()
         let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
@@ -1122,6 +1151,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testPipeBootstrap_whenInputNil_callsChannelInitializer() async throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         let eventLoopGroup = self.group!
         let (pipe1ReadFD, pipe1WriteFD) = self.makePipeFileDescriptors()
         let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
@@ -1185,6 +1217,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testPipeBootstrap_whenOutputNil_callsChannelInitializer() async throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
         let eventLoopGroup = self.group!
         let (pipe1ReadFD, pipe1WriteFD) = self.makePipeFileDescriptors()
         let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
@@ -1252,6 +1287,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     // MARK: RawSocket bootstrap
 
     func testRawSocketBootstrap() async throws {
+        #if os(Windows)
+        throw XCTSkip("Raw sockets are not yet supported on Windows")
+        #endif
         try XCTSkipIfUserHasNotEnoughRightsForRawSocketAPI()
         let eventLoopGroup = self.group!
 
@@ -1273,6 +1311,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testRawSocketBootstrap_withProtocolNegotiation() async throws {
+        #if os(Windows)
+        throw XCTSkip("Raw sockets are not yet supported on Windows")
+        #endif
         try XCTSkipIfUserHasNotEnoughRightsForRawSocketAPI()
         let eventLoopGroup = self.group!
 
@@ -1321,6 +1362,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     // MARK: VSock
 
     func testVSock() async throws {
+        #if os(Windows)
+        throw XCTSkip("VSOCK is not supported on Windows")
+        #else
         try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
         let eventLoopGroup = self.group!
 
@@ -1379,6 +1423,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
             group.cancelAll()
         }
+        #endif
     }
 
     // MARK: - Test Helpers
@@ -1388,11 +1433,19 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     ) {
         var pipe1FDs: [CInt] = [-1, -1]
         pipe1FDs.withUnsafeMutableBufferPointer { ptr in
+            #if os(Windows)
+            XCTAssertEqual(0, _pipe(ptr.baseAddress!, 4096, _O_BINARY))
+            #else
             XCTAssertEqual(0, pipe(ptr.baseAddress!))
+            #endif
         }
         var pipe2FDs: [CInt] = [-1, -1]
         pipe2FDs.withUnsafeMutableBufferPointer { ptr in
+            #if os(Windows)
+            XCTAssertEqual(0, _pipe(ptr.baseAddress!, 4096, _O_BINARY))
+            #else
             XCTAssertEqual(0, pipe(ptr.baseAddress!))
+            #endif
         }
         return (pipe1FDs[0], pipe1FDs[1], pipe2FDs[0], pipe2FDs[1])
     }
@@ -1400,7 +1453,11 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     private func makePipeFileDescriptors() -> (pipeReadFD: CInt, pipeWriteFD: CInt) {
         var pipeFDs: [CInt] = [-1, -1]
         pipeFDs.withUnsafeMutableBufferPointer { ptr in
+            #if os(Windows)
+            XCTAssertEqual(0, _pipe(ptr.baseAddress!, 4096, _O_BINARY))
+            #else
             XCTAssertEqual(0, pipe(ptr.baseAddress!))
+            #endif
         }
         return (pipeFDs[0], pipeFDs[1])
     }
@@ -1520,6 +1577,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             }
     }
 
+    #if !os(Windows)
     private func makeClientChannel(
         eventLoopGroup: EventLoopGroup,
         fileDescriptor: CInt
@@ -1535,6 +1593,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 }
             }
     }
+    #endif
 
     private func makeClientChannelWithProtocolNegotiation(
         eventLoopGroup: EventLoopGroup,

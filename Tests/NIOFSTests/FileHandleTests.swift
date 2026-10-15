@@ -19,6 +19,12 @@ import XCTest
 #if ENABLE_MOCKING
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 internal final class FileHandleTests: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("The NIOFileSystem family is not yet functional on Windows")
+        #endif
+    }
+
     private func withHandleForMocking(
         path: FilePath = "/probably/does/not/exist",
         _ execute: (SystemFileHandle, MockingDriver) throws -> Void

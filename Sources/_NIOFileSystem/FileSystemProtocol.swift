@@ -306,6 +306,10 @@ public protocol FileSystemProtocol: Sendable {
     /// a file with a directory and vice versa. After the file or directory at `destinationPath`
     /// has been replaced, the item at `existingPath` will be removed.
     ///
+    /// > Note: This method behaves identically to ``FileSystemProtocol/moveItem(at:to:)``, except that it will replace
+    /// the item at `destinationPath` if it already exists. The item at `existingPath` is moved to the new location and
+    /// will no longer exist at its original path.
+    ///
     /// - Parameters:
     ///   - destinationPath: The path of the file or directory to replace.
     ///   - existingPath: The path of the existing file or directory.

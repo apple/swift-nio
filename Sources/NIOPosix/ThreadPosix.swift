@@ -140,8 +140,7 @@ enum ThreadOpsPosix: ThreadOps {
         // 64 bytes should be good enough as on Linux the limit is usually 16
         // and it's very unlikely a user will ever set something longer
         // anyway.
-        var chars: [CChar] = Array(repeating: 0, count: 64)
-        return chars.withUnsafeMutableBufferPointer { ptr in
+        withUnsafeTemporaryAllocation(of: CChar.self, capacity: 64) { ptr in
             guard sys_pthread_getname_np(thread.handle, ptr.baseAddress!, ptr.count) == 0 else {
                 return nil
             }

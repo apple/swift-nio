@@ -27,54 +27,92 @@ public struct ByteCount: Hashable, Sendable {
     ///
     /// One kilobyte is 1000 bytes.
     ///
+    /// If the resulting number of bytes does not fit in an `Int64` the value
+    /// saturates to `Int64.max` (or `Int64.min` for negative counts) rather
+    /// than overflowing.
+    ///
     /// - Parameter count: The number of kilobytes
     public static func kilobytes(_ count: Int64) -> ByteCount {
-        ByteCount(bytes: 1000 * count)
+        ByteCount(bytes: count.multipliedSaturating(by: 1000))
     }
 
     /// Returns a ``ByteCount`` with a given number of megabytes
     ///
     /// One megabyte is 1,000,000 bytes.
     ///
+    /// If the resulting number of bytes does not fit in an `Int64` the value
+    /// saturates to `Int64.max` (or `Int64.min` for negative counts) rather
+    /// than overflowing.
+    ///
     /// - Parameter count: The number of megabytes
     public static func megabytes(_ count: Int64) -> ByteCount {
-        ByteCount(bytes: 1000 * 1000 * count)
+        ByteCount(bytes: count.multipliedSaturating(by: 1000 * 1000))
     }
 
     /// Returns a ``ByteCount`` with a given number of gigabytes
     ///
     /// One gigabyte is 1,000,000,000 bytes.
     ///
+    /// If the resulting number of bytes does not fit in an `Int64` the value
+    /// saturates to `Int64.max` (or `Int64.min` for negative counts) rather
+    /// than overflowing.
+    ///
     /// - Parameter count: The number of gigabytes
     public static func gigabytes(_ count: Int64) -> ByteCount {
-        ByteCount(bytes: 1000 * 1000 * 1000 * count)
+        ByteCount(bytes: count.multipliedSaturating(by: 1000 * 1000 * 1000))
     }
 
     /// Returns a ``ByteCount`` with a given number of kibibytes
     ///
     /// One kibibyte is 1024 bytes.
     ///
+    /// If the resulting number of bytes does not fit in an `Int64` the value
+    /// saturates to `Int64.max` (or `Int64.min` for negative counts) rather
+    /// than overflowing.
+    ///
     /// - Parameter count: The number of kibibytes
     public static func kibibytes(_ count: Int64) -> ByteCount {
-        ByteCount(bytes: 1024 * count)
+        ByteCount(bytes: count.multipliedSaturating(by: 1024))
     }
 
     /// Returns a ``ByteCount`` with a given number of mebibytes
     ///
     /// One mebibyte is 10,485,760 bytes.
     ///
+    /// If the resulting number of bytes does not fit in an `Int64` the value
+    /// saturates to `Int64.max` (or `Int64.min` for negative counts) rather
+    /// than overflowing.
+    ///
     /// - Parameter count: The number of mebibytes
     public static func mebibytes(_ count: Int64) -> ByteCount {
-        ByteCount(bytes: 1024 * 1024 * count)
+        ByteCount(bytes: count.multipliedSaturating(by: 1024 * 1024))
     }
 
     /// Returns a ``ByteCount`` with a given number of gibibytes
     ///
     /// One gibibyte is 10,737,418,240 bytes.
     ///
+    /// If the resulting number of bytes does not fit in an `Int64` the value
+    /// saturates to `Int64.max` (or `Int64.min` for negative counts) rather
+    /// than overflowing.
+    ///
     /// - Parameter count: The number of gibibytes
     public static func gibibytes(_ count: Int64) -> ByteCount {
-        ByteCount(bytes: 1024 * 1024 * 1024 * count)
+        ByteCount(bytes: count.multipliedSaturating(by: 1024 * 1024 * 1024))
+    }
+}
+
+extension Int64 {
+    /// Multiplies `self` by `other`, saturating to `Int64.max` or `Int64.min`
+    /// on overflow instead of trapping.
+    fileprivate func multipliedSaturating(by other: Int64) -> Int64 {
+        let (result, overflow) = self.multipliedReportingOverflow(by: other)
+        guard overflow else {
+            return result
+        }
+        // The factors are constant positive multipliers, so the sign of the
+        // saturated result follows the sign of `self`.
+        return self < 0 ? .min : .max
     }
 }
 

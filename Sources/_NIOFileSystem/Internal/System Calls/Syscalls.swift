@@ -193,13 +193,15 @@ internal func system_flistxattr(
     return flistxattr(fd, namebuf, size, 0)
     #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return flistxattr(fd, namebuf, size)
+    #elseif os(Windows)
+    fatalError("flistxattr is unavailable on Windows")
     #endif
 }
 
 /// fgetxattr(2): Get an extended attribute value
 internal func system_fgetxattr(
     _ fd: FileDescriptor.RawValue,
-    _ name: UnsafePointer<CChar>,
+    _ name: UnsafePointer<CInterop.PlatformChar>,
     _ value: UnsafeMutableRawPointer?,
     _ size: Int
 ) -> Int {
@@ -215,13 +217,15 @@ internal func system_fgetxattr(
     return fgetxattr(fd, name, value, size, 0, 0)
     #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fgetxattr(fd, name, value, size)
+    #elseif os(Windows)
+    fatalError("fgetxattr is unavailable on Windows")
     #endif
 }
 
 /// fsetxattr(2): Set an extended attribute value
 internal func system_fsetxattr(
     _ fd: FileDescriptor.RawValue,
-    _ name: UnsafePointer<CChar>,
+    _ name: UnsafePointer<CInterop.PlatformChar>,
     _ value: UnsafeRawPointer?,
     _ size: Int
 ) -> CInt {
@@ -237,13 +241,15 @@ internal func system_fsetxattr(
     return fsetxattr(fd, name, value, size, 0, 0)
     #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fsetxattr(fd, name, value, size, 0)
+    #elseif os(Windows)
+    fatalError("fsetxattr is unavailable on Windows")
     #endif
 }
 
 /// fremovexattr(2): Remove an extended attribute value
 internal func system_fremovexattr(
     _ fd: FileDescriptor.RawValue,
-    _ name: UnsafePointer<CChar>
+    _ name: UnsafePointer<CInterop.PlatformChar>
 ) -> CInt {
     #if ENABLE_MOCKING
     if mockingEnabled {
@@ -256,6 +262,8 @@ internal func system_fremovexattr(
     return fremovexattr(fd, name, 0)
     #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fremovexattr(fd, name)
+    #elseif os(Windows)
+    fatalError("fremovexattr is unavailable on Windows")
     #endif
 }
 
