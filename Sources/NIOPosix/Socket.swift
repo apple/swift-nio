@@ -18,6 +18,10 @@ import CNIOLinux
 import CNIOOpenBSD
 import NIOCore
 
+#if os(FreeBSD)
+import CNIOFreeBSD
+#endif
+
 #if canImport(WinSDK)
 import WinSDK
 #endif
