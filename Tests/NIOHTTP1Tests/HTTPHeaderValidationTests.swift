@@ -801,7 +801,7 @@ import Testing
         let invalidHeaderValue = "HeaderValueWith\rCR"
 
         let channel = EmbeddedChannel()
-        var configuration = NIOHTTPServerPipelineConfiguration()
+        var configuration = NIOHTTPServerPipelineSynchronousConfiguration()
         configuration.errorHandling = false
         configuration.outboundHeaderValidation = false
         try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: configuration)
@@ -885,7 +885,7 @@ extension EmbeddedChannel {
     }
 }
 
-extension NIOHTTPServerPipelineConfiguration {
+extension NIOHTTPServerPipelineSynchronousConfiguration {
     static var noErrorHandling: Self {
         var configuration = Self()
         configuration.errorHandling = false

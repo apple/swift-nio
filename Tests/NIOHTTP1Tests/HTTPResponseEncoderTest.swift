@@ -269,7 +269,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         }
 
         XCTAssertNoThrow(
-            try channel.pipeline.configureHTTPServerPipeline(configuration: .noFramingTransformation).wait()
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noFramingTransformation)
         )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
@@ -610,7 +610,7 @@ class HTTPResponseEncoderTests: XCTestCase {
     }
 }
 
-extension NIOHTTPServerPipelineConfiguration {
+extension NIOHTTPServerPipelineSynchronousConfiguration {
     static var noFramingTransformation: Self {
         var configuration = Self()
         configuration.encoderConfiguration = .noFramingTransformation

@@ -30,7 +30,9 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
             }
         }
         let channel = EmbeddedChannel()
-        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(configuration: .withErrorHandling).wait())
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .withErrorHandling)
+        )
         XCTAssertNoThrow(try channel.pipeline.addHandler(CloseOnHTTPErrorHandler()).wait())
 
         var buffer = channel.allocator.buffer(capacity: 1024)
@@ -66,7 +68,9 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
             case error
         }
         let channel = EmbeddedChannel()
-        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(configuration: .withErrorHandling).wait())
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .withErrorHandling)
+        )
 
         channel.pipeline.fireErrorCaught(DummyError.error)
         XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
@@ -82,9 +86,9 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
             XCTAssertNoThrow(try channel.finish())
         }
 
-        var configuration = NIOHTTPServerPipelineConfiguration.withErrorHandling
+        var configuration = NIOHTTPServerPipelineSynchronousConfiguration.withErrorHandling
         configuration.pipeliningAssistance = false
-        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(configuration: configuration).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: configuration))
         let res = HTTPServerResponsePart.head(
             .init(
                 version: .http1_1,
@@ -172,9 +176,9 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         let channel = EmbeddedChannel()
         defer { XCTAssertNoThrow(try channel.finish(acceptAlreadyClosed: false)) }
 
-        var configuration = NIOHTTPServerPipelineConfiguration.withErrorHandling
+        var configuration = NIOHTTPServerPipelineSynchronousConfiguration.withErrorHandling
         configuration.pipeliningAssistance = false
-        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(configuration: configuration).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: configuration))
         XCTAssertNoThrow(try channel.connect(to: .makeAddressResolvingHost("127.0.0.1", port: 0)).wait())
 
         // Send an head that expects a continue informational response
@@ -214,9 +218,9 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
 
         XCTAssertNoThrow(try channel.connect(to: .makeAddressResolvingHost("127.0.0.1", port: 0)).wait())
 
-        var configuration = NIOHTTPServerPipelineConfiguration.withErrorHandling
+        var configuration = NIOHTTPServerPipelineSynchronousConfiguration.withErrorHandling
         configuration.pipeliningAssistance = false
-        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(configuration: configuration).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: configuration))
 
         // Send an head that expects a continue informational response
         let reqHeadBytes = "POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nExpect: 100-continue\r\n\r\n"
@@ -258,7 +262,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
 
 }
 
-extension NIOHTTPServerPipelineConfiguration {
+extension NIOHTTPServerPipelineSynchronousConfiguration {
     static var withErrorHandling: Self {
         var configuration = Self()
         configuration.errorHandling = true
