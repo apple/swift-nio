@@ -1115,7 +1115,7 @@ extension ChannelPipeline.SynchronousOperations {
 ///
 /// The upgraders in this configuration must be `Sendable`. If you are configuring the pipeline synchronously on the
 /// Channel's event loop and your upgraders are not `Sendable`, use ``NIOHTTPServerPipelineSynchronousConfiguration``
-/// with ``ChannelPipeline/SynchronousOperations/configureHTTPServerPipeline(position:configuration:)`` instead.
+/// with ``NIOCore/ChannelPipeline/SynchronousOperations/configureHTTPServerPipeline(position:configuration:)`` instead.
 public struct NIOHTTPServerPipelineConfiguration: Sendable {
     /// Whether to provide assistance handling HTTP clients that pipeline their requests. Defaults to `true`. If
     /// `false`, users will need to handle clients that pipeline themselves.
