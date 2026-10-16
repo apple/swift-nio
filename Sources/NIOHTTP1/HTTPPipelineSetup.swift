@@ -1212,7 +1212,7 @@ public struct NIOHTTPServerPipelineSynchronousConfiguration {
         public var upgraders: [HTTPServerProtocolUpgrader]
 
         /// Called once the upgrade is complete, with the context of the handler performing the upgrade.
-        public var completionHandler: @Sendable (ChannelHandlerContext) -> Void
+        public var completionHandler: (ChannelHandlerContext) -> Void
 
         /// Creates an upgrade configuration.
         ///
@@ -1222,7 +1222,7 @@ public struct NIOHTTPServerPipelineSynchronousConfiguration {
         ///     the upgrade.
         public init(
             upgraders: [HTTPServerProtocolUpgrader],
-            completionHandler: @escaping @Sendable (ChannelHandlerContext) -> Void
+            completionHandler: @escaping (ChannelHandlerContext) -> Void
         ) {
             self.upgraders = upgraders
             self.completionHandler = completionHandler
