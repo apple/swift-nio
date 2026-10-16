@@ -703,16 +703,29 @@ extension ChannelPipeline.SynchronousOperations {
             leftOverBytesStrategy: leftOverBytesStrategy,
             limitConfiguration: decoderLimitConfiguration
         )
-        var handlers: [RemovableChannelHandler] = [requestEncoder, ByteToMessageHandler(responseDecoder)]
+        let decoderHandler = ByteToMessageHandler(responseDecoder)
+
+        // Both arrays are built with compile-time upcasts from the same handler
+        // instances; `httpHandlers` is everything the upgrader removes after a
+        // successful upgrade, encoder included. Passing `[RemovableChannelHandler]`
+        // to `addHandlers`, or mapping between the two existential types, would be
+        // a *checked* cast that re-resolves each element's protocol conformances
+        // at runtime. The pre-Swift 6.0 runtime (iOS 17 and earlier) cannot
+        // resolve the conformance of a generic type with a `~Copyable` parameter
+        // and traps with `swift_dynamicCastFailure` instead — see #3764.
+        var handlers: [ChannelHandler] = [requestEncoder, decoderHandler]
+        var httpHandlers: [RemovableChannelHandler] = [requestEncoder, decoderHandler]
 
         if enableOutboundHeaderValidation {
-            handlers.append(NIOHTTPRequestHeadersValidator())
+            let headerValidator = NIOHTTPRequestHeadersValidator()
+            handlers.append(headerValidator)
+            httpHandlers.append(headerValidator)
         }
 
         if let upgrade = upgrade {
             let upgrader = NIOHTTPClientUpgradeHandler(
                 upgraders: upgrade.upgraders,
-                httpHandlers: handlers,
+                httpHandlers: httpHandlers,
                 upgradeCompletionHandler: upgrade.completionHandler
             )
             handlers.append(upgrader)
@@ -1088,26 +1101,43 @@ extension ChannelPipeline.SynchronousOperations {
             limitConfiguration: configuration.decoderLimitConfiguration,
             responseEncoder: responseEncoder
         )
+        let decoderHandler = ByteToMessageHandler(requestDecoder)
 
-        var handlers: [RemovableChannelHandler] = [responseEncoder, ByteToMessageHandler(requestDecoder)]
+        // Both arrays are built with compile-time upcasts from the same handler
+        // instances; `extraHTTPHandlers` holds everything but the encoder, which
+        // is what `Array(handlers.dropFirst())` used to produce. Passing
+        // `[RemovableChannelHandler]` to `addHandlers`, or mapping between the
+        // two existential types, would be a *checked* cast that re-resolves each
+        // element's protocol conformances at runtime. The pre-Swift 6.0 runtime
+        // (iOS 17 and earlier) cannot resolve the conformance of a generic type
+        // with a `~Copyable` parameter and traps with `swift_dynamicCastFailure`
+        // instead — see #3764.
+        var handlers: [ChannelHandler] = [responseEncoder, decoderHandler]
+        var extraHTTPHandlers: [RemovableChannelHandler] = [decoderHandler]
 
         if configuration.pipeliningAssistance {
-            handlers.append(HTTPServerPipelineHandler())
+            let pipelineHandler = HTTPServerPipelineHandler()
+            handlers.append(pipelineHandler)
+            extraHTTPHandlers.append(pipelineHandler)
         }
 
         if configuration.outboundHeaderValidation {
-            handlers.append(NIOHTTPResponseHeadersValidator())
+            let headerValidator = NIOHTTPResponseHeadersValidator()
+            handlers.append(headerValidator)
+            extraHTTPHandlers.append(headerValidator)
         }
 
         if configuration.errorHandling {
-            handlers.append(HTTPServerProtocolErrorHandler())
+            let protocolErrorHandler = HTTPServerProtocolErrorHandler()
+            handlers.append(protocolErrorHandler)
+            extraHTTPHandlers.append(protocolErrorHandler)
         }
 
         if let upgrade = configuration.serverUpgrade {
             let upgrader = HTTPServerUpgradeHandler(
                 upgraders: upgrade.upgraders,
                 httpEncoder: responseEncoder,
-                extraHTTPHandlers: Array(handlers.dropFirst()),
+                extraHTTPHandlers: extraHTTPHandlers,
                 upgradeCompletionHandler: upgrade.completionHandler
             )
             handlers.append(upgrader)
