@@ -230,6 +230,7 @@ extension ChannelPipeline {
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     @preconcurrency
     @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
+    @_disfavoredOverload
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -275,6 +276,7 @@ extension ChannelPipeline {
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     @preconcurrency
     @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
+    @_disfavoredOverload
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -323,6 +325,7 @@ extension ChannelPipeline {
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     @preconcurrency
     @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
+    @_disfavoredOverload
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -374,6 +377,7 @@ extension ChannelPipeline {
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     @preconcurrency
     @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
+    @_disfavoredOverload
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -406,11 +410,12 @@ extension ChannelPipeline {
     ///
     /// - Parameters:
     ///   - position: Where in the pipeline to add the HTTP server handlers. Defaults to `.last`.
-    ///   - configuration: The configuration for the HTTP server pipeline.
+    ///   - configuration: The configuration for the HTTP server pipeline. Defaults to
+    ///     ``NIOHTTPServerPipelineConfiguration/init()``.
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
-        configuration: NIOHTTPServerPipelineConfiguration
+        configuration: NIOHTTPServerPipelineConfiguration = .init()
     ) -> EventLoopFuture<Void> {
         if self.eventLoop.inEventLoop {
             return self.eventLoop.makeCompletedFuture {
@@ -743,6 +748,7 @@ extension ChannelPipeline.SynchronousOperations {
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
     /// - Throws: If the pipeline could not be configured.
     @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
+    @_disfavoredOverload
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.SynchronousOperations.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -832,6 +838,7 @@ extension ChannelPipeline.SynchronousOperations {
     ///         spec compliance. Defaults to `true`.
     /// - Throws: If the pipeline could not be configured.
     @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
+    @_disfavoredOverload
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.SynchronousOperations.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -929,6 +936,7 @@ extension ChannelPipeline.SynchronousOperations {
     ///   - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
     /// - Throws: If the pipeline could not be configured.
     @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
+    @_disfavoredOverload
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.SynchronousOperations.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -980,6 +988,7 @@ extension ChannelPipeline.SynchronousOperations {
     ///   - decoderLimitConfiguration: The limit configuration for the ``HTTPDecoder``.
     /// - Throws: If the pipeline could not be configured.
     @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
+    @_disfavoredOverload
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.SynchronousOperations.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -1066,11 +1075,12 @@ extension ChannelPipeline.SynchronousOperations {
     ///
     /// - Parameters:
     ///   - position: Where in the pipeline to add the HTTP server handlers. Defaults to `.last`.
-    ///   - configuration: The configuration for the HTTP server pipeline.
+    ///   - configuration: The configuration for the HTTP server pipeline. Defaults to
+    ///     ``NIOHTTPServerPipelineSynchronousConfiguration/init()``.
     /// - Throws: If the pipeline could not be configured.
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.SynchronousOperations.Position = .last,
-        configuration: NIOHTTPServerPipelineSynchronousConfiguration
+        configuration: NIOHTTPServerPipelineSynchronousConfiguration = .init()
     ) throws {
         self.eventLoop.assertInEventLoop()
 

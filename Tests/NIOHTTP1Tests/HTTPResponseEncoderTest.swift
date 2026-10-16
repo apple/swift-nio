@@ -553,7 +553,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         // request-method queue advances correctly and the response stream isn't corrupted.
         let channel = EmbeddedChannel()
         defer { XCTAssertNoThrow(try channel.finish()) }
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .init())
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline()
 
         func readAllOutbound() throws -> String {
             var all = channel.allocator.buffer(capacity: 128)
