@@ -945,7 +945,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertTrue(self.channel.isActive)
 
         // Now wait for 3 seconds (2 seconds less than the timeout period).
-        self.channel.embeddedEventLoop.advanceTime(by: .seconds(2))
+        self.channel.embeddedEventLoop.advanceTime(by: .seconds(3))
 
         // The channel should still be open as the timeout hasn't been reached.
         XCTAssertTrue(self.channel.isActive)
