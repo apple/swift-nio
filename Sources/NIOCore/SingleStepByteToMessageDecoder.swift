@@ -182,7 +182,7 @@ extension NIOSingleStepByteToMessageDecoder where Self: ~Copyable {
 ///
 ///     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 ///     let bootstrap = ServerBootstrap(group: group).childChannelInitializer({channel in
-///         channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true, withErrorHandling: true).flatMap { _ in
+///         channel.pipeline.configureHTTPServerPipeline().flatMap { _ in
 ///             channel.pipeline.addHandlers([RawBodyMessageHandler(), DecodedBodyHTTPHandler()])
 ///         }
 ///     })
