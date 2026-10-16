@@ -351,7 +351,9 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
                 self.lifecycleState = .quiescing(receivedRequestEnd: true, timeoutCallback: timeoutCallback)
                 self.eventBuffer.removeAll()
             }
-            if case .quiescing(receivedRequestEnd: true, let timeoutCallback) = self.lifecycleState, self.state == .idle {
+            if case .quiescing(receivedRequestEnd: true, let timeoutCallback) = self.lifecycleState,
+                self.state == .idle
+            {
                 self.lifecycleState = .quiescingCompleted
                 timeoutCallback?.cancel()
                 context.close(promise: nil)
@@ -479,13 +481,13 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             startReadingAgain = true
 
             switch self.lifecycleState {
-            case .quiescing(receivedRequestEnd: false, let forcefulShutdownCallback) where self.state == .responseEndPending:
+            case .quiescing(receivedRequestEnd: false, let timeoutCallback) where self.state == .responseEndPending:
                 // we just received the .end that we're missing so we can fall through to closing the connection
                 fallthrough
-            case .quiescing(receivedRequestEnd: true, let forcefulShutdownCallback):
+            case .quiescing(receivedRequestEnd: true, let timeoutCallback):
                 let loopBoundContext = context.loopBound
                 self.lifecycleState = .quiescingCompleted
-                forcefulShutdownCallback?.cancel()
+                timeoutCallback?.cancel()
                 context.write(data).flatMap {
                     let context = loopBoundContext.value
                     return context.close()
