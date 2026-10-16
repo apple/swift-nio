@@ -106,6 +106,8 @@ More specialized modules provide concrete implementations of many of the abstrac
 - ``ByteToMessageHandler``
 - ``NIOSingleStepByteToMessageDecoder``
 - ``NIOSingleStepByteToMessageProcessor``
+- ``NIOSingleStepByteToMessageHandle``
+- ``NIOSingleStepDecodeMode``
 - ``MessageToByteEncoder``
 - ``MessageToByteHandler``
 
