@@ -1128,6 +1128,153 @@ class HTTPClientUpgradeTestCase: XCTestCase {
             XCTAssertEqual(NIOHTTPClientUpgradeError.receivedResponseBeforeRequestSent, reportedError)
         }
     }
+
+    // MARK: Handler composition of the configured pipelines.
+
+    /// The configured client pipeline wires the encoder, the byte-to-message
+    /// decoder, the (optional) header validator and the upgrader. Pins the
+    /// composition of the handler lists built in `_addHTTPClientHandlersFallback`.
+    func testClientPipelineHandlerComposition() throws {
+        func assertConfigured(enableOutboundHeaderValidation: Bool, file: StaticString = #filePath, line: UInt = #line) {
+            let channel = EmbeddedChannel()
+            let upgrade: NIOHTTPClientUpgradeSendableConfiguration = (
+                upgraders: [SuccessfulClientUpgrader(forProtocol: "test")],
+                completionHandler: { _ in }
+            )
+
+            XCTAssertNoThrow(
+                try channel.pipeline.addHTTPClientHandlers(
+                    leftOverBytesStrategy: .dropBytes,
+                    enableOutboundHeaderValidation: enableOutboundHeaderValidation,
+                    withClientUpgrade: upgrade
+                ).wait(),
+                file: file,
+                line: line
+            )
+
+            XCTAssertNoThrow(
+                try channel.pipeline.containsHandler(type: HTTPRequestEncoder.self).wait(),
+                file: file,
+                line: line
+            )
+            XCTAssertNoThrow(
+                try channel.pipeline.containsHandler(type: ByteToMessageHandler<HTTPResponseDecoder>.self).wait(),
+                file: file,
+                line: line
+            )
+            XCTAssertNoThrow(
+                try channel.pipeline.containsHandler(type: NIOHTTPClientUpgradeHandler.self).wait(),
+                file: file,
+                line: line
+            )
+            if enableOutboundHeaderValidation {
+                XCTAssertNoThrow(
+                    try channel.pipeline.containsHandler(type: NIOHTTPRequestHeadersValidator.self).wait(),
+                    file: file,
+                    line: line
+                )
+            } else {
+                XCTAssertThrowsError(
+                    try channel.pipeline.containsHandler(type: NIOHTTPRequestHeadersValidator.self).wait(),
+                    file: file,
+                    line: line
+                )
+            }
+            _ = try? channel.finish()
+        }
+
+        assertConfigured(enableOutboundHeaderValidation: true)
+        assertConfigured(enableOutboundHeaderValidation: false)
+    }
+
+    /// The configured server pipeline wires the encoder, the byte-to-message
+    /// decoder and each optional handler. Pins the composition of the handler
+    /// lists built in `_configureHTTPServerPipeline`.
+    func testServerPipelineHandlerComposition() throws {
+        func assertConfigured(
+            pipelining: Bool,
+            headerValidation: Bool,
+            errorHandling: Bool,
+            file: StaticString = #filePath,
+            line: UInt = #line
+        ) {
+            let channel = EmbeddedChannel()
+            let upgrade: NIOHTTPServerUpgradeSendableConfiguration = (
+                upgraders: [],
+                completionHandler: { _ in }
+            )
+
+            XCTAssertNoThrow(
+                try channel.pipeline.configureHTTPServerPipeline(
+                    withPipeliningAssistance: pipelining,
+                    withServerUpgrade: upgrade,
+                    withErrorHandling: errorHandling,
+                    withOutboundHeaderValidation: headerValidation
+                ).wait(),
+                file: file,
+                line: line
+            )
+
+            XCTAssertNoThrow(
+                try channel.pipeline.containsHandler(type: HTTPResponseEncoder.self).wait(),
+                file: file,
+                line: line
+            )
+            XCTAssertNoThrow(
+                try channel.pipeline.containsHandler(type: ByteToMessageHandler<HTTPRequestDecoder>.self).wait(),
+                file: file,
+                line: line
+            )
+            XCTAssertNoThrow(
+                try channel.pipeline.containsHandler(type: HTTPServerUpgradeHandler.self).wait(),
+                file: file,
+                line: line
+            )
+            if pipelining {
+                XCTAssertNoThrow(
+                    try channel.pipeline.containsHandler(type: HTTPServerPipelineHandler.self).wait(),
+                    file: file,
+                    line: line
+                )
+            } else {
+                XCTAssertThrowsError(
+                    try channel.pipeline.containsHandler(type: HTTPServerPipelineHandler.self).wait(),
+                    file: file,
+                    line: line
+                )
+            }
+            if headerValidation {
+                XCTAssertNoThrow(
+                    try channel.pipeline.containsHandler(type: NIOHTTPResponseHeadersValidator.self).wait(),
+                    file: file,
+                    line: line
+                )
+            } else {
+                XCTAssertThrowsError(
+                    try channel.pipeline.containsHandler(type: NIOHTTPResponseHeadersValidator.self).wait(),
+                    file: file,
+                    line: line
+                )
+            }
+            if errorHandling {
+                XCTAssertNoThrow(
+                    try channel.pipeline.containsHandler(type: HTTPServerProtocolErrorHandler.self).wait(),
+                    file: file,
+                    line: line
+                )
+            } else {
+                XCTAssertThrowsError(
+                    try channel.pipeline.containsHandler(type: HTTPServerProtocolErrorHandler.self).wait(),
+                    file: file,
+                    line: line
+                )
+            }
+            _ = try? channel.finish()
+        }
+
+        assertConfigured(pipelining: true, headerValidation: true, errorHandling: true)
+        assertConfigured(pipelining: false, headerValidation: false, errorHandling: false)
+    }
 }
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
