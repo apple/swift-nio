@@ -51,9 +51,12 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     // Otherwise, we will try to handle the situation as cleanly as possible
     internal var failOnPreconditions: Bool = true
 
+    private var configuration: HTTPServerPipelineHandlerConfiguration
+
     public init() {
         self.nextExpectedInboundMessage = nil
         self.nextExpectedOutboundMessage = nil
+        self.configuration = HTTPServerPipelineHandlerConfiguration()
 
         debugOnly {
             self.nextExpectedInboundMessage = .head
@@ -61,17 +64,10 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         }
     }
 
-    /// Create a `HTTPServerPipelineHandler` with a `maximumGracefulShutdownDuration`, which determines the maximum
-    /// duration to wait for the connection to quiesce before the connection is forcefully closed.
-    ///
-    /// - Parameter maximumGracefulShutdownDuration: The longest this handler will wait after receiving a
-    ///   `ChannelShouldQuiesceEvent` before forcefully closing the `Channel`. Use ``init()`` if you do not want to
-    ///   enable a graceful shutdown timeout.
-    ///
-    /// - Note: The deadline only applies if the connection cannot be closed as soon as the quiescing event is received.
-    public convenience init(maximumGracefulShutdownDuration: TimeAmount) {
+    /// Create a ``HTTPServerPipelineHandler`` from ``HTTPServerPipelineHandlerConfiguration``.
+    public convenience init(configuration: HTTPServerPipelineHandlerConfiguration) {
         self.init()
-        self.maximumGracefulShutdownDuration = maximumGracefulShutdownDuration
+        self.configuration = configuration
     }
 
     private enum ConnectionStateAction {
@@ -294,9 +290,6 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     private var nextExpectedInboundMessage: Optional<NextExpectedMessageType>
     // always `nil` in release builds, never `nil` in debug builds
     private var nextExpectedOutboundMessage: Optional<NextExpectedMessageType>
-    // The longest we will wait after receiving a `ChannelShouldQuiesceEvent` before forcefully closing the `Channel`.
-    // If set to `nil`, there is no timeout.
-    private var maximumGracefulShutdownDuration: TimeAmount?
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         switch self.lifecycleState {
@@ -387,7 +380,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     /// - Returns: The scheduled callback, or `nil` if no `maximumGracefulShutdownDuration` was configured or if there
     ///   was an error when scheduling the callback.
     private func scheduleGracefulShutdownTimeout(context: ChannelHandlerContext) -> NIOScheduledCallback? {
-        guard let gracefulShutdownTimeout = self.maximumGracefulShutdownDuration else {
+        guard let gracefulShutdownTimeout = self.configuration.maximumGracefulShutdownDuration else {
             return nil
         }
 
@@ -774,5 +767,21 @@ private struct ChannelCloseCallbackHandler: Sendable, NIOScheduledCallbackHandle
     func handleScheduledCallback(eventLoop: some EventLoop) {
         // Close the channel.
         self.loopBoundContext.value.close(promise: nil)
+    }
+}
+
+/// Configuration for the ``HTTPServerPipelineHandler``.
+public struct HTTPServerPipelineHandlerConfiguration: Sendable, Hashable {
+    /// The maximum duration to wait for the connection to quiesce (when receiving a ``ChannelShouldQuiesceEvent``)
+    /// before the connection is forcefully closed.
+    ///
+    /// Defaults to `nil`, i.e. there is no timeout for the connection to quiesce.
+    ///
+    /// - Note: The timeout only applies if the connection cannot be closed as soon as the quiescing event is received.
+    public var maximumGracefulShutdownDuration: TimeAmount?
+
+    /// Create a ``HTTPServerPipelineHandlerConfiguration`` with the default value for every option.
+    public init() {
+        self.maximumGracefulShutdownDuration = nil
     }
 }
