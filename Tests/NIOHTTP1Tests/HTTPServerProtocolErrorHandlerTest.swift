@@ -87,7 +87,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         }
 
         var configuration = NIOHTTPServerPipelineSynchronousConfiguration.withErrorHandling
-        configuration.pipeliningAssistance = false
+        configuration.pipeliningConfiguration = nil
         XCTAssertNoThrow(try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: configuration))
         let res = HTTPServerResponsePart.head(
             .init(
@@ -177,7 +177,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         defer { XCTAssertNoThrow(try channel.finish(acceptAlreadyClosed: false)) }
 
         var configuration = NIOHTTPServerPipelineSynchronousConfiguration.withErrorHandling
-        configuration.pipeliningAssistance = false
+        configuration.pipeliningConfiguration = nil
         XCTAssertNoThrow(try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: configuration))
         XCTAssertNoThrow(try channel.connect(to: .makeAddressResolvingHost("127.0.0.1", port: 0)).wait())
 
@@ -219,7 +219,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.connect(to: .makeAddressResolvingHost("127.0.0.1", port: 0)).wait())
 
         var configuration = NIOHTTPServerPipelineSynchronousConfiguration.withErrorHandling
-        configuration.pipeliningAssistance = false
+        configuration.pipeliningConfiguration = nil
         XCTAssertNoThrow(try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: configuration))
 
         // Send an head that expects a continue informational response
