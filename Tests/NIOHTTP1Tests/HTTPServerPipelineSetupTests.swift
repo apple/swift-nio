@@ -40,7 +40,7 @@ import Testing
     func configureHTTPServerPipelineWithDeprecatedHelper(options: Options) throws {
         try expectPipeline(NIOHTTPServerPipelineConfiguration.self, configuredWith: options) { channel, configuration in
             try channel.pipeline.configureHTTPServerPipeline(
-                withPipeliningAssistance: configuration.pipeliningAssistance,
+                withPipeliningAssistance: configuration.pipeliningConfiguration != nil,
                 withServerUpgrade: configuration.serverUpgrade.map { ($0.upgraders, $0.completionHandler) },
                 withErrorHandling: configuration.errorHandling,
                 withOutboundHeaderValidation: configuration.outboundHeaderValidation,
@@ -55,7 +55,7 @@ import Testing
     func syncConfigureHTTPServerPipelineWithDeprecatedHelper(options: Options) throws {
         try expectPipeline(NIOHTTPServerPipelineConfiguration.self, configuredWith: options) { channel, configuration in
             try channel.pipeline.syncOperations.configureHTTPServerPipeline(
-                withPipeliningAssistance: configuration.pipeliningAssistance,
+                withPipeliningAssistance: configuration.pipeliningConfiguration != nil,
                 withServerUpgrade: configuration.serverUpgrade.map { ($0.upgraders, $0.completionHandler) },
                 withErrorHandling: configuration.errorHandling,
                 withOutboundHeaderValidation: configuration.outboundHeaderValidation,
@@ -69,7 +69,7 @@ import Testing
 extension HTTPServerPipelineSetupTests {
     /// One combination of enabling or disabling each pipeline configuration setting.
     struct Options: Sendable, CustomTestStringConvertible {
-        var pipeliningAssistance: Bool
+        var pipelining: Bool
         var errorHandling: Bool
         var outboundHeaderValidation: Bool
         var serverUpgrade: Bool
@@ -79,7 +79,7 @@ extension HTTPServerPipelineSetupTests {
         /// Every combination of the options.
         static let all: [Self] = (0..<64).map { bits in
             Self(
-                pipeliningAssistance: bits & 1 != 0,
+                pipelining: bits & 1 != 0,
                 errorHandling: bits & 2 != 0,
                 outboundHeaderValidation: bits & 4 != 0,
                 serverUpgrade: bits & 8 != 0,
@@ -90,7 +90,7 @@ extension HTTPServerPipelineSetupTests {
 
         var testDescription: String {
             let enabled = [
-                ("pipeliningAssistance", self.pipeliningAssistance),
+                ("pipelining", self.pipelining),
                 ("errorHandling", self.errorHandling),
                 ("outboundHeaderValidation", self.outboundHeaderValidation),
                 ("serverUpgrade", self.serverUpgrade),
@@ -137,10 +137,13 @@ private func expectHandlers(
     sourceLocation: SourceLocation
 ) throws {
     let sync = channel.pipeline.syncOperations
-    #expect(
-        sync.hasHandler(HTTPServerPipelineHandler.self) == configuration.pipeliningAssistance,
-        sourceLocation: sourceLocation
-    )
+
+    if configuration.pipeliningConfiguration == nil {
+        #expect(!sync.hasHandler(HTTPServerPipelineHandler.self), sourceLocation: sourceLocation)
+    } else {
+        #expect(sync.hasHandler(HTTPServerPipelineHandler.self), sourceLocation: sourceLocation)
+    }
+
     #expect(
         sync.hasHandler(HTTPServerProtocolErrorHandler.self) == configuration.errorHandling,
         sourceLocation: sourceLocation
@@ -211,7 +214,7 @@ private func expectDecoder(
 private protocol PipelineConfiguration {
     init()
 
-    var pipeliningAssistance: Bool { get set }
+    var pipeliningConfiguration: HTTPServerPipelineHandlerConfiguration? { get set }
     var errorHandling: Bool { get set }
     var outboundHeaderValidation: Bool { get set }
     var encoderConfiguration: HTTPResponseEncoder.Configuration { get set }
@@ -222,7 +225,11 @@ private protocol PipelineConfiguration {
 
 extension PipelineConfiguration {
     fileprivate mutating func apply(_ options: HTTPServerPipelineSetupTests.Options) {
-        self.pipeliningAssistance = options.pipeliningAssistance
+        if options.pipelining {
+            self.pipeliningConfiguration = HTTPServerPipelineHandlerConfiguration()
+        } else {
+            self.pipeliningConfiguration = nil
+        }
         self.errorHandling = options.errorHandling
         self.outboundHeaderValidation = options.outboundHeaderValidation
         self.encoderConfiguration.automaticallySetFramingHeaders = options.automaticallySetFramingHeaders
