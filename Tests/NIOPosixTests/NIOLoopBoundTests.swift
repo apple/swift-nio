@@ -106,6 +106,34 @@ final class NIOLoopBoundTests: XCTestCase {
         )
     }
 
+    func testLoopBoundCanBeInitialisedBySendingValueOffLoop() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let loop = group.any()
+
+        final class NonSendableIntBox {
+            var value: Int
+
+            init(value: Int) {
+                self.value = value
+            }
+        }
+
+        // `NIOLoopBound(sending:eventLoop:)` does not require the caller to be on the
+        // `EventLoop`, unlike `NIOLoopBound(_:eventLoop:)`, so a non-`Sendable` value
+        // can be sent in from off the loop.
+        let loopBound = NIOLoopBound(sending: NonSendableIntBox(value: 100), eventLoop: loop)
+        XCTAssertEqual(
+            100,
+            try loop.submit {
+                loopBound.value.value
+            }.wait()
+        )
+    }
+
     func testInPlaceMutation() {
         var loopBound = NIOLoopBound(CoWValue(), eventLoop: loop)
         XCTAssertTrue(loopBound.value.mutateInPlace())
