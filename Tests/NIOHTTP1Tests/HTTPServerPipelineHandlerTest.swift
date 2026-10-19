@@ -117,7 +117,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
     fileprivate var pipelineHandler: HTTPServerPipelineHandler! = nil
     fileprivate var quiesceEventRecorder: QuiesceEventRecorder! = nil
 
-    fileprivate var shutdownTimeoutSeconds: Int64? = nil
+    fileprivate var gracefulShutdownTimeout: TimeAmount? = nil
 
     override func setUp() {
         self.setUpPipeline()
@@ -129,7 +129,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.readCounter = ReadCountingHandler()
         self.writeRecorder = WriteRecorder()
         var pipelineHandlerConfiguration = HTTPServerPipelineHandlerConfiguration()
-        pipelineHandlerConfiguration.maximumGracefulShutdownDuration = self.shutdownTimeoutSeconds.map { .seconds($0) }
+        pipelineHandlerConfiguration.maximumGracefulShutdownDuration = self.gracefulShutdownTimeout
         self.pipelineHandler = HTTPServerPipelineHandler(configuration: pipelineHandlerConfiguration)
         self.quiesceEventRecorder = QuiesceEventRecorder()
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(CloseOutputSuppressor()))
@@ -151,9 +151,9 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
     }
 
     /// Discard the pipeline built by `setUp` and build a fresh one with a different graceful shutdown timeout.
-    private func reconfigurePipeline(shutdownTimeoutSeconds: Int64?) {
+    private func reconfigurePipeline(gracefulShutdownTimeout: TimeAmount?) {
         XCTAssertNoThrow(try self.channel.finish(acceptAlreadyClosed: true))
-        self.shutdownTimeoutSeconds = shutdownTimeoutSeconds
+        self.gracefulShutdownTimeout = gracefulShutdownTimeout
         self.setUpPipeline()
     }
 
@@ -886,7 +886,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
     }
 
     func testNoForcefulShutdownTimeoutIsScheduledWhenQuiescingWhileIdle() throws {
-        self.reconfigurePipeline(shutdownTimeoutSeconds: 5)
+        self.reconfigurePipeline(gracefulShutdownTimeout: .seconds(5))
 
         // We're completely idle, so quiescing should close the connection immediately.
         XCTAssertTrue(self.channel.isActive)
@@ -897,7 +897,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
     }
 
     func testForcefulShutdownTimeoutFiresWhenQuiescingAndRequestEndNeverArrives() throws {
-        self.reconfigurePipeline(shutdownTimeoutSeconds: 5)
+        self.reconfigurePipeline(gracefulShutdownTimeout: .seconds(5))
 
         // Only write a request head. The connection should eventually forcefully shutdown when graceful shutdown is
         // triggered, because the request end part will never be sent.
@@ -926,7 +926,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
     }
 
     func testForcefulShutdownTimeoutFiresWhenQuiescingAndResponseEndNeverArrives() throws {
-        self.reconfigurePipeline(shutdownTimeoutSeconds: 5)
+        self.reconfigurePipeline(gracefulShutdownTimeout: .seconds(5))
 
         // Write a full request.
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
@@ -958,7 +958,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
     }
 
     func testForcefulShutdownTimeoutFiresWhenQuiescingAfterCloseOutputMidRequest() throws {
-        self.reconfigurePipeline(shutdownTimeoutSeconds: 5)
+        self.reconfigurePipeline(gracefulShutdownTimeout: .seconds(5))
 
         // Send just a request head.
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
@@ -981,7 +981,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
     }
 
     func testBufferedRequestsAreNotDeliveredAfterForcefulShutdown() throws {
-        self.reconfigurePipeline(shutdownTimeoutSeconds: 5)
+        self.reconfigurePipeline(gracefulShutdownTimeout: .seconds(5))
 
         // Send through a full request and buffer a few more.
         for _ in 0..<3 {
