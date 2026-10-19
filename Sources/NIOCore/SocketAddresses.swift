@@ -271,10 +271,16 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         case .unixDomainSocket(let addr):
             // This is a static assert that exists just to verify the safety of the assumption below.
             assert(Swift.type(of: addr.address.sun_path.0) == CChar.self)
+            let pathSize = MemoryLayout.size(ofValue: addr.address.sun_path)
             let pathname: String = withUnsafePointer(to: addr.address.sun_path) { ptr in
                 // Homogeneous tuples are always implicitly also bound to their element type, so this assumption below is safe.
                 let charPtr = UnsafeRawPointer(ptr).assumingMemoryBound(to: CChar.self)
-                return String(cString: charPtr)
+                // sun_path is not NUL-terminated if the path fills it, so don't read past its end.
+                let length = strnlen(charPtr, pathSize)
+                return String(
+                    decoding: UnsafeRawBufferPointer(start: UnsafeRawPointer(charPtr), count: length),
+                    as: UTF8.self
+                )
             }
             return pathname
         }
