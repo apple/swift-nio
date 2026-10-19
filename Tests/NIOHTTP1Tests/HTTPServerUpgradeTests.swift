@@ -117,7 +117,7 @@ private func serverHTTPChannelWithAutoremoval(
         .childChannelInitializer { channel in
             p.succeed(channel)
             var configuration = NIOHTTPServerPipelineConfiguration()
-            configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandlerConfiguration() : nil
+            configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
             configuration.serverUpgrade = .init(
                 upgraders: upgraders,
                 completionHandler: upgradeCompletionHandler

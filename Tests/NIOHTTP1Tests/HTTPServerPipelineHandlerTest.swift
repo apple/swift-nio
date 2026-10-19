@@ -128,7 +128,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.readRecorder = ReadRecorder()
         self.readCounter = ReadCountingHandler()
         self.writeRecorder = WriteRecorder()
-        var pipelineHandlerConfiguration = HTTPServerPipelineHandlerConfiguration()
+        var pipelineHandlerConfiguration = HTTPServerPipelineHandler.Configuration()
         pipelineHandlerConfiguration.maximumGracefulShutdownDuration = self.gracefulShutdownTimeout
         self.pipelineHandler = HTTPServerPipelineHandler(configuration: pipelineHandlerConfiguration)
         self.quiesceEventRecorder = QuiesceEventRecorder()

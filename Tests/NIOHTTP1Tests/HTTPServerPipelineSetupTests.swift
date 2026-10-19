@@ -214,7 +214,7 @@ private func expectDecoder(
 private protocol PipelineConfiguration {
     init()
 
-    var pipeliningConfiguration: HTTPServerPipelineHandlerConfiguration? { get set }
+    var pipeliningConfiguration: HTTPServerPipelineHandler.Configuration? { get set }
     var errorHandling: Bool { get set }
     var outboundHeaderValidation: Bool { get set }
     var encoderConfiguration: HTTPResponseEncoder.Configuration { get set }
@@ -225,11 +225,7 @@ private protocol PipelineConfiguration {
 
 extension PipelineConfiguration {
     fileprivate mutating func apply(_ options: HTTPServerPipelineSetupTests.Options) {
-        if options.pipelining {
-            self.pipeliningConfiguration = HTTPServerPipelineHandlerConfiguration()
-        } else {
-            self.pipeliningConfiguration = nil
-        }
+        self.pipeliningConfiguration = options.pipelining ? HTTPServerPipelineHandler.Configuration() : nil
         self.errorHandling = options.errorHandling
         self.outboundHeaderValidation = options.outboundHeaderValidation
         self.encoderConfiguration.automaticallySetFramingHeaders = options.automaticallySetFramingHeaders

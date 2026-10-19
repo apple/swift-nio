@@ -47,16 +47,33 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     public typealias OutboundIn = HTTPServerResponsePart
     public typealias OutboundOut = HTTPServerResponsePart
 
+    /// Configuration for the ``HTTPServerPipelineHandler``.
+    public struct Configuration: Sendable, Hashable {
+        /// The maximum duration to wait for the connection to quiesce (when receiving a `ChannelShouldQuiesceEvent`)
+        /// before the connection is forcefully closed.
+        ///
+        /// Defaults to `nil`, i.e. there is no timeout for the connection to quiesce.
+        public var maximumGracefulShutdownDuration: TimeAmount?
+
+        /// Create a ``HTTPServerPipelineHandler/Configuration`` with the default value for every option.
+        public init() {
+            self.maximumGracefulShutdownDuration = nil
+        }
+    }
+
     // If this is true AND we're in a debug build, crash the program when an invariant in violated
     // Otherwise, we will try to handle the situation as cleanly as possible
     internal var failOnPreconditions: Bool = true
 
-    private var configuration: HTTPServerPipelineHandlerConfiguration
+    private let configuration: Configuration
 
-    public init() {
+    /// Create an ``HTTPServerPipelineHandler``.
+    ///
+    /// - Parameter configuration: The configuration for the handler.
+    public init(configuration: Configuration) {
         self.nextExpectedInboundMessage = nil
         self.nextExpectedOutboundMessage = nil
-        self.configuration = HTTPServerPipelineHandlerConfiguration()
+        self.configuration = configuration
 
         debugOnly {
             self.nextExpectedInboundMessage = .head
@@ -64,10 +81,9 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         }
     }
 
-    /// Create a ``HTTPServerPipelineHandler`` from ``HTTPServerPipelineHandlerConfiguration``.
-    public convenience init(configuration: HTTPServerPipelineHandlerConfiguration) {
-        self.init()
-        self.configuration = configuration
+    /// Create an ``HTTPServerPipelineHandler`` with the default configuration.
+    public convenience init() {
+        self.init(configuration: Configuration())
     }
 
     private enum ConnectionStateAction {
@@ -769,21 +785,5 @@ private struct ChannelCloseCallbackHandler: Sendable, NIOScheduledCallbackHandle
     func handleScheduledCallback(eventLoop: some EventLoop) {
         // Close the channel.
         self.loopBoundContext.value.close(promise: nil)
-    }
-}
-
-/// Configuration for the ``HTTPServerPipelineHandler``.
-public struct HTTPServerPipelineHandlerConfiguration: Sendable, Hashable {
-    /// The maximum duration to wait for the connection to quiesce (when receiving a `ChannelShouldQuiesceEvent`) before
-    /// the connection is forcefully closed.
-    ///
-    /// Defaults to `nil`, i.e. there is no timeout for the connection to quiesce.
-    ///
-    /// - Note: The timeout only applies if the connection cannot be closed as soon as the quiescing event is received.
-    public var maximumGracefulShutdownDuration: TimeAmount?
-
-    /// Create a ``HTTPServerPipelineHandlerConfiguration`` with the default value for every option.
-    public init() {
-        self.maximumGracefulShutdownDuration = nil
     }
 }
