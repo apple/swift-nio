@@ -281,8 +281,12 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         /// Operating normally, accepting all events.
         case acceptingEvents
 
-        /// Quiescing but we're still waiting for the request's `.end` which means we still need to process input.
-        /// Quiescing and the last request's `.end` has been seen which means we no longer accept any input.
+        /// Quiescing and waiting for the in-flight request and response to complete.
+        ///
+        /// - `receivedRequestEnd`: Whether the last request's `.end` has been seen. Until it has, we still need to
+        ///   process input; afterwards we no longer accept any.
+        /// - `timeoutCallback`: The pending timeout callback which forcefully closes the connection if the connection
+        ///   doesn't finish quiescing in time, or `nil` if the timeout wasn't configured or was cancelled.
         case quiescing(receivedRequestEnd: Bool, timeoutCallback: NIOScheduledCallback?)
 
         /// Quiescing and we have issued a channel close. Further I/O here is not expected, and won't be managed.
