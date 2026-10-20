@@ -119,7 +119,8 @@ public protocol FileSystemProtocol: Sendable {
     /// The template for the path of the temporary directory must end in at least
     /// three 'X's, which will be replaced with a unique alphanumeric combination.
     /// The template can contain intermediary directories which will be created
-    /// if they do not exist already.
+    /// if they do not exist already. The temporary directory, and any intermediary
+    /// directories created for it, are only accessible by the owner.
     ///
     /// Related system calls: `mkdir(2)`.
     ///

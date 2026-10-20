@@ -1829,6 +1829,19 @@ extension FileSystemTests {
         XCTAssertGreaterThan(info.size, 0)
     }
 
+    func testCreateTemporaryDirectoryIsOnlyAccessibleByOwner() async throws {
+        let temporaryDirectoryPath = try await self.fs.createTemporaryDirectory(
+            template: NIOFilePath("\(#function)-XXXXXX")
+        )
+
+        self.addTeardownBlock { [fileSystem = self.fs] in
+            try await fileSystem.removeItem(at: temporaryDirectoryPath, strategy: .platformDefault)
+        }
+
+        let info = try await self.fs.info(forFileAt: temporaryDirectoryPath)
+        XCTAssertEqual(info?.permissions, .ownerReadWriteExecute)
+    }
+
     func testTemporaryDirectoryRespectsEnvironment() async throws {
         if let envTmpDir = getenv("TMPDIR") {
             let envTmpDirString = String(cString: envTmpDir)
