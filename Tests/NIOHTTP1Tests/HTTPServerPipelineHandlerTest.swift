@@ -923,6 +923,9 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         // The channel should have closed as a result of the timeout firing.
         XCTAssertFalse(self.channel.isActive)
+
+        // Quiescing is complete. The quiesce event must not be replayed when the handler is removed.
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
     func testForcefulShutdownTimeoutFiresWhenQuiescingAndResponseEndNeverArrives() throws {
@@ -955,6 +958,9 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         // The channel should have closed as a result of the timeout firing.
         XCTAssertFalse(self.channel.isActive)
+
+        // Quiescing is complete. The quiesce event must not be replayed when the handler is removed.
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
     func testForcefulShutdownTimeoutFiresWhenQuiescingAfterCloseOutputMidRequest() throws {
@@ -978,6 +984,9 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         // The request end never arrives, so the timeout forcefully closes the channel.
         self.channel.embeddedEventLoop.advanceTime(by: .seconds(2))
         XCTAssertFalse(self.channel.isActive)
+
+        // Quiescing is complete. The quiesce event must not be replayed when the handler is removed.
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
     func testBufferedRequestsAreNotDeliveredAfterForcefulShutdown() throws {
@@ -1009,6 +1018,102 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                 .channelRead(HTTPServerRequestPart.end(nil)),
             ]
         )
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+    }
+
+    func testForcefulShutdownTimeoutIsCancelledWhenQuiescingCompletes() throws {
+        self.reconfigurePipeline(gracefulShutdownTimeout: .seconds(5))
+
+        // Send a full request, then trigger graceful shutdown before responding.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+
+        // Respond before the timeout fires: the connection should close gracefully.
+        XCTAssertNoThrow(try self.channel.writeOutbound(HTTPServerResponsePart.head(self.responseHead)))
+        XCTAssertNoThrow(try self.channel.writeOutbound(HTTPServerResponsePart.end(nil)))
+        XCTAssertFalse(self.channel.isActive)
+        self.channel.embeddedEventLoop.run()
+
+        // The timeout callback must have been cancelled, otherwise it would still hold a reference to the handler.
+        XCTAssertTrue(isKnownUniquelyReferenced(&self.pipelineHandler))
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+    }
+
+    func testForcefulShutdownTimeoutIsCancelledWhenChannelClosesWhileQuiescing() throws {
+        self.reconfigurePipeline(gracefulShutdownTimeout: .seconds(5))
+
+        // Start a request and trigger graceful shutdown.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+
+        // Close the channel before the timeout fires.
+        XCTAssertNoThrow(try self.channel.close().wait())
+        self.channel.embeddedEventLoop.run()
+
+        // The timeout callback must have been cancelled, otherwise it would still hold a reference to the handler.
+        XCTAssertTrue(isKnownUniquelyReferenced(&self.pipelineHandler))
+    }
+
+    func testForcefulShutdownTimeoutIsCancelledWhenHandlerIsRemovedWhileQuiescing() throws {
+        self.reconfigurePipeline(gracefulShutdownTimeout: .seconds(5))
+
+        // Start a request and trigger graceful shutdown.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
+
+        // Removing the handler should replay the quiesce event.
+        XCTAssertNoThrow(try self.channel.pipeline.syncOperations.removeHandler(self.pipelineHandler).wait())
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 1)
+
+        // The timeout callback must have been cancelled, otherwise it would still hold a reference to the handler.
+        XCTAssertTrue(isKnownUniquelyReferenced(&self.pipelineHandler))
+
+        // And it must not close the connection that it no longer owns.
+        self.channel.embeddedEventLoop.advanceTime(by: .seconds(5))
+        XCTAssertTrue(self.channel.isActive)
+    }
+
+    func testForcefulShutdownTimeoutIsCancelledWhenForceClosingAfterPreconditionViolation() throws {
+        self.reconfigurePipeline(gracefulShutdownTimeout: .seconds(5))
+        self.pipelineHandler.failOnPreconditions = false
+
+        // Start a request and trigger graceful shutdown.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+
+        // Sending a second head violates a precondition, and any further I/O should forcefully close the connection.
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertFalse(self.channel.isActive)
+        self.channel.embeddedEventLoop.run()
+
+        // The timeout must have been cancelled, otherwise it would still hold a reference to the handler.
+        XCTAssertTrue(isKnownUniquelyReferenced(&self.pipelineHandler))
+    }
+
+    func testForcefulShutdownTimeoutIsCancelledWhenRequestEndCompletesQuiescing() throws {
+        self.reconfigurePipeline(gracefulShutdownTimeout: .seconds(5))
+
+        // Respond early, before the request has finished, then trigger graceful shutdown.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeOutbound(HTTPServerResponsePart.head(self.responseHead)))
+        XCTAssertNoThrow(try self.channel.writeOutbound(HTTPServerResponsePart.end(nil)))
+        self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+        XCTAssertTrue(self.channel.isActive)
+
+        // The request end arrives before the timeout fires. The connection should now close gracefully.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        XCTAssertFalse(self.channel.isActive)
+        self.channel.embeddedEventLoop.run()
+
+        // The timeout callback must have been cancelled, otherwise it would still hold a reference to the handler.
+        XCTAssertTrue(isKnownUniquelyReferenced(&self.pipelineHandler))
+        XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
     }
 
     func testParserErrorOnly() throws {

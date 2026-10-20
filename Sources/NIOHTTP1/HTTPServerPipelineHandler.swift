@@ -284,10 +284,10 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         /// Quiescing and waiting for the in-flight request and response to complete.
         ///
         /// - `receivedRequestEnd`: Whether the last request's `.end` has been seen. Until it has, we still need to
-        ///   process input; afterwards we no longer accept any.
-        /// - `timeoutCallback`: The pending timeout callback which forcefully closes the connection if the connection
-        ///   doesn't finish quiescing in time, or `nil` if the timeout wasn't configured or was cancelled.
-        case quiescing(receivedRequestEnd: Bool, timeoutCallback: NIOScheduledCallback?)
+        ///   process input.
+        /// - `timeout`: Forcefully closes the connection if it doesn't finish quiescing in time, or `nil` if no timeout
+        ///   was configured.
+        case quiescing(receivedRequestEnd: Bool, timeout: GracefulShutdownTimeout?)
 
         /// Quiescing and we have issued a channel close. Further I/O here is not expected, and won't be managed.
         case quiescingCompleted
@@ -300,6 +300,47 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
 
             case .quiescing, .quiescingCompleted:
                 false
+            }
+        }
+
+        /// Forcefully closes the connection if it doesn't finish quiescing in time.
+        struct GracefulShutdownTimeout {
+            private let scheduledCallback: NIOScheduledCallback?
+
+            /// Schedules the forceful connection close timeout. If the event loop fails to schedule the timeout, the
+            /// connection is closed on the next event loop tick.
+            static func schedule(
+                after duration: TimeAmount,
+                pipelineHandler: HTTPServerPipelineHandler,
+                context: ChannelHandlerContext
+            ) -> Self {
+                let eventLoop = context.eventLoop.assumeIsolated()
+                do {
+                    let scheduledCallback = try eventLoop.scheduleCallback(
+                        in: duration,
+                        handler: CallbackHandler(pipelineHandler: pipelineHandler, context: context)
+                    )
+                    return Self(scheduledCallback: scheduledCallback)
+                } catch {
+                    eventLoop.execute {
+                        pipelineHandler.gracefulShutdownTimeoutFired(context: context)
+                    }
+                    return Self(scheduledCallback: nil)
+                }
+            }
+
+            /// Cancels the timeout. Does nothing if it has already fired or been cancelled.
+            func cancel() {
+                self.scheduledCallback?.cancel()
+            }
+
+            private struct CallbackHandler: NIOScheduledCallbackHandler {
+                let pipelineHandler: HTTPServerPipelineHandler
+                let context: ChannelHandlerContext
+
+                func handleScheduledCallback(eventLoop: some EventLoop) {
+                    self.pipelineHandler.gracefulShutdownTimeoutFired(context: self.context)
+                }
             }
         }
     }
@@ -367,15 +408,13 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             // New request is complete. We don't want any more data from now on.
             action = self.state.requestEndReceived()
 
-            if case .quiescing(receivedRequestEnd: false, let timeoutCallback) = self.lifecycleState {
-                self.lifecycleState = .quiescing(receivedRequestEnd: true, timeoutCallback: timeoutCallback)
+            if case .quiescing(receivedRequestEnd: false, let timeout) = self.lifecycleState {
+                self.lifecycleState = .quiescing(receivedRequestEnd: true, timeout: timeout)
                 self.eventBuffer.removeAll()
             }
-            if case .quiescing(receivedRequestEnd: true, let timeoutCallback) = self.lifecycleState,
-                self.state == .idle
-            {
+            if case .quiescing(receivedRequestEnd: true, let timeout) = self.lifecycleState, self.state == .idle {
                 self.lifecycleState = .quiescingCompleted
-                timeoutCallback?.cancel()
+                timeout?.cancel()
                 context.close(promise: nil)
             }
         case .body:
@@ -397,19 +436,31 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         context.fireErrorCaught(error)
     }
 
-    /// Schedule the forceful channel close.
+    /// Schedule the forceful channel close after the graceful shutdown timeout.
     ///
-    /// - Returns: The scheduled callback, or `nil` if no `maximumGracefulShutdownDuration` was configured or if there
-    ///   was an error when scheduling the callback.
-    private func scheduleGracefulShutdownTimeout(context: ChannelHandlerContext) -> NIOScheduledCallback? {
-        guard let gracefulShutdownTimeout = self.configuration.maximumGracefulShutdownDuration else {
+    /// - Returns: The scheduled timeout, or `nil` if no `maximumGracefulShutdownDuration` was configured.
+    private func scheduleGracefulShutdownTimeout(
+        context: ChannelHandlerContext
+    ) -> LifecycleState.GracefulShutdownTimeout? {
+        guard let duration = self.configuration.maximumGracefulShutdownDuration else {
             return nil
         }
 
-        return try? context.eventLoop.scheduleCallback(
-            in: gracefulShutdownTimeout,
-            handler: ChannelCloseCallbackHandler(context: context)
-        )
+        return .schedule(after: duration, pipelineHandler: self, context: context)
+    }
+
+    /// The graceful shutdown timeout has fired. If we are quiescing, stop waiting for the connection to quiesce and
+    /// forcefully close the connection.
+    private func gracefulShutdownTimeoutFired(context: ChannelHandlerContext) {
+        switch self.lifecycleState {
+        case .quiescing:
+            self.lifecycleState = .quiescingCompleted
+            self.eventBuffer.removeAll()
+            context.close(promise: nil)
+
+        case .acceptingEvents, .quiescingCompleted:
+            ()
+        }
     }
 
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
@@ -424,7 +475,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
                 // we're not in the middle of a request, let's just shut the door
                 self.lifecycleState = .quiescing(
                     receivedRequestEnd: true,
-                    timeoutCallback: self.scheduleGracefulShutdownTimeout(context: context)
+                    timeout: self.scheduleGracefulShutdownTimeout(context: context)
                 )
                 self.eventBuffer.removeAll()
             case .preconditionFailed,
@@ -439,7 +490,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
                 // It's ok for us to forget we saw close output here, the lifecycle event will close for us.
                 self.lifecycleState = .quiescing(
                     receivedRequestEnd: false,
-                    timeoutCallback: self.scheduleGracefulShutdownTimeout(context: context)
+                    timeout: self.scheduleGracefulShutdownTimeout(context: context)
                 )
             }
         case ChannelEvent.inputClosed:
@@ -501,13 +552,13 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             startReadingAgain = true
 
             switch self.lifecycleState {
-            case .quiescing(receivedRequestEnd: false, let timeoutCallback) where self.state == .responseEndPending:
+            case .quiescing(receivedRequestEnd: false, let timeout) where self.state == .responseEndPending:
                 // we just received the .end that we're missing so we can fall through to closing the connection
                 fallthrough
-            case .quiescing(receivedRequestEnd: true, let timeoutCallback):
+            case .quiescing(receivedRequestEnd: true, let timeout):
                 let loopBoundContext = context.loopBound
                 self.lifecycleState = .quiescingCompleted
-                timeoutCallback?.cancel()
+                timeout?.cancel()
                 context.write(data).flatMap {
                     let context = loopBoundContext.value
                     return context.close()
@@ -555,6 +606,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         //     re-entrantly called, we want to ensure that so we take a local copy.
         // 2. If we are quiescing, we swallowed a quiescing event from the user: replay it,
         //     as the user has hopefully added a handler that will do something with this.
+        //     Since we no longer own the connection's shutdown, we also cancel the graceful shutdown timeout.
         // 3. Finally, if we have a read pending, we need to release it.
         //
         // The basic theory here is that if there is anything we were going to do when we received
@@ -577,7 +629,8 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         }
 
         switch self.lifecycleState {
-        case .quiescing:
+        case .quiescing(_, let timeout):
+            timeout?.cancel()
             context.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
         case .acceptingEvents, .quiescingCompleted:
             // Either we haven't quiesced, or we succeeded in doing it.
@@ -600,6 +653,10 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         //
         // We set keepingCapacity to avoid this reallocating a buffer, as we'll just free it shortly anyway.
         self.eventBuffer.removeAll(keepingCapacity: true)
+        if case .quiescing(_, .some(let timeout)) = self.lifecycleState {
+            // There's nothing left for the graceful shutdown timeout to close. Cancel the callback.
+            timeout.cancel()
+        }
         context.fireChannelInactive()
     }
 
@@ -647,11 +704,6 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
                 "The connection has been forcefully closed because further IO was attempted after a precondition was violated"
             let error = ConnectionStateError.preconditionViolated(message: message)
             promise?.fail(error)
-
-            if case .quiescing(_, let shutdownCallback) = self.lifecycleState {
-                shutdownCallback?.cancel()
-            }
-
             self.close(context: context, mode: .all, promise: nil)
             return true
         case .none:
@@ -778,16 +830,3 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
 
 @available(*, unavailable)
 extension HTTPServerPipelineHandler: Sendable {}
-
-private struct ChannelCloseCallbackHandler: Sendable, NIOScheduledCallbackHandler {
-    let loopBoundContext: NIOLoopBound<ChannelHandlerContext>
-
-    init(context: ChannelHandlerContext) {
-        self.loopBoundContext = context.loopBound
-    }
-
-    func handleScheduledCallback(eventLoop: some EventLoop) {
-        // Close the channel.
-        self.loopBoundContext.value.close(promise: nil)
-    }
-}
