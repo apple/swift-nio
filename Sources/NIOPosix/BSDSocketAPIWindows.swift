@@ -634,7 +634,9 @@ extension NIOBSDSocket {
                 (path.withCString(encodedAs: UTF16.self) {
                     CreateFileW(
                         $0,
-                        GENERIC_READ,
+                        // `DELETE` access is required to remove the path further down, via
+                        // `SetFileInformationByHandle`.
+                        GENERIC_READ | DWORD(DELETE),
                         DWORD(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE),
                         nil,
                         DWORD(OPEN_EXISTING),
@@ -643,14 +645,27 @@ extension NIOBSDSocket {
                     )
                 })
         else {
-            throw IOError(windows: DWORD(EBADF), reason: "CreateFileW")
+            // Nothing to clean up if the path does not exist. This mirrors the POSIX
+            // implementation, which treats `ENOENT` from `stat` as "already cleaned up".
+            let dwError = GetLastError()
+            if dwError == ERROR_FILE_NOT_FOUND || dwError == ERROR_PATH_NOT_FOUND {
+                return
+            }
+            throw IOError(windows: dwError, reason: "CreateFileW")
         }
         defer { CloseHandle(hFile) }
 
+        // `GetFileType` reports failure by returning `FILE_TYPE_UNKNOWN` *and* setting an error
         let ftFileType = GetFileType(hFile)
-        let dwError = GetLastError()
-        guard dwError == NO_ERROR, ftFileType != FILE_TYPE_DISK else {
-            throw IOError(windows: dwError, reason: "GetFileType")
+        if ftFileType == FILE_TYPE_UNKNOWN {
+            let dwError = GetLastError()
+            if dwError != NO_ERROR {
+                throw IOError(windows: dwError, reason: "GetFileType")
+            }
+        }
+        // A bound AF_UNIX path is a reparse point on disk; the reparse tag below identifies it.
+        guard ftFileType == FILE_TYPE_DISK else {
+            throw UnixDomainSocketPathWrongType()
         }
 
         var fiInformation: BY_HANDLE_FILE_INFORMATION =
