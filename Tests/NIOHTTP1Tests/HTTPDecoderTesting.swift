@@ -178,6 +178,34 @@ import Testing
         _ = try? channel.finish()
     }
 
+
+    @Test func combinedHeaderFieldExceedingLimitShouldReject() throws {
+        var config = NIOHTTPDecoderLimitConfiguration()
+        config.maxHeaderFieldSize = 128
+        config.maxHeaderListSize = 1024 * 1024
+    
+        let decoder = HTTPRequestDecoder(limitConfiguration: config)
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandler(
+            ByteToMessageHandler(decoder)
+        )
+    
+        let name = String(repeating: "A", count: 128)
+        let value = String(repeating: "B", count: 128)
+    
+        var buffer = channel.allocator.buffer(capacity: 512)
+        buffer.writeString("GET / HTTP/1.1\r\n")
+        buffer.writeString("\(name): \(value)\r\n\r\n")
+    
+        let error = #expect(throws: HTTPParserError.self) {
+            try channel.writeInbound(buffer)
+        }
+    
+        #expect(error == .headerOverflow)
+    
+        _ = try? channel.finish()
+    }
+
     // MARK: - Max header list size tests
 
     @Test func requestExceedingMaxHeaderListSizeErrors() throws {
