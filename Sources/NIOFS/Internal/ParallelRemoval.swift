@@ -26,7 +26,12 @@ extension FileSystem {
         // Discover current directory and find all files/directories. Free up
         // the handle as fast as possible.
         let (directoriesToRecurseInto, itemsToDelete) = try await bucket.withToken {
-            try await self.withDirectoryHandle(atPath: NIOFilePath(path)) { directory in
+            try await self.withDirectoryHandle(
+                atPath: NIOFilePath(path),
+                // not following symlinks here to prevent TOCTOU attacks where a directory found while
+                // listing is replaced with a symlink pointing to an attacker-controlled location
+                options: OpenOptions.Directory(followSymbolicLinks: false)
+            ) { directory in
                 var subdirectories: [FilePath] = []
                 var itemsInDirectory: [FilePath] = []
 

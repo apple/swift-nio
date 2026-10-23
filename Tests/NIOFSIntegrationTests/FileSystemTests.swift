@@ -1189,6 +1189,49 @@ final class FileSystemTests: XCTestCase {
         XCTAssertNil(infoAfterRemoval)
     }
 
+    func testRemoveDirectoryDoesNotFollowSymlinkSwappedInAfterListing() async throws {
+        // 'root/sub' is listed as a directory and later opened by path when the removal recurses
+        // into it. Swap it for a symlink to 'target' while the removal runs: the removal must not
+        // follow the link and delete the contents of 'target'.
+        for strategy in try [RemovalStrategy.sequential, .parallel(maxDescriptors: 2)] {
+            for _ in 0..<50 {
+                let target = try await self.fs.temporaryFilePath()
+                let canary = NIOFilePath(target.underlying.appending("canary"))
+                try await self.fs.createDirectory(at: target, withIntermediateDirectories: false)
+                try await self.fs.withFileHandle(
+                    forWritingAt: canary,
+                    options: .newFile(replaceExisting: false)
+                ) { _ in }
+
+                let root = try await self.fs.temporaryFilePath()
+                let sub = NIOFilePath(root.underlying.appending("sub"))
+                let moved = NIOFilePath(root.underlying.appending("moved"))
+                try await self.fs.createDirectory(at: sub, withIntermediateDirectories: true)
+                for i in 0..<16 {
+                    try await self.fs.withFileHandle(
+                        forWritingAt: NIOFilePath(sub.underlying.appending("file-\(i)")),
+                        options: .newFile(replaceExisting: false)
+                    ) { _ in }
+                }
+
+                let swap = Task {
+                    try await Task.sleep(nanoseconds: UInt64.random(in: 0..<500_000))
+                    try await self.fs.moveItem(at: sub, to: moved)
+                    try await self.fs.createSymbolicLink(at: sub, withDestination: target)
+                }
+                _ = try? await self.fs.removeItem(at: root, strategy: strategy, recursively: true)
+                _ = try? await swap.value
+
+                let info = try await self.fs.info(forFileAt: canary)
+                XCTAssertNotNil(info, "removing '\(root)' with \(strategy) deleted '\(canary)'")
+
+                _ = try? await self.fs.removeItem(at: moved, strategy: .platformDefault, recursively: true)
+                _ = try? await self.fs.removeItem(at: root, strategy: .platformDefault, recursively: true)
+                try await self.fs.removeItem(at: target, strategy: .platformDefault, recursively: true)
+            }
+        }
+    }
+
     func testMoveRegularFile() async throws {
         let source = try await self.fs.temporaryFilePath()
         try await self.fs.withFileHandle(
