@@ -112,7 +112,7 @@ void *replacement_malloc_zone_realloc(malloc_zone_t *zone, void *ptr, size_t siz
     inc_malloc_counter();
     add_malloc_bytes_counter((intptr_t)size);
 
-    JUMP_INTO_LIBC_FUN(realloc, ptr, size);
+    JUMP_INTO_LIBC_FUN(malloc_zone_realloc, zone, ptr, size);
 }
 
 void *replacement_malloc_zone_memalign(malloc_zone_t *zone, size_t alignment, size_t size) {

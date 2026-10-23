@@ -25,6 +25,11 @@ let package = Package(
         .package(path: "../AtomicCounter")
     ],
     targets: [
-        .target(name: "HookedFunctions", dependencies: ["AtomicCounter"])
+        .target(name: "HookedFunctions", dependencies: ["AtomicCounter"]),
+        .executableTarget(
+            name: "HookedFunctionsDarwinTests",
+            dependencies: ["HookedFunctions"],
+            path: "Tests/HookedFunctionsDarwinTests"
+        ),
     ]
 )
