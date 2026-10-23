@@ -59,10 +59,18 @@ extension LockOperations {
         let err = pthread_mutex_init(mutex, &attr)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
+        #if os(FreeBSD)
+        var attr: pthread_mutexattr_t? = nil
+        #else
         var attr = pthread_mutexattr_t()
+        #endif
         pthread_mutexattr_init(&attr)
         debugOnly {
+            #if os(FreeBSD)
+            pthread_mutexattr_settype(&attr, Int32(PTHREAD_MUTEX_ERRORCHECK.rawValue))
+            #else
             pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
+            #endif
         }
 
         let err = pthread_mutex_init(mutex, &attr)
