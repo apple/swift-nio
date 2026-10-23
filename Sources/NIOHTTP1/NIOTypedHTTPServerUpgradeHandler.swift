@@ -177,6 +177,8 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         switch self.stateMachine.channelReadRequestPart(requestPart) {
         case .failUpgradePromise(let error):
             self.upgradeResultPromise.fail(error)
+            context.fireErrorCaught(error)
+            context.pipeline.syncOperations.removeHandler(self, promise: nil)
 
         case .runNotUpgradingInitializer:
             self.notUpgradingCompletionHandler(context.channel)
