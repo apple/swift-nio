@@ -20,7 +20,7 @@
 ///
 /// Unix-domain stream channels also accept `AddressedEnvelope<ByteBuffer>` for outbound
 /// writes with file-descriptor metadata. On those channels, `remoteAddress` is ignored
-/// and inbound reads remain `ByteBuffer`s.
+/// and inbound reads remain `ByteBuffer`s unless `ChannelOptions.receiveFileDescriptors` is enabled.
 public struct AddressedEnvelope<DataType> {
     public var remoteAddress: SocketAddress
     public var data: DataType
@@ -49,6 +49,13 @@ public struct AddressedEnvelope<DataType> {
         /// The envelope must contain at least one readable byte. The remote address is ignored
         /// for connected stream sockets; IP-specific metadata is not supported on this path.
         public var fd: Int?
+        /// File descriptors received using `SCM_RIGHTS` on a Unix-domain stream socket.
+        ///
+        /// Populated only when `ChannelOptions.receiveFileDescriptors` is enabled. The receiving
+        /// handler takes ownership and must close every descriptor, including when discarding data.
+        /// Copying or releasing this envelope does not duplicate or close the descriptors.
+        /// Descriptors have close-on-exec set. This field cannot be used for outbound stream writes.
+        public var receivedFileDescriptors: [CInt] = []
         /// The UDP segment size for Generic Segmentation Offload (GSO).
         ///
         /// When set, this enables per-message GSO, allowing the kernel to split this datagram

@@ -659,7 +659,7 @@ final class ChannelTests: XCTestCase {
                     received.append(contentsOf: bytes.prefix(count))
                     for message in controlBytes.receivedControlMessages! {
                         XCTAssertEqual(message.level, SOL_SOCKET)
-                        XCTAssertEqual(message.type, SCM_RIGHTS)
+                        XCTAssertEqual(message.type, CInt(SCM_RIGHTS))
                         receivedDescriptors.append(ControlMessageParser._readCInt(data: try XCTUnwrap(message.data)))
                     }
                 case .wouldBlock:
