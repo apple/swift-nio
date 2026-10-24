@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 #if SWIFTNIO_USE_IO_URING
@@ -424,3 +426,4 @@ extension Selector: _SelectorBackendProtocol {
 #endif
 
 #endif
+#endif  // !os(WASI)

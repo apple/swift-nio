@@ -12,10 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOConcurrencyHelpers
 
 #if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#elseif os(OpenBSD)
+import CNIOOpenBSD
+#elseif os(Windows)
+import WinSDK
 #endif
 
 enum LowLevelThreadOperations {
@@ -42,7 +48,6 @@ protocol ThreadOps {
 /// A Thread that executes some runnable block.
 ///
 /// All methods exposed are thread-safe.
-// swift-format-ignore
 @usableFromInline
 final class NIOThread: Sendable {
     internal typealias ThreadBoxValue = (body: (NIOThread) -> Void, name: String?)
@@ -90,11 +95,23 @@ final class NIOThread: Sendable {
     }
 
     static var currentThreadName: String? {
+        #if os(Windows)
+        ThreadOpsSystem.threadName(.init(handle: GetCurrentThread()))
+        #else
         ThreadOpsSystem.threadName(.init(handle: pthread_self()))
+        #endif
     }
 
     static var currentThreadID: UInt {
-        .init(bitPattern: .init(bitPattern: ThreadOpsSystem.currentThread.handle))
+        #if os(Windows)
+        // Use the OS thread id directly. It is stable for the lifetime of the
+        // thread, whereas `currentThread` hands back a fresh `DuplicateHandle`
+        // on every call — distinct handle values for the same thread (so not a
+        // stable id) that would also leak, since nothing closes them here.
+        UInt(GetCurrentThreadId())
+        #else
+        UInt(bitPattern: .init(bitPattern: ThreadOpsSystem.currentThread.handle))
+        #endif
     }
 
     @discardableResult
@@ -149,7 +166,15 @@ final class NIOThread: Sendable {
     internal static func withCurrentThread<Return>(_ body: (NIOThread) throws -> Return) rethrows -> Return {
         let thread = NIOThread(handle: ThreadOpsSystem.currentThread, desiredName: nil)
         defer {
-            thread.takeOwnership()
+            let handle = thread.takeOwnership()
+            #if os(Windows)
+            // On Windows `currentThread` gave us an owning HANDLE via
+            // `DuplicateHandle`; release it now. We can't `joinThread` it (that
+            // would wait on the current thread and deadlock), so close directly.
+            CloseHandle(handle.handle)
+            #else
+            _ = handle
+            #endif
         }
         return try body(thread)
     }
@@ -274,3 +299,4 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
 }
 
 extension ThreadSpecificVariable: @unchecked Sendable where Value: Sendable {}
+#endif  // !os(WASI)

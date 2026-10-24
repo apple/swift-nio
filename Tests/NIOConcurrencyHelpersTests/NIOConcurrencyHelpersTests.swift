@@ -24,6 +24,16 @@ import Darwin
 import Glibc
 #elseif canImport(Android)
 import Android
+#elseif os(Windows)
+import WinSDK
+
+// Windows has no `usleep`; approximate it with `Sleep`, which takes whole
+// milliseconds. The coarse precision is fine for these test poll loops.
+@discardableResult
+func usleep(_ microseconds: UInt32) -> CInt {
+    Sleep(microseconds / 1000)
+    return 0
+}
 #else
 #error("The Concurrency helpers test module was unable to identify your C library.")
 #endif
@@ -474,6 +484,41 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt32.self)
         testFor(UInt64.self)
         testFor(UInt.self)
+    }
+
+    @available(*, deprecated, message: "Test deprecated as it tests the deprecated Lock class")
+    func testDeprecatedLockMutualExclusion() {
+        let l = Lock()
+
+        nonisolated(unsafe) var x = 1
+        let q = DispatchQueue(label: "q")
+        let g = DispatchGroup()
+        let sem1 = DispatchSemaphore(value: 0)
+        let sem2 = DispatchSemaphore(value: 0)
+
+        l.lock()
+
+        q.async(group: g) {
+            sem1.signal()
+            l.lock()
+            x = 2
+            l.unlock()
+            sem2.signal()
+        }
+
+        sem1.wait()
+        XCTAssertEqual(
+            DispatchTimeoutResult.timedOut,
+            g.wait(timeout: .now() + 0.1)
+        )
+        XCTAssertEqual(1, x)
+
+        l.unlock()
+        sem2.wait()
+
+        l.lock()
+        XCTAssertEqual(2, x)
+        l.unlock()
     }
 
     func testLockMutualExclusion() {

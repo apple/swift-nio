@@ -12,9 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import CNIODarwin
 import CNIOLinux
+import CNIOOpenBSD
 import CNIOWindows
 import NIOCore
 
@@ -148,6 +151,7 @@ private func doPendingDatagramWriteVectorOperation(
 
                 var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[c])
                 controlBytes.appendExplicitCongestionState(metadata: p.metadata, protocolFamily: protocolFamily)
+                controlBytes.appendUDPSegmentSize(metadata: p.metadata)
                 let controlMessageBytePointer = controlBytes.validControlBytes
 
                 var msg = msghdr()
@@ -155,8 +159,7 @@ private func doPendingDatagramWriteVectorOperation(
                 msg.msg_namelen = addressLen
                 msg.msg_iov = iovecs.baseAddress! + c
                 msg.msg_iovlen = 1
-                msg.msg_control = controlMessageBytePointer.baseAddress
-                msg.msg_controllen = .init(controlMessageBytePointer.count)
+                msg.control_ptr = controlMessageBytePointer
                 msg.msg_flags = 0
                 msgs[c] = MMsgHdr(msg_hdr: msg, msg_len: 0)
             }
@@ -717,3 +720,4 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         assert(self.state.isEmpty)
     }
 }
+#endif  // !os(WASI)

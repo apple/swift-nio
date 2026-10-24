@@ -17,12 +17,9 @@
 #include "CNIOWindows.h"
 
 #include <assert.h>
-
-int CNIOWindows_sendmmsg(SOCKET s, CNIOWindows_mmsghdr *msgvec, unsigned int vlen,
-                         int flags) {
-  assert(!"sendmmsg not implemented");
-  abort();
-}
+#include <errno.h>
+#include <stdio.h>
+#include <winbase.h>
 
 int CNIOWindows_recvmmsg(SOCKET s, CNIOWindows_mmsghdr *msgvec,
                          unsigned int vlen, int flags,
@@ -53,6 +50,34 @@ size_t CNIOWindows_CMSG_LEN(size_t length) {
 
 size_t CNIOWindows_CMSG_SPACE(size_t length) {
   return WSA_CMSG_SPACE(length);
+}
+
+errno_t CNIOWindows_errno(void) {
+    errno_t value = 0;
+    _get_errno(&value);
+    return value;
+}
+
+void CNIOWindows_set_errno(errno_t value) {
+    _set_errno(value);
+}
+
+DWORD CNIOWindows_FormatGetLastError(DWORD errorCode, LPSTR errorMsg) {
+  return FormatMessage(
+    FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+    NULL,
+    errorCode,
+    0, // Default language
+    errorMsg,
+    0,
+    NULL
+  );
+}
+
+void CNIOWindows_setStdoutUnbuffered(void) {
+  // Equivalent to `setbuf(stdout, NULL)`, but `setbuf` is deprecated on the
+  // Windows CRT; `setvbuf(..., _IONBF, 0)` is the recommended replacement.
+  setvbuf(stdout, NULL, _IONBF, 0);
 }
 
 #endif

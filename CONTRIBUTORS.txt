@@ -96,6 +96,7 @@ needs to be listed here.
 - Kevin Sweeney <kevin_sweeney@apple.com>
 - Kim de Vos <kimdevos12@hotmail.com>
 - Konrad `ktoso` Malawski <ktoso@apple.com>
+- Kushal Pisavadia <kushal.p@apple.com>
 - Kyle Bashour <kylebshr@me.com>
 - Kyle Browning <kylebrowning@me.com>
 - Kyle Jessup <kyle@perfect.org>

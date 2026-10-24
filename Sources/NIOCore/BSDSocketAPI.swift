@@ -83,7 +83,26 @@ private let sysInet_ntop:
         inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
 #endif
+#elseif os(FreeBSD)
+@preconcurrency import Glibc
+import CNIOFreeBSD
+
+private let sysInet_ntop:
+    @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? =
+        CNIOFreeBSD_inet_ntop
+private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt =
+    CNIOFreeBSD_inet_pton
+
+#elseif os(OpenBSD)
+@preconcurrency import Glibc
+import CNIOOpenBSD
+
+private let sysInet_ntop:
+    @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? =
+        inet_ntop
+private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
 #elseif canImport(Darwin)
+import CNIODarwin
 import Darwin
 
 private let sysInet_ntop:
@@ -102,15 +121,9 @@ private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMut
 #endif
 
 #if os(Android)
-#if compiler(>=6.0)
 @usableFromInline let IFF_BROADCAST: CUnsignedInt = numericCast(Android.IFF_BROADCAST.rawValue)
 @usableFromInline let IFF_POINTOPOINT: CUnsignedInt = numericCast(Android.IFF_POINTOPOINT.rawValue)
 @usableFromInline let IFF_MULTICAST: CUnsignedInt = numericCast(Android.IFF_MULTICAST.rawValue)
-#else
-@usableFromInline let IFF_BROADCAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_BROADCAST.rawValue)
-@usableFromInline let IFF_POINTOPOINT: CUnsignedInt = numericCast(SwiftGlibc.IFF_POINTOPOINT.rawValue)
-@usableFromInline let IFF_MULTICAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_MULTICAST.rawValue)
-#endif
 #if arch(arm)
 @usableFromInline let SO_RCVTIMEO = SO_RCVTIMEO_OLD
 @usableFromInline let SO_TIMESTAMP = SO_TIMESTAMP_OLD
@@ -127,6 +140,16 @@ public enum NIOBSDSocket: Sendable {
     #else
     public typealias Handle = CInt
     #endif
+    public struct PipeHandle {
+        public var input: Handle
+        public var output: Handle
+
+        @inlinable
+        public init(input: Handle, output: Handle) {
+            self.input = input
+            self.output = output
+        }
+    }
 }
 
 extension NIOBSDSocket {
@@ -385,6 +408,28 @@ extension NIOBSDSocket.Option {
     }
 }
 
+#if canImport(Darwin)
+extension NIOBSDSocket.Option {
+    /// Set the don't fragment bit on outgoing IPv4 packets.
+    @inlinable
+    public static var ip_dontfrag: NIOBSDSocket.Option {
+        NIOBSDSocket.Option(rawValue: IP_DONTFRAG)
+    }
+}
+#endif
+
+#if os(Linux)
+extension NIOBSDSocket.Option {
+    /// Set the path MTU discovery mode for IPv4, one of the `IP_PMTUDISC_*` values.
+    ///
+    /// - Seealso: `man 7 ip` (Linux)
+    @inlinable
+    public static var ip_mtu_discover: NIOBSDSocket.Option {
+        NIOBSDSocket.Option(rawValue: IP_MTU_DISCOVER)
+    }
+}
+#endif
+
 // IPv6 Options
 extension NIOBSDSocket.Option {
     /// Add an IPv6 group membership.
@@ -424,6 +469,34 @@ extension NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IPV6_V6ONLY)
     }
 }
+
+#if canImport(Darwin) || os(Linux)
+extension NIOBSDSocket.Option {
+    /// Don't fragment outgoing IPv6 packets.
+    ///
+    /// - Seealso: https://datatracker.ietf.org/doc/html/rfc3542#section-11.2
+    @inlinable
+    public static var ipv6_dontfrag: NIOBSDSocket.Option {
+        #if canImport(Darwin)
+        NIOBSDSocket.Option(rawValue: CNIODarwin_IPV6_DONTFRAG)
+        #else
+        NIOBSDSocket.Option(rawValue: IPV6_DONTFRAG)
+        #endif
+    }
+}
+#endif
+
+#if os(Linux)
+extension NIOBSDSocket.Option {
+    /// Set the path MTU discovery mode for IPv6, one of the `IPV6_PMTUDISC_*` values.
+    ///
+    /// - Seealso: `man 7 ipv6` (Linux)
+    @inlinable
+    public static var ipv6_mtu_discover: NIOBSDSocket.Option {
+        NIOBSDSocket.Option(rawValue: IPV6_MTU_DISCOVER)
+    }
+}
+#endif
 
 // TCP Options
 extension NIOBSDSocket.Option {
@@ -544,6 +617,18 @@ extension NIOBSDSocket.Option {
     @inlinable
     public static var so_timestamp: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: SO_TIMESTAMP)
+    }
+
+    /// Allows multiple sockets to be bound to an identical address and port.
+    ///
+    /// - Important: The behavior of this socket option is platform-specific. See platform documentation for details.
+    ///
+    /// - Seealso: `man 2 socket` (Linux)
+    /// - Seealso: `man 2 setsockopt` (Darwin)
+    /// - Seealso: https://stackoverflow.com/questions/14388706/how-do-so-reuseaddr-and-so-reuseport-differ
+    @inlinable
+    public static var so_reuseport: NIOBSDSocket.Option {
+        NIOBSDSocket.Option(rawValue: SO_REUSEPORT)
     }
 }
 #endif

@@ -18,6 +18,9 @@ import XCTest
 
 @testable import NIOPosix
 
+// See SyscallAbstractionLayer.swift: the SAL harness is CInt-fd based and gated
+// off on Windows.
+#if !os(Windows)
 struct SALContext {
     let eventLoop: SelectableEventLoop
     private let wakeups: LockedBox<Void>
@@ -47,11 +50,12 @@ struct SALContext {
     func runSALOnEventLoop<Result: Sendable>(
         file: StaticString = #filePath,
         line: UInt = #line,
-        body: @escaping @Sendable (
-            _ eventLoop: SelectableEventLoop,
-            _ kernelToUser: LockedBox<KernelToUser>,
-            _ userToKernal: LockedBox<UserToKernel>
-        ) throws -> Result,
+        body:
+            @escaping @Sendable (
+                _ eventLoop: SelectableEventLoop,
+                _ kernelToUser: LockedBox<KernelToUser>,
+                _ userToKernal: LockedBox<UserToKernel>
+            ) throws -> Result,
         syscallAssertions: (SyscallAssertions) throws -> Void
     ) throws -> Result {
         let box = LockedBox<Swift.Result<Result, Error>>()
@@ -81,11 +85,12 @@ struct SALContext {
     func runSALOnEventLoopAndWait<Result: Sendable>(
         file: StaticString = #filePath,
         line: UInt = #line,
-        body: @escaping @Sendable (
-            _ eventLoop: SelectableEventLoop,
-            _ kernelToUser: LockedBox<KernelToUser>,
-            _ userToKernal: LockedBox<UserToKernel>
-        ) throws -> EventLoopFuture<Result>,
+        body:
+            @escaping @Sendable (
+                _ eventLoop: SelectableEventLoop,
+                _ kernelToUser: LockedBox<KernelToUser>,
+                _ userToKernal: LockedBox<UserToKernel>
+            ) throws -> EventLoopFuture<Result>,
         syscallAssertions: (SyscallAssertions) throws -> Void
     ) throws -> Result {
         let result = try self.runSALOnEventLoop(body: body, syscallAssertions: syscallAssertions)
@@ -95,11 +100,12 @@ struct SALContext {
     func runSALOnEventLoop<Result: Sendable>(
         file: StaticString = #filePath,
         line: UInt = #line,
-        body: @escaping @Sendable (
-            _ eventLoop: SelectableEventLoop,
-            _ kernelToUser: LockedBox<KernelToUser>,
-            _ userToKernal: LockedBox<UserToKernel>
-        ) throws -> Result
+        body:
+            @escaping @Sendable (
+                _ eventLoop: SelectableEventLoop,
+                _ kernelToUser: LockedBox<KernelToUser>,
+                _ userToKernal: LockedBox<UserToKernel>
+            ) throws -> Result
     ) throws -> Result {
         try self.runSALOnEventLoop(file: file, line: line, body: body) { _ in }
     }
@@ -164,3 +170,4 @@ func withSALContext<R>(body: (SALContext) throws -> R) throws -> R {
     let result = try body(context)
     return result
 }
+#endif

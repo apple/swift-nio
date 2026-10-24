@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 /// A protocol that covers an object that does DNS lookups.
@@ -48,3 +50,4 @@ public protocol Resolver {
     /// This method is not guaranteed to terminate the outstanding queries.
     func cancelQueries()
 }
+#endif  // !os(WASI)

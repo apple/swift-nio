@@ -12,17 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOConcurrencyHelpers
 import NIOCore
 
 #if os(Linux)
 import CNIOLinux
+#elseif os(Windows)
+import WinSDK
 #endif
 
 @usableFromInline
 internal enum SelectorLifecycleState: Sendable {
     case open
-    case closing
     case closed
 }
 
@@ -123,21 +126,21 @@ protocol _SelectorBackendProtocol {
     func initialiseState0() throws
     func deinitAssertions0()  // allows actual implementation to run some assertions as part of the class deinit
     func register0(
-        selectableFD: CInt,
-        fileDescriptor: CInt,
+        selectableFD: NIOBSDSocket.Handle,
+        fileDescriptor: NIOBSDSocket.Handle,
         interested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws
     func reregister0(
-        selectableFD: CInt,
-        fileDescriptor: CInt,
+        selectableFD: NIOBSDSocket.Handle,
+        fileDescriptor: NIOBSDSocket.Handle,
         oldInterested: SelectorEventSet,
         newInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws
     func deregister0(
-        selectableFD: CInt,
-        fileDescriptor: CInt,
+        selectableFD: NIOBSDSocket.Handle,
+        fileDescriptor: NIOBSDSocket.Handle,
         oldInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws
@@ -183,7 +186,7 @@ internal class Selector<R: Registration> {
     var selectorFD: CInt = -1  // -1 == we're closed
 
     // Here we add the stored properties that are used by the specific backends
-    #if canImport(Darwin)
+    #if canImport(Darwin) || os(OpenBSD)
     @usableFromInline
     typealias EventType = kevent
     #elseif os(Linux) || os(Android)
@@ -210,6 +213,30 @@ internal class Selector<R: Registration> {
     @usableFromInline
     var deferredReregistrationsPending = false  // true if flush needed when reentring whenReady()
     #endif
+    #elseif os(Windows)
+    @usableFromInline
+    typealias EventType = WinSDK.pollfd
+    /// Array of poll file descriptors monitored by WSAPoll. The first entry is always the wakeup socket.
+    @usableFromInline
+    var pollFDs = [pollfd]()
+    /// Reverse lookup map from file-descriptor handle to the entry's index in `pollFDs`. Maintained
+    /// alongside `pollFDs` so that `reregister0`/`deregister0` can update the relevant `pollfd` in O(1)
+    /// instead of linearly scanning the array. The indexes are kept in sync as entries are removed:
+    /// `whenReady0` compacts `pollFDs` in place after processing events and updates this map for every
+    /// surviving entry that shifts position.
+    @usableFromInline
+    var pollFDIndexes = [NIOBSDSocket.Handle: Int]()
+    /// Tracks indexes of file descriptors pending removal from `pollFDs`. We defer removal until after
+    /// processing all events in `whenReady0` to avoid invalidating indexes during iteration. Stored as
+    /// indexes rather than a parallel boolean array for O(1) lookup during cleanup.
+    @usableFromInline
+    var deregisteredFDs = Set<Int>()
+    /// The read end of the wakeup socket pair. This is monitored in WSAPoll to allow waking up the event loop.
+    @usableFromInline
+    var wakeupReadSocket: NIOBSDSocket.Handle = NIOBSDSocket.invalidHandle
+    /// The write end of the wakeup socket pair. Writing to this socket wakes up the event loop.
+    @usableFromInline
+    var wakeupWriteSocket: NIOBSDSocket.Handle = NIOBSDSocket.invalidHandle
     #else
     #error("Unsupported platform, no suitable selector backend (we need kqueue or epoll support)")
     #endif
@@ -392,7 +419,18 @@ extension Selector: CustomStringConvertible {
     @usableFromInline
     var description: String {
         func makeDescription() -> String {
-            "Selector { descriptor = \(self.selectorFD) }"
+            #if os(Windows)
+            // The WSAPoll backend has no descriptor standing for the selector itself, the way
+            // epoll and kqueue do. The read end of the wakeup socket pair has the same lifetime,
+            // so report that, and -1 once it has been closed, keeping the convention that -1
+            // means the selector is no longer usable.
+            let descriptor =
+                self.wakeupReadSocket == NIOBSDSocket.invalidHandle
+                ? -1 : Int(self.wakeupReadSocket)
+            #else
+            let descriptor = self.selectorFD
+            #endif
+            return "Selector { descriptor = \(descriptor) }"
         }
 
         if self.myThread.isCurrentSlow {
@@ -526,3 +564,4 @@ enum SelectorStrategy: Sendable {
         hasher.combine(self._rawValue)
     }
 }
+#endif  // !os(WASI)

@@ -54,6 +54,8 @@ final class ChatHandler: ChannelInboundHandler {
     private var channels: [ObjectIdentifier: Channel] = [:]
 
     public func channelActive(context: ChannelHandlerContext) {
+        // In production code, you should check if `context.remoteAddress` is actually
+        // present, as in rare situations it can be `nil`.
         let remoteAddress = context.remoteAddress!
         let channel = context.channel
         self.channelsSyncQueue.async {
@@ -92,6 +94,9 @@ final class ChatHandler: ChannelInboundHandler {
 
         // 64 should be good enough for the ipaddress
         var buffer = context.channel.allocator.buffer(capacity: read.readableBytes + 64)
+
+        // In production code, you should check if `context.remoteAddress` is actually
+        // present, as in rare situations it can be `nil`.
         buffer.writeString("(\(context.remoteAddress!)) - ")
         buffer.writeBuffer(&read)
         self.channelsSyncQueue.async { [buffer] in

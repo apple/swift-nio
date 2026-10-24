@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import NIOCore
 
 public enum VsockChannelEvents: Sendable {
@@ -38,3 +41,4 @@ public enum VsockChannelEvents: Sendable {
         }
     }
 }
+#endif  // !os(WASI)

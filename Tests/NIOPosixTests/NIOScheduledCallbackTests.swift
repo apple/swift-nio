@@ -183,7 +183,7 @@ final class IsolatedEventLoopScheduledCallbackTests: XCTestCase {
     func testShutdownCancelsOutstandingScheduledCallbacks() throws {
         let handler = NonSendableMockScheduledCallbackHandler()
 
-        _ = try self.loop.assumeIsolated().scheduleCallback(in: .milliseconds(1), handler: handler)
+        _ = try self.loop.assumeIsolated().scheduleCallback(in: .hours(1), handler: handler)
         self.shutdownEventLoop()
         handler.assert(callbackCount: 0, cancelCount: 1)
     }
@@ -208,6 +208,38 @@ final class IsolatedEventLoopScheduledCallbackTests: XCTestCase {
 
         self.shutdownEventLoop()
         handler.assert(callbackCount: 1, cancelCount: 0)
+    }
+}
+
+// `SelectableEventLoop` overrides `_scheduleCallbackIsolatedUnsafeUnchecked` override; test that
+// path specifically rather than relying on the default `IsolatedEventLoopScheduledCallbackTests`.
+final class SelectableEventLoopIsolatedScheduledCallbackTests: XCTestCase {
+    func testScheduledCallbackExecutedAtDeadlineOnIsolatedEventLoop() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { try! group.syncShutdownGracefully() }
+        let loop = group.next()
+        let handler = MockScheduledCallbackHandler()
+
+        try loop.submit {
+            _ = try loop.assumeIsolated().scheduleCallback(in: .milliseconds(1), handler: handler)
+        }.wait()
+
+        try loop.scheduleTask(in: .milliseconds(10)) {}.futureResult.wait()
+        handler.assert(callbackCount: 1, cancelCount: 0)
+    }
+
+    func testCancelOnIsolatedEventLoopExecutesCancellationCallback() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { try! group.syncShutdownGracefully() }
+        let loop = group.next()
+        let handler = MockScheduledCallbackHandler()
+
+        try loop.submit {
+            let scheduledCallback = try loop.assumeIsolated().scheduleCallback(in: .hours(1), handler: handler)
+            scheduledCallback.cancel()
+        }.wait()
+
+        handler.assert(callbackCount: 0, cancelCount: 1)
     }
 }
 
@@ -241,7 +273,9 @@ extension _BaseScheduledCallbackTests {
     func testScheduledCallbackNotExecutedBeforeDeadline() async throws {
         let handler = MockScheduledCallbackHandler()
 
-        _ = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        // Use a long deadline so that even if the short sleep overshoots on a loaded CI machine,
+        // it cannot reach the callback deadline.
+        _ = try self.loop.scheduleCallback(in: .hours(1), handler: handler)
         handler.assert(callbackCount: 0, cancelCount: 0)
 
         try await self.advanceTime(by: .microseconds(1))
@@ -294,7 +328,7 @@ extension _BaseScheduledCallbackTests {
     func testCancelExecutesCancellationCallback() async throws {
         let handler = MockScheduledCallbackHandler()
 
-        let scheduledCallback = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        let scheduledCallback = try self.loop.scheduleCallback(in: .hours(1), handler: handler)
         scheduledCallback.cancel()
         try await self.requirements.waitForLoopTick()
         handler.assert(callbackCount: 0, cancelCount: 1)
@@ -314,7 +348,7 @@ extension _BaseScheduledCallbackTests {
     func testCancelAfterCancelDoesNotCallCancellationCallbackAgain() async throws {
         let handler = MockScheduledCallbackHandler()
 
-        let scheduledCallback = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        let scheduledCallback = try self.loop.scheduleCallback(in: .hours(1), handler: handler)
         scheduledCallback.cancel()
         try await self.requirements.waitForLoopTick()
         scheduledCallback.cancel()
@@ -325,7 +359,7 @@ extension _BaseScheduledCallbackTests {
     func testCancelAfterShutdownDoesNotCallCancellationCallbackAgain() async throws {
         let handler = MockScheduledCallbackHandler()
 
-        let scheduledCallback = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        let scheduledCallback = try self.loop.scheduleCallback(in: .hours(1), handler: handler)
         try await self.shutdownEventLoop()
         handler.assert(callbackCount: 0, cancelCount: 1)
 
@@ -336,7 +370,7 @@ extension _BaseScheduledCallbackTests {
     func testShutdownCancelsOutstandingScheduledCallbacks() async throws {
         let handler = MockScheduledCallbackHandler()
 
-        _ = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        _ = try self.loop.scheduleCallback(in: .hours(1), handler: handler)
         try await self.shutdownEventLoop()
         handler.assert(callbackCount: 0, cancelCount: 1)
     }
@@ -344,7 +378,7 @@ extension _BaseScheduledCallbackTests {
     func testShutdownDoesNotCancelCancelledCallbacksAgain() async throws {
         let handler = MockScheduledCallbackHandler()
 
-        let handle = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        let handle = try self.loop.scheduleCallback(in: .hours(1), handler: handler)
         handle.cancel()
         try await self.requirements.waitForLoopTick()
         handler.assert(callbackCount: 0, cancelCount: 1)
@@ -390,7 +424,7 @@ private final class MockScheduledCallbackHandler: NIOScheduledCallbackHandler, S
         self.cancelCount.wrappingIncrement(by: 1, ordering: .sequentiallyConsistent)
     }
 
-    func assert(callbackCount: Int, cancelCount: Int, file: StaticString = #file, line: UInt = #line) {
+    func assert(callbackCount: Int, cancelCount: Int, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(
             self.callbackCount.load(ordering: .sequentiallyConsistent),
             callbackCount,
@@ -407,7 +441,7 @@ private final class MockScheduledCallbackHandler: NIOScheduledCallbackHandler, S
         )
     }
 
-    func waitForCallback(timeout: TimeAmount, file: StaticString = #file, line: UInt = #line) async throws {
+    func waitForCallback(timeout: TimeAmount, file: StaticString = #filePath, line: UInt = #line) async throws {
         try await XCTWithTimeout(timeout, file: file, line: line) { await self.callbackStream.first { _ in true } }
     }
 }
@@ -424,7 +458,7 @@ private final class NonSendableMockScheduledCallbackHandler: NIOScheduledCallbac
         self.cancelCount += 1
     }
 
-    func assert(callbackCount: Int, cancelCount: Int, file: StaticString = #file, line: UInt = #line) {
+    func assert(callbackCount: Int, cancelCount: Int, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertEqual(
             self.callbackCount,
             callbackCount,
@@ -457,7 +491,7 @@ private final class NonSendableMockScheduledCallbackHandler: NIOScheduledCallbac
 /// This function is probably a good balance of pragmatism and clarity.
 func XCTWithTimeout<Result>(
     _ timeout: TimeAmount,
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line,
     operation: @escaping @Sendable () async throws -> Result
 ) async throws -> Result where Result: Sendable {

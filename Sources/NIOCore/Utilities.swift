@@ -20,10 +20,15 @@ import CNIOLinux
 #elseif canImport(Android)
 @preconcurrency import Android
 #endif
+#elseif os(OpenBSD)
+import CNIOOpenBSD
+@preconcurrency import Glibc
 #elseif os(Windows)
+import ucrt
 import let WinSDK.RelationProcessorCore
 
 import let WinSDK.AF_UNSPEC
+import let WinSDK.ERROR_BUFFER_OVERFLOW
 import let WinSDK.ERROR_SUCCESS
 
 import func WinSDK.GetAdaptersAddresses
@@ -117,11 +122,26 @@ public enum System: Sendable {
         .map { $0.ProcessorMask.nonzeroBitCount }
         .reduce(0, +)
         #elseif os(Linux) || os(Android)
-        if let quota2 = Linux.coreCountCgroup2Restriction() {
-            return quota2
-        } else if let quota = Linux.coreCountCgroup1Restriction() {
-            return quota
-        } else if let cpusetCount = Linux.coreCount(cpuset: Linux.cpuSetPath) {
+        var cpuSetPath: String?
+
+        switch Linux.cgroupVersion {
+        case .v1:
+            if let quota = Linux.coreCountCgroup1Restriction() {
+                return quota
+            }
+            cpuSetPath = Linux.cpuSetPathV1
+        case .v2:
+            if let quota = Linux.coreCountCgroup2Restriction() {
+                return quota
+            }
+            cpuSetPath = Linux.cpuSetPathV2
+        case .none:
+            break
+        }
+
+        if let cpuSetPath,
+            let cpusetCount = Linux.coreCount(cpuset: cpuSetPath)
+        {
             return cpusetCount
         } else {
             return sysconf(CInt(_SC_NPROCESSORS_ONLN))
@@ -141,6 +161,9 @@ public enum System: Sendable {
     /// - Returns: An array of network interfaces available on this machine.
     /// - Throws: If an error is encountered while enumerating interfaces.
     @available(*, deprecated, renamed: "enumerateDevices")
+    #if compiler(>=6.3)
+    @available(Android 24, *)
+    #endif
     public static func enumerateInterfaces() throws -> [NIONetworkInterface] {
         var interfaces: [NIONetworkInterface] = []
         interfaces.reserveCapacity(12)  // Arbitrary choice.
@@ -171,47 +194,61 @@ public enum System: Sendable {
     ///
     /// - Returns: An array of network devices available on this machine.
     /// - Throws: If an error is encountered while enumerating interfaces.
+    #if compiler(>=6.3)
+    @available(Android 24, *)
+    #endif
     public static func enumerateDevices() throws -> [NIONetworkDevice] {
         var devices: [NIONetworkDevice] = []
         devices.reserveCapacity(12)  // Arbitrary choice.
 
         #if os(Windows)
-        var ulSize: ULONG = 0
-        _ = GetAdaptersAddresses(ULONG(AF_UNSPEC), 0, nil, nil, &ulSize)
+        // `GetAdaptersAddresses` writes a linked list of variably sized records into the
+        // caller's buffer, so the buffer must be sized in *bytes*, not in whole
+        // `IP_ADAPTER_ADDRESSES` records. 15KB is the initial allocation recommended by the
+        // documentation; if that is not enough (or if the adapter information grows between
+        // two calls) the call reports `ERROR_BUFFER_OVERFLOW` and updates `ulSize` with the
+        // size now required, so the enumeration is retried a small number of times.
+        var ulSize: ULONG = 15 * 1024
+        let ulBufferOverflow: ULONG = ULONG(ERROR_BUFFER_OVERFLOW)
+        var ulResult: ULONG = ulBufferOverflow
+        var attemptsRemaining: Int = 3
 
-        let stride: Int = MemoryLayout<IP_ADAPTER_ADDRESSES>.stride
-        let pBuffer: UnsafeMutableBufferPointer<IP_ADAPTER_ADDRESSES> =
-            UnsafeMutableBufferPointer.allocate(capacity: Int(ulSize) / stride)
-        defer {
-            pBuffer.deallocate()
+        while ulResult == ulBufferOverflow && attemptsRemaining > 0 {
+            attemptsRemaining -= 1
+
+            let pBuffer: UnsafeMutableRawPointer =
+                UnsafeMutableRawPointer.allocate(
+                    byteCount: Int(ulSize),
+                    alignment: MemoryLayout<IP_ADAPTER_ADDRESSES>.alignment
+                )
+            defer {
+                pBuffer.deallocate()
+            }
+
+            let pAdapters: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES> =
+                pBuffer.bindMemory(to: IP_ADAPTER_ADDRESSES.self, capacity: 1)
+
+            ulResult = GetAdaptersAddresses(ULONG(AF_UNSPEC), 0, nil, pAdapters, &ulSize)
+            guard ulResult == ERROR_SUCCESS else {
+                continue
+            }
+
+            var pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>? = pAdapters
+            while let adapter = pAdapter {
+                var pUnicastAddress: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>? =
+                    adapter.pointee.FirstUnicastAddress
+                while let unicastAddress = pUnicastAddress {
+                    if let device = NIONetworkDevice(adapter, unicastAddress) {
+                        devices.append(device)
+                    }
+                    pUnicastAddress = unicastAddress.pointee.Next
+                }
+                pAdapter = adapter.pointee.Next
+            }
         }
 
-        let ulResult: ULONG =
-            GetAdaptersAddresses(
-                ULONG(AF_UNSPEC),
-                0,
-                nil,
-                pBuffer.baseAddress,
-                &ulSize
-            )
         guard ulResult == ERROR_SUCCESS else {
             throw IOError(windows: ulResult, reason: "GetAdaptersAddresses")
-        }
-
-        var pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>? =
-            UnsafeMutablePointer(pBuffer.baseAddress)
-        while pAdapter != nil {
-            let pUnicastAddresses: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>? =
-                pAdapter!.pointee.FirstUnicastAddress
-            var pUnicastAddress: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>? =
-                pUnicastAddresses
-            while pUnicastAddress != nil {
-                if let device = NIONetworkDevice(pAdapter!, pUnicastAddress!) {
-                    devices.append(device)
-                }
-                pUnicastAddress = pUnicastAddress!.pointee.Next
-            }
-            pAdapter = pAdapter!.pointee.Next
         }
         #elseif !os(WASI)
         var interface: UnsafeMutablePointer<ifaddrs>? = nil
@@ -258,14 +295,42 @@ extension System {
     public static let supportsUDPReceiveOffload: Bool = false
     #endif
 
-    /// Returns the UDP maximum segment count if the platform supports and defines it.
+    /// Returns `nil`.
+    @available(*, deprecated, message: "UDP_MAX_SEGMENTS isn't exposed by the Linux kernel")
     public static var udpMaxSegments: Int? {
-        #if os(Linux)
-        let maxSegments = CNIOLinux_UDP_MAX_SEGMENTS
-        if maxSegments != -1 {
-            return maxSegments
-        }
-        #endif
-        return nil
+        nil
     }
 }
+
+#if os(Windows)
+@usableFromInline
+package enum Windows {
+    @usableFromInline
+    package static func strerror(_ errnoCode: CInt) -> String? {
+        withUnsafeTemporaryAllocation(of: CChar.self, capacity: 256) { ptr in
+            if strerror_s(ptr.baseAddress, ptr.count, errnoCode) == 0 {
+                return String(cString: UnsafePointer(ptr.baseAddress!))
+            }
+            return nil
+        }
+    }
+
+    package static func getenv(_ env: String) -> String? {
+        var count = 0
+        var ptr: UnsafeMutablePointer<CChar>? = nil
+        withUnsafeMutablePointer(to: &ptr) { buffer in
+            // according to docs only EINVAL and ENOMEM are possible here.
+            _ = _dupenv_s(buffer, &count, env)
+        }
+        defer { if let ptr { free(ptr) } }
+        if count > 0, let ptr {
+            let buffer = UnsafeBufferPointer(start: ptr, count: count)
+            return buffer.withMemoryRebound(to: UInt8.self) {
+                String(decoding: $0, as: Unicode.UTF8.self)
+            }
+        } else {
+            return nil
+        }
+    }
+}
+#endif

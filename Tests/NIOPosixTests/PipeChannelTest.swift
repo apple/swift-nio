@@ -20,6 +20,12 @@ import XCTest
 @testable import NIOPosix
 
 final class PipeChannelTest: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        throw XCTSkip("Pipe channels are not supported on Windows")
+        #endif
+    }
+
     var group: MultiThreadedEventLoopGroup! = nil
     var channel: Channel! = nil
     var toChannel: FileHandle! = nil
@@ -31,6 +37,11 @@ final class PipeChannelTest: XCTestCase {
     }
 
     override func setUp() {
+        #if os(Windows)
+        // Pipe channels are unsupported on Windows (see `setUpWithError`); avoid
+        // running the pipe setup, which would trap, before the tests are skipped.
+        return
+        #else
         self.group = .init(numberOfThreads: 1)
 
         XCTAssertNoThrow(
@@ -61,9 +72,13 @@ final class PipeChannelTest: XCTestCase {
             }
         )
         self.buffer = self.channel.allocator.buffer(capacity: 128)
+        #endif
     }
 
     override func tearDown() {
+        #if os(Windows)
+        return
+        #else
         self.buffer = nil
         self.toChannel.closeFile()
         self.fromChannel.closeFile()
@@ -71,6 +86,7 @@ final class PipeChannelTest: XCTestCase {
         self.fromChannel = nil
         XCTAssertNoThrow(try self.channel.syncCloseAcceptingAlreadyClosed())
         XCTAssertNoThrow(try self.group.syncShutdownGracefully())
+        #endif
     }
 
     func testBasicIO() throws {
@@ -99,10 +115,17 @@ final class PipeChannelTest: XCTestCase {
 
     func testWriteErrorsCloseChannel() {
         XCTAssertNoThrow(try self.channel.setOption(.allowRemoteHalfClosure, value: true).wait())
-        self.fromChannel.closeFile()
-        var buffer = self.channel.allocator.buffer(capacity: 1)
-        buffer.writeString("X")
-        XCTAssertThrowsError(try self.channel.writeAndFlush(buffer).wait()) { error in
+
+        // We need to wedge the EL open here to make sure that the close of `fromChannel` does
+        // not potentially cause us to handle writeEOF before we attempt to make the write. We
+        // want the _write_ to discover the issue first, not writeEOF.
+        let writeFuture = self.channel.eventLoop.flatSubmit { [fromChannel, channel] in
+            fromChannel!.closeFile()
+            var buffer = channel!.allocator.buffer(capacity: 1)
+            buffer.writeString("X")
+            return channel!.writeAndFlush(buffer)
+        }
+        XCTAssertThrowsError(try writeFuture.wait()) { error in
             if let error = error as? IOError {
                 XCTAssert([EPIPE, EBADF].contains(error.errnoCode), "unexpected errno: \(error)")
             } else {
@@ -145,6 +168,9 @@ final class PipeChannelTest: XCTestCase {
     }
 
     func testWeWorkFineWithASingleFileDescriptor() throws {
+        #if os(Windows)
+        throw XCTSkip("socketpair is not available on Windows")
+        #else
         final class EchoHandler: ChannelInboundHandler, Sendable {
             typealias InboundIn = ByteBuffer
             typealias OutboundOut = ByteBuffer
@@ -198,6 +224,48 @@ final class PipeChannelTest: XCTestCase {
             }
         )
         XCTAssertEqual(UInt8(ascii: "X"), spaceForX)
+        #endif
+    }
+
+    func testWriteEndGoingAway() throws {
+        try withPipe { readHandle, writeHandle in
+            let chan = try NIOPipeBootstrap(group: self.group)
+                .takingOwnershipOfDescriptor(output: try writeHandle.takeDescriptorOwnership())
+                .wait()
+
+            let writeResult = chan.writeAndFlush(ByteBuffer(repeating: 0x41, count: 32 * 1024 * 1024))
+            try chan.eventLoop.submit {}.wait()  // wait for write to be enqueued
+
+            try readHandle.close()
+
+            XCTAssertThrowsError(try writeResult.wait()) { error in
+                XCTAssertTrue(error is IOError, "Expected IOError but got \(type(of: error))")
+                if let ioError = error as? IOError {
+                    XCTAssertEqual(ioError.errnoCode, EPIPE, "Expected EPIPE but got \(ioError.errnoCode)")
+                }
+            }
+
+            // Channel should be closed after the write error
+            XCTAssertNoThrow(try chan.closeFuture.wait())
+
+            return []
+        }
+    }
+
+    func testReadEndGoingAway() throws {
+        try withPipe { readHandle, writeHandle in
+            let chan = try NIOPipeBootstrap(group: self.group)
+                .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+                .takingOwnershipOfDescriptor(input: try readHandle.takeDescriptorOwnership())
+                .wait()
+
+            try writeHandle.close()
+
+            // Channel should be closed because the read side is dead.
+            XCTAssertNoThrow(try chan.closeFuture.wait())
+
+            return []
+        }
     }
 }
 

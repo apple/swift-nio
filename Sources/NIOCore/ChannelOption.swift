@@ -93,6 +93,14 @@ extension ChannelOptions {
             }
 
             #if !os(Windows)
+            // Unavailable on Windows: there, WinSDK imports the socket option
+            // level/name constants (`IPPROTO_IP`, `IP_TTL`, `SO_REUSEADDR`, …)
+            // as enumeration cases rather than plain integers, so they don't fit
+            // the integer `SocketOptionLevel`/`SocketOptionName` typealiases.
+            // Use `init(level:name:)` taking `NIOBSDSocket.OptionLevel`/`Option`
+            // instead (their `.ip`/`.tcp`/etc. accessors read the enum's raw
+            // value).
+
             /// Create a new `SocketOption`.
             ///
             /// - Parameters:
@@ -217,6 +225,19 @@ extension ChannelOptions {
             public init() {}
         }
 
+        /// ``DatagramReceiveSegmentSize`` enables per-message GRO (Generic Receive Offload) segment size reporting.
+        /// When enabled, the kernel will provide the original segment size via control messages for aggregated datagrams,
+        /// which will be reported in `AddressedEnvelope.Metadata.segmentSize`.
+        ///
+        /// This option requires ``DatagramReceiveOffload`` to be enabled first and is only supported on Linux.
+        /// Support can be checked using ``System/supportsUDPReceiveOffload``.
+        ///
+        /// - Note: This provides the receive-side complement to per-message GSO (``AddressedEnvelope/Metadata/segmentSize``).
+        public struct DatagramReceiveSegmentSize: ChannelOption, Sendable {
+            public typealias Value = Bool
+            public init() {}
+        }
+
         /// When set to true IP level ECN information will be reported through `AddressedEnvelope.Metadata`
         public struct ExplicitCongestionNotificationsOption: ChannelOption, Sendable {
             public typealias Value = Bool
@@ -299,6 +320,8 @@ extension ChannelOptions {
 
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public struct ChannelOptions: Sendable {
+    // Unavailable on Windows; see `SocketOption.init(level:name:)`. Use the
+    // typed `socketOption(_:)`/`ipOption(_:)`/`tcpOption(_:)` accessors instead.
     #if !os(Windows)
     public static let socket: @Sendable (SocketOptionLevel, SocketOptionName) -> ChannelOptions.Types.SocketOption = {
         (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
@@ -360,6 +383,9 @@ public struct ChannelOptions: Sendable {
     /// - seealso: `DatagramReceiveOffload`
     public static let datagramReceiveOffload = Types.DatagramReceiveOffload()
 
+    /// - seealso: `DatagramReceiveSegmentSize`
+    public static let datagramReceiveSegmentSize = Types.DatagramReceiveSegmentSize()
+
     /// - seealso: `ExplicitCongestionNotificationsOption`
     public static let explicitCongestionNotification = Types.ExplicitCongestionNotificationsOption()
 
@@ -372,6 +398,8 @@ public struct ChannelOptions: Sendable {
 
 /// - seealso: `SocketOption`.
 extension ChannelOption where Self == ChannelOptions.Types.SocketOption {
+    // Unavailable on Windows; see `SocketOption.init(level:name:)`. Use the
+    // typed `socketOption(_:)`/`ipOption(_:)`/`tcpOption(_:)` accessors instead.
     #if !(os(Windows))
     public static func socket(_ level: SocketOptionLevel, _ name: SocketOptionName) -> Self {
         .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
@@ -449,6 +477,11 @@ extension ChannelOption where Self == ChannelOptions.Types.DatagramSegmentSize {
 /// - seealso: `DatagramReceiveOffload`.
 extension ChannelOption where Self == ChannelOptions.Types.DatagramReceiveOffload {
     public static var datagramReceiveOffload: Self { .init() }
+}
+
+/// - seealso: `DatagramReceiveSegmentSize`.
+extension ChannelOption where Self == ChannelOptions.Types.DatagramReceiveSegmentSize {
+    public static var datagramReceiveSegmentSize: Self { .init() }
 }
 
 /// - seealso: `ExplicitCongestionNotificationsOption`.

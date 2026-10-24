@@ -59,7 +59,7 @@ internal func XCTAssertThrowsError<T>(
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 internal func XCTAssertNoThrow<T>(
     _ expression: @autoclosure () async throws -> T,
-    file: StaticString = #file,
+    file: StaticString = #filePath,
     line: UInt = #line
 ) async {
     do {

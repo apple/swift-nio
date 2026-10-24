@@ -408,7 +408,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             "Received second response while waiting for first one to complete"
         )
         debugOnly {
-            let res = Self.unwrapOutboundIn(data)
+            let res = HTTPServerPipelineHandler.unwrapOutboundIn(data)
             switch res {
             case .head(let head) where head.isInformational:
                 self.checkAssertion(self.nextExpectedOutboundMessage == .head)
@@ -425,12 +425,12 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
 
         var startReadingAgain = false
 
-        switch Self.unwrapOutboundIn(data) {
+        switch HTTPServerPipelineHandler.unwrapOutboundIn(data) {
         case .head(var head) where self.lifecycleState != .acceptingEvents:
             if head.isKeepAlive {
                 head.headers.replaceOrAdd(name: "connection", value: "close")
             }
-            context.write(Self.wrapOutboundOut(.head(head)), promise: promise)
+            context.write(HTTPServerPipelineHandler.wrapOutboundOut(.head(head)), promise: promise)
         case .end:
             startReadingAgain = true
 
@@ -650,7 +650,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         let maybeFirstHead = self.eventBuffer.firstIndex(where: { element in
             switch element {
             case .channelRead(let read):
-                switch Self.unwrapInboundIn(read) {
+                switch HTTPServerPipelineHandler.unwrapInboundIn(read) {
                 case .head:
                     return true
                 case .body, .end:

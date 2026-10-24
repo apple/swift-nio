@@ -19,6 +19,10 @@ import XCTest
 @testable import NIOPosix
 
 class SystemTest: XCTestCase {
+    // None of these tests apply on Windows: the syscall-wrapper perf test is
+    // POSIX-only, `testErrorsWorkCorrectly` uses a POSIX fd as a socket handle,
+    // and the rest depend on POSIX `cmsg` support.
+    #if !os(Windows)
     func testSystemCallWrapperPerformance() throws {
         try runSystemCallWrapperPerformanceTest(
             testAssertFunction: XCTAssert,
@@ -114,8 +118,7 @@ class SystemTest: XCTestCase {
         var exampleCmsgHdr = SystemTest.cmsghdrExample
         exampleCmsgHdr.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
-            msgHdr.msg_control = pCmsgHdr.baseAddress
-            msgHdr.msg_controllen = .init(pCmsgHdr.count)
+            msgHdr.control_ptr = pCmsgHdr
 
             withUnsafePointer(to: msgHdr) { pMsgHdr in
                 let result = NIOBSDSocketControlMessage.firstHeader(inside: pMsgHdr)
@@ -128,8 +131,7 @@ class SystemTest: XCTestCase {
         var exampleCmsgHdr = SystemTest.cmsghdrExample
         exampleCmsgHdr.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
-            msgHdr.msg_control = pCmsgHdr.baseAddress
-            msgHdr.msg_controllen = .init(pCmsgHdr.count)
+            msgHdr.control_ptr = pCmsgHdr
 
             withUnsafeMutablePointer(to: &msgHdr) { pMsgHdr in
                 let first = NIOBSDSocketControlMessage.firstHeader(inside: pMsgHdr)
@@ -146,8 +148,7 @@ class SystemTest: XCTestCase {
         var exampleCmsgHrd = SystemTest.cmsghdrExample
         exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
-            msgHdr.msg_control = pCmsgHdr.baseAddress
-            msgHdr.msg_controllen = .init(pCmsgHdr.count)
+            msgHdr.control_ptr = pCmsgHdr
 
             withUnsafePointer(to: msgHdr) { pMsgHdr in
                 let first = NIOBSDSocketControlMessage.firstHeader(inside: pMsgHdr)
@@ -169,8 +170,7 @@ class SystemTest: XCTestCase {
         var exampleCmsgHrd = SystemTest.cmsghdrExample
         exampleCmsgHrd.withUnsafeMutableBytes { pCmsgHdr in
             var msgHdr = msghdr()
-            msgHdr.msg_control = pCmsgHdr.baseAddress
-            msgHdr.msg_controllen = .init(pCmsgHdr.count)
+            msgHdr.control_ptr = pCmsgHdr
             let collection = UnsafeControlMessageCollection(messageHeader: msgHdr)
             var msgNum = 0
             for cmsg in collection {
@@ -188,4 +188,5 @@ class SystemTest: XCTestCase {
             XCTAssertEqual(msgNum, 2)
         }
     }
+    #endif  // !os(Windows)
 }

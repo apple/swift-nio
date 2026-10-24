@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOConcurrencyHelpers
 import NIOCore
 
@@ -342,3 +344,4 @@ extension Selector: _SelectorBackendProtocol {
 #endif
 
 #endif
+#endif  // !os(WASI)

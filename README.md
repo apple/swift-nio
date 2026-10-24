@@ -1,4 +1,4 @@
-[![sswg:graduated|104x20](https://img.shields.io/badge/sswg-graduated-green.svg)](https://github.com/swift-server/sswg/blob/main/process/incubation.md#graduated-level)
+[![sswg:graduated|104x20](https://img.shields.io/badge/sswg-graduated-green.svg)](https://www.swift.org/sswg/incubation-process.html#graduated-level)
 
 # SwiftNIO
 
@@ -19,6 +19,8 @@ Repository | NIO 2
 [https://github.com/apple/swift-nio-extras][repo-nio-extras] <br>useful additions around SwiftNIO | `from: "1.0.0"`
 [https://github.com/apple/swift-nio-transport-services][repo-nio-transport-services] <br> first-class support for macOS, iOS, tvOS, and watchOS | `from: "1.0.0"`
 [https://github.com/apple/swift-nio-ssh][repo-nio-ssh] <br> SSH support | `.upToNextMinor(from: "0.2.0")`
+[https://github.com/apple/swift-nio-quic][repo-nio-quic] <br> QUIC support (in active development) | `branch: "main"`
+[https://github.com/apple/swift-nio-http3][repo-nio-http3] <br> HTTP/3 support (in active development) | `branch: "main"`
 
 Within this repository we have a number of products that provide different functionality. This package contains the following products:
 
@@ -32,7 +34,7 @@ Within this repository we have a number of products that provide different funct
 - `NIOHTTP1`. This provides a low-level HTTP/1.1 protocol implementation.
 - `NIOWebSocket`. This provides a low-level WebSocket protocol implementation.
 - `NIOTestUtils`. This provides a number of helpers for testing projects that use SwiftNIO.
-- `NIOFileSystem`. This provides `async` APIs for interacting with the file system.
+- `_NIOFileSystem`. This provides `async` APIs for interacting with the file system.
 
 ### Protocol Implementations
 
@@ -86,7 +88,9 @@ SwiftNIO            | Minimum Swift Version
 `2.60.0 ..< 2.65.0` | 5.7
 `2.65.0 ..< 2.76.0` | 5.8
 `2.76.0 ..< 2.83.0` | 5.9
-`2.83.0 ...`        | 5.10
+`2.83.0 ..< 2.87.0` | 5.10
+`2.87.0 ..< 2.98.0` | 6.0
+`2.98.0 ...`        | 6.1
 
 ### SwiftNIO 1
 SwiftNIO 1 is considered end of life - it is strongly recommended that you move to a newer version.  The Core NIO team does not actively work on this version.  No new features will be added to this version but PRs which fix bugs or security vulnerabilities will be accepted until the end of May 2022.
@@ -101,6 +105,8 @@ SwiftNIO aims to support all of the platforms where Swift is supported. Currentl
 
 * Ubuntu 18.04+
 * macOS 10.9+, iOS 7+; (macOS 10.14+, iOS 12+, tvOS 12+ or watchOS 6+ with [swift-nio-transport-services][repo-nio-transport-services])
+
+SwiftNIO has experimental support on OpenBSD for all SwiftNIO libraries _except_ for `_NIOFileSystem`, which is not yet supported. You can use all other SwiftNIO libraries on OpenBSD by adding them as dependencies in `Package.swift`.
 
 ### Compatibility
 
@@ -362,3 +368,5 @@ dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 [repo-nio-ssl]: https://github.com/apple/swift-nio-ssl
 [repo-nio-transport-services]: https://github.com/apple/swift-nio-transport-services
 [repo-nio-ssh]: https://github.com/apple/swift-nio-ssh
+[repo-nio-quic]: https://github.com/apple/swift-nio-quic
+[repo-nio-http3]: https://github.com/apple/swift-nio-http3

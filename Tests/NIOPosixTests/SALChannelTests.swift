@@ -18,6 +18,8 @@ import XCTest
 
 @testable import NIOPosix
 
+// Depends on the SAL harness, which is gated off on Windows.
+#if !os(Windows)
 final class SALChannelTest: XCTestCase {
     func testBasicConnectedChannel() throws {
         try withSALContext { context in
@@ -1128,3 +1130,4 @@ final class SALChannelTest: XCTestCase {
         }
     }
 }
+#endif

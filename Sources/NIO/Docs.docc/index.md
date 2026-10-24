@@ -35,7 +35,7 @@ SwiftNIO has a number of products that provide different functionality. This pac
 - [NIOHTTP1][module-http1]. This provides a low-level HTTP/1.1 protocol implementation.
 - [NIOWebSocket][module-websocket]. This provides a low-level WebSocket protocol implementation.
 - [NIOTestUtils][module-test-utilities]. This provides a number of helpers for testing projects that use SwiftNIO.
-- [NIOFileSystem][module-filesystem]. This provides `async` APIs for interacting with the file system.
+- [_NIOFileSystem][module-filesystem]. This provides `async` APIs for interacting with the file system.
 
 ### Conceptual Overview
 

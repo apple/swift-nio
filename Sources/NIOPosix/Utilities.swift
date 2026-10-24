@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 /// A utility function that runs the body code only in debug builds, without
 /// emitting compiler warnings.
 ///
@@ -32,3 +34,4 @@ final class Box<T> {
     let value: T
     init(_ value: T) { self.value = value }
 }
+#endif  // !os(WASI)

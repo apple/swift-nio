@@ -406,7 +406,6 @@ final class AsyncChannelTests: XCTestCase {
         }
     }
 
-    #if compiler(>=6.0)
     func testExecuteThenCloseFromActor() async throws {
         final actor TestActor {
             func test() async throws {
@@ -547,7 +546,6 @@ final class AsyncChannelTests: XCTestCase {
         let r = try await actor.test()
         XCTAssertEqual(r.someMutableState, 5)
     }
-    #endif
 }
 
 // This is unchecked Sendable since we only call this in the testing eventloop

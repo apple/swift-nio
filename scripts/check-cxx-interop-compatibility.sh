@@ -22,9 +22,9 @@ fatal() { error "$@"; exit 1; }
 log "Checking for Cxx interoperability compatibility..."
 
 source_dir=$(pwd)
-working_dir=$(mktemp -d)
+working_dir=$(mktemp -d "/tmp/tmp_swift_package_XXXXXXXXXX")
 project_name=$(basename "$working_dir")
-source_file=Sources/$project_name/$(echo "$project_name" | tr . _).swift
+source_file=Sources/$project_name/$project_name.swift
 library_products=$( swift package dump-package | jq -r '.products[] | select(.type.library != null) | .name')
 package_name=$(swift package dump-package | jq -r '.name')
 
@@ -37,6 +37,7 @@ swift package init
 } >> Package.swift
 
 echo "package.dependencies.append(.package(path: \"$source_dir\"))" >> Package.swift
+echo >> "$source_file" # Line break to account for template code in the file
 
 for product in $library_products; do
   echo "package.targets.first!.dependencies.append(.product(name: \"$product\", package: \"$package_name\"))" >> Package.swift

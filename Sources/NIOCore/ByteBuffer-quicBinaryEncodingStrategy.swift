@@ -21,15 +21,54 @@ extension ByteBuffer {
             case two = 2
             case four = 4
             case eight = 8
+
+            /// The QUIC integer length closest to `value`.
+            ///
+            /// A QUIC variable-length integer occupies 1, 2, 4 or 8 bytes, so a value such as
+            /// 3 has no exact representation. Values below eight round up to the next valid
+            /// length; values above it saturate at ``IntegerLength/eight``.
+            @inlinable
+            public init(roundingFrom value: Int) {
+                switch value {
+                case ...1: self = .one
+                case 2: self = .two
+                case 3, 4: self = .four
+                default: self = .eight
+                }
+            }
         }
+
+        /// The number of bytes used to write integers with this strategy.
+        ///
+        /// This is only relevant when calling ``ByteBuffer/writeLengthPrefixed(strategy:writeData:)``.
+        public var requiredBytesIntegerLength: IntegerLength
+
         /// An estimate of the bytes required to write integers using this strategy
-        public var requiredBytesHint: Int
+        ///
+        /// A QUIC variable-length integer is 1, 2, 4 or 8 bytes long, so only those values are
+        /// representable. Prefer ``requiredBytesIntegerLength``, which can only hold a valid
+        /// length. Assigning a value here rounds to the closest valid length.
+        @inlinable
+        public var requiredBytesHint: Int {
+            get {
+                self.requiredBytesIntegerLength.rawValue
+            }
+            @available(
+                *,
+                deprecated,
+                message:
+                    "Set requiredBytesIntegerLength instead: a QUIC integer is 1, 2, 4 or 8 bytes long, so other values cannot be represented exactly."
+            )
+            set {
+                self.requiredBytesIntegerLength = IntegerLength(roundingFrom: newValue)
+            }
+        }
 
         /// Note: Prefer to use the APIs directly on ByteBuffer such as ``ByteBuffer/writeEncodedInteger(_:strategy:)`` and pass `.quic` rather than directly initialising an instance of this strategy
         /// - Parameter requiredBytesHint: An estimate of the bytes required to write integers using this strategy. This parameter is only relevant if calling ``ByteBuffer/writeLengthPrefixed(strategy:writeData:)``
         @inlinable
         public init(requiredBytesHint: IntegerLength) {
-            self.requiredBytesHint = requiredBytesHint.rawValue
+            self.requiredBytesIntegerLength = requiredBytesHint
         }
 
         @inlinable
@@ -65,6 +104,7 @@ extension ByteBuffer {
         /// Calculates the minimum number of bytes needed to encode an integer using this strategy
         /// - Parameter integer: The integer to be encoded
         /// - Returns: The number of bytes needed to encode it
+        @inlinable
         public static func bytesNeededForInteger<IntegerType: FixedWidthInteger>(_ integer: IntegerType) -> Int {
             // We must cast the integer to UInt64 here
             // Otherwise, an integer can fall through to the default case
@@ -72,13 +112,13 @@ extension ByteBuffer {
             // The second case cannot be represented at all in UInt8, because 16383 is too big
             // Swift will end up creating the 16383 literal as 0, and thus we will fall all the way through to the default
             switch UInt64(integer) {
-            case 0..<63:
+            case 0...63:
                 return 1
-            case 0..<16383:
+            case 0...16383:
                 return 2
-            case 0..<1_073_741_823:
+            case 0...1_073_741_823:
                 return 4
-            case 0..<4_611_686_018_427_387_903:
+            case 0...4_611_686_018_427_387_903:
                 return 8
             default:
                 fatalError("QUIC variable-length integer outside of valid range")
@@ -105,41 +145,39 @@ extension ByteBuffer {
             // Use more space than necessary in order to fill the reserved space
             // This will avoid a memmove
             // If the needed space is more than the reserved, we can't avoid the move
-            switch max(reservedCapacity, Self.bytesNeededForInteger(integer)) {
-            case 1:
+            switch IntegerLength(roundingFrom: max(reservedCapacity, Self.bytesNeededForInteger(integer))) {
+            case .one:
                 // Easy, store the value. The top two bits are 0 so we don't need to do any masking.
                 return buffer.writeInteger(UInt8(truncatingIfNeeded: integer))
-            case 2:
+            case .two:
                 // Set the top two bit mask, then write the value.
                 let value = UInt16(truncatingIfNeeded: integer) | (0x40 << 8)
                 return buffer.writeInteger(value)
-            case 4:
+            case .four:
                 // Set the top two bit mask, then write the value.
                 let value = UInt32(truncatingIfNeeded: integer) | (0x80 << 24)
                 return buffer.writeInteger(value)
-            case 8:
+            case .eight:
                 // Set the top two bit mask, then write the value.
                 let value = UInt64(truncatingIfNeeded: integer) | (0xC0 << 56)
                 return buffer.writeInteger(value)
-            default:
-                fatalError("Unreachable")
             }
         }
     }
 }
 
 extension NIOBinaryIntegerEncodingStrategy where Self == ByteBuffer.QUICBinaryEncodingStrategy {
-    @inlinable
     /// Encodes bytes as defined in RFC 9000 § 16
     /// - Parameter requiredBytesHint: An estimate of the bytes required to write integers using this strategy. This parameter is only relevant if calling ``ByteBuffer/writeLengthPrefixed(strategy:writeData:)``
     /// - Returns: An instance of ``ByteBuffer/QUICBinaryEncodingStrategy``
+    @inlinable
     public static func quic(
         requiredBytesHint: ByteBuffer.QUICBinaryEncodingStrategy.IntegerLength
     ) -> ByteBuffer.QUICBinaryEncodingStrategy {
         ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: requiredBytesHint)
     }
 
-    @inlinable
     /// Encodes bytes as defined in RFC 9000 § 16
+    @inlinable
     public static var quic: ByteBuffer.QUICBinaryEncodingStrategy { .quic(requiredBytesHint: .four) }
 }

@@ -23,6 +23,8 @@ private final class HTTPEchoHandler: ChannelInboundHandler {
     public typealias OutboundOut = HTTPClientRequestPart
 
     public func channelActive(context: ChannelHandlerContext) {
+        // In production code, you should check if `context.remoteAddress` is actually
+        // present, as in rare situations it can be `nil`.
         print("Client connected to \(context.remoteAddress!)")
 
         // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.

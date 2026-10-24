@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOConcurrencyHelpers
 import NIOCore
 
@@ -58,3 +60,4 @@ internal enum ErrorResult {
     case fatal
     case nonFatal
 }
+#endif  // !os(WASI)

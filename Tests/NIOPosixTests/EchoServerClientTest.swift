@@ -20,6 +20,15 @@ import XCTest
 @testable import NIOPosix
 
 class EchoServerClientTest: XCTestCase {
+    override func setUpWithError() throws {
+        #if os(Windows)
+        // Several of these socket echo integration tests stall or crash on
+        // Windows (Unix domain sockets, dual-stack IPv4/IPv6 binds, and others),
+        // so the whole suite is skipped there pending functional networking.
+        throw XCTSkip("EchoServerClientTest exercises socket behaviour that is not yet functional on Windows")
+        #endif
+    }
+
     func testEcho() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -243,6 +252,9 @@ class EchoServerClientTest: XCTestCase {
     }
 
     func testEchoVsock() throws {
+        #if os(Windows)
+        throw XCTSkip("VSOCK is not supported on Windows")
+        #else
         try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -289,6 +301,7 @@ class EchoServerClientTest: XCTestCase {
         try clientChannel.writeAndFlush(buffer).wait()
 
         XCTAssertEqual(try promise.futureResult.wait(), buffer)
+        #endif
     }
 
     func testChannelActiveOnConnect() throws {
@@ -958,15 +971,9 @@ class EchoServerClientTest: XCTestCase {
                         sem.signal()
                         return channel.eventLoop.makeSucceededFuture(())
                     }.bind(host: host, port: 0).wait()
-            } catch let e as SocketAddressError {
-                if case .unknown(host, port: 0) = e {
-                    // this can happen if the system isn't configured for both IPv4 and IPv6
-                    continue
-                } else {
-                    // nope, that's a different socket error
-                    XCTFail("unexpected SocketAddressError: \(e)")
-                    break
-                }
+            } catch let e as SocketAddressError.UnknownHost where e.host == host && e.port == 0 {
+                // this can happen if the system isn't configured for both IPv4 and IPv6
+                continue
             } catch {
                 // other unknown error
                 XCTFail("unexpected error: \(error)")

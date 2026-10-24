@@ -18,7 +18,7 @@ import NIOPosix
 
 private let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
 
-let benchmarks = {
+let benchmarks: @Sendable () -> Void = {
     let defaultMetrics: [BenchmarkMetric] = [
         .mallocCountTotal,
         .contextSwitches,
@@ -31,7 +31,8 @@ let benchmarks = {
             metrics: defaultMetrics,
             scalingFactor: .mega,
             maxDuration: .seconds(10_000_000),
-            maxIterations: 5
+            maxIterations: 5,
+            thresholds: [.mallocCountTotal: .init(absolute: [.p90: 50])]
         )
     ) { benchmark in
         try runTCPEcho(
@@ -61,6 +62,36 @@ let benchmarks = {
         )
     ) { benchmark in
         try await runTCPEchoAsyncChannel(
+            numberOfWrites: benchmark.scaledIterations.upperBound,
+            eventLoop: eventLoop
+        )
+    }
+
+    Benchmark(
+        "UDPEcho",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
+        )
+    ) { benchmark in
+        try runUDPEcho(
+            numberOfWrites: benchmark.scaledIterations.upperBound,
+            eventLoop: eventLoop
+        )
+    }
+
+    Benchmark(
+        "UDPEchoPacketInfo",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
+        )
+    ) { benchmark in
+        try runUDPEchoPacketInfo(
             numberOfWrites: benchmark.scaledIterations.upperBound,
             eventLoop: eventLoop
         )
@@ -98,6 +129,51 @@ let benchmarks = {
         for _ in benchmark.scaledIterations {
             let handle = try! eventLoop.scheduleCallback(in: .hours(1), handler: timer)
         }
+    }
+
+    Benchmark(
+        "MTELG.assumeIsolated().scheduleTask(in:_:)",
+        configuration: Benchmark.Configuration(
+            metrics: defaultMetrics,
+            scalingFactor: .mega,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
+        )
+    ) { benchmark in
+        let iterations = benchmark.scaledIterations.count
+        try! eventLoop.submit {
+            benchmark.startMeasurement()
+            let isolatedEventLoop = eventLoop.assumeIsolated()
+            for _ in 0..<iterations {
+                isolatedEventLoop.scheduleTask(in: .hours(1), {})
+            }
+            benchmark.stopMeasurement()
+        }.wait()
+    }
+
+    Benchmark(
+        "MTELG.assumeIsolated().scheduleCallback(in:_:)",
+        configuration: Benchmark.Configuration(
+            metrics: defaultMetrics,
+            scalingFactor: .mega,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
+        )
+    ) { benchmark in
+        final class Timer: NIOScheduledCallbackHandler, Sendable {
+            func handleScheduledCallback(eventLoop: some EventLoop) {}
+        }
+        let timer = Timer()
+        let iterations = benchmark.scaledIterations.count
+
+        try! eventLoop.submit {
+            benchmark.startMeasurement()
+            let isolatedEventLoop = eventLoop.assumeIsolated()
+            for _ in 0..<iterations {
+                let handle = try! isolatedEventLoop.scheduleCallback(in: .hours(1), handler: timer)
+            }
+            benchmark.stopMeasurement()
+        }.wait()
     }
 
     Benchmark(
@@ -139,5 +215,39 @@ let benchmarks = {
         for _ in benchmark.scaledIterations {
             await actor.foo()
         }
+    }
+
+    // MARK: - NIOThreadPool submit benchmarks
+
+    // Serial wakeup: submit one item, wait for completion, repeat.
+    // Every submit hits N sleeping threads — this is where wake-one
+    // vs wake-all (thundering herd) matters most.
+    let pool16 = NIOThreadPool(numberOfThreads: 16)
+    let pool4 = NIOThreadPool(numberOfThreads: 4)
+
+    Benchmark(
+        "NIOThreadPool.serial_wakeup(16 threads)",
+        configuration: .init(
+            metrics: [.wallClock, .cpuUser, .cpuSystem, .cpuTotal, .contextSwitches, .syscalls],
+            maxDuration: .seconds(30),
+            maxIterations: 30,
+            setup: { pool16.start() },
+            teardown: { try! pool16.syncShutdownGracefully() }
+        )
+    ) { _ in
+        runNIOThreadPoolSerialWakeup(pool: pool16, count: 10_000)
+    }
+
+    Benchmark(
+        "NIOThreadPool.serial_wakeup(4 threads)",
+        configuration: .init(
+            metrics: [.wallClock, .cpuUser, .cpuSystem, .cpuTotal, .contextSwitches, .syscalls],
+            maxDuration: .seconds(30),
+            maxIterations: 30,
+            setup: { pool4.start() },
+            teardown: { try! pool4.syncShutdownGracefully() }
+        )
+    ) { _ in
+        runNIOThreadPoolSerialWakeup(pool: pool4, count: 10_000)
     }
 }

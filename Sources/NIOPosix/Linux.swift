@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 // This is a companion to System.swift that provides only Linux specials: either things that exist
 // only on Linux, or things that have Linux-specific extensions.
 
@@ -178,13 +180,8 @@ internal enum Epoll {
 
 internal enum Linux {
     #if os(Android)
-    #if compiler(>=6.0)
     static let SOCK_CLOEXEC = Android.SOCK_CLOEXEC
     static let SOCK_NONBLOCK = Android.SOCK_NONBLOCK
-    #else
-    static let SOCK_CLOEXEC = Glibc.SOCK_CLOEXEC
-    static let SOCK_NONBLOCK = Glibc.SOCK_NONBLOCK
-    #endif
     #elseif canImport(Musl)
     static let SOCK_CLOEXEC = Musl.SOCK_CLOEXEC
     static let SOCK_NONBLOCK = Musl.SOCK_NONBLOCK
@@ -213,3 +210,4 @@ internal enum Linux {
     }
 }
 #endif
+#endif  // !os(WASI)

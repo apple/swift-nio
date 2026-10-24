@@ -16,7 +16,10 @@ methods are ``EventLoopFuture/get()`` and
 ``EventLoopPromise/completeWithTask(_:)``.
 
 > Warning: The future ``EventLoopFuture/get()`` method does not support task
-> cancellation.
+> cancellation. If you need to return on cancellation, use
+> ``EventLoopFuture/getAbandoningOnCancel()``: it throws `CancellationError`
+> when the `Task` is cancelled but it merely _abandons_ the future, i.e. the
+> operation backing the future is likely still ongoing.
 
 Here is a small example of how these work:
 
@@ -282,7 +285,7 @@ let upgradeResult: EventLoopFuture<UpgradeResult> = try await ClientBootstrap(gr
 ```
 
 After having configured the pipeline to negotiate a websocket upgrade. We can
-switch over the the `upgradeResult`. Importantly, we have to `await` the
+switch over the `upgradeResult`. Importantly, we have to `await` the
 `upgradeResult` first since it has to be negotiated on the connection.
 
 ```

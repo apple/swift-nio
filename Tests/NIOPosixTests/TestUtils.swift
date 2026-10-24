@@ -20,7 +20,28 @@ import XCTest
 @testable import NIOCore
 @testable import NIOPosix
 
+#if os(Windows)
+import WinSDK
+import ucrt
+
+// Windows has no `usleep`; approximate it with `Sleep`, which takes whole
+// milliseconds. The coarse precision is fine for these test poll loops.
+@discardableResult
+func usleep(_ microseconds: UInt32) -> CInt {
+    Sleep(microseconds / 1000)
+    return 0
+}
+#endif
+
 extension System {
+    static var isWindows: Bool {
+        #if os(Windows)
+        return true
+        #else
+        return false
+        #endif
+    }
+
     static var supportsIPv6: Bool {
         do {
             let ipv6Loopback = try SocketAddress.makeAddressResolvingHost("::1", port: 0)
@@ -32,7 +53,9 @@ extension System {
 
     static var supportsVsockLoopback: Bool {
         #if os(Linux) || os(Android)
-        guard let modules = try? String(contentsOf: URL(fileURLWithPath: "/proc/modules")) else { return false }
+        guard let modules = try? String(contentsOf: URL(fileURLWithPath: "/proc/modules"), encoding: .utf8) else {
+            return false
+        }
         return modules.split(separator: "\n").compactMap({ $0.split(separator: " ").first }).contains("vsock_loopback")
         #else
         return false
@@ -43,7 +66,12 @@ extension System {
 func withPipe(_ body: (NIOCore.NIOFileHandle, NIOCore.NIOFileHandle) throws -> [NIOCore.NIOFileHandle]) throws {
     var fds: [Int32] = [-1, -1]
     fds.withUnsafeMutableBufferPointer { ptr in
+        #if os(Windows)
+        // Windows has no `pipe`; `_pipe` is the CRT equivalent.
+        XCTAssertEqual(0, _pipe(ptr.baseAddress!, 4096, _O_BINARY))
+        #else
         XCTAssertEqual(0, pipe(ptr.baseAddress!))
+        #endif
     }
     let readFH = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: fds[0])
     let writeFH = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: fds[1])
@@ -68,7 +96,12 @@ func withPipe(
 ) async throws {
     var fds: [Int32] = [-1, -1]
     fds.withUnsafeMutableBufferPointer { ptr in
+        #if os(Windows)
+        // Windows has no `pipe`; `_pipe` is the CRT equivalent.
+        XCTAssertEqual(0, _pipe(ptr.baseAddress!, 4096, _O_BINARY))
+        #else
         XCTAssertEqual(0, pipe(ptr.baseAddress!))
+        #endif
     }
     let readFH = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: fds[0])
     let writeFH = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: fds[1])
@@ -230,6 +263,16 @@ var temporaryDirectory: String {
 }
 
 func createTemporaryDirectory() -> String {
+    #if os(Windows)
+    // Windows has no `mkdtemp`. Build a uniquely-named directory (using a GUID)
+    // under the temporary directory and create it with `CreateDirectoryW`.
+    let path = "\(temporaryDirectory)/.NIOTests-temp-dir_\(UUID().uuidString)"
+    let created = path.withCString(encodedAs: UTF16.self) {
+        CreateDirectoryW($0, nil)
+    }
+    XCTAssertTrue(created)
+    return path
+    #else
     let template = "\(temporaryDirectory)/.NIOTests-temp-dir_XXXXXX"
 
     var templateBytes = template.utf8 + [0]
@@ -243,9 +286,34 @@ func createTemporaryDirectory() -> String {
     }
     templateBytes.removeLast()
     return String(decoding: templateBytes, as: Unicode.UTF8.self)
+    #endif
 }
 
 func openTemporaryFile() -> (CInt, String) {
+    #if os(Windows)
+    // Windows has no `mkstemp`. Generate a unique name with `_mktemp_s`, then
+    // create and open it with `_sopen_s`.
+    var templateBytes = "\(temporaryDirectory)/nio_XXXXXX".utf8 + [0]
+    let templateBytesCount = templateBytes.count
+    let fd = templateBytes.withUnsafeMutableBufferPointer { ptr in
+        ptr.baseAddress!.withMemoryRebound(to: CChar.self, capacity: templateBytesCount) {
+            (ptr: UnsafeMutablePointer<CChar>) -> CInt in
+            XCTAssertEqual(_mktemp_s(ptr, templateBytesCount), 0)
+            var fd: CInt = -1
+            let err = _sopen_s(
+                &fd,
+                ptr,
+                _O_CREAT | _O_EXCL | _O_RDWR | _O_BINARY,
+                _SH_DENYNO,
+                _S_IREAD | _S_IWRITE
+            )
+            XCTAssertEqual(err, 0)
+            return fd
+        }
+    }
+    templateBytes.removeLast()
+    return (fd, String(decoding: templateBytes, as: Unicode.UTF8.self))
+    #else
     let template = "\(temporaryDirectory)/nio_XXXXXX"
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
@@ -257,6 +325,7 @@ func openTemporaryFile() -> (CInt, String) {
     }
     templateBytes.removeLast()
     return (fd, String(decoding: templateBytes, as: Unicode.UTF8.self))
+    #endif
 }
 
 extension Channel {

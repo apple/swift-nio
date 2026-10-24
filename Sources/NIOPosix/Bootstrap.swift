@@ -11,7 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import CNIOLinux
+import CNIOOpenBSD
 import NIOCore
 
 #if os(Windows)
@@ -459,7 +463,7 @@ public final class ServerBootstrap {
         }
 
         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-            let accepted = Self.unwrapInboundIn(data)
+            let accepted = AcceptHandler.unwrapInboundIn(data)
             let ctxEventLoop = context.eventLoop
             let childEventLoop = accepted.eventLoop
             let childChannelInit = self.childChannelInit ?? { (_: Channel) in childEventLoop.makeSucceededFuture(()) }
@@ -484,7 +488,7 @@ public final class ServerBootstrap {
                     guard context.channel.isActive else {
                         return ctxEventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
                     }
-                    context.fireChannelRead(Self.wrapInboundOut(accepted))
+                    context.fireChannelRead(AcceptHandler.wrapInboundOut(accepted))
                     return context.eventLoop.makeSucceededFuture(())
                 }.whenFailure { error in
                     self.closeAndFire(context: context, accepted: accepted, err: error)
@@ -1407,9 +1411,10 @@ extension ClientBootstrap {
         port: Int,
         eventLoop: EventLoop,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
-            PostRegistrationTransformationResult
-        >
+        postRegisterTransformation:
+            @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+                PostRegistrationTransformationResult
+            >
     ) async throws -> PostRegistrationTransformationResult {
         let resolver =
             self.resolver
@@ -1455,9 +1460,10 @@ extension ClientBootstrap {
         eventLoop: EventLoop,
         socket: NIOBSDSocket.Handle,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
-            PostRegistrationTransformationResult
-        >
+        postRegisterTransformation:
+            @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+                PostRegistrationTransformationResult
+            >
     ) async throws -> PostRegistrationTransformationResult {
         let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, socket: socket)
 
@@ -1481,9 +1487,10 @@ extension ClientBootstrap {
         eventLoop: EventLoop,
         protocolFamily: NIOBSDSocket.ProtocolFamily,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
-            PostRegistrationTransformationResult
-        >,
+        postRegisterTransformation:
+            @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+                PostRegistrationTransformationResult
+            >,
         _ body: @escaping @Sendable (Channel) -> EventLoopFuture<Void>
     ) -> EventLoopFuture<(Channel, PostRegistrationTransformationResult)> {
         let channel: SocketChannel
@@ -1514,9 +1521,10 @@ extension ClientBootstrap {
         channelOptions: ChannelOptions.Storage,
         bindTarget: SocketAddress?,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
-            PostRegistrationTransformationResult
-        >,
+        postRegisterTransformation:
+            @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+                PostRegistrationTransformationResult
+            >,
         _ body: @escaping @Sendable (Channel) -> EventLoopFuture<Void>
     ) -> EventLoopFuture<(Channel, PostRegistrationTransformationResult)> {
         let channel: SocketChannel
@@ -1550,9 +1558,10 @@ extension ClientBootstrap {
         channel: SocketChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
         registration: @escaping @Sendable (SocketChannel) -> EventLoopFuture<Void>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
-            PostRegistrationTransformationResult
-        >
+        postRegisterTransformation:
+            @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+                PostRegistrationTransformationResult
+            >
     ) -> EventLoopFuture<PostRegistrationTransformationResult> {
         Self.initializeAndRegisterChannel(
             channel: channel,
@@ -1576,9 +1585,10 @@ extension ClientBootstrap {
         bindTarget: SocketAddress?,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
         registration: @escaping @Sendable (SocketChannel) -> EventLoopFuture<Void>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
-            PostRegistrationTransformationResult
-        >
+        postRegisterTransformation:
+            @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+                PostRegistrationTransformationResult
+            >
     ) -> EventLoopFuture<PostRegistrationTransformationResult> {
         let channelInitializer = { @Sendable channel in
             bootstrapChannelInitializer(channel).hop(to: channel.eventLoop)
@@ -2097,9 +2107,10 @@ extension DatagramBootstrap {
     private func connect0<ChannelInitializerResult: Sendable, PostRegistrationTransformationResult: Sendable>(
         makeSocketAddress: () throws -> SocketAddress,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
-            PostRegistrationTransformationResult
-        >
+        postRegisterTransformation:
+            @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+                PostRegistrationTransformationResult
+            >
     ) async throws -> PostRegistrationTransformationResult {
         let address = try makeSocketAddress()
         let subtype = self.proto
@@ -2128,9 +2139,10 @@ extension DatagramBootstrap {
     private func bind0<ChannelInitializerResult: Sendable, PostRegistrationTransformationResult: Sendable>(
         makeSocketAddress: () throws -> SocketAddress,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
-            PostRegistrationTransformationResult
-        >
+        postRegisterTransformation:
+            @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+                PostRegistrationTransformationResult
+            >
     ) async throws -> PostRegistrationTransformationResult {
         let address = try makeSocketAddress()
         let subtype = self.proto
@@ -2163,9 +2175,10 @@ extension DatagramBootstrap {
         makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
         registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
-            PostRegistrationTransformationResult
-        >
+        postRegisterTransformation:
+            @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+                PostRegistrationTransformationResult
+            >
     ) -> EventLoopFuture<PostRegistrationTransformationResult> {
         let eventLoop = self.group.next()
         let bootstrapChannelInitializer =
@@ -2353,6 +2366,9 @@ public final class NIOPipeBootstrap {
     ///   - inputOutput: The _Unix file descriptor_ for the input & output.
     /// - Returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
     public func takingOwnershipOfDescriptor(inputOutput: CInt) -> EventLoopFuture<Channel> {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         let inputFD = inputOutput
         let outputFD = try! Posix.dup(descriptor: inputOutput)
 
@@ -2360,6 +2376,7 @@ public final class NIOPipeBootstrap {
             try! Posix.close(descriptor: outputFD)
             throw error
         }
+        #endif
     }
 
     /// Create the `PipeChannel` with the provided input and output file descriptors.
@@ -2460,6 +2477,9 @@ extension NIOPipeBootstrap {
         inputOutput: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> Output {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         let inputFD = inputOutput
         let outputFD = try! Posix.dup(descriptor: inputOutput)
 
@@ -2473,6 +2493,7 @@ extension NIOPipeBootstrap {
             try! Posix.close(descriptor: outputFD)
             throw error
         }
+        #endif
     }
 
     /// Create the `PipeChannel` with the provided input and output file descriptors.
@@ -2574,6 +2595,9 @@ extension NIOPipeBootstrap {
         output: CInt?,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>
     ) -> EventLoopFuture<ChannelInitializerResult> {
+        #if os(Windows)
+        fatalError(missingPipeSupportWindows)
+        #else
         precondition(
             input ?? 0 >= 0 && output ?? 0 >= 0 && input != output,
             "illegal file descriptor pair. The file descriptors \(String(describing: input)), \(String(describing: output)) "
@@ -2656,6 +2680,7 @@ extension NIOPipeBootstrap {
                 setupChannel()
             }
         }
+        #endif
     }
 }
 
@@ -2679,3 +2704,4 @@ private struct DefaultNIOPipeBootstrapHooks: NIOPipeBootstrapHooks {
         try PipeChannel(eventLoop: eventLoop, input: input, output: output)
     }
 }
+#endif  // !os(WASI)

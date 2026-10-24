@@ -242,9 +242,8 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        Task { [writer] in
-            try await writer!.yield("message1")
-        }
+        let writer = self.writer!
+        async let _ = writer.yield("message1")
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -262,9 +261,8 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        Task { [writer] in
-            try await writer!.yield("message2")
-        }
+        let writer = self.writer!
+        async let _ = writer.yield("message2")
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -280,10 +278,11 @@ final class NIOAsyncWriterTests: XCTestCase {
         }
         let resumed = expectation(description: "yield completed")
 
-        Task { [writer] in
-            try await writer!.yield("message2")
+        let writer = self.writer!
+        async let _ = {
+            try await writer.yield("message2")
             resumed.fulfill()
-        }
+        }()
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -302,9 +301,8 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        Task { [writer] in
-            try await writer!.yield("message1")
-        }
+        let writer = self.writer!
+        async let _ = writer.yield("message1")
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -323,10 +321,11 @@ final class NIOAsyncWriterTests: XCTestCase {
         }
         let resumed = expectation(description: "yield completed")
 
-        Task { [writer] in
-            try await writer!.yield("message1")
+        let writer = self.writer!
+        async let _ = {
+            try await writer.yield("message1")
             resumed.fulfill()
-        }
+        }()
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -365,9 +364,8 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        Task { [writer] in
-            try await writer!.yield("message2")
-        }
+        let writer = self.writer!
+        async let _ = writer.yield("message2")
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -396,9 +394,8 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        Task { [writer] in
-            try await writer!.yield("message2")
-        }
+        let writer = self.writer!
+        async let _ = writer.yield("message2")
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -426,6 +423,22 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
     }
 
+    func testYield_cancelWhenStreamingAndNotWritable() async throws {
+        try await self.writer.yield("message1")
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
+        // Ensure the yield suspends
+        self.sink.setWritability(to: false)
+
+        let task = Task { [writer] in
+            try await writer!.yield("message2")
+        }
+        task.cancel()
+
+        await XCTAssertThrowsError(try await task.value) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+    }
+
     func testYield_whenWriterFinished() async throws {
         self.sink.setWritability(to: false)
 
@@ -434,9 +447,8 @@ final class NIOAsyncWriterTests: XCTestCase {
             suspended.fulfill()
         }
 
-        Task { [writer] in
-            try await writer!.yield("message1")
-        }
+        let writer = self.writer!
+        async let _ = writer.yield("message1")
 
         await fulfillment(of: [suspended], timeout: 1)
 
@@ -607,11 +619,10 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 1)
     }
 
-    #if compiler(>=6)
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     func testWriterFinish_AndSuspendBufferedYield() async throws {
         try await withThrowingTaskGroup(of: Void.self) { group in
-            try await withManualTaskExecutor { taskExecutor1, taskExecutor2 in
+            try await withManualTaskExecutors { taskExecutor1, taskExecutor2 in
                 self.sink.setWritability(to: false)
 
                 self.delegate.didYieldHandler = { _ in
@@ -654,7 +665,6 @@ final class NIOAsyncWriterTests: XCTestCase {
             }
         }
     }
-    #endif  // compiler(>=6)
 
     func testWriterFinish_whenFinished() {
         // This tests just checks that finishing again is a no-op

@@ -59,7 +59,7 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let data = Self.unwrapOutboundIn(data)
+        let data = WebSocketFrameEncoder.unwrapOutboundIn(data)
 
         // First, we explode the frame structure and apply the mask.
         let frameHeader = FrameHeader(frame: data)
@@ -77,13 +77,13 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
             if !unwrappedExtensionData.prependFrameHeaderIfPossible(frameHeader) {
                 self.writeSeparateHeaderBuffer(frameHeader, context: context)
             }
-            context.write(Self.wrapOutboundOut(unwrappedExtensionData), promise: nil)
+            context.write(WebSocketFrameEncoder.wrapOutboundOut(unwrappedExtensionData), promise: nil)
         } else if !applicationData.prependFrameHeaderIfPossible(frameHeader) {
             self.writeSeparateHeaderBuffer(frameHeader, context: context)
         }
 
         // Ok, now we need to write the application data buffer.
-        context.write(Self.wrapOutboundOut(applicationData), promise: promise)
+        context.write(WebSocketFrameEncoder.wrapOutboundOut(applicationData), promise: promise)
     }
 
     /// Applies the websocket masking operation based on the passed byte buffers.
@@ -119,7 +119,7 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
 
         // Ok, frame header away! Before we send it we save it back onto ourselves in case we get recursively called.
         self.headerBuffer = buffer
-        context.write(Self.wrapOutboundOut(buffer), promise: nil)
+        context.write(WebSocketFrameEncoder.wrapOutboundOut(buffer), promise: nil)
     }
 }
 

@@ -53,7 +53,7 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let frame = Self.unwrapInboundIn(data)
+        let frame = NIOWebSocketFrameAggregator.unwrapInboundIn(data)
         do {
             switch frame.opcode {
             case .continuation:

@@ -360,7 +360,11 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
                 }
             }
 
-        case .upgrading, .unbuffering, .finished:
+        case .finished:
+            // Connection was closed before we found an upgrader
+            return nil
+
+        case .upgrading, .unbuffering:
             fatalError("Internal inconsistency in HTTPServerUpgradeStateMachine")
 
         case .modifying:

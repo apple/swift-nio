@@ -12,8 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import CNIOLinux
+import CNIOOpenBSD
 import NIOCore
 
 private struct PendingStreamWrite {
@@ -722,3 +725,4 @@ extension PendingStreamWritesManager: CustomStringConvertible {
             + "writabilityFlag: \(self.channelWritabilityFlag.load(ordering: .relaxed))), state: \(self.state) }"
     }
 }
+#endif  // !os(WASI)

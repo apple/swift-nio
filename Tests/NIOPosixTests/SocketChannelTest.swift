@@ -373,13 +373,25 @@ final class SocketChannelTest: XCTestCase {
     }
 
     public func testWithConfiguredStreamSocket() throws {
+        #if os(Windows)
+        throw XCTSkip("Creating a channel from a pre-connected socket is not supported on Windows")
+        #else
+        let didAccept = ConditionLock<Int>(value: 0)
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         let serverSock = try Socket(protocolFamily: .inet, type: .stream)
         try serverSock.bind(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
         let serverChannelFuture = try serverSock.withUnsafeHandle {
-            ServerBootstrap(group: group).withBoundSocket(dup($0))
+            ServerBootstrap(group: group)
+                .childChannelInitializer { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        let acquiredLock = didAccept.lock(whenValue: 0, timeoutSeconds: 1)
+                        XCTAssertTrue(acquiredLock)
+                        didAccept.unlock(withValue: 1)
+                    }
+                }
+                .withBoundSocket(dup($0))
         }
         try serverSock.close()
         let serverChannel = try serverChannelFuture.wait()
@@ -391,15 +403,28 @@ final class SocketChannelTest: XCTestCase {
             ClientBootstrap(group: group).withConnectedSocket(dup($0))
         }
         try clientSock.close()
-        let clientChannel = try clientChannelFuture.wait()
 
+        // At this point we need to wait not just for the client connection to be created
+        // but also for the server connection to come in. Otherwise we risk a race where the
+        // client connection has come up but the server connection hasn't yet, leading to the
+        // server channel close below causing the server to never accept the inbound channel
+        // and leading to an unexpected error on close.
+        let clientChannel = try clientChannelFuture.wait()
         XCTAssertEqual(true, clientChannel.isActive)
+
+        let acquiredLock = didAccept.lock(whenValue: 1, timeoutSeconds: 1)
+        XCTAssertTrue(acquiredLock)
+        didAccept.unlock()
 
         try serverChannel.close().wait()
         try clientChannel.close().wait()
+        #endif
     }
 
     public func testWithConfiguredDatagramSocket() throws {
+        #if os(Windows)
+        throw XCTSkip("Creating a channel from a pre-connected socket is not supported on Windows")
+        #else
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
@@ -414,6 +439,7 @@ final class SocketChannelTest: XCTestCase {
         XCTAssertEqual(true, serverChannel.isActive)
 
         try serverChannel.close().wait()
+        #endif
     }
 
     public func testPendingConnectNotificationOrder() throws {
@@ -598,6 +624,9 @@ final class SocketChannelTest: XCTestCase {
     }
 
     func testSocketFlagNONBLOCKWorks() throws {
+        #if os(Windows)
+        throw XCTSkip("fcntl / O_NONBLOCK flag manipulation is not available on Windows")
+        #else
         var socket = try assertNoThrowWithValue(try ServerSocket(protocolFamily: .inet, setNonBlocking: true))
         XCTAssertNoThrow(
             try socket.withUnsafeHandle { fd in
@@ -621,10 +650,11 @@ final class SocketChannelTest: XCTestCase {
             }
         )
         XCTAssertNoThrow(try socket.close())
+        #endif
     }
 
     func testInstantTCPConnectionResetThrowsError() throws {
-        #if !os(Linux) && !os(Android)
+        #if !os(Linux) && !os(Android) && !os(Windows)
         // This test checks that we correctly fail with an error rather than
         // asserting or silently ignoring if a client aborts the connection
         // early with a RST before accept(). The behaviour is the same as closing the socket
@@ -732,6 +762,9 @@ final class SocketChannelTest: XCTestCase {
     }
 
     func testSetSockOptDoesNotOverrideExistingFlags() throws {
+        #if os(Windows)
+        throw XCTSkip("fcntl flag manipulation is not available on Windows")
+        #else
         let s = try assertNoThrowWithValue(
             Socket(
                 protocolFamily: .inet,
@@ -771,6 +804,7 @@ final class SocketChannelTest: XCTestCase {
         )
 
         XCTAssertNoThrow(try s.close())
+        #endif
     }
 
     func testServerChannelDoesNotBreakIfAcceptingFailsWithEINVAL() throws {
@@ -999,6 +1033,9 @@ final class SocketChannelTest: XCTestCase {
     }
 
     func testServerClosesTheConnectionImmediately() throws {
+        #if os(Windows)
+        throw XCTSkip("Connection-reset handling is unreliable on Windows and can leak a promise")
+        #endif
         // This is a regression test for a problem that the grpc-swift compatibility tests hit where everything would
         // get stuck on a server that just insta-closes every accepted connection.
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -1108,6 +1145,23 @@ final class SocketChannelTest: XCTestCase {
         #endif
     }
 
+    func testBaseSocketChannelWithUnderlyingTransport() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+        let socket = try Socket.SocketType(protocolFamily: .inet, type: .datagram)
+        let channel = try BaseSocketChannel(
+            socket: socket,
+            parent: nil,
+            eventLoop: group.next() as! SelectableEventLoop,
+            recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024),
+            supportReconnect: false
+        )
+
+        try channel.socket.withUnsafeHandle { fd in
+            XCTAssertNotEqual(fd, NIOBSDSocket.invalidHandle)
+            try channel.withUnsafeTransport { XCTAssertEqual($0, fd) }
+        }
+    }
 }
 
 final class DropAllReadsOnTheFloorHandler: ChannelDuplexHandler, Sendable {

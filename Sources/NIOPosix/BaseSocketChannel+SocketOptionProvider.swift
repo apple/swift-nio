@@ -11,6 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(WASI)
+
 import NIOCore
 
 extension BaseSocketChannel: SocketOptionProvider {
@@ -83,3 +86,4 @@ extension BaseSocketChannel: SocketOptionProvider {
         try self.socket.getOption(level: level, name: name)
     }
 }
+#endif  // !os(WASI)

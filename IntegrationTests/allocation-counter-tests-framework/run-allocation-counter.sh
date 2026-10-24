@@ -61,9 +61,9 @@ EOF
     cat <<EOF
     ],
     dependencies: [
-        .package(url: "HookedFunctions/", branch: "main"),
-        .package(url: "AtomicCounter/", branch: "main"),
-        .package(url: "$swiftpm_pkg_name/", branch: "main"),
+        .package(path: "HookedFunctions"),
+        .package(path: "AtomicCounter"),
+        .package(path: "$swiftpm_pkg_name"),
 EOF
     if [[ -n "$extra_dependencies_file" ]]; then
         cat "$extra_dependencies_file"
@@ -167,13 +167,7 @@ function build_package() {
     make_git_commit_all
     cd ..
 
-    mkdir "$swiftpm_pkg_name"
-    cd "$swiftpm_pkg_name"
-    fake_package_swift "$swiftpm_pkg_name"
-    make_git_commit_all
-    cd ..
-
-    hooked_package_swift_start "$extra_dependencies_file" "$swiftpm_pkg_name" "$@" > Package.swift
+    hooked_package_swift_start "$extra_dependencies_file" "$swiftpm_pkg_root" "$@" > Package.swift
     for f in "$@"; do
         local module
         module=$(module_name_from_path "$f")
@@ -195,8 +189,6 @@ EOF
         done
     done
     hooked_package_swift_end >> Package.swift
-
-    swift package edit --path "$swiftpm_pkg_root" "$swiftpm_pkg_name"
     )
 }
 
@@ -270,6 +262,7 @@ for f in "${files[@]}"; do
 done
 
 working_dir=$(mktemp -d "$tmp_dir/.nio_alloc_counter_tests_XXXXXX")
+echo "Working directory: $working_dir"
 
 selected_hooked_functions="HookedFunctionsDoHook"
 selected_bootstrap="bootstrapDoHook"
@@ -282,7 +275,7 @@ fi
 build_package \
     "$working_dir" \
     "$here/template" \
-    "$pkg_root" \
+    "$(realpath "$pkg_root")" \
     "$(find_swiftpm_package_name "$pkg_root")" \
     "$selected_hooked_functions" \
     "$selected_bootstrap" \
@@ -296,8 +289,36 @@ build_package \
 set -eu
 cd "$working_dir"
 swift build "${build_opts[@]}"
-for f in "${files[@]}"; do
-    echo "- $f"
-    swift run "${build_opts[@]}" "$(module_name_from_path "$f")"
-done
+bin_path=$(swift build "${build_opts[@]}" --show-bin-path)
+if [[ "${NIO_ALLOC_COUNTER_TESTS_PARALLEL:-false}" == "true" ]]; then
+    out_dir=$(mktemp -d)
+    trap 'rm -rf "$out_dir"' EXIT
+    for f in "${files[@]}"; do
+        module=$(module_name_from_path "$f")
+        (
+            rc=0
+            "$bin_path/$module" > "$out_dir/$module" || rc=$?
+            echo $rc > "$out_dir/$module.exit"
+        ) &
+    done
+    wait
+    all_ok=true
+    for f in "${files[@]}"; do
+        module=$(module_name_from_path "$f")
+        echo "- $f"
+        if [[ "$(cat "$out_dir/$module.exit")" == "0" ]]; then
+            cat "$out_dir/$module"
+        else
+            all_ok=false
+            echo "FAILED: $f" >&2
+            cat "$out_dir/$module"
+        fi
+    done
+    "$all_ok"
+else
+    for f in "${files[@]}"; do
+        echo "- $f"
+        "$bin_path/$(module_name_from_path "$f")"
+    done
+fi
 )

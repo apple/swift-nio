@@ -44,6 +44,13 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
         self._value = value
     }
 
+    /// Initialise a ``NIOLoopBound`` to `value` by sending value into `eventLoop`. Caller does not need to be on the EventLoop.
+    @inlinable
+    public init(sending value: sending Value, eventLoop: EventLoop) {
+        self.eventLoop = eventLoop
+        self._value = value
+    }
+
     /// Access the `value` with the precondition that the code is running on `eventLoop`.
     ///
     /// - Note: ``NIOLoopBound`` itself is value-typed, so any writes will only affect the current value.
@@ -139,17 +146,16 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         .init(_value: value, uncheckedEventLoop: eventLoop)
     }
 
-    #if compiler(>=6.0)
-    // Note: Whitespace changes are used to workaround compiler bug
-    // Remove when compiler version 5.10 is no longer supported.
-    // https://github.com/swiftlang/swift/issues/79285
-    // swift-format-ignore
     /// Initialise a ``NIOLoopBoundBox`` by sending a  value, validly callable off `eventLoop`.
     ///
     /// Contrary to ``init(_:eventLoop:)``, this method can be called off `eventLoop` because `value` is moved into the box and can no longer be accessed outside the box.
     /// So we don't need to protect `value` itself, we just need to protect the ``NIOLoopBoundBox`` against mutations which we do because the ``value``
     /// accessors are checking that we're on `eventLoop`.
-    public static func makeBoxSendingValue(_ value: sending Value, as: Value.Type = Value.self, eventLoop: EventLoop) -> NIOLoopBoundBox<Value> {
+    public static func makeBoxSendingValue(
+        _ value: sending Value,
+        as: Value.Type = Value.self,
+        eventLoop: EventLoop
+    ) -> NIOLoopBoundBox<Value> {
         // Here, we -- possibly surprisingly -- do not precondition being on the EventLoop. This is okay for a few
         // reasons:
         // - This function takes its value as `sending` so we don't need to worry about somebody
@@ -159,7 +165,6 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         // - The only way to ever write (or read indeed) `self._value` is by proving to be inside the `EventLoop`.
         .init(_value: value, uncheckedEventLoop: eventLoop)
     }
-    #endif
 
     /// Access the `value` with the precondition that the code is running on `eventLoop`.
     ///
@@ -174,5 +179,25 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
             self.eventLoop.preconditionInEventLoop()
             yield &self._value
         }
+    }
+
+    /// Safely access and potentially modify the contained value with a closure.
+    ///
+    /// This method provides a way to perform operations on the contained value while ensuring
+    /// thread safety through EventLoop verification. The closure receives an `inout` parameter
+    /// allowing both read and write access to the value.
+    ///
+    /// - Parameter handler: A closure that receives an `inout` reference to the contained value.
+    ///   The closure can read from and write to this value. Any modifications made within the
+    ///   closure will be reflected in the box after the closure completes, even if the closure throws.
+    /// - Returns: The value returned by the `handler` closure.
+    /// - Note: This method is particularly useful when you need to perform read and write operations
+    ///         on the value because it reduces the on EventLoop checks.
+    @inlinable
+    public func withValue<Success, Failure: Error>(
+        _ handler: (inout Value) throws(Failure) -> Success
+    ) throws(Failure) -> Success {
+        self.eventLoop.preconditionInEventLoop()
+        return try handler(&self._value)
     }
 }

@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import Atomics
 import NIOCore
 
@@ -37,17 +39,22 @@ extension NIOSingletons {
     ///
     /// - warning: You may only call this method from the main thread.
     /// - warning: You may only call this method once.
+    /// - warning: This method is currently not supported on Windows and will return false.
     @discardableResult
     public static func unsafeTryInstallSingletonPosixEventLoopGroupAsConcurrencyGlobalExecutor() -> Bool {
+        #if os(Windows)
+        return false
+        #else
         // Guard between the minimum and maximum supported version for the hook
-        #if compiler(>=5.9) && compiler(<6.3)
+        #if compiler(<6.6)
         guard #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) else {
             return false
         }
 
-        typealias ConcurrencyEnqueueGlobalHook = @convention(thin) (
-            UnownedJob, @convention(thin) (UnownedJob) -> Void
-        ) -> Void
+        typealias ConcurrencyEnqueueGlobalHook =
+            @convention(thin) (
+                UnownedJob, @convention(thin) (UnownedJob) -> Void
+            ) -> Void
 
         guard
             _haveWeTakenOverTheConcurrencyPool.compareExchange(
@@ -92,9 +99,9 @@ extension NIOSingletons {
                 // This formally picks a random EventLoop from the singleton group. However, `EventLoopGroup.any()`
                 // attempts to be sticky. So if we're already in an `EventLoop` that's part of the singleton
                 // `EventLoopGroup`, we'll get that one and be very fast (avoid a thread switch).
-                let targetEL = MultiThreadedEventLoopGroup.singleton.any()
+                let targetEL = MultiThreadedEventLoopGroup.singleton.anySEL()
 
-                (targetEL.executor as! any SilenceWarning).enqueue(job)
+                (targetEL as any SilenceWarning).enqueue(job)
             })
 
             // Unsafe 3: We mandate that the function pointer can be reinterpreted as `UnsafeRawPointer` which isn't
@@ -122,6 +129,7 @@ extension NIOSingletons {
         #else
         return false
         #endif
+        #endif  // windows unimplemented
     }
 }
 
@@ -133,3 +141,4 @@ where
 {
     typealias AtomicRep = Wrapped.AtomicOptionalRepresentation
 }
+#endif  // !os(WASI)

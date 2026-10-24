@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(WASI)
+
 import NIOCore
 
 /// A server socket that can accept new connections.
@@ -74,7 +76,7 @@ class ServerSocket: BaseSocket, ServerSocketProtocol {
     /// Create a new instance.
     ///
     /// - Parameters:
-    ///   - descriptor: The _Unix file descriptor_ representing the bound socket.
+    ///   - socket: The _Unix file descriptor_ representing the bound socket.
     ///   - setNonBlocking: Set non-blocking mode on the socket.
     /// - Throws: An `IOError` if socket is invalid.
     init(socket: NIOBSDSocket.Handle, setNonBlocking: Bool = false) throws {
@@ -150,3 +152,4 @@ class ServerSocket: BaseSocket, ServerSocketProtocol {
         }
     }
 }
+#endif  // !os(WASI)
