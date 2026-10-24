@@ -17,6 +17,10 @@
 /// The AddressedEnvelope is used extensively on `DatagramChannel`s in order to keep track
 /// of source or destination address metadata: that is, where some data came from or where
 /// it is going.
+///
+/// Unix-domain stream channels also accept `AddressedEnvelope<ByteBuffer>` for outbound
+/// writes with file-descriptor metadata. On those channels, `remoteAddress` is ignored
+/// and inbound reads remain `ByteBuffer`s.
 public struct AddressedEnvelope<DataType> {
     public var remoteAddress: SocketAddress
     public var data: DataType
@@ -39,6 +43,11 @@ public struct AddressedEnvelope<DataType> {
         /// Details of any congestion state.
         public var ecnState: NIOExplicitCongestionNotificationState
         public var packetInfo: NIOPacketInfo?
+        /// A borrowed file descriptor to send using `SCM_RIGHTS` on a Unix-domain stream socket.
+        ///
+        /// Keep the descriptor open until the write completes. NIO does not close it.
+        /// The envelope must contain at least one readable byte. The remote address is ignored
+        /// for connected stream sockets; IP-specific metadata is not supported on this path.
         public var fd: Int?
         /// The UDP segment size for Generic Segmentation Offload (GSO).
         ///

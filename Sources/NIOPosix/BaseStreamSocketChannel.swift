@@ -164,23 +164,29 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     }
 
     final override func writeToSocket() throws -> OverallWriteResult {
-        print(#fileID, #function)
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(
-            writeMessage: { ptr, destinationPtr, destinationSize, controlBytes in
-                fatalError("writeMessage")
-                guard let ctrlBytes = controlBytes else {
-                    return .processed(0)
+            writeMessage: { pointer, metadata in
+                guard pointer.count > 0 else { return .processed(0) }
+                let messageBuffer = self.selectableEventLoop.msgBufferPool.get()
+                defer { self.selectableEventLoop.msgBufferPool.put(messageBuffer) }
+                return try messageBuffer.withUnsafePointers { _, _, controlMessageStorage in
+                    var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[0])
+                    #if !os(Windows)
+                    if let descriptor = metadata.fd {
+                        controlBytes.appendControlMessage(
+                            level: SOL_SOCKET,
+                            type: SCM_RIGHTS,
+                            payload: CInt(descriptor)
+                        )
+                    }
+                    #endif
+                    return try self.socket.sendmsg(
+                        pointer: pointer,
+                        destinationPtr: nil,
+                        destinationSize: 0,
+                        controlBytes: controlBytes.validControlBytes
+                    )
                 }
-                var s = UnsafeControlMessageStorage.allocate(msghdrCount: 1)
-                var cb = UnsafeOutboundControlBytes(controlBytes: s[0])
-                cb.appendExplicitCongestionState(metadata: ctrlBytes, protocolFamily: .unix)
-                let controlMessageBytePointer = cb.validControlBytes
-                return try self.socket.sendmsg(
-                    pointer: ptr,
-                    destinationPtr: destinationPtr,
-                    destinationSize: destinationSize,
-                    controlBytes: controlMessageBytePointer
-                )
             },
             scalarBufferWriteOperation: { ptr in
                 guard ptr.count > 0 else {
@@ -315,10 +321,28 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         }
 
         if let envelope = self.tryUnwrapData(data, as: AddressedEnvelope<ByteBuffer>.self) {
-            if self.pendingWrites.add(envelope: envelope, promise: promise) {
+            #if os(Windows)
+            promise?.fail(ChannelError.operationUnsupported)
+            return
+            #else
+            guard self.localAddress?.protocol == .unix,
+                envelope.metadata?.packetInfo == nil, envelope.metadata?.segmentSize == nil,
+                envelope.metadata == nil || envelope.metadata?.ecnState == .transportNotCapable
+            else {
+                promise?.fail(ChannelError.operationUnsupported)
+                return
+            }
+            if let descriptor = envelope.metadata?.fd {
+                guard CInt(exactly: descriptor) != nil, descriptor >= 0, envelope.data.readableBytes > 0 else {
+                    promise?.fail(ChannelError.inappropriateOperationForState)
+                    return
+                }
+            }
+            if !self.pendingWrites.add(envelope: envelope, promise: promise) {
                 self.pipeline.syncOperations.fireChannelWritabilityChanged()
             }
             return
+            #endif
         }
 
         let data = self.unwrapData(data, as: IOData.self)
