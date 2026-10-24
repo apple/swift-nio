@@ -18,6 +18,7 @@ import NIOCore
 
 class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>, @unchecked Sendable {
     internal var connectTimeoutScheduled: Optional<Scheduled<Void>>
+    private var receiveFileDescriptors = false
     private var allowRemoteHalfClosure: Bool = false
     private var inputShutdown: Bool = false
     private var outputShutdown: Bool = false
@@ -54,6 +55,15 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         }
 
         switch option {
+        case _ as ChannelOptions.Types.ReceiveFileDescriptors:
+            #if os(Linux)
+            guard try socket.localAddress().protocol == .unix else {
+                throw ChannelError.operationUnsupported
+            }
+            receiveFileDescriptors = value as! Bool
+            #else
+            throw ChannelError.operationUnsupported
+            #endif
         case _ as ChannelOptions.Types.AllowRemoteHalfClosureOption:
             self.allowRemoteHalfClosure = value as! Bool
         case _ as ChannelOptions.Types.WriteSpinOption:
@@ -73,6 +83,15 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         }
 
         switch option {
+        case _ as ChannelOptions.Types.ReceiveFileDescriptors:
+            #if os(Linux)
+            guard try socket.localAddress().protocol == .unix else {
+                throw ChannelError.operationUnsupported
+            }
+            return receiveFileDescriptors as! Option.Value
+            #else
+            throw ChannelError.operationUnsupported
+            #endif
         case _ as ChannelOptions.Types.AllowRemoteHalfClosureOption:
             return self.allowRemoteHalfClosure as! Option.Value
         case _ as ChannelOptions.Types.WriteSpinOption:
@@ -120,9 +139,18 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 throw ChannelError._eof
             }
 
+            let receiveAddress = receiveFileDescriptors ? try socket.remoteAddress() : nil
+            var receivedDescriptors: [CInt] = []
             let (buffer, readResult) = try self.recvBufferPool.buffer(allocator: self.allocator) { buffer in
                 try buffer.withMutableWritePointer { pointer in
-                    try self.socket.read(pointer: pointer)
+                    #if os(Linux)
+                    if receiveFileDescriptors {
+                        let (result, descriptors) = try socket.receiveFileDescriptors(pointer: pointer)
+                        receivedDescriptors = descriptors
+                        return result
+                    }
+                    #endif
+                    return try socket.read(pointer: pointer)
                 }
             }
 
@@ -135,7 +163,15 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     self.readPending = false
 
                     assert(self.isActive)
-                    self.pipeline.syncOperations.fireChannelRead(NIOAny(buffer))
+                    if let receiveAddress {
+                        var metadata = AddressedEnvelope<ByteBuffer>.Metadata(ecnState: .transportNotCapable)
+                        metadata.receivedFileDescriptors = receivedDescriptors
+                        pipeline.syncOperations.fireChannelRead(
+                            NIOAny(AddressedEnvelope(remoteAddress: receiveAddress, data: buffer, metadata: metadata))
+                        )
+                    } else {
+                        pipeline.syncOperations.fireChannelRead(NIOAny(buffer))
+                    }
                     result = .some
 
                     if buffer.writableBytes > 0 {
@@ -165,6 +201,29 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
 
     final override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(
+            writeMessage: { pointer, metadata in
+                guard pointer.count > 0 else { return .processed(0) }
+                let messageBuffer = self.selectableEventLoop.msgBufferPool.get()
+                defer { self.selectableEventLoop.msgBufferPool.put(messageBuffer) }
+                return try messageBuffer.withUnsafePointers { _, _, controlMessageStorage in
+                    var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[0])
+                    #if !os(Windows)
+                    if let descriptor = metadata.fd {
+                        controlBytes.appendControlMessage(
+                            level: SOL_SOCKET,
+                            type: CInt(SCM_RIGHTS),
+                            payload: CInt(descriptor)
+                        )
+                    }
+                    #endif
+                    return try self.socket.sendmsg(
+                        pointer: pointer,
+                        destinationPtr: nil,
+                        destinationSize: 0,
+                        controlBytes: controlBytes.validControlBytes
+                    )
+                }
+            },
             scalarBufferWriteOperation: { ptr in
                 guard ptr.count > 0 else {
                     // No need to call write if the buffer is empty.
@@ -295,6 +354,32 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         if self.outputShutdown {
             promise?.fail(ChannelError._outputClosed)
             return
+        }
+
+        if let envelope = self.tryUnwrapData(data, as: AddressedEnvelope<ByteBuffer>.self) {
+            #if os(Windows)
+            promise?.fail(ChannelError.operationUnsupported)
+            return
+            #else
+            guard self.localAddress?.protocol == .unix,
+                envelope.metadata?.packetInfo == nil, envelope.metadata?.segmentSize == nil,
+                envelope.metadata?.receivedFileDescriptors.isEmpty != false,
+                envelope.metadata == nil || envelope.metadata?.ecnState == .transportNotCapable
+            else {
+                promise?.fail(ChannelError.operationUnsupported)
+                return
+            }
+            if let descriptor = envelope.metadata?.fd {
+                guard CInt(exactly: descriptor) != nil, descriptor >= 0, envelope.data.readableBytes > 0 else {
+                    promise?.fail(ChannelError.inappropriateOperationForState)
+                    return
+                }
+            }
+            if !self.pendingWrites.add(envelope: envelope, promise: promise) {
+                self.pipeline.syncOperations.fireChannelWritabilityChanged()
+            }
+            return
+            #endif
         }
 
         let data = self.unwrapData(data, as: IOData.self)

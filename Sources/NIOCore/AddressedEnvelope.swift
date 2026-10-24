@@ -17,6 +17,10 @@
 /// The AddressedEnvelope is used extensively on `DatagramChannel`s in order to keep track
 /// of source or destination address metadata: that is, where some data came from or where
 /// it is going.
+///
+/// Unix-domain stream channels also accept `AddressedEnvelope<ByteBuffer>` for outbound
+/// writes with file-descriptor metadata. On those channels, `remoteAddress` is ignored
+/// and inbound reads remain `ByteBuffer`s unless `ChannelOptions.receiveFileDescriptors` is enabled.
 public struct AddressedEnvelope<DataType> {
     public var remoteAddress: SocketAddress
     public var data: DataType
@@ -39,6 +43,19 @@ public struct AddressedEnvelope<DataType> {
         /// Details of any congestion state.
         public var ecnState: NIOExplicitCongestionNotificationState
         public var packetInfo: NIOPacketInfo?
+        /// A borrowed file descriptor to send using `SCM_RIGHTS` on a Unix-domain stream socket.
+        ///
+        /// Keep the descriptor open until the write completes. NIO does not close it.
+        /// The envelope must contain at least one readable byte. The remote address is ignored
+        /// for connected stream sockets; IP-specific metadata is not supported on this path.
+        public var fd: Int?
+        /// File descriptors received using `SCM_RIGHTS` on a Unix-domain stream socket.
+        ///
+        /// Populated only when `ChannelOptions.receiveFileDescriptors` is enabled. The receiving
+        /// handler takes ownership and must close every descriptor, including when discarding data.
+        /// Copying or releasing this envelope does not duplicate or close the descriptors.
+        /// Descriptors have close-on-exec set. This field cannot be used for outbound stream writes.
+        public var receivedFileDescriptors: [CInt] = []
         /// The UDP segment size for Generic Segmentation Offload (GSO).
         ///
         /// When set, this enables per-message GSO, allowing the kernel to split this datagram
@@ -53,12 +70,21 @@ public struct AddressedEnvelope<DataType> {
         public init(ecnState: NIOExplicitCongestionNotificationState) {
             self.ecnState = ecnState
             self.packetInfo = nil
+            self.fd = nil
             self.segmentSize = nil
         }
 
         public init(ecnState: NIOExplicitCongestionNotificationState, packetInfo: NIOPacketInfo?) {
             self.ecnState = ecnState
             self.packetInfo = packetInfo
+            self.fd = nil
+            self.segmentSize = nil
+        }
+
+        public init(ecnState: NIOExplicitCongestionNotificationState, fd: Int?) {
+            self.ecnState = ecnState
+            self.packetInfo = nil
+            self.fd = fd
             self.segmentSize = nil
         }
 
@@ -69,6 +95,7 @@ public struct AddressedEnvelope<DataType> {
         ) {
             self.ecnState = ecnState
             self.packetInfo = packetInfo
+            self.fd = nil
             self.segmentSize = segmentSize
         }
     }
