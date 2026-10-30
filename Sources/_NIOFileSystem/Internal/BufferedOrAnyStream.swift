@@ -92,7 +92,13 @@ internal struct AnyAsyncSequence<Element>: AsyncSequence, Sendable {
         }
 
         internal mutating func next() async throws -> Element? {
-            try await self.iterator.next() as? Element
+            var box = UnsafeTransfer(self.iterator)
+            return try await box.wrappedValue.next() as? Element
+        }
+
+        @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
+        internal mutating func next(isolation actor: isolated (any Actor)?) async throws(any Error) -> Element? {
+            try await self.iterator.next(isolation: actor) as? Element
         }
     }
 }

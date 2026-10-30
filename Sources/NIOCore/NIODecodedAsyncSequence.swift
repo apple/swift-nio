@@ -122,6 +122,7 @@ extension NIODecodedAsyncSequence: AsyncSequence {
         /// The same as `next(isolation:)` but not isolated to an actor, which allows
         /// for less availability restrictions.
         @inlinable
+        @concurrent
         public mutating func next() async throws -> Element? {
             while true {
                 switch self.state {

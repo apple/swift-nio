@@ -762,6 +762,7 @@ private func XCTAssertEqualWithoutAutoclosure<T>(
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension AsyncSequence {
     /// Collect all elements in the sequence into an array.
+    @concurrent
     fileprivate func collect() async rethrows -> [Element] {
         try await self.reduce(into: []) { accumulated, next in
             accumulated.append(next)
