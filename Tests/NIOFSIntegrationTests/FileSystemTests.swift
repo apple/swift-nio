@@ -1842,6 +1842,29 @@ extension FileSystemTests {
         XCTAssertEqual(info?.permissions, .ownerReadWriteExecute)
     }
 
+    func testCreateTemporaryDirectoryWithIntermediatePathsIsOnlyAccessibleByOwner() async throws {
+        let templateRoot = FilePath("\(#function)")
+        let intermediateDirectoryPath = templateRoot.appending("intermediate")
+        let template = intermediateDirectoryPath.appending("pattern-XXXXXX")
+        let temporaryDirectoryPath = try await self.fs.createTemporaryDirectory(
+            template: NIOFilePath(template)
+        )
+
+        self.addTeardownBlock { [fileSystem = self.fs] in
+            try await fileSystem.removeItem(
+                at: NIOFilePath(templateRoot),
+                strategy: .platformDefault,
+                recursively: true
+            )
+        }
+
+        // Every directory created from the template must be owner-only, not just the last one.
+        for path in [NIOFilePath(templateRoot), NIOFilePath(intermediateDirectoryPath), temporaryDirectoryPath] {
+            let info = try await self.fs.info(forFileAt: path)
+            XCTAssertEqual(info?.permissions, .ownerReadWriteExecute, "\(path)")
+        }
+    }
+
     func testTemporaryDirectoryRespectsEnvironment() async throws {
         if let envTmpDir = getenv("TMPDIR") {
             let envTmpDirString = String(cString: envTmpDir)
