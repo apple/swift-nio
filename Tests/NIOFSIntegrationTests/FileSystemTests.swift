@@ -1829,6 +1829,24 @@ extension FileSystemTests {
         XCTAssertGreaterThan(info.size, 0)
     }
 
+    func testCreateTemporaryDirectoryDoesNotReuseExistingDirectory() async throws {
+        let root = try await self.fs.temporaryFilePath()
+        try await self.fs.createDirectory(at: root, withIntermediateDirectories: false)
+        self.addTeardownBlock { [fileSystem = self.fs] in
+            try await fileSystem.removeItem(at: root, strategy: .platformDefault, recursively: true)
+        }
+
+        // With three 'X's there are at most 62^3 possible names, so creating 2000 directories is all but
+        // certain to generate a name which already exists. Each call must return a new directory.
+        var created = Set<NIOFilePath>()
+        for _ in 0..<2000 {
+            let path = try await self.fs.createTemporaryDirectory(
+                template: NIOFilePath(root.underlying.appending("XXX"))
+            )
+            XCTAssert(created.insert(path).inserted, "\(path) was returned more than once")
+        }
+    }
+
     func testTemporaryDirectoryRespectsEnvironment() async throws {
         if let envTmpDir = getenv("TMPDIR") {
             let envTmpDirString = String(cString: envTmpDir)

@@ -1901,7 +1901,8 @@ extension FileSystem {
             let createDirectoriesResult = self._createDirectory(
                 at: finalPath,
                 withIntermediateDirectories: true,
-                permissions: FilePermissions.defaultsForDirectory
+                permissions: FilePermissions.defaultsForDirectory,
+                idempotent: false  // Fail if the generated path already exists.
             )
             switch createDirectoriesResult {
             case .success:
