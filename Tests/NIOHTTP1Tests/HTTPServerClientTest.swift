@@ -851,7 +851,7 @@ class HTTPServerClientTest: XCTestCase {
 extension NIOHTTPServerPipelineSynchronousConfiguration {
     static var noPipeliningAssistance: Self {
         var configuration = Self()
-        configuration.pipeliningAssistance = false
+        configuration.pipeliningConfiguration = nil
         return configuration
     }
 }

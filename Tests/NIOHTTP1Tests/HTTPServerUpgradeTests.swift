@@ -117,7 +117,7 @@ private func serverHTTPChannelWithAutoremoval(
         .childChannelInitializer { channel in
             p.succeed(channel)
             var configuration = NIOHTTPServerPipelineConfiguration()
-            configuration.pipeliningAssistance = pipelining
+            configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
             configuration.serverUpgrade = .init(
                 upgraders: upgraders,
                 completionHandler: upgradeCompletionHandler
@@ -1202,7 +1202,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         var configuration = NIOHTTPServerPipelineConfiguration()
         // Here we're disabling the pipeline handler, because otherwise it makes this test case impossible to reach.
-        configuration.pipeliningAssistance = false
+        configuration.pipeliningConfiguration = nil
         configuration.serverUpgrade = .init(upgraders: [delayedUpgrader], completionHandler: { _ in })
         XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(configuration: configuration).wait())
 

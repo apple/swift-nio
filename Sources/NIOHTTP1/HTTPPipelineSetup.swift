@@ -238,7 +238,7 @@ extension ChannelPipeline {
         withErrorHandling errorHandling: Bool = true
     ) -> EventLoopFuture<Void> {
         var configuration = NIOHTTPServerPipelineConfiguration()
-        configuration.pipeliningAssistance = pipelining
+        configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
         configuration.serverUpgrade = upgrade.map { NIOHTTPServerPipelineConfiguration.UpgradeConfiguration($0) }
         configuration.errorHandling = errorHandling
 
@@ -285,7 +285,7 @@ extension ChannelPipeline {
         withOutboundHeaderValidation headerValidation: Bool = true
     ) -> EventLoopFuture<Void> {
         var configuration = NIOHTTPServerPipelineConfiguration()
-        configuration.pipeliningAssistance = pipelining
+        configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
         configuration.serverUpgrade = upgrade.map { NIOHTTPServerPipelineConfiguration.UpgradeConfiguration($0) }
         configuration.errorHandling = errorHandling
         configuration.outboundHeaderValidation = headerValidation
@@ -335,7 +335,7 @@ extension ChannelPipeline {
         withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration = .init()
     ) -> EventLoopFuture<Void> {
         var configuration = NIOHTTPServerPipelineConfiguration()
-        configuration.pipeliningAssistance = pipelining
+        configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
         configuration.serverUpgrade = upgrade.map { NIOHTTPServerPipelineConfiguration.UpgradeConfiguration($0) }
         configuration.errorHandling = errorHandling
         configuration.outboundHeaderValidation = headerValidation
@@ -388,7 +388,7 @@ extension ChannelPipeline {
         withDecoderLimitConfiguration decoderLimitConfiguration: NIOHTTPDecoderLimitConfiguration = .init()
     ) -> EventLoopFuture<Void> {
         var configuration = NIOHTTPServerPipelineConfiguration()
-        configuration.pipeliningAssistance = pipelining
+        configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
         configuration.serverUpgrade = upgrade.map { NIOHTTPServerPipelineConfiguration.UpgradeConfiguration($0) }
         configuration.errorHandling = errorHandling
         configuration.outboundHeaderValidation = headerValidation
@@ -755,7 +755,7 @@ extension ChannelPipeline.SynchronousOperations {
         withErrorHandling errorHandling: Bool = true
     ) throws {
         var configuration = NIOHTTPServerPipelineSynchronousConfiguration()
-        configuration.pipeliningAssistance = pipelining
+        configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
         configuration.serverUpgrade = upgrade.map { .init($0) }
         configuration.errorHandling = errorHandling
 
@@ -799,7 +799,7 @@ extension ChannelPipeline.SynchronousOperations {
     ) throws {
         let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         var configuration = NIOHTTPServerPipelineSynchronousConfiguration()
-        configuration.pipeliningAssistance = pipelining
+        configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
         configuration.serverUpgrade = upgrade.map { .init($0) }
         configuration.errorHandling = errorHandling
 
@@ -845,7 +845,7 @@ extension ChannelPipeline.SynchronousOperations {
         withOutboundHeaderValidation headerValidation: Bool = true
     ) throws {
         var configuration = NIOHTTPServerPipelineSynchronousConfiguration()
-        configuration.pipeliningAssistance = pipelining
+        configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
         configuration.serverUpgrade = upgrade.map { .init($0) }
         configuration.errorHandling = errorHandling
         configuration.outboundHeaderValidation = headerValidation
@@ -894,7 +894,7 @@ extension ChannelPipeline.SynchronousOperations {
     ) throws {
         let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         var configuration = NIOHTTPServerPipelineSynchronousConfiguration()
-        configuration.pipeliningAssistance = pipelining
+        configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
         configuration.serverUpgrade = upgrade.map { .init($0) }
         configuration.errorHandling = errorHandling
         configuration.outboundHeaderValidation = headerValidation
@@ -931,7 +931,7 @@ extension ChannelPipeline.SynchronousOperations {
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
     ///   - headerValidation: Whether to validate outbound request headers to confirm that they meet
     ///         spec compliance. Defaults to `true`.
-    ///   - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
+    ///   - encoderConfiguration: The configuration for the ``HTTPResponseEncoder``.
     /// - Throws: If the pipeline could not be configured.
     @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
     public func configureHTTPServerPipeline(
@@ -943,7 +943,7 @@ extension ChannelPipeline.SynchronousOperations {
         withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration
     ) throws {
         var configuration = NIOHTTPServerPipelineSynchronousConfiguration()
-        configuration.pipeliningAssistance = pipelining
+        configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
         configuration.serverUpgrade = upgrade.map { .init($0) }
         configuration.errorHandling = errorHandling
         configuration.outboundHeaderValidation = headerValidation
@@ -981,7 +981,7 @@ extension ChannelPipeline.SynchronousOperations {
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
     ///   - headerValidation: Whether to validate outbound request headers to confirm that they meet
     ///         spec compliance. Defaults to `true`.
-    ///   - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
+    ///   - encoderConfiguration: The configuration for the ``HTTPResponseEncoder``.
     ///   - decoderLimitConfiguration: The limit configuration for the ``HTTPDecoder``.
     /// - Throws: If the pipeline could not be configured.
     @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
@@ -995,7 +995,7 @@ extension ChannelPipeline.SynchronousOperations {
         withDecoderLimitConfiguration decoderLimitConfiguration: NIOHTTPDecoderLimitConfiguration,
     ) throws {
         var configuration = NIOHTTPServerPipelineSynchronousConfiguration()
-        configuration.pipeliningAssistance = pipelining
+        configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
         configuration.serverUpgrade = upgrade.map { .init($0) }
         configuration.errorHandling = errorHandling
         configuration.outboundHeaderValidation = headerValidation
@@ -1034,7 +1034,7 @@ extension ChannelPipeline.SynchronousOperations {
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
     ///   - headerValidation: Whether to validate outbound request headers to confirm that they meet
     ///         spec compliance. Defaults to `true`.
-    ///   - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
+    ///   - encoderConfiguration: The configuration for the ``HTTPResponseEncoder``.
     /// - Throws: If the pipeline could not be configured.
     @available(*, deprecated, message: "Use configureHTTPServerPipeline(position:configuration:) instead")
     @_disfavoredOverload
@@ -1048,7 +1048,7 @@ extension ChannelPipeline.SynchronousOperations {
     ) throws {
         let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         var configuration = NIOHTTPServerPipelineSynchronousConfiguration()
-        configuration.pipeliningAssistance = pipelining
+        configuration.pipeliningConfiguration = pipelining ? HTTPServerPipelineHandler.Configuration() : nil
         configuration.serverUpgrade = upgrade.map { .init($0) }
         configuration.errorHandling = errorHandling
         configuration.outboundHeaderValidation = headerValidation
@@ -1091,8 +1091,8 @@ extension ChannelPipeline.SynchronousOperations {
 
         var handlers: [RemovableChannelHandler] = [responseEncoder, ByteToMessageHandler(requestDecoder)]
 
-        if configuration.pipeliningAssistance {
-            handlers.append(HTTPServerPipelineHandler())
+        if let pipeliningConfiguration = configuration.pipeliningConfiguration {
+            handlers.append(HTTPServerPipelineHandler(configuration: pipeliningConfiguration))
         }
 
         if configuration.outboundHeaderValidation {
@@ -1123,9 +1123,10 @@ extension ChannelPipeline.SynchronousOperations {
 /// Channel's event loop and your upgraders are not `Sendable`, use ``NIOHTTPServerPipelineSynchronousConfiguration``
 /// with ``NIOCore/ChannelPipeline/SynchronousOperations/configureHTTPServerPipeline(position:configuration:)`` instead.
 public struct NIOHTTPServerPipelineConfiguration: Sendable {
-    /// Whether to provide assistance handling HTTP clients that pipeline their requests. Defaults to `true`. If
-    /// `false`, users will need to handle clients that pipeline themselves.
-    public var pipeliningAssistance: Bool = true
+    /// The configuration for the ``HTTPServerPipelineHandler``, which provides assistance handling HTTP clients that
+    /// pipeline their requests. Defaults to ``HTTPServerPipelineHandler/Configuration/init()``. If `nil`, the handler
+    /// isn't added and users will need to handle clients that pipeline themselves.
+    public var pipeliningConfiguration: HTTPServerPipelineHandler.Configuration? = .init()
 
     /// Whether to add a ``HTTPServerUpgradeHandler`` to the pipeline, configured for HTTP upgrade. Defaults to `nil`,
     /// which will not add the handler to the pipeline. See the documentation on ``HTTPServerUpgradeHandler`` for more
@@ -1181,9 +1182,10 @@ public struct NIOHTTPServerPipelineConfiguration: Sendable {
 /// This is identical to ``NIOHTTPServerPipelineConfiguration``, except that the upgrade configuration is not required
 /// to be `Sendable`.
 public struct NIOHTTPServerPipelineSynchronousConfiguration {
-    /// Whether to provide assistance handling HTTP clients that pipeline their requests. Defaults to `true`. If
-    /// `false`, users will need to handle clients that pipeline themselves.
-    public var pipeliningAssistance: Bool = true
+    /// The configuration for the ``HTTPServerPipelineHandler``, which provides assistance handling HTTP clients that
+    /// pipeline their requests. Defaults to ``HTTPServerPipelineHandler/Configuration/init()``. If `nil`, the handler
+    /// isn't added and users will need to handle clients that pipeline themselves.
+    public var pipeliningConfiguration: HTTPServerPipelineHandler.Configuration? = .init()
 
     /// Whether to add a ``HTTPServerUpgradeHandler`` to the pipeline, configured for HTTP upgrade. Defaults to `nil`,
     /// which will not add the handler to the pipeline. See the documentation on ``HTTPServerUpgradeHandler`` for more
@@ -1204,7 +1206,7 @@ public struct NIOHTTPServerPipelineSynchronousConfiguration {
     public var decoderLimitConfiguration: NIOHTTPDecoderLimitConfiguration = .init()
 
     fileprivate init(_ configuration: NIOHTTPServerPipelineConfiguration) {
-        self.pipeliningAssistance = configuration.pipeliningAssistance
+        self.pipeliningConfiguration = configuration.pipeliningConfiguration
         self.serverUpgrade = configuration.serverUpgrade.map { UpgradeConfiguration($0) }
         self.errorHandling = configuration.errorHandling
         self.outboundHeaderValidation = configuration.outboundHeaderValidation
