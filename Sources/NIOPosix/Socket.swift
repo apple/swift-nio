@@ -29,6 +29,20 @@ typealias IOVector = WSABUF
 typealias IOVector = iovec
 #endif
 
+extension IOError {
+    /// Creates an `IOError` from an error code read out of a socket, as `SO_ERROR` produces.
+    ///
+    /// Winsock reports those in its own error domain rather than as an `errno`, so the two need
+    /// to be distinguished at the point the value is read.
+    init(socketError code: CInt, reason: String) {
+        #if os(Windows)
+        self.init(winsock: code, reason: reason)
+        #else
+        self.init(errnoCode: code, reason: reason)
+        #endif
+    }
+}
+
 // TODO: scattering support
 class Socket: BaseSocket, SocketProtocol {
     typealias SocketType = Socket
@@ -150,7 +164,10 @@ class Socket: BaseSocket, SocketProtocol {
     func finishConnect() throws {
         let result: Int32 = try getOption(level: .socket, name: .so_error)
         if result != 0 {
-            throw IOError(errnoCode: result, reason: "finishing a non-blocking connect failed")
+            throw IOError(
+                socketError: result,
+                reason: "finishing a non-blocking connect failed"
+            )
         }
     }
 
