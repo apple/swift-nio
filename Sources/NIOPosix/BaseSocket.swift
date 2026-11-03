@@ -19,6 +19,10 @@ import CNIOOpenBSD
 import NIOConcurrencyHelpers
 import NIOCore
 
+#if os(FreeBSD)
+import CNIOFreeBSD
+#endif
+
 #if os(Windows)
 import let WinSDK.EAFNOSUPPORT
 import let WinSDK.EBADF
