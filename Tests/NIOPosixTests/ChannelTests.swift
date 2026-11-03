@@ -303,6 +303,10 @@ final class ChannelTests: XCTestCase {
         var multiState = 0
         var fileState = 0
         let result = try pwm.triggerAppropriateWriteOperations(
+            writeMessage: { _, _ in
+                XCTFail("Unexpected write with control metadata")
+                return .wouldBlock(0)
+            },
             scalarBufferWriteOperation: { buf in
                 defer {
                     singleState += 1
@@ -502,6 +506,255 @@ final class ChannelTests: XCTestCase {
         }
         return result
     }
+
+    func testPendingWritesPreserveMetadataAcrossWouldBlockAndSendItOnlyOnce() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let data = ByteBuffer(string: "abcd")
+        let metadata = AddressedEnvelope<ByteBuffer>.Metadata(ecnState: .transportNotCapable, fd: 42)
+        let envelope = AddressedEnvelope(
+            remoteAddress: try SocketAddress(unixDomainSocketPath: "/unused"),
+            data: data,
+            metadata: metadata
+        )
+
+        try self.withPendingStreamWritesManager { manager in
+            let promise = eventLoop.makePromise(of: Void.self)
+            XCTAssertTrue(manager.add(envelope: envelope, promise: promise))
+            manager.markFlushCheckpoint()
+            manager.writeSpinCount = 0
+
+            // Zero progress retains metadata; the first successful byte consumes it.
+            let attempts: [(IOResult<Int>, Int64)] = [
+                (.wouldBlock(0), 4), (.processed(0), 4), (.processed(1), 3), (.processed(3), 0),
+            ]
+            for (result, remainingBytes) in attempts {
+                let expectsMetadata = manager.bufferedBytes == 4
+                let expectedBytes = Array("abcd".utf8.suffix(Int(manager.bufferedBytes)))
+                let outcome = try manager.triggerAppropriateWriteOperations(
+                    writeMessage: { pointer, actualMetadata in
+                        XCTAssertTrue(expectsMetadata, "Sent metadata twice")
+                        XCTAssertEqual(actualMetadata, metadata)
+                        XCTAssertEqual(Array(pointer), expectedBytes)
+                        return result
+                    },
+                    scalarBufferWriteOperation: { pointer in
+                        XCTAssertFalse(expectsMetadata, "Lost metadata")
+                        XCTAssertEqual(Array(pointer), expectedBytes)
+                        return result
+                    },
+                    vectorBufferWriteOperation: { _ in
+                        XCTFail("Unexpected vector write")
+                        return .wouldBlock(0)
+                    },
+                    scalarFileWriteOperation: { _, _, _ in
+                        XCTFail("Unexpected file write")
+                        return .wouldBlock(0)
+                    }
+                )
+                XCTAssertEqual(
+                    outcome.writeResult,
+                    remainingBytes == 0 ? .writtenCompletely(.open) : .couldNotWriteEverything
+                )
+                XCTAssertEqual(manager.bufferedBytes, remainingBytes)
+                XCTAssertEqual(promise.futureResult.isFulfilled, remainingBytes == 0)
+            }
+        }
+    }
+
+    func testPendingWritesDoNotBatchAcrossMetadata() throws {
+        try self.withPendingStreamWritesManager { manager in
+            let address = try SocketAddress(unixDomainSocketPath: "/unused")
+            let metadata = AddressedEnvelope<ByteBuffer>.Metadata(ecnState: .transportNotCapable, fd: 42)
+            let eventLoop = EmbeddedEventLoop()
+            let completed = NIOLoopBoundBox<[Int]>([], eventLoop: eventLoop)
+            for index in 0..<6 {
+                let promise = eventLoop.makePromise(of: Void.self)
+                promise.futureResult.whenSuccess { completed.value.append(index) }
+                let buffer = ByteBuffer(bytes: [UInt8(index)])
+                if index == 2 || index == 3 {
+                    _ = manager.add(
+                        envelope: AddressedEnvelope(remoteAddress: address, data: buffer, metadata: metadata),
+                        promise: promise
+                    )
+                } else {
+                    _ = manager.add(data: .byteBuffer(buffer), promise: promise)
+                }
+            }
+            manager.markFlushCheckpoint()
+            var writes: [[UInt8]] = []
+            _ = try manager.triggerAppropriateWriteOperations(
+                writeMessage: { pointer, actualMetadata in
+                    XCTAssertEqual(actualMetadata, metadata)
+                    writes.append(Array(pointer))
+                    return .processed(pointer.count)
+                },
+                scalarBufferWriteOperation: { _ in
+                    XCTFail("Unexpected scalar write")
+                    return .wouldBlock(0)
+                },
+                vectorBufferWriteOperation: { vectors in
+                    var bytes: [UInt8] = []
+                    for vector in vectors {
+                        bytes.append(
+                            contentsOf: UnsafeRawBufferPointer(
+                                start: vector.iov_base,
+                                count: Int(vector.iov_len)
+                            )
+                        )
+                    }
+                    writes.append(bytes)
+                    return .processed(bytes.count)
+                },
+                scalarFileWriteOperation: { _, _, _ in
+                    XCTFail("Unexpected file write")
+                    return .wouldBlock(0)
+                }
+            )
+            XCTAssertEqual(writes, [[0, 1], [2], [3], [4, 5]])
+            XCTAssertEqual(completed.value, Array(0..<6))
+        }
+    }
+
+    #if !os(Windows)
+    func testUnixDomainStreamSendsFileDescriptor() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+        var sockets: [CInt] = [-1, -1]
+        try Posix.socketpair(domain: .unix, type: .stream, protocolSubtype: .default, socketVector: &sockets)
+        let peer = try Socket(socket: sockets[1], setNonBlocking: true)
+        defer { XCTAssertNoThrow(try peer.close()) }
+        let channel = try ClientBootstrap(group: group).withConnectedSocket(sockets[0]).wait()
+        defer { XCTAssertNoThrow(try channel.close().wait()) }
+
+        try withPipe { readHandle, writeHandle in
+            let descriptor = try readHandle.withUnsafeFileDescriptor { $0 }
+            let envelope = AddressedEnvelope(
+                remoteAddress: try SocketAddress(unixDomainSocketPath: "/ignored"),
+                data: ByteBuffer(string: "hello"),
+                metadata: .init(ecnState: .transportNotCapable, fd: Int(descriptor))
+            )
+            try channel.writeAndFlush(envelope).wait()
+
+            var storage = UnsafeControlMessageStorage.allocate(msghdrCount: 1)
+            defer { storage.deallocate() }
+            var receivedDescriptors: [CInt] = []
+            defer { for fd in receivedDescriptors { XCTAssertNoThrow(try Posix.close(descriptor: fd)) } }
+            var received: [UInt8] = []
+            let deadline = NIODeadline.now() + .seconds(5)
+            while received.count < 5 && NIODeadline.now() < deadline {
+                var bytes = [UInt8](repeating: 0, count: 5 - received.count)
+                var address = sockaddr_storage()
+                var addressLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
+                var controlBytes = UnsafeReceivedControlBytes(controlBytesBuffer: storage[0])
+                let result = try bytes.withUnsafeMutableBytes {
+                    try peer.recvmsg(
+                        pointer: $0,
+                        storage: &address,
+                        storageLen: &addressLength,
+                        controlBytes: &controlBytes
+                    )
+                }
+                switch result {
+                case .processed(let count):
+                    received.append(contentsOf: bytes.prefix(count))
+                    for message in controlBytes.receivedControlMessages! {
+                        XCTAssertEqual(message.level, SOL_SOCKET)
+                        XCTAssertEqual(message.type, CInt(SCM_RIGHTS))
+                        receivedDescriptors.append(ControlMessageParser._readCInt(data: try XCTUnwrap(message.data)))
+                    }
+                case .wouldBlock:
+                    Thread.sleep(forTimeInterval: 0.001)
+                }
+            }
+            XCTAssertEqual(received, Array("hello".utf8))
+            XCTAssertEqual(receivedDescriptors.count, 1)
+            let receivedDescriptor = try XCTUnwrap(receivedDescriptors.first)
+            XCTAssertNotEqual(receivedDescriptor, descriptor)
+            XCTAssertNoThrow(try Posix.fcntl(descriptor: descriptor, command: F_GETFD, value: 0))
+
+            var byte: UInt8 = 123
+            XCTAssertEqual(
+                try writeHandle.withUnsafeFileDescriptor { fd in
+                    try Posix.write(descriptor: fd, pointer: &byte, size: 1)
+                },
+                .processed(1)
+            )
+            byte = 0
+            XCTAssertEqual(try Posix.read(descriptor: receivedDescriptor, pointer: &byte, size: 1), .processed(1))
+            XCTAssertEqual(byte, 123)
+            return [readHandle, writeHandle]
+        }
+    }
+
+    func testUnixDomainStreamRejectsInvalidFileDescriptorWrites() throws {
+        try withCrossConnectedUnixDomainSocketChannels { sender, _ in
+            for descriptor in [-1, Int.max, 0] {
+                let envelope = AddressedEnvelope(
+                    remoteAddress: sender.remoteAddress!,
+                    data: descriptor == 0 ? ByteBuffer() : ByteBuffer(string: "x"),
+                    metadata: .init(ecnState: .transportNotCapable, fd: descriptor)
+                )
+                XCTAssertThrowsError(try sender.writeAndFlush(envelope).wait()) {
+                    XCTAssertEqual($0 as? ChannelError, .inappropriateOperationForState)
+                }
+            }
+            XCTAssertTrue(sender.isActive)
+            XCTAssertEqual(try sender.getOption(.bufferedWritableBytes).wait(), 0)
+        }
+    }
+
+    func testUnixDomainStreamEnvelopeWritabilityNotifications() throws {
+        final class WritabilityRecorder: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            var changes: [Bool] = []
+
+            func channelWritabilityChanged(context: ChannelHandlerContext) {
+                self.changes.append(context.channel.isWritable)
+                context.fireChannelWritabilityChanged()
+            }
+        }
+
+        try withCrossConnectedUnixDomainSocketChannels { sender, _ in
+            try sender.setOption(.writeBufferWaterMark, value: .init(low: 1, high: 2)).wait()
+            try sender.eventLoop.submit {
+                let recorder = WritabilityRecorder()
+                try sender.pipeline.syncOperations.addHandler(recorder)
+                let smallWrite = sender.write(
+                    AddressedEnvelope(
+                        remoteAddress: sender.remoteAddress!,
+                        data: ByteBuffer(string: "a")
+                    )
+                )
+                XCTAssertTrue(recorder.changes.isEmpty)
+                let largeWrite = sender.write(
+                    AddressedEnvelope(
+                        remoteAddress: sender.remoteAddress!,
+                        data: ByteBuffer(string: "bcd")
+                    )
+                )
+                XCTAssertEqual(recorder.changes, [false])
+                sender.flush()
+                XCTAssertEqual(recorder.changes, [false, true])
+                XCTAssertTrue(smallWrite.isFulfilled)
+                XCTAssertTrue(largeWrite.isFulfilled)
+            }.wait()
+        }
+    }
+
+    func testTCPStreamRejectsFileDescriptorWrites() throws {
+        try withCrossConnectedTCPChannels { sender, _ in
+            let envelope = AddressedEnvelope(
+                remoteAddress: sender.remoteAddress!,
+                data: ByteBuffer(string: "x"),
+                metadata: .init(ecnState: .transportNotCapable, fd: 0)
+            )
+            XCTAssertThrowsError(try sender.writeAndFlush(envelope).wait()) {
+                XCTAssertEqual($0 as? ChannelError, .operationUnsupported)
+            }
+            XCTAssertTrue(sender.isActive)
+        }
+    }
+    #endif
 
     /// Tests that writes of empty buffers work correctly and that we don't accidentally write buffers that haven't been flushed.
     func testPendingWritesEmptyWritesWorkAndWeDontWriteUnflushedThings() throws {

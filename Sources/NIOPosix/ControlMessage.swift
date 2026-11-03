@@ -190,11 +190,51 @@ struct UnsafeReceivedControlBytes {
     var controlBytesBuffer: UnsafeMutableRawBufferPointer
     /// Set when a message is received which is using the controlBytesBuffer - the lifetime will be tied to that of `controlBytesBuffer`
     var receivedControlMessages: UnsafeControlMessageCollection?
+    var receivedMessageFlags: CInt = 0
+    let receiveFlags: CInt
 
-    init(controlBytesBuffer: UnsafeMutableRawBufferPointer) {
+    init(controlBytesBuffer: UnsafeMutableRawBufferPointer, receiveFlags: CInt = 0) {
         self.controlBytesBuffer = controlBytesBuffer
+        self.receiveFlags = receiveFlags
     }
 }
+
+#if os(Linux)
+extension UnsafeReceivedControlBytes {
+    mutating func takeFileDescriptors() throws -> [CInt] {
+        let messages = receivedControlMessages
+        receivedControlMessages = nil
+        var descriptors: [CInt] = []
+        var invalid = receivedMessageFlags & CInt(MSG_CTRUNC) != 0
+        if let messages {
+            // SCM_PIDFD (Linux 6.5+) installs an owned descriptor too. Close it rather than leak it.
+            let scmPIDFD: CInt = 4
+            for message in messages
+            where message.level == SOL_SOCKET && (message.type == CInt(SCM_RIGHTS) || message.type == scmPIDFD) {
+                guard let data = message.data else {
+                    invalid = true
+                    continue
+                }
+                let remainder = data.count % MemoryLayout<CInt>.size
+                if remainder != 0 { invalid = true }
+                for offset in stride(from: 0, to: data.count - remainder, by: MemoryLayout<CInt>.size) {
+                    let descriptor = data.loadUnaligned(fromByteOffset: offset, as: CInt.self)
+                    if message.type == CInt(SCM_RIGHTS) {
+                        descriptors.append(descriptor)
+                    } else {
+                        try? Posix.close(descriptor: descriptor)
+                    }
+                }
+            }
+        }
+        if invalid {
+            for descriptor in descriptors { try? Posix.close(descriptor: descriptor) }
+            throw IOError(errnoCode: EMSGSIZE, reason: "truncated or malformed SCM_RIGHTS control messages")
+        }
+        return descriptors
+    }
+}
+#endif
 
 /// Extract information from a collection of control messages.
 struct ControlMessageParser {

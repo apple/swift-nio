@@ -13,9 +13,16 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import NIOCore
 import XCTest
 
 @testable import NIOPosix
+
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 
 // This file constructs POSIX msghdr and UnsafeControlMessageCollection
 // throughout, which are unsupported on Windows.
@@ -99,6 +106,88 @@ class ControlMessageTests: XCTestCase {
         }
         XCTAssertEqual(expected, decoded)
     }
+
+    #if os(Linux)
+    func testFileDescriptorsAcrossMultipleControlMessagesAreTakenOnce() throws {
+        try withPipe { readHandle, writeHandle in
+            let first = try readHandle.withUnsafeFileDescriptor { try Posix.dup(descriptor: $0) }
+            let second = try writeHandle.withUnsafeFileDescriptor { try Posix.dup(descriptor: $0) }
+            defer {
+                XCTAssertNoThrow(try Posix.close(descriptor: first))
+                XCTAssertNoThrow(try Posix.close(descriptor: second))
+            }
+            encoder.appendControlMessage(level: SOL_SOCKET, type: CInt(SCM_RIGHTS), payload: first)
+            encoder.appendControlMessage(level: SOL_SOCKET, type: CInt(SCM_RIGHTS), payload: second)
+            var received = UnsafeReceivedControlBytes(controlBytesBuffer: encoderBytes!)
+            received.receivedControlMessages = UnsafeControlMessageCollection(
+                controlBytes: encoder.validControlBytes
+            )
+            XCTAssertEqual(try received.takeFileDescriptors(), [first, second])
+            XCTAssertNil(received.receivedControlMessages)
+            XCTAssertTrue(try received.takeFileDescriptors().isEmpty)
+            return [readHandle, writeHandle]
+        }
+    }
+
+    func testTruncatedControlMessagesCloseEveryReceivedDescriptor() throws {
+        try withPipe { readHandle, writeHandle in
+            let descriptors = try [readHandle, writeHandle].map { handle in
+                try handle.withUnsafeFileDescriptor { try Posix.dup(descriptor: $0) }
+            }
+            for descriptor in descriptors {
+                encoder.appendControlMessage(level: SOL_SOCKET, type: CInt(SCM_RIGHTS), payload: descriptor)
+            }
+            var received = UnsafeReceivedControlBytes(controlBytesBuffer: encoderBytes!)
+            received.receivedControlMessages = UnsafeControlMessageCollection(
+                controlBytes: encoder.validControlBytes
+            )
+            received.receivedMessageFlags = CInt(MSG_CTRUNC)
+            XCTAssertThrowsError(try received.takeFileDescriptors()) {
+                XCTAssertEqual(($0 as? IOError)?.errnoCode, EMSGSIZE)
+            }
+            for descriptor in descriptors {
+                XCTAssertEqual(fcntl(descriptor, F_GETFD), -1)
+                XCTAssertEqual(errno, EBADF)
+            }
+            XCTAssertNil(received.receivedControlMessages)
+            return [readHandle, writeHandle]
+        }
+    }
+
+    func testMalformedDescriptorPayloadClosesCompleteDescriptors() throws {
+        try withPipe { readHandle, writeHandle in
+            let descriptor = try readHandle.withUnsafeFileDescriptor { try Posix.dup(descriptor: $0) }
+            encoder.appendControlMessage(level: SOL_SOCKET, type: CInt(SCM_RIGHTS), payload: descriptor)
+            let header = encoderBytes!.baseAddress!.assumingMemoryBound(to: cmsghdr.self)
+            header.pointee.cmsg_len += 1
+            var received = UnsafeReceivedControlBytes(controlBytesBuffer: encoderBytes!)
+            received.receivedControlMessages = UnsafeControlMessageCollection(
+                controlBytes: encoder.validControlBytes
+            )
+            XCTAssertThrowsError(try received.takeFileDescriptors()) {
+                XCTAssertEqual(($0 as? IOError)?.errnoCode, EMSGSIZE)
+            }
+            XCTAssertEqual(fcntl(descriptor, F_GETFD), -1)
+            XCTAssertEqual(errno, EBADF)
+            return [readHandle, writeHandle]
+        }
+    }
+
+    func testIgnoredPIDFDIsClosed() throws {
+        try withPipe { readHandle, writeHandle in
+            let descriptor = try readHandle.withUnsafeFileDescriptor { try Posix.dup(descriptor: $0) }
+            encoder.appendControlMessage(level: SOL_SOCKET, type: 4, payload: descriptor)
+            var received = UnsafeReceivedControlBytes(controlBytesBuffer: encoderBytes!)
+            received.receivedControlMessages = UnsafeControlMessageCollection(
+                controlBytes: encoder.validControlBytes
+            )
+            XCTAssertTrue(try received.takeFileDescriptors().isEmpty)
+            XCTAssertEqual(fcntl(descriptor, F_GETFD), -1)
+            XCTAssertEqual(errno, EBADF)
+            return [readHandle, writeHandle]
+        }
+    }
+    #endif
 
     private func assertBuffersNonOverlapping(
         _ b1: UnsafeMutableRawBufferPointer,
