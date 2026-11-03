@@ -300,6 +300,94 @@ final class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try self.decoderChannel.readAllOutboundBytes()))
     }
 
+    private func maskingChannel(
+        _ maskingVerification: WebSocketMaskingVerification,
+        isServer: Bool
+    ) -> EmbeddedChannel {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(WebSocketFrameEncoder()))
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.addHandler(
+                ByteToMessageHandler(WebSocketFrameDecoder(maskingVerification: maskingVerification))
+            )
+        )
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.addHandler(WebSocketProtocolErrorHandler(isServer: isServer))
+        )
+        return channel
+    }
+
+    func testServerDecoderRejectsUnmaskedFrame() throws {
+        let channel = self.maskingChannel(.serverExpectsMaskedFrames, isServer: true)
+
+        // A FIN text frame with a zero-length, *unmasked* payload: the mask bit of the second byte
+        // is clear. RFC 6455 (§5.1) requires clients to mask, so a server must reject this.
+        var buffer = channel.allocator.buffer(capacity: 2)
+        buffer.writeBytes([0x81, 0x00])
+
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertEqual(.unmaskedFrame, error as? NIOWebSocketMaskingError)
+        }
+
+        // The protocol error handler emits an unmasked close frame with the protocol error code (1002).
+        XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xEA], try channel.readAllOutboundBytes()))
+        _ = try? channel.finish()
+    }
+
+    func testServerDecoderAcceptsMaskedFrame() throws {
+        let channel = self.maskingChannel(.serverExpectsMaskedFrames, isServer: true)
+
+        // A FIN text frame with a zero-length, masked payload (mask bit set, 4-byte masking key).
+        var buffer = channel.allocator.buffer(capacity: 6)
+        buffer.writeBytes([0x81, 0x80, 0x00, 0x00, 0x00, 0x00])
+
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+
+        let frame = try channel.readInbound(as: WebSocketFrame.self)
+        XCTAssertEqual(frame?.opcode, .text)
+        XCTAssertNotNil(frame?.maskKey)
+        _ = try? channel.finish()
+    }
+
+    func testClientDecoderRejectsMaskedFrame() throws {
+        let channel = self.maskingChannel(.clientExpectsUnmaskedFrames, isServer: false)
+
+        // A FIN text frame with a masked, zero-length payload. RFC 6455 (§5.1) forbids a server
+        // from masking, so a client must reject this.
+        var buffer = channel.allocator.buffer(capacity: 6)
+        buffer.writeBytes([0x81, 0x80, 0x00, 0x00, 0x00, 0x00])
+
+        XCTAssertThrowsError(try channel.writeInbound(buffer)) { error in
+            XCTAssertEqual(.maskedFrame, error as? NIOWebSocketMaskingError)
+        }
+        _ = try? channel.finish()
+    }
+
+    func testClientDecoderAcceptsUnmaskedFrame() throws {
+        let channel = self.maskingChannel(.clientExpectsUnmaskedFrames, isServer: false)
+
+        var buffer = channel.allocator.buffer(capacity: 2)
+        buffer.writeBytes([0x81, 0x00])
+
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
+
+        let frame = try channel.readInbound(as: WebSocketFrame.self)
+        XCTAssertEqual(frame?.opcode, .text)
+        XCTAssertNil(frame?.maskKey)
+        _ = try? channel.finish()
+    }
+
+    func testDefaultDecoderDoesNotEnforceMasking() throws {
+        // The default decoder installed by setUp uses `.disabled`, preserving the historic
+        // behaviour of accepting an unmasked frame that a server would otherwise reject.
+        self.buffer.writeBytes([0x81, 0x00])
+        XCTAssertNoThrow(try self.decoderChannel.writeInbound(self.buffer))
+
+        let frame = try self.decoderChannel.readInbound(as: WebSocketFrame.self)
+        XCTAssertEqual(frame?.opcode, .text)
+        XCTAssertNil(frame?.maskKey)
+    }
+
     func testDecoderRejectsFragmentedControlFrames() throws {
         XCTAssertNoThrow(
             try self.decoderChannel.pipeline.syncOperations.addHandler(WebSocketFrameEncoder(), position: .first)
