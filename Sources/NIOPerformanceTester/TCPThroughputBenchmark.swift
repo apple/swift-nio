@@ -25,6 +25,7 @@ final class TCPThroughputBenchmark: Benchmark {
 
     private let messages: Int
     private let messageSize: Int
+    private let reportWriteProgress: Bool
 
     private var group: EventLoopGroup!
     private var serverChannel: Channel!
@@ -41,6 +42,8 @@ final class TCPThroughputBenchmark: Benchmark {
         private let connectionEstablishedPromise: EventLoopPromise<EventLoop>
         private let eventLoop: EventLoop
         private var context: ChannelHandlerContext!
+        private var bytesSent: Int64 = 0
+        private var bytesReported: Int64 = 0
 
         init(_ connectionEstablishedPromise: EventLoopPromise<EventLoop>, eventLoop: EventLoop) {
             self.connectionEstablishedPromise = connectionEstablishedPromise
@@ -53,9 +56,22 @@ final class TCPThroughputBenchmark: Benchmark {
         }
 
         public func send(_ message: ByteBuffer, times count: Int) {
+            self.bytesSent += Int64(message.readableBytes) * Int64(count)
             for _ in 0..<count {
                 _ = self.context.writeAndFlush(Self.wrapOutboundOut(message.slice()))
             }
+        }
+
+        func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+            if let progress = event as? NIOWriteProgressEvent {
+                self.bytesReported += progress.bytesWritten
+            } else {
+                context.fireUserInboundEventTriggered(event)
+            }
+        }
+
+        func checkProgress(enabled: Bool) {
+            precondition(self.bytesReported == (enabled ? self.bytesSent : 0))
         }
     }
 
@@ -106,9 +122,10 @@ final class TCPThroughputBenchmark: Benchmark {
         }
     }
 
-    public init(messages: Int, messageSize: Int) {
+    public init(messages: Int, messageSize: Int, reportWriteProgress: Bool = false) {
         self.messages = messages
         self.messageSize = messageSize
+        self.reportWriteProgress = reportWriteProgress
     }
 
     func setUp() throws {
@@ -118,6 +135,7 @@ final class TCPThroughputBenchmark: Benchmark {
 
         let promise = self.group.next().makePromise(of: NIOLoopBound<ServerHandler>.self)
         self.serverChannel = try ServerBootstrap(group: self.group)
+            .childChannelOption(.reportWriteProgress, value: self.reportWriteProgress)
             .childChannelInitializer { channel in
                 channel.eventLoop.makeCompletedFuture {
                     let serverHandler = ServerHandler(connectionEstablishedPromise, eventLoop: channel.eventLoop)
@@ -151,6 +169,11 @@ final class TCPThroughputBenchmark: Benchmark {
     }
 
     func tearDown() {
+        let serverHandler = self.serverHandler!
+        let reportWriteProgress = self.reportWriteProgress
+        try! self.serverEventLoop.submit {
+            serverHandler.value.checkProgress(enabled: reportWriteProgress)
+        }.wait()
         try! self.clientChannel.close().wait()
         try! self.serverChannel.close().wait()
         try! self.group.syncShutdownGracefully()

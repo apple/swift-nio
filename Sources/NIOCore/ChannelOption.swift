@@ -154,6 +154,16 @@ extension ChannelOptions {
             public init() {}
         }
 
+        /// Enables ``NIOWriteProgressEvent`` notifications when a stream channel makes outbound progress.
+        ///
+        /// Defaults to `false`. Supported by NIOPosix stream socket and pipe channels. Disabling this option
+        /// discards any progress that has not yet been reported.
+        public struct ReportWriteProgressOption: ChannelOption, Sendable {
+            public typealias Value = Bool
+
+            public init() {}
+        }
+
         /// `MaxMessagesPerReadOption` allows users to configure the maximum number of read calls to the underlying transport are performed before wait again until
         /// there is more to read and be notified.
         public struct MaxMessagesPerReadOption: ChannelOption, Sendable {
@@ -365,6 +375,9 @@ public struct ChannelOptions: Sendable {
     /// - seealso: `WriteSpinOption`.
     public static let writeSpin = Types.WriteSpinOption()
 
+    /// - seealso: ``ChannelOptions/Types/ReportWriteProgressOption``.
+    public static let reportWriteProgress = Types.ReportWriteProgressOption()
+
     /// - seealso: `WriteBufferWaterMarkOption`.
     public static let writeBufferWaterMark = Types.WriteBufferWaterMarkOption()
 
@@ -447,6 +460,11 @@ extension ChannelOption where Self == ChannelOptions.Types.BacklogOption {
 /// - seealso: `WriteSpinOption`.
 extension ChannelOption where Self == ChannelOptions.Types.WriteSpinOption {
     public static var writeSpin: Self { .init() }
+}
+
+/// - seealso: ``ChannelOptions/Types/ReportWriteProgressOption``.
+extension ChannelOption where Self == ChannelOptions.Types.ReportWriteProgressOption {
+    public static var reportWriteProgress: Self { .init() }
 }
 
 /// - seealso: `WriteBufferWaterMarkOption`.

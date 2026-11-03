@@ -514,3 +514,22 @@ public struct ChannelShouldQuiesceEvent: Sendable {
     public init() {
     }
 }
+
+/// Outbound progress reported as an inbound user event when ``ChannelOptions/reportWriteProgress`` is enabled.
+///
+/// `bytesWritten` is the number of bytes accepted by the local operating system during a write burst. It does not
+/// imply delivery to, or acknowledgement by, the peer. A burst can partially complete a write or combine several
+/// writes and system calls, so an event does not correspond to an individual write promise.
+///
+/// Notifications are synchronous, after the burst's socket registration has been updated. A handler may write,
+/// flush, or close the channel in response; a new write burst can produce a reentrant progress notification.
+/// No event is emitted for zero progress, or if the channel fully closes before the burst can be reported.
+/// An output half-close can deliver its final progress after ``ChannelEvent/outputClosed``.
+public struct NIOWriteProgressEvent: Equatable, Sendable {
+    /// The number of bytes accepted by the local operating system in this burst.
+    public let bytesWritten: Int64
+
+    public init(bytesWritten: Int64) {
+        self.bytesWritten = bytesWritten
+    }
+}

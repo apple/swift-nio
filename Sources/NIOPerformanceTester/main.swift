@@ -1257,6 +1257,10 @@ if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) {
         desc: "tcp_100k_messages_throughput",
         benchmark: TCPThroughputBenchmark(messages: 100_000, messageSize: 500)
     )
+    try measureAndPrint(
+        desc: "tcp_100k_messages_throughput_write_progress",
+        benchmark: TCPThroughputBenchmark(messages: 100_000, messageSize: 500, reportWriteProgress: true)
+    )
 }
 
 try measureAndPrint(
