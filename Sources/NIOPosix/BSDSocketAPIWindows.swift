@@ -294,7 +294,13 @@ extension NIOBSDSocket {
     ) throws -> IOResult<size_t> {
         let iResult: CInt = CNIOWindows_recv(s, buf, CInt(len), 0)
         if iResult == SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "recv")
+            let error = WSAGetLastError()
+            // A non-blocking socket with nothing to read is not an error: report
+            // it the way the POSIX `syscall(blocking: true)` wrapper does.
+            if error == WSAEWOULDBLOCK {
+                return .wouldBlock(0)
+            }
+            throw IOError(winsock: error, reason: "recv")
         }
         return .processed(size_t(iResult))
     }
@@ -406,7 +412,14 @@ extension NIOBSDSocket {
     ) throws -> IOResult<size_t> {
         let iResult: CInt = CNIOWindows_send(s, buf, CInt(len), 0)
         if iResult == SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "send")
+            let error = WSAGetLastError()
+            // A full send buffer on a non-blocking socket is not an error: report
+            // it the way the POSIX `syscall(blocking: true)` wrapper does, so the
+            // channel waits for writability instead of closing.
+            if error == WSAEWOULDBLOCK {
+                return .wouldBlock(0)
+            }
+            throw IOError(winsock: error, reason: "send")
         }
         return .processed(size_t(iResult))
     }
@@ -420,7 +433,16 @@ extension NIOBSDSocket {
         let ptr = UnsafeMutablePointer(mutating: iovecs.baseAddress)
         let result = WSASend(s, ptr, UInt32(iovecs.count), &bytesSent, 0, nil, nil)
         if result == SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "WSASend")
+            let error = WSAGetLastError()
+            // A full send buffer on a non-blocking socket is not an error: report
+            // it the way the POSIX `syscall(blocking: true)` wrapper does, so the
+            // channel waits for writability instead of closing. Without this,
+            // any flush that outruns the socket's send buffer tears the channel
+            // down mid-stream.
+            if error == WSAEWOULDBLOCK {
+                return .wouldBlock(0)
+            }
+            throw IOError(winsock: error, reason: "WSASend")
         }
         return .processed(Int(bytesSent))
     }
