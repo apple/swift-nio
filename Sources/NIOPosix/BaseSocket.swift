@@ -23,7 +23,10 @@ import NIOCore
 import let WinSDK.EAFNOSUPPORT
 import let WinSDK.EBADF
 
+import let WinSDK.SO_PROTOCOL_INFOW
+
 import struct WinSDK.socklen_t
+import struct WinSDK.WSAPROTOCOL_INFOW
 #endif
 
 @usableFromInline
@@ -286,9 +289,42 @@ class BaseSocket: BaseSocketProtocol {
     ///   - name: The name of the option to set.
     ///   - value: The value for the option.
     /// - Throws: An `IOError` if the operation failed.
+    /// The protocol family of this socket, for deciding whether `TCP_NODELAY` applies to it.
+    ///
+    /// - Throws: An `IOError` if the protocol family could not be determined.
+    private func protocolFamilyForTCPOptions() throws -> NIOBSDSocket.ProtocolFamily {
+        #if os(Windows)
+        // Ask the socket rather than deriving this from its local address: Winsock fails
+        // `getsockname` for a socket that has not been bound yet, where POSIX reports the wildcard
+        // address. Channel options are applied before the socket is bound or connected, so relying
+        // on the local address here silently dropped `TCP_NODELAY` for every connection.
+        var info = WSAPROTOCOL_INFOW()
+        var length = socklen_t(MemoryLayout<WSAPROTOCOL_INFOW>.size)
+        try self.withUnsafeHandle { fd in
+            try NIOBSDSocket.getsockopt(
+                socket: fd,
+                level: .socket,
+                option_name: NIOBSDSocket.Option(rawValue: SO_PROTOCOL_INFOW),
+                option_value: &info,
+                option_len: &length
+            )
+        }
+        return NIOBSDSocket.ProtocolFamily(rawValue: info.iAddressFamily)
+        #else
+        return try self.localAddress().protocol
+        #endif
+    }
+
+    /// Sets the socket option.
+    ///
+    /// - Parameters:
+    ///   - level: The protocol level (see `man setsockopt`).
+    ///   - name: The name of the option to set.
+    ///   - value: The value for the option.
+    /// - Throws: An `IOError` if the operation failed.
     func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
         if level == .tcp && name == .tcp_nodelay {
-            switch try? self.localAddress().protocol {
+            switch try? self.protocolFamilyForTCPOptions() {
             case .some(.inet), .some(.inet6): break
             // Setting TCP_NODELAY on UNIX domain sockets will fail. Previously we had a bug where we would ignore
             // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
