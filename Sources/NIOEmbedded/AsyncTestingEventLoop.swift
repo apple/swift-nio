@@ -241,6 +241,22 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
         }
     }
 
+    /// Submits a job to run on this loop, which is its serial executor and its task executor.
+    ///
+    /// Unlike `execute`, this runs the job soon even if it's called on the loop. Swift concurrency enqueues a job when
+    /// it resumes a task, which may happen in code on the loop that isn't run by `run()`, for example in an
+    /// `executeInContext` closure. `execute` would only queue the job up then, until the loop is run again.
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    public func enqueue(_ job: consuming ExecutorJob) {
+        let job = UnownedJob(job)
+        self.queue.async {
+            self.scheduleTask(deadline: self.now) {
+                job.runSynchronously(on: self.asUnownedSerialExecutor())
+            }
+            self._run()
+        }
+    }
+
     /// Run all tasks that have previously been submitted to this `NIOAsyncTestingEventLoop`, either by calling `execute` or
     /// events that have been enqueued using `scheduleTask`/`scheduleRepeatedTask`/`scheduleRepeatedAsyncTask` and whose
     /// deadlines have expired.
