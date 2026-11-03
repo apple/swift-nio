@@ -11,14 +11,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIOConcurrencyHelpers
 import NIOCore
 import NIOEmbedded
 import NIOPosix
-import XCTest
+import Synchronization
+import Testing
 
-final class TaskExecutorTests: XCTestCase {
-    #if compiler(>=6.0)
+@Suite
+struct TaskExecutorTests {
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     func _runTests(loop1: some EventLoop, loop2: some EventLoop) async {
         let executor1 = loop1.taskExecutor
@@ -30,7 +30,7 @@ final class TaskExecutorTests: XCTestCase {
 
                 withUnsafeCurrentTask { task in
                     // this currently fails on macOS
-                    XCTAssertEqual(task?.unownedTaskExecutor, executor1.asUnownedTaskExecutor())
+                    #expect(task?.unownedTaskExecutor == executor1.asUnownedTaskExecutor())
                 }
             }
 
@@ -40,7 +40,7 @@ final class TaskExecutorTests: XCTestCase {
 
                 withUnsafeCurrentTask { task in
                     // this currently fails on macOS
-                    XCTAssertEqual(task?.unownedTaskExecutor, executor2.asUnownedTaskExecutor())
+                    #expect(task?.unownedTaskExecutor == executor2.asUnownedTaskExecutor())
                 }
             }
         }
@@ -51,7 +51,7 @@ final class TaskExecutorTests: XCTestCase {
 
             withUnsafeCurrentTask { task in
                 // this currently fails on macOS
-                XCTAssertEqual(task?.unownedTaskExecutor, executor1.asUnownedTaskExecutor())
+                #expect(task?.unownedTaskExecutor == executor1.asUnownedTaskExecutor())
             }
         }
 
@@ -59,18 +59,18 @@ final class TaskExecutorTests: XCTestCase {
     }
 
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-    func testSelectableEventLoopAsTaskExecutor() async throws {
+    @Test func selectableEventLoopAsTaskExecutor() async throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         var iterator = group.makeIterator()
         let loop1 = iterator.next()!
         let loop2 = iterator.next()!
 
         await self._runTests(loop1: loop1, loop2: loop2)
-        try! await group.shutdownGracefully()
+        try await group.shutdownGracefully()
     }
 
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-    func testAsyncTestingEventLoopAsTaskExecutor() async throws {
+    @Test func asyncTestingEventLoopAsTaskExecutor() async throws {
         let loop1 = NIOAsyncTestingEventLoop()
         let loop2 = NIOAsyncTestingEventLoop()
 
@@ -90,13 +90,13 @@ final class TaskExecutorTests: XCTestCase {
     /// ways that make the runtime enqueue the task on its preferred executor again.
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     func _runSuspendingTests(loop: some EventLoop, other: some EventLoop) async throws {
-        let executor = try XCTUnwrap(loop as? any TaskExecutor)
+        let executor = try #require(loop as? any TaskExecutor)
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask(executorPreference: executor) {
                 for _ in 0..<100 {
                     loop.assertInEventLoop()
                     withUnsafeCurrentTask { task in
-                        XCTAssertEqual(task?.unownedTaskExecutor, executor.asUnownedTaskExecutor())
+                        #expect(task?.unownedTaskExecutor == executor.asUnownedTaskExecutor())
                     }
                     // Resumed from another thread.
                     try await other.submit {}.get()
@@ -108,7 +108,7 @@ final class TaskExecutorTests: XCTestCase {
             }
             group.addTask {
                 try await Task.sleep(for: .seconds(10))
-                XCTFail("A task which prefers the event loop as its task executor stopped making progress")
+                Issue.record("A task which prefers the event loop as its task executor stopped making progress")
             }
             try await group.next()
             group.cancelAll()
@@ -116,18 +116,18 @@ final class TaskExecutorTests: XCTestCase {
     }
 
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-    func testSelectableEventLoopItselfAsTaskExecutor() async throws {
+    @Test func selectableEventLoopItselfAsTaskExecutor() async throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         var iterator = group.makeIterator()
         let loop1 = iterator.next()!
         let loop2 = iterator.next()!
 
         try await self._runSuspendingTests(loop: loop1, other: loop2)
-        try! await group.shutdownGracefully()
+        try await group.shutdownGracefully()
     }
 
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-    func testAsyncTestingEventLoopItselfAsTaskExecutor() async throws {
+    @Test func asyncTestingEventLoopItselfAsTaskExecutor() async throws {
         let loop1 = NIOAsyncTestingEventLoop()
         let loop2 = NIOAsyncTestingEventLoop()
 
@@ -137,28 +137,27 @@ final class TaskExecutorTests: XCTestCase {
         await loop2.shutdownGracefully()
     }
 
+    #if compiler(>=6.4)
     /// A task which prefers the loop can be resumed by code which runs on the loop, but not in `run()`, like an
     /// `executeInContext` closure. Its job must still run.
-    @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-    func testAsyncTestingEventLoopRunsJobsEnqueuedOnTheLoop() async throws {
+    @available(macOS 27.0, iOS 27.0, watchOS 27.0, tvOS 27.0, visionOS 27.0, *)
+    @Test func asyncTestingEventLoopRunsJobsEnqueuedOnTheLoop() async throws {
         let loop = NIOAsyncTestingEventLoop()
-        let waiter = NIOLockedValueBox<CheckedContinuation<Void, Never>?>(nil)
+        let waiter = TaskWaiter()
 
         let task = Task(executorPreference: loop as any TaskExecutor) {
-            await withCheckedContinuation { continuation in
-                waiter.withLockedValue { $0 = continuation }
-            }
+            await waiter.wait()
             loop.assertInEventLoop()
         }
 
         // Wait for the task to suspend, so that resuming it enqueues a job.
-        while waiter.withLockedValue({ $0 == nil }) {
+        while !waiter.isWaiting {
             try await Task.sleep(for: .milliseconds(1))
         }
         try await Task.sleep(for: .milliseconds(50))
 
         try await loop.executeInContext {
-            waiter.withLockedValue { $0.take()! }.resume()
+            waiter.resume()
         }
 
         let finished = await withTaskGroup(of: Bool.self) { group in
@@ -178,9 +177,34 @@ final class TaskExecutorTests: XCTestCase {
             group.cancelAll()
             return finished
         }
-        XCTAssertTrue(finished, "The task's job didn't run until the loop was run")
+        #expect(finished, "The task's job didn't run until the loop was run")
 
         await loop.shutdownGracefully()
     }
     #endif
 }
+
+#if compiler(>=6.4)
+/// A task waiting to be resumed by the test.
+@available(macOS 27.0, iOS 27.0, watchOS 27.0, tvOS 27.0, visionOS 27.0, *)
+private final class TaskWaiter: Sendable {
+    private let continuation = Mutex<Continuation<Void, Never>?>(nil)
+
+    var isWaiting: Bool {
+        self.continuation.withLock { $0 != nil }
+    }
+
+    func wait() async {
+        await withContinuation(of: Void.self) { continuation in
+            var continuation = Optional(continuation)
+            self.continuation.withLock { $0 = continuation.take() }
+        }
+    }
+
+    func resume() {
+        let continuation = self.continuation.withLock { $0.take() }
+        precondition(continuation != nil, "No task is waiting")
+        continuation?.resume()
+    }
+}
+#endif
