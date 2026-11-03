@@ -15,6 +15,7 @@
 #if !os(WASI)
 
 import CNIOLinux
+import CNIOFreeBSD
 import CNIOOpenBSD
 import NIOConcurrencyHelpers
 import NIOCore

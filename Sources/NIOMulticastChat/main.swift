@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import CNIOLinux
+import CNIOFreeBSD
 import CNIOOpenBSD
 import NIOCore
 import NIOPosix
