@@ -31,19 +31,21 @@ final class StandardStreamsTests: XCTestCase {
     }
 
     func testStandardHandlesAreDuplicated() async throws {
+        // Check each handle independently so a failed open cannot leave earlier handles
+        // outstanding. SystemFileHandle requires descriptors to be closed explicitly.
         let input = try await FileSystem.shared.openStandardInput()
-        let output = try await FileSystem.shared.openStandardOutput()
-        let error = try await FileSystem.shared.openStandardError()
-
         let inputDescriptor = try await input.withUnsafeDescriptor { $0.rawValue }
-        let outputDescriptor = try await output.withUnsafeDescriptor { $0.rawValue }
-        let errorDescriptor = try await error.withUnsafeDescriptor { $0.rawValue }
         XCTAssertNotEqual(inputDescriptor, 0)
-        XCTAssertNotEqual(outputDescriptor, 1)
-        XCTAssertNotEqual(errorDescriptor, 2)
-
         try await input.close()
+
+        let output = try await FileSystem.shared.openStandardOutput()
+        let outputDescriptor = try await output.withUnsafeDescriptor { $0.rawValue }
+        XCTAssertNotEqual(outputDescriptor, 1)
         try await output.close()
+
+        let error = try await FileSystem.shared.openStandardError()
+        let errorDescriptor = try await error.withUnsafeDescriptor { $0.rawValue }
+        XCTAssertNotEqual(errorDescriptor, 2)
         try await error.close()
 
         // Closing the duplicates must not close the process's original standard descriptors.
@@ -65,6 +67,21 @@ final class StandardStreamsTests: XCTestCase {
         try await FileSystem.shared.withStandardError { error in
             let descriptor = try await error.withUnsafeDescriptor { $0.rawValue }
             XCTAssertNotEqual(descriptor, 2)
+        }
+    }
+
+    func testScopedStandardOutputClosesOnThrow() async throws {
+        struct ExpectedError: Error {}
+
+        do {
+            try await FileSystem.shared.withStandardOutput { _ in
+                throw ExpectedError()
+            }
+            XCTFail("Expected the scoped operation to throw")
+        } catch is ExpectedError {
+            // The scoped handle was closed, but the process's stdout must still be open.
+            let duplicate = try FileDescriptor(rawValue: 1).duplicate()
+            try duplicate.close()
         }
     }
 
