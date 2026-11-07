@@ -86,6 +86,9 @@ public final class SystemFileHandle: Sendable {
         /// The path used to open this handle.
         internal let path: FilePath
 
+        /// Whether reads and writes use non-positional I/O, regardless of the requested offset.
+        internal let usesSequentialIO: Bool
+
         /// An action to take when closing the file handle.
         fileprivate let materialization: Materialization?
 
@@ -93,12 +96,14 @@ public final class SystemFileHandle: Sendable {
             lifecycle: Lifecycle,
             threadPool: NIOThreadPool,
             path: FilePath,
-            materialization: Materialization?
+            materialization: Materialization?,
+            usesSequentialIO: Bool
         ) {
             self.lifecycle = NIOLockedValueBox(lifecycle)
             self.threadPool = threadPool
             self.path = path
             self.materialization = materialization
+            self.usesSequentialIO = usesSequentialIO
         }
     }
 
@@ -109,18 +114,21 @@ public final class SystemFileHandle: Sendable {
     ///   - descriptor: The open file descriptor.
     ///   - path: The path to the file used to open the descriptor.
     ///   - threadPool: The thread pool on which system calls will be performed.
+    ///   - usesSequentialIO: Whether to use non-positional reads and writes for this handle.
     @_spi(Testing)
     public init(
         takingOwnershipOf descriptor: FileDescriptor,
         path: FilePath,
         materialization: Materialization? = nil,
-        threadPool: NIOThreadPool
+        threadPool: NIOThreadPool,
+        usesSequentialIO: Bool = false
     ) {
         self.sendableView = SendableView(
             lifecycle: .open(descriptor),
             threadPool: threadPool,
             path: path,
-            materialization: materialization
+            materialization: materialization,
+            usesSequentialIO: usesSequentialIO
         )
     }
 
@@ -1043,7 +1051,19 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
     ) async throws -> ByteBuffer {
         try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._withUnsafeDescriptor { descriptor in
-                try descriptor.readChunk(
+                if sendableView.usesSequentialIO {
+                    return try descriptor.readChunk(length: length.bytes)
+                        .mapError { error in
+                            FileSystemError.read(
+                                usingSyscall: .read,
+                                error: error,
+                                path: sendableView.path,
+                                location: .here()
+                            )
+                        }.get()
+                }
+
+                return try descriptor.readChunk(
                     fromAbsoluteOffset: offset,
                     length: length.bytes
                 ).flatMapError { error in
@@ -1109,7 +1129,19 @@ extension SystemFileHandle: WritableFileHandleProtocol {
     ) async throws -> Int64 {
         try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._withUnsafeDescriptor { descriptor in
-                try descriptor.write(contentsOf: bytes, toAbsoluteOffset: offset)
+                if sendableView.usesSequentialIO {
+                    return try descriptor.write(contentsOf: bytes)
+                        .mapError { error in
+                            FileSystemError.write(
+                                usingSyscall: .write,
+                                error: error,
+                                path: sendableView.path,
+                                location: .here()
+                            )
+                        }.get()
+                }
+
+                return try descriptor.write(contentsOf: bytes, toAbsoluteOffset: offset)
                     .flatMapError { error in
                         if let errno = error as? Errno, errno == .illegalSeek || errno == .noSuchAddressOrDevice {
                             guard offset == 0 else {
