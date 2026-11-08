@@ -22,6 +22,10 @@ import NIOConcurrencyHelpers
 import NIOCore
 import _NIODataStructures
 
+#if canImport(ObjectiveC)
+import ObjectiveC
+#endif
+
 private func printError(_ string: StaticString) {
     string.withUTF8Buffer { buf in
         var buf = buf
@@ -41,7 +45,7 @@ private func printError(_ string: StaticString) {
 /// Execute the given closure and ensure we release all auto pools if needed.
 @inlinable
 internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
-    #if canImport(Darwin)
+    #if canImport(ObjectiveC)
     return try autoreleasepool {
         try execute()
     }
