@@ -82,10 +82,36 @@ final class FileInfoTests: XCTestCase {
         XCTAssertEqual(info.userID, FileInfo.UserID(rawValue: 5))
         XCTAssertEqual(info.groupID, FileInfo.GroupID(rawValue: 6))
         XCTAssertEqual(info.size, 8)
+        // st_blocks is 9, and st_blocks is always in units of 512 bytes regardless of the
+        // platform's st_blksize (which is 10 in `self.status`, and must be ignored here).
+        XCTAssertEqual(info.onDiskSize, 9 * 512)
 
         XCTAssertEqual(info.lastAccessTime, FileInfo.Timespec(seconds: 0, nanoseconds: 0))
         XCTAssertEqual(info.lastDataModificationTime, FileInfo.Timespec(seconds: 1, nanoseconds: 0))
         XCTAssertEqual(info.lastStatusChangeTime, FileInfo.Timespec(seconds: 2, nanoseconds: 0))
+    }
+
+    func testOnDiskSizeIsNilWithoutPlatformSpecificStatus() {
+        let info = FileInfo(
+            type: .regular,
+            permissions: .ownerReadWriteExecute,
+            size: 100,
+            userID: FileInfo.UserID(rawValue: 0),
+            groupID: FileInfo.GroupID(rawValue: 0),
+            lastAccessTime: FileInfo.Timespec(seconds: 0, nanoseconds: 0),
+            lastDataModificationTime: FileInfo.Timespec(seconds: 0, nanoseconds: 0),
+            lastStatusChangeTime: FileInfo.Timespec(seconds: 0, nanoseconds: 0)
+        )
+        XCTAssertNil(info.onDiskSize)
+    }
+
+    func testOnDiskSizeTracksBlocksNotBlockSize() {
+        var status = self.status
+        status.st_blocks = 1
+        // A larger st_blksize (the filesystem's preferred I/O size) must not affect the result.
+        status.st_blksize = 1 << 20
+        let info = FileInfo(platformSpecificStatus: status)
+        XCTAssertEqual(info.onDiskSize, 512)
     }
 
     func testEquatableConformance() {
