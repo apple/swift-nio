@@ -88,6 +88,95 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         self.init(threadPool: threadPool, ownsThreadPool: true)
     }
 
+    /// Opens a handle for the process's standard input.
+    ///
+    /// The returned handle owns a duplicate of standard input. Closing it doesn't close the
+    /// process's original descriptor. Standard streams are sequential: absolute offsets supplied
+    /// to read operations are ignored, and each read consumes the next bytes from the stream.
+    public func openStandardInput() async throws -> ReadFileHandle {
+        let handle = try await self._openStandardStream(descriptor: 0, name: "standard input")
+        return ReadFileHandle(wrapping: handle)
+    }
+
+    /// Opens a handle for the process's standard output.
+    ///
+    /// The returned handle owns a duplicate of standard output. Closing it doesn't close the
+    /// process's original descriptor. Writes are sequential and ignore absolute offsets.
+    public func openStandardOutput() async throws -> WriteFileHandle {
+        let handle = try await self._openStandardStream(descriptor: 1, name: "standard output")
+        return WriteFileHandle(wrapping: handle)
+    }
+
+    /// Opens a handle for the process's standard error.
+    ///
+    /// The returned handle owns a duplicate of standard error. Closing it doesn't close the
+    /// process's original descriptor. Writes are sequential and ignore absolute offsets.
+    public func openStandardError() async throws -> WriteFileHandle {
+        let handle = try await self._openStandardStream(descriptor: 2, name: "standard error")
+        return WriteFileHandle(wrapping: handle)
+    }
+
+    /// Provides scoped access to the process's standard input.
+    ///
+    /// A duplicated descriptor is closed when the closure returns, including if it throws.
+    public func withStandardInput<Result>(
+        _ execute: (ReadFileHandle) async throws -> Result
+    ) async throws -> Result {
+        let handle = try await self.openStandardInput()
+        return try await withUncancellableTearDown {
+            try await execute(handle)
+        } tearDown: { _ in
+            try await handle.close()
+        }
+    }
+
+    /// Provides scoped access to the process's standard output.
+    ///
+    /// A duplicated descriptor is closed when the closure returns, including if it throws.
+    public func withStandardOutput<Result>(
+        _ execute: (WriteFileHandle) async throws -> Result
+    ) async throws -> Result {
+        let handle = try await self.openStandardOutput()
+        return try await withUncancellableTearDown {
+            try await execute(handle)
+        } tearDown: { _ in
+            try await handle.close()
+        }
+    }
+
+    /// Provides scoped access to the process's standard error.
+    ///
+    /// A duplicated descriptor is closed when the closure returns, including if it throws.
+    public func withStandardError<Result>(
+        _ execute: (WriteFileHandle) async throws -> Result
+    ) async throws -> Result {
+        let handle = try await self.openStandardError()
+        return try await withUncancellableTearDown {
+            try await execute(handle)
+        } tearDown: { _ in
+            try await handle.close()
+        }
+    }
+
+    private func _openStandardStream(descriptor: CInt, name: String) async throws -> SystemFileHandle {
+        let path = FilePath(name)
+        return try await self.threadPool.runIfActive {
+            // Duplicate the process descriptor so that callers can safely close their handle.
+            let duplicate = try Result {
+                try FileDescriptor(rawValue: descriptor).duplicate()
+            }.mapError { error in
+                FileSystemError.dup(error: error, path: path, location: .here())
+            }.get()
+
+            return SystemFileHandle(
+                takingOwnershipOf: duplicate,
+                path: path,
+                threadPool: self.threadPool,
+                usesSequentialIO: true
+            )
+        }
+    }
+
     /// Open the file at `path` for reading.
     ///
     /// #### Errors
