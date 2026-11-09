@@ -109,8 +109,15 @@ struct SelectorEventSet: OptionSet, Equatable, Sendable {
 }
 
 internal let isEarlyEOFDeliveryWorkingOnThisOS: Bool = {
-    #if canImport(Darwin)
-    return false  // rdar://53656794 , once fixed we need to do an OS version check here.
+    #if os(macOS)
+    // rdar://53656794 : EVFILT_EXCEPT with NOTE_LOWAT delivers EV_EOF on peer close without firing for
+    // ordinary readable data from macOS 27 on. Earlier releases keep early EOF delivery disabled.
+    if #available(macOS 27, *) {
+        return true
+    }
+    return false
+    #elseif canImport(Darwin)
+    return false  // rdar://53656794 , not yet verified on this platform.
     #else
     return true
     #endif

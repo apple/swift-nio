@@ -880,7 +880,29 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             return
         }
 
+        guard self.isEarlyEOFDeliveryWorkingForThisChannel else {
+            return
+        }
+
         self.safeReregister(interested: self.interestedEvent.union(.readEOF))
+    }
+
+    /// Whether `.readEOF` (early EOF delivery) can be used for this channel.
+    ///
+    /// On Darwin, `EVFILT_EXCEPT` delivers early EOF reliably for TCP sockets from macOS 27 on, but it still fires
+    /// spuriously for UNIX domain sockets whose receive buffer is full (rdar://53656794). Early EOF is therefore
+    /// only used for IPv4/IPv6 channels on Darwin.
+    private var isEarlyEOFDeliveryWorkingForThisChannel: Bool {
+        #if canImport(Darwin)
+        switch self.localAddress {
+        case .some(.v4), .some(.v6):
+            return true
+        case .some(.unixDomainSocket), .none:
+            return false
+        }
+        #else
+        return true
+        #endif
     }
 
     internal final func unregisterForReadable() {
