@@ -72,6 +72,8 @@ public final class RepeatedTask {
     private let cancellationPromise: EventLoopPromise<Void>?
     private var scheduled: Optional<Scheduled<EventLoopFuture<Void>>>
     private var task: Optional<RepeatedTaskCallback>
+    /// The future returned by the most recent execution of the task which hasn't completed yet, if any.
+    private var inFlight: Optional<EventLoopFuture<Void>>
 
     internal init(
         interval: TimeAmount,
@@ -84,6 +86,7 @@ public final class RepeatedTask {
         self.cancellationPromise = cancellationPromise
         self.task = task
         self.scheduled = nil
+        self.inFlight = nil
     }
 
     internal func begin(in delay: TimeAmount) {
@@ -102,7 +105,7 @@ public final class RepeatedTask {
             return
         }
         self.scheduled = self.eventLoop.scheduleTask(in: delay) {
-            task(self)
+            self.runAndTrackInFlight(task)
         }
         self.reschedule()
     }
@@ -146,10 +149,21 @@ public final class RepeatedTask {
         // fulfillment to the next `EventLoop` cycle. The delay is harmless to other states and distinguishing
         // them from 2 and 3 is not practical (or necessarily possible), so is used unconditionally. Check the
         // promises for nil so as not to otherwise invoke `execute()` unnecessarily.
+        //
+        // By the next cycle, a task that was executing will have returned the `EventLoopFuture` that represents
+        // its remaining asynchronous work. If that future is still pending (or was already pending when
+        // `cancel0()` was invoked from outside), the promises must only be fulfilled once it has completed.
         if self.cancellationPromise != nil || localCancellationPromise != nil {
             self.eventLoop.execute {
-                self.cancellationPromise?.succeed(())
-                localCancellationPromise?.succeed(())
+                if let inFlight = self.inFlight {
+                    inFlight.hop(to: self.eventLoop).whenComplete { (_: Result<Void, Error>) in
+                        self.cancellationPromise?.succeed(())
+                        localCancellationPromise?.succeed(())
+                    }
+                } else {
+                    self.cancellationPromise?.succeed(())
+                    localCancellationPromise?.succeed(())
+                }
             }
         }
     }
@@ -181,9 +195,20 @@ public final class RepeatedTask {
             guard let task = self.task else {
                 return self.eventLoop.makeSucceededFuture(())
             }
-            return task(self)
+            return self.runAndTrackInFlight(task)
         }
         self.reschedule()
+    }
+
+    /// Runs `task` and remembers the future it returns until that future has completed,
+    /// so that a pending cancellation only notifies once the task's asynchronous work is finished.
+    private func runAndTrackInFlight(_ task: RepeatedTaskCallback) -> EventLoopFuture<Void> {
+        let future = task(self)
+        self.inFlight = future
+        future.hop(to: self.eventLoop).whenComplete { (_: Result<Void, Error>) in
+            self.inFlight = nil
+        }
+        return future
     }
 }
 
