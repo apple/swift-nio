@@ -21,6 +21,10 @@ import CNIOOpenBSD
 import CNIOWindows
 import NIOCore
 
+#if os(FreeBSD)
+import CNIOFreeBSD
+#endif
+
 #if canImport(WinSDK)
 import struct WinSDK.socklen_t
 #endif

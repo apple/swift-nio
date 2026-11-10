@@ -100,6 +100,7 @@ let package = Package(
         .target(
             name: "NIOPosix",
             dependencies: [
+                "CNIOFreeBSD",
                 "CNIOOpenBSD",
                 "CNIOLinux",
                 "CNIODarwin",

@@ -80,7 +80,7 @@ protocol SocketProtocol: BaseSocketProtocol {
     func ignoreSIGPIPE() throws
 }
 
-#if os(Linux) || os(Android) || os(OpenBSD)
+#if os(Linux) || os(Android) || os(OpenBSD) || os(FreeBSD)
 // This is a lazily initialised global variable that when read for the first time, will ignore SIGPIPE.
 private let globallyIgnoredSIGPIPE: Bool = {
     // no F_SETNOSIGPIPE on Linux :(
@@ -100,7 +100,7 @@ private let globallyIgnoredSIGPIPE: Bool = {
 extension BaseSocketProtocol {
     // used by `BaseSocket` and `PipePair`.
     internal static func ignoreSIGPIPE(descriptor fd: CInt) throws {
-        #if os(Linux) || os(Android) || os(OpenBSD)
+        #if os(Linux) || os(Android) || os(OpenBSD) || os(FreeBSD)
         let haveWeIgnoredSIGPIEThisIsHereToTriggerIgnoringIt = globallyIgnoredSIGPIPE
         guard haveWeIgnoredSIGPIEThisIsHereToTriggerIgnoringIt else {
             fatalError("BUG in NIO. We did not ignore SIGPIPE, this code path should definitely not be reachable.")

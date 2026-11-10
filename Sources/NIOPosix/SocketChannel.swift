@@ -17,6 +17,10 @@
 import CNIOLinux
 import NIOCore
 
+#if os(FreeBSD)
+import CNIOFreeBSD
+#endif
+
 #if os(Windows)
 import let WinSDK.ECONNABORTED
 import let WinSDK.ECONNREFUSED
@@ -128,19 +132,19 @@ final class SocketChannel: BaseStreamSocketChannel<Socket>, @unchecked Sendable 
         case _ as ChannelOptions.Types.ConnectTimeoutOption:
             return connectTimeout as! Option.Value
         case _ as ChannelOptions.Types.LocalVsockContextID:
-            #if os(Windows) || os(OpenBSD)
+            #if os(Windows) || os(OpenBSD) || os(FreeBSD)
             fallthrough
             #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
             #endif
         case _ as ChannelOptions.Types.LocalVsockAddress:
-            #if os(Windows) || os(OpenBSD)
+            #if os(Windows) || os(OpenBSD) || os(FreeBSD)
             fallthrough
             #else
             return try self.socket.getLocalVsockAddress() as! Option.Value
             #endif
         case _ as ChannelOptions.Types.RemoteVsockAddress:
-            #if os(Windows) || os(OpenBSD)
+            #if os(Windows) || os(OpenBSD) || os(FreeBSD)
             fallthrough
             #else
             return try self.socket.getRemoteVsockAddress() as! Option.Value
@@ -299,13 +303,13 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
         case _ as ChannelOptions.Types.BacklogOption:
             return backlog as! Option.Value
         case _ as ChannelOptions.Types.LocalVsockContextID:
-            #if os(Windows) || os(OpenBSD)
+            #if os(Windows) || os(OpenBSD) || os(FreeBSD)
             fallthrough
             #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
             #endif
         case _ as ChannelOptions.Types.LocalVsockAddress:
-            #if os(Windows) || os(OpenBSD)
+            #if os(Windows) || os(OpenBSD) || os(FreeBSD)
             fallthrough
             #else
             return try self.socket.getLocalVsockAddress() as! Option.Value
@@ -344,7 +348,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
             switch target {
             case .socketAddress(let address):
                 try socket.bind(to: address)
-            #if os(Windows) || os(OpenBSD)
+            #if os(Windows) || os(OpenBSD) || os(FreeBSD)
             case .vsockAddress:
                 fatalError(vsockUnimplemented)
             #else
@@ -629,12 +633,16 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             #else
             switch self.localAddress?.protocol {
             case .some(.inet):
+                #if os(FreeBSD)
+                throw ChannelError._operationUnsupported
+                #else
                 self.receivePacketInfo = true
                 try self.socket.setOption(
                     level: .ip,
                     name: .ip_recv_pktinfo,
                     value: valueAsInt
                 )
+                #endif
             case .some(.inet6):
                 self.receivePacketInfo = true
                 try self.socket.setOption(
@@ -712,11 +720,15 @@ final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
             #else
             switch self.localAddress?.protocol {
             case .some(.inet):
+                #if os(FreeBSD)
+                throw ChannelError._operationUnsupported
+                #else
                 return try
                     (self.socket.getOption(
                         level: .ip,
                         name: .ip_recv_pktinfo
                     ) != 0) as! Option.Value
+                #endif
             case .some(.inet6):
                 return try
                     (self.socket.getOption(
