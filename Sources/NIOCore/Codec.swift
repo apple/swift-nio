@@ -844,7 +844,7 @@ extension MessageToByteHandler {
             context.fireErrorCaught(error)
             return
         case .done:
-            // let's just ignore this
+            promise?.fail(ChannelError._ioOnClosedChannel)
             return
         case .operational:
             // there's actually some work to do here

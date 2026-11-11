@@ -13,10 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 import NIOConcurrencyHelpers
-@_spi(CustomByteBufferAllocator) @testable import NIOCore
 import NIOEmbedded
 import XCTest
 
+@_spi(CustomByteBufferAllocator) @testable import NIOCore
 @testable import NIOPosix
 
 private let testDecoderIsNotQuadratic_mallocs = NIOLockedValueBox(0)
@@ -2002,6 +2002,39 @@ final class MessageToByteEncoderTest: XCTestCase {
         createAndReleaseIt()
     }
 
+    func testMessageToByteHandlerFailsPromiseWhenDone() throws {
+        struct DummyEncoder: MessageToByteEncoder {
+            typealias OutboundIn = String
+
+            func encode(data: String, out: inout ByteBuffer) throws {
+                out.writeString(data)
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        let handler = MessageToByteHandler(DummyEncoder())
+
+        try channel.pipeline.syncOperations.addHandler(handler)
+
+        let context = try channel.pipeline.syncOperations.context(handler: handler)
+
+        handler.handlerRemoved(context: context)
+
+        let promise = channel.eventLoop.makePromise(of: Void.self)
+
+        handler.write(
+            context: context,
+            data: NIOAny("drop this"),
+            promise: promise
+        )
+
+        XCTAssertTrue(
+            promise.futureResult.isFulfilled,
+            "The promise must be completed when a write is attempted after the handler is done"
+        )
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
 }
 
 /// A decoder which - like `HTTPDecoder` - conforms to `ByteToMessageDecoder` unconditionally but to
