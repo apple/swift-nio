@@ -320,20 +320,20 @@ private class BetterHTTPParser {
             // annoyingly opaque here, and in those cases return 1 instead of 0. This forces http_parser
             // to not expect a request body.
             //
-            // The same logic applies to CONNECT: RFC 7230 says that regardless of what the headers say,
-            // responses to CONNECT never have HTTP-level bodies.
+            // The same logic applies to a 2xx response to CONNECT: RFC 9112 says that regardless of what
+            // the headers say, 2xx responses to CONNECT never have HTTP-level bodies.
             //
             // Finally, we need to work around a bug in http_parser for 1XX, 204, and 304 responses.
-            // RFC 7230 says:
+            // RFC 9112 says:
             //
-            // > ... any response with a 1xx (Informational),
-            // > 204 (No Content), or 304 (Not Modified) status
-            // > code is always terminated by the first empty line after the
-            // > header fields, regardless of the header fields present in the
-            // > message, and thus cannot contain a message body.
+            // > ... any response with a 1xx (Informational), 204 (No Content),
+            // > or 304 (Not Modified) status code is always terminated
+            // > by the first empty line after the header fields, regardless
+            // > of the header fields present in the message, and thus cannot
+            // > contain a message body or trailer section.
             //
             // However, http_parser only does this for responses that do not contain length fields. That
-            // does not meet the requirement of RFC 7230. This is an outstanding http_parser issue:
+            // does not meet the requirement of RFC 9112. This is an outstanding http_parser issue:
             // https://github.com/nodejs/http-parser/issues/251. As a result, we check for these status
             // codes and override http_parser's handling as well.
             guard !self.requestHeads.isEmpty else {
@@ -348,7 +348,7 @@ private class BetterHTTPParser {
                 skipBody = true
             } else {
                 let method = self.requestHeads.removeFirst().method
-                if method == .HEAD || method == .CONNECT {
+                if method == .HEAD || (method == .CONNECT && statusCode / 100 == 2) {
                     skipBody = true
                 } else if statusCode / 100 == 1  // 1XX codes
                     || statusCode == 204 || statusCode == 304
@@ -592,7 +592,8 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     private var lastResponseHeaderWasInformational = false
 
     /// The paired response encoder, if any, that this (server request) decoder feeds decoded
-    /// request methods to so it can omit the body from responses to `HEAD`/`CONNECT` requests.
+    /// request methods to so it can omit the body from responses to `HEAD` requests and from 2xx
+    /// responses to `CONNECT` requests.
     /// Set via the internal initializer used by `configureHTTPServerPipeline`; `nil` otherwise
     /// (client decoding, or direct use), in which case decoding is unaffected.
     private var responseEncoder: HTTPResponseEncoder? = nil
@@ -651,8 +652,8 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     }
 
     /// Creates a request decoder that feeds each decoded request's method to `responseEncoder`, so
-    /// it can omit the body from responses to `HEAD`/`CONNECT` requests. Used by
-    /// `configureHTTPServerPipeline`.
+    /// it can omit the body from responses to `HEAD` requests and from 2xx responses to `CONNECT`
+    /// requests. Used by `configureHTTPServerPipeline`.
     internal convenience init(
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
         informationalResponseStrategy: NIOInformationalResponseStrategy = .drop,

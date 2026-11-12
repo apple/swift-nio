@@ -412,11 +412,12 @@ class HTTPResponseEncoderTests: XCTestCase {
     // MARK: - HEAD/CONNECT response body suppression
 
     /// Adds only the response encoder, lets it observe a request with `requestMethod`, then writes
-    /// the given (bodyless) response and returns all response bytes as a single string.
+    /// the given response and returns all response bytes as a single string.
     private func encodeResponse(
         toRequestMethod requestMethod: HTTPMethod,
         status: HTTPResponseStatus,
         headers: HTTPHeaders = HTTPHeaders(),
+        body: String? = nil,
         configuration: HTTPResponseEncoder.Configuration = .init()
     ) throws -> String {
         let channel = EmbeddedChannel()
@@ -431,6 +432,9 @@ class HTTPResponseEncoderTests: XCTestCase {
         var responseHead = HTTPResponseHead(version: .http1_1, status: status)
         responseHead.headers = headers
         try channel.writeOutbound(HTTPServerResponsePart.head(responseHead))
+        if let body {
+            try channel.writeOutbound(HTTPServerResponsePart.body(.byteBuffer(ByteBuffer(string: body))))
+        }
         try channel.writeOutbound(HTTPServerResponsePart.end(nil))
 
         var all = channel.allocator.buffer(capacity: 128)
@@ -512,6 +516,20 @@ class HTTPResponseEncoderTests: XCTestCase {
         XCTAssertEqual(
             try self.encodeResponse(toRequestMethod: .CONNECT, status: .ok, headers: ["content-length": "1000"]),
             "HTTP/1.1 200 OK\r\n\r\n"
+        )
+    }
+
+    func testNon2XXConnectResponseCarriesItsBody() throws {
+        // Only a 2xx response to CONNECT opens a tunnel. A refusal (here a 407 from a proxy) is an
+        // ordinary response, so its framing headers and body are kept (RFC 9112 §6.3).
+        XCTAssertEqual(
+            try self.encodeResponse(
+                toRequestMethod: .CONNECT,
+                status: .proxyAuthenticationRequired,
+                headers: ["content-length": "5"],
+                body: "Hello"
+            ),
+            "HTTP/1.1 407 Proxy Authentication Required\r\ncontent-length: 5\r\n\r\nHello"
         )
     }
 

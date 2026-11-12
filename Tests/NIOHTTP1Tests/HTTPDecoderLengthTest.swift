@@ -267,6 +267,27 @@ class HTTPDecoderLengthTest: XCTestCase {
         try assertIgnoresLengthFields(requestMethod: .CONNECT, responseStatus: .ok, responseFramingField: .neither)
     }
 
+    func testNon2XXResponseToCONNECTHasBody() throws {
+        // Only a 2xx response to CONNECT opens a tunnel. Any other response is framed as usual (RFC 9112 § 6.3).
+        try self.channel.pipeline.syncOperations.addHandler(HTTPRequestEncoder())
+        try self.channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPResponseDecoder()))
+
+        try self.channel.writeOutbound(
+            HTTPClientRequestPart.head(HTTPRequestHead(version: .http1_1, method: .CONNECT, uri: "example.com:443"))
+        )
+        try self.channel.writeInbound(
+            ByteBuffer(string: "HTTP/1.1 407 Proxy Authentication Required\r\nContent-Length: 5\r\n\r\nHello")
+        )
+
+        XCTAssertEqual(
+            try self.channel.readInbound(as: HTTPClientResponsePart.self),
+            .head(HTTPResponseHead(version: .http1_1, status: .proxyAuthenticationRequired, headers: ["Content-Length": "5"]))
+        )
+        XCTAssertEqual(try self.channel.readInbound(as: HTTPClientResponsePart.self), .body(ByteBuffer(string: "Hello")))
+        XCTAssertEqual(try self.channel.readInbound(as: HTTPClientResponsePart.self), .end(nil))
+        XCTAssertNil(try self.channel.readInbound(as: HTTPClientResponsePart.self))
+    }
+
     func testIgnoresTransferEncodingFieldOnHEADResponses() throws {
         try assertIgnoresLengthFields(
             requestMethod: .HEAD,
