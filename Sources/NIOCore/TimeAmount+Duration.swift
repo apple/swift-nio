@@ -16,7 +16,8 @@ extension TimeAmount {
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     /// Creates a new `TimeAmount` for the given `Duration`, truncating and clamping if necessary.
     ///
-    /// - Returns: `TimeAmount`, truncated to nanosecond precision, and clamped to `Int64.max` nanoseconds.
+    /// - Returns: `TimeAmount`, truncated to nanosecond precision, and clamped to `Int64.max` nanoseconds
+    ///   (or `Int64.min` nanoseconds for a negative `Duration`).
     public init(_ duration: Swift.Duration) {
         self = .nanoseconds(duration.nanosecondsClamped)
     }
@@ -32,7 +33,8 @@ extension Swift.Duration {
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Swift.Duration {
-    /// The duration represented as nanoseconds, clamped to maximum expressible value.
+    /// The duration represented as nanoseconds, clamped to the maximum (or, for a negative duration, the minimum)
+    /// expressible value.
     var nanosecondsClamped: Int64 {
         let components = self.components
 
@@ -44,7 +46,7 @@ extension Swift.Duration {
             !secondsComponentNanos.overflow,
             !combinedNanos.overflow
         else {
-            return .max
+            return self < .zero ? .min : .max
         }
 
         return combinedNanos.partialValue
