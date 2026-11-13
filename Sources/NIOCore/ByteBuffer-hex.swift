@@ -220,7 +220,7 @@ extension ByteBuffer {
         result += String(repeating: " ", count: 60 - result.count)
 
         // Right column renders the 16 bytes line as ASCII characters, or "." if the character is not printable.
-        let printableRange = UInt8(ascii: " ")..<UInt8(ascii: "~")
+        let printableRange = UInt8(ascii: " ")...UInt8(ascii: "~")
         let printableBytes = self.readableBytesView.map {
             printableRange.contains($0) ? $0 : UInt8(ascii: ".")
         }
