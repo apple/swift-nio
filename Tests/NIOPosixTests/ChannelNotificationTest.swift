@@ -563,17 +563,22 @@ class ChannelNotificationTest: XCTestCase {
                 .bind(host: "127.0.0.1", port: 0).wait()
         )
 
-        let connectFuture = ClientBootstrap(group: group)
-            .channelInitializer { channel in
-                channel.eventLoop.makeCompletedFuture {
-                    try channel.pipeline.syncOperations.addHandler(OrderVerificationHandler())
+        // Connect and add the close callback on the event loop. Otherwise the connection can complete
+        // and fire channelActive before this thread adds the callback, which fails the test.
+        let eventLoop = group.next()
+        let serverAddress = serverChannel.localAddress!
+        let closeFuture = eventLoop.flatSubmit {
+            ClientBootstrap(group: eventLoop)
+                .channelInitializer { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try channel.pipeline.syncOperations.addHandler(OrderVerificationHandler())
+                    }
                 }
-            }
-            .connect(to: serverChannel.localAddress!)
-
-        // Close immediately in the promise callback. The channel must still become active before it becomes inactive!
-        let closeFuture = connectFuture.flatMap { channel in
-            channel.close()
+                .connect(to: serverAddress)
+                .flatMap { channel in
+                    // Close immediately in the promise callback.
+                    channel.close()
+                }
         }
 
         XCTAssertNoThrow(try closeFuture.wait())
