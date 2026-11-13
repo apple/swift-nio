@@ -17,6 +17,9 @@ import SystemPackage
 #if canImport(Darwin)
 import Darwin
 import CNIODarwin
+#elseif os(FreeBSD)
+import Glibc
+import CNIOFreeBSD
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
 import CNIOLinux
@@ -167,6 +170,11 @@ public enum Syscall: Sendable {
             self.rawValue = rawValue
         }
 
+        #if os(FreeBSD)
+        public static var exclusive: Self {
+            Self(rawValue: CUnsignedInt(AT_RENAME_NOREPLACE))
+        }
+        #else
         public static var exclusive: Self {
             Self(rawValue: CNIOLinux_RENAME_NOREPLACE)
         }
@@ -174,6 +182,7 @@ public enum Syscall: Sendable {
         public static var swap: Self {
             Self(rawValue: CNIOLinux_RENAME_EXCHANGE)
         }
+        #endif
     }
     #endif
 
@@ -190,13 +199,24 @@ public enum Syscall: Sendable {
 
         @_spi(Testing)
         public static var emptyPath: Self {
+            #if os(FreeBSD)
+            Self(rawValue: AT_EMPTY_PATH)
+            #else
             Self(rawValue: CNIOLinux_AT_EMPTY_PATH)
+            #endif
         }
 
         @_spi(Testing)
         public static var followSymbolicLinks: Self {
             Self(rawValue: AT_SYMLINK_FOLLOW)
         }
+
+        #if os(FreeBSD)
+        @_spi(Testing)
+        public static var resolveBeneath: Self {
+            Self(rawValue: AT_RESOLVE_BENEATH)
+        }
+        #endif
     }
 
     @_spi(Testing)
@@ -310,7 +330,7 @@ public enum Syscall: Sendable {
         }
     }
 
-    #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    #if !os(FreeBSD) && (canImport(Glibc) || canImport(Musl) || canImport(Bionic))
     @_spi(Testing)
     public static func sendfile(
         to output: FileDescriptor,
@@ -320,6 +340,31 @@ public enum Syscall: Sendable {
     ) -> Result<Int, Errno> {
         valueOrErrno(retryOnInterrupt: false) {
             system_sendfile(output.rawValue, input.rawValue, off_t(offset), size)
+        }
+    }
+    #endif
+
+    #if os(FreeBSD)
+    @_spi(Testing)
+    public static func copy_file_range(
+        from sourceFD: FileDescriptor,
+        offset: inout Int?,
+        to destinationFD: FileDescriptor,
+        destOffset: inout Int?,
+        size: Int,
+        flags: UInt
+    ) -> Result<Int, Errno> {
+        valueOrErrno(retryOnInterrupt: false) {
+            switch (offset, destOffset) {
+            case (nil, nil):
+                return system_copy_file_range(sourceFD.rawValue, nil, destinationFD.rawValue, nil, size, UInt32(flags))
+            case (.some, nil):
+                return system_copy_file_range(sourceFD.rawValue, &offset!, destinationFD.rawValue, nil, size, UInt32(flags))
+            case (nil, .some):
+                return system_copy_file_range(sourceFD.rawValue, nil, destinationFD.rawValue, &destOffset!, size, UInt32(flags))
+            case (.some, .some):
+                return system_copy_file_range(sourceFD.rawValue, &offset!, destinationFD.rawValue, &destOffset!, size, UInt32(flags))
+            }
         }
     }
     #endif

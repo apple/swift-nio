@@ -16,6 +16,8 @@ import SystemPackage
 
 #if canImport(Darwin)
 import Darwin
+#elseif os(FreeBSD)
+import Glibc
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
 import CNIOLinux
@@ -161,7 +163,7 @@ extension FileInfo {
 
     /// A time interval consisting of whole seconds and nanoseconds.
     public struct Timespec: Hashable, Sendable {
-        #if canImport(Darwin) || os(Windows)
+        #if canImport(Darwin) || os(FreeBSD) || os(Windows)
         private static let utimeOmit = Int(UTIME_OMIT)
         private static let utimeNow = Int(UTIME_NOW)
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
@@ -235,6 +237,13 @@ private struct Stat: Hashable {
         hasher.combine(FileInfo.Timespec(stat.st_birthtimespec))
         hasher.combine(stat.st_flags)
         hasher.combine(stat.st_gen)
+        #elseif os(FreeBSD)
+        hasher.combine(FileInfo.Timespec(stat.st_atim))
+        hasher.combine(FileInfo.Timespec(stat.st_mtim))
+        hasher.combine(FileInfo.Timespec(stat.st_ctim))
+        hasher.combine(FileInfo.Timespec(stat.st_birthtim))
+        hasher.combine(stat.st_flags)
+        hasher.combine(stat.st_gen)
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
         hasher.combine(FileInfo.Timespec(stat.st_atim))
         hasher.combine(FileInfo.Timespec(stat.st_mtim))
@@ -278,6 +287,17 @@ private struct Stat: Hashable {
             isEqual
             && FileInfo.Timespec(lStat.st_birthtimespec)
                 == FileInfo.Timespec(rStat.st_birthtimespec)
+        isEqual = isEqual && lStat.st_flags == rStat.st_flags
+        isEqual = isEqual && lStat.st_gen == rStat.st_gen
+        #elseif os(FreeBSD)
+        // See the note in `hash(into:)`: FreeBSD has both the POSIX `st_*tim` fields and
+        // the BSD birth time, file flags and generation number.
+        isEqual = isEqual && FileInfo.Timespec(lStat.st_atim) == FileInfo.Timespec(rStat.st_atim)
+        isEqual = isEqual && FileInfo.Timespec(lStat.st_mtim) == FileInfo.Timespec(rStat.st_mtim)
+        isEqual = isEqual && FileInfo.Timespec(lStat.st_ctim) == FileInfo.Timespec(rStat.st_ctim)
+        isEqual =
+            isEqual
+            && FileInfo.Timespec(lStat.st_birthtim) == FileInfo.Timespec(rStat.st_birthtim)
         isEqual = isEqual && lStat.st_flags == rStat.st_flags
         isEqual = isEqual && lStat.st_gen == rStat.st_gen
         #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)

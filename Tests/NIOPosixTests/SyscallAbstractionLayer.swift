@@ -49,6 +49,7 @@
 //   the calling thread in an UnsafeTransfer.
 
 import CNIOLinux
+import CNIOFreeBSD
 import NIOConcurrencyHelpers
 import NIOCore
 import XCTest
