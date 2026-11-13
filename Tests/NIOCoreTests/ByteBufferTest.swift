@@ -2106,6 +2106,17 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, actual)
     }
 
+    func testHexDumpDetailedPrintableCharacterBounds() {
+        // 0x20 (" ") through 0x7e ("~") are printable, like in `hexdump -C`.
+        let buf = ByteBuffer(bytes: [0x1f, 0x20, 0x41, 0x7e, 0x7f])
+        let expected = """
+            00000000  1f 20 41 7e 7f                                    |. A~.|
+            00000005
+            """
+        let actual = buf.hexDump(format: .detailed)
+        XCTAssertEqual(expected, actual)
+    }
+
     func testHexDumpDetailedWithMaxBytes() {
         let buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
         let expected = """
