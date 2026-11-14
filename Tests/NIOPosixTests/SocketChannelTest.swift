@@ -74,6 +74,85 @@ final class SocketChannelTest: XCTestCase {
         try futureB.wait()
     }
 
+    func testStreamWritesSurviveSocketBackpressure() throws {
+        /// The channel event loop confines all mutable state.
+        final class AccumulateReadsHandler: ChannelInboundHandler, @unchecked Sendable {
+            typealias InboundIn = ByteBuffer
+
+            private let expectedByteCount: Int
+            private let completionPromise: EventLoopPromise<ByteBuffer>
+            private var received: ByteBuffer!
+            private var completed = false
+
+            init(expectedByteCount: Int, completionPromise: EventLoopPromise<ByteBuffer>) {
+                self.expectedByteCount = expectedByteCount
+                self.completionPromise = completionPromise
+            }
+
+            func handlerAdded(context: ChannelHandlerContext) {
+                self.received = context.channel.allocator.buffer(capacity: self.expectedByteCount)
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                var buffer = Self.unwrapInboundIn(data)
+                self.received.writeBuffer(&buffer)
+                if !self.completed && self.received.readableBytes >= self.expectedByteCount {
+                    self.completed = true
+                    self.completionPromise.succeed(self.received)
+                }
+            }
+
+            func channelInactive(context: ChannelHandlerContext) {
+                if !self.completed {
+                    self.completed = true
+                    self.completionPromise.fail(ChannelError.eof)
+                }
+                context.fireChannelInactive()
+            }
+        }
+
+        func runTest(receiver: Channel, sender: Channel) throws {
+            let totalByteCount = 4 * 1024 * 1024
+            let chunkSize = 4 * 1024
+            let receivedPromise = receiver.eventLoop.makePromise(of: ByteBuffer.self)
+
+            try receiver.setOption(.autoRead, value: false).wait()
+            try receiver.setOption(.socketOption(.so_rcvbuf), value: 1_024).wait()
+            try sender.setOption(.socketOption(.so_sndbuf), value: 1_024).wait()
+            try receiver.pipeline.addHandler(
+                AccumulateReadsHandler(
+                    expectedByteCount: totalByteCount,
+                    completionPromise: receivedPromise
+                )
+            ).wait()
+
+            var expected = sender.allocator.buffer(capacity: totalByteCount)
+            expected.writeBytes((0..<totalByteCount).map { UInt8(truncatingIfNeeded: $0) })
+
+            // Keeping reads disabled while several megabytes are flushed forces the sender through
+            // kernel backpressure before the peer can drain the socket.
+            for offset in stride(from: 0, to: totalByteCount - chunkSize, by: chunkSize) {
+                sender.write(
+                    expected.getSlice(at: offset, length: chunkSize)!,
+                    promise: nil
+                )
+            }
+            let writeFuture = sender.writeAndFlush(
+                expected.getSlice(at: totalByteCount - chunkSize, length: chunkSize)!
+            )
+            let writeRemainedPending = try sender.eventLoop.submit {
+                !writeFuture.isFulfilled
+            }.wait()
+            XCTAssertTrue(writeRemainedPending, "The write completed before the receiver began draining the socket.")
+
+            try receiver.setOption(.autoRead, value: true).wait()
+            try writeFuture.wait()
+            XCTAssertEqual(expected, try receivedPromise.futureResult.wait())
+        }
+
+        try withCrossConnectedTCPChannels(forceSeparateEventLoops: true, runTest)
+    }
+
     public func testDelayedConnectSetsUpRemotePeerAddress() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
