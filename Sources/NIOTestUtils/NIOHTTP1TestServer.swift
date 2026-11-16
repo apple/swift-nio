@@ -224,9 +224,9 @@ public final class NIOHTTP1TestServer {
     private var outboundResponse: OutboundResponse = .idle
     private var serverChannel: Channel! = nil
 
-    /// Ensures that after we `writeOutbound`` a `.head` to a specific channel, we send
+    /// Ensures that after we `writeOutbound` a `.head` to a specific channel, we send
     /// the `.body` and `.end` to the same channel, before `currentClientChannel` changes again.
-    /// 
+    ///
     /// Ensures that we don't send `.end` to a new channel, if we omitted `.end` to the previous
     /// current channel.
     private enum OutboundResponse {
