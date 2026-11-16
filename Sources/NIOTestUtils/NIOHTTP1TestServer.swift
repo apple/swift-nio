@@ -221,7 +221,22 @@ public final class NIOHTTP1TestServer {
     // all protected by eventLoop
     private let inboundBuffer: BlockingQueue<HTTPServerRequestPart> = .init()
     private var currentClientChannel: Channel? = nil
+    private var outboundResponse: OutboundResponse = .idle
     private var serverChannel: Channel! = nil
+
+    /// Ensures that after we `writeOutbound`` a `.head` to a specific channel, we send
+    /// the `.body` and `.end` to the same channel, before `currentClientChannel` changes again.
+    /// 
+    /// Ensures that we don't send `.end` to a new channel, if we omitted `.end` to the previous
+    /// current channel.
+    private enum OutboundResponse {
+
+        /// No response is in progress.
+        case idle
+
+        /// The response's `.head` went to this connection, so send `.body` and `.end` to the same one.
+        case started(on: Channel?)
+    }
 
     enum State {
         case channelsAvailable(CircularBuffer<Channel>)
@@ -357,11 +372,24 @@ extension NIOHTTP1TestServer {
 
         let transformed = try SendableHTTPServerResponsePart(data)
         try self.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
-            if let channel = self.currentClientChannel {
-                return channel.writeAndFlush(transformed)
-            } else {
+            let channel: Channel?
+            switch (transformed, self.outboundResponse) {
+            case (.head, _):
+                channel = self.currentClientChannel
+                self.outboundResponse = .started(on: channel)
+            case (.body, .started(let responseChannel)), (.end, .started(let responseChannel)):
+                channel = responseChannel
+            case (.body, .idle), (.end, .idle):
+                channel = self.currentClientChannel
+            }
+            if case .end = transformed {
+                self.outboundResponse = .idle
+            }
+
+            guard let channel else {
                 return self.eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
             }
+            return channel.writeAndFlush(transformed)
         }.wait()
     }
 

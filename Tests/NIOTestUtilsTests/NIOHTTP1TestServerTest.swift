@@ -519,6 +519,55 @@ class NIOHTTP1TestServerTest: XCTestCase {
         // The promise for the second should error.
         XCTAssertThrowsError(try secondResponsePromise.futureResult.wait())
     }
+
+    func testResponsePartsAreNotWrittenToTheNextConnection() throws {
+        let testServer = NIOHTTP1TestServer(group: self.group)
+        defer {
+            XCTAssertNoThrow(try testServer.stop())
+        }
+
+        let response1Promise = self.group.next().makePromise(of: String.self)
+        let channel1 = try self.connect(serverPort: testServer.serverPort, responsePromise: response1Promise).wait()
+        let response2Promise = self.group.next().makePromise(of: String.self)
+        // `channel2` is accepted but waits until the server is done with `channel1`.
+        let channel2 = try self.connect(serverPort: testServer.serverPort, responsePromise: response2Promise).wait()
+
+        self.sendRequest(channel: channel1, uri: "/request1", message: "Request #1")
+        XCTAssertNoThrow(try testServer.readInbound().assertHead(expectedURI: "/request1"))
+        XCTAssertNoThrow(try testServer.readInbound().assertBody(expectedMessage: "Request #1"))
+        XCTAssertNoThrow(try testServer.readInbound().assertEnd())
+
+        // A `content-length` response is complete once its body has arrived, so the client closes
+        // the connection without waiting for the server to write the `.end`.
+        let response1Buffer = self.allocator.buffer(string: "Response #1")
+        let response1Head = HTTPResponseHead(
+            version: .http1_1,
+            status: .ok,
+            headers: ["content-length": "\(response1Buffer.readableBytes)"]
+        )
+        XCTAssertNoThrow(try testServer.writeOutbound(.head(response1Head)))
+        XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(response1Buffer))))
+        XCTAssertNoThrow(XCTAssertEqual("Response #1", try response1Promise.futureResult.wait()))
+        XCTAssertNoThrow(try channel1.closeFuture.wait())
+
+        // Once the server has read the request from `channel2`, `channel2` is the connection being served.
+        self.sendRequest(channel: channel2, uri: "/request2", message: "Request #2")
+        XCTAssertNoThrow(try testServer.readInbound().assertHead(expectedURI: "/request2"))
+        XCTAssertNoThrow(try testServer.readInbound().assertBody(expectedMessage: "Request #2"))
+        XCTAssertNoThrow(try testServer.readInbound().assertEnd())
+
+        // The first response's `.end` belongs to the closed `channel1`, not to `channel2`.
+        XCTAssertThrowsError(try testServer.writeOutbound(.end(nil))) { error in
+            XCTAssertEqual(error as? ChannelError, .ioOnClosedChannel)
+        }
+
+        // `channel2` still gets its own response, intact.
+        let response2Buffer = self.allocator.buffer(string: "Response #2")
+        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .http1_1, status: .ok))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(response2Buffer))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
+        XCTAssertNoThrow(XCTAssertEqual("Response #2", try response2Promise.futureResult.wait()))
+    }
 }
 
 private final class TestHTTPHandler: ChannelInboundHandler {
