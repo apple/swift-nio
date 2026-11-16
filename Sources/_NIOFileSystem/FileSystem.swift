@@ -1896,12 +1896,12 @@ extension FileSystem {
         for _ in 1...16 {
             let name = prefix + String(randomAlphaNumericOfLength: suffixLength)
 
-            // Trying to create the directory.
+            // Trying to create the directory. Like mkdtemp(3), only the owner may access it.
             let finalPath = root.appending(name)
             let createDirectoriesResult = self._createDirectory(
                 at: finalPath,
                 withIntermediateDirectories: true,
-                permissions: FilePermissions.defaultsForDirectory
+                permissions: .ownerReadWriteExecute
             )
             switch createDirectoriesResult {
             case .success:

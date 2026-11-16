@@ -396,7 +396,7 @@ class HTTPServerClientTest: XCTestCase {
                     // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
                     channel.eventLoop.makeCompletedFuture {
                         let sync = channel.pipeline.syncOperations
-                        try sync.configureHTTPServerPipeline(configuration: .noPipeliningAssistance)
+                        try sync.configureHTTPServerPipeline(withPipeliningAssistance: false)
                         let httpHandler = SimpleHTTPServer(mode)
                         try sync.addHandlers(httpHandler)
                     }
@@ -469,12 +469,11 @@ class HTTPServerClientTest: XCTestCase {
                 // Set the handlers that are appled to the accepted Channels
                 .childChannelInitializer { channel in
                     // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
-                    channel.eventLoop.makeCompletedFuture {
-                        try channel.pipeline.syncOperations.configureHTTPServerPipeline(
-                            configuration: .noPipeliningAssistance
-                        )
-                        let httpHandler = SimpleHTTPServer(mode)
-                        return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                    channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
+                        channel.eventLoop.makeCompletedFuture {
+                            let httpHandler = SimpleHTTPServer(mode)
+                            return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                        }
                     }
                 }.bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -545,7 +544,7 @@ class HTTPServerClientTest: XCTestCase {
                 // Set the handlers that are appled to the accepted Channels
                 .childChannelInitializer { channel in
                     // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
-                    channel.pipeline.configureHTTPServerPipeline().flatMap {
+                    channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
                         channel.eventLoop.makeCompletedFuture {
                             let httpHandler = SimpleHTTPServer(.byteBuffer)
                             return try channel.pipeline.syncOperations.addHandler(httpHandler)
@@ -617,12 +616,11 @@ class HTTPServerClientTest: XCTestCase {
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { channel in
-                    channel.eventLoop.makeCompletedFuture {
-                        try channel.pipeline.syncOperations.configureHTTPServerPipeline(
-                            configuration: .noPipeliningAssistance
-                        )
-                        let httpHandler = SimpleHTTPServer(mode)
-                        return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                    channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
+                        channel.eventLoop.makeCompletedFuture {
+                            let httpHandler = SimpleHTTPServer(mode)
+                            return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                        }
                     }
                 }.bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -692,12 +690,11 @@ class HTTPServerClientTest: XCTestCase {
                 // Set the handlers that are appled to the accepted Channels
                 .childChannelInitializer { channel in
                     // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
-                    channel.eventLoop.makeCompletedFuture {
-                        try channel.pipeline.syncOperations.configureHTTPServerPipeline(
-                            configuration: .noPipeliningAssistance
-                        )
-                        let httpHandler = SimpleHTTPServer(mode)
-                        return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                    channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
+                        channel.eventLoop.makeCompletedFuture {
+                            let httpHandler = SimpleHTTPServer(mode)
+                            return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                        }
                     }
                 }.bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -738,12 +735,11 @@ class HTTPServerClientTest: XCTestCase {
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { channel in
-                    channel.eventLoop.makeCompletedFuture {
-                        try channel.pipeline.syncOperations.configureHTTPServerPipeline(
-                            configuration: .noPipeliningAssistance
-                        )
-                        let httpHandler = SimpleHTTPServer(.byteBuffer)
-                        return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                    channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
+                        channel.eventLoop.makeCompletedFuture {
+                            let httpHandler = SimpleHTTPServer(.byteBuffer)
+                            return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                        }
                     }
                 }.bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -795,12 +791,11 @@ class HTTPServerClientTest: XCTestCase {
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { channel in
-                    channel.eventLoop.makeCompletedFuture {
-                        try channel.pipeline.syncOperations.configureHTTPServerPipeline(
-                            configuration: .noPipeliningAssistance
-                        )
-                        let httpHandler = SimpleHTTPServer(.byteBuffer)
-                        return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                    channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
+                        channel.eventLoop.makeCompletedFuture {
+                            let httpHandler = SimpleHTTPServer(.byteBuffer)
+                            return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                        }
                     }
                 }.bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -845,13 +840,5 @@ class HTTPServerClientTest: XCTestCase {
                 expectedHeaders: [:]
             )
         )
-    }
-}
-
-extension NIOHTTPServerPipelineSynchronousConfiguration {
-    static var noPipeliningAssistance: Self {
-        var configuration = Self()
-        configuration.pipeliningAssistance = false
-        return configuration
     }
 }

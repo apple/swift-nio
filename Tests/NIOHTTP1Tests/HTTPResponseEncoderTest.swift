@@ -269,7 +269,7 @@ class HTTPResponseEncoderTests: XCTestCase {
         }
 
         XCTAssertNoThrow(
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noFramingTransformation)
+            try channel.pipeline.configureHTTPServerPipeline(withEncoderConfiguration: .noFramingTransformation).wait()
         )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
@@ -292,7 +292,9 @@ class HTTPResponseEncoderTests: XCTestCase {
         }
 
         XCTAssertNoThrow(
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noFramingTransformation)
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(
+                withEncoderConfiguration: .noFramingTransformation
+            )
         )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
@@ -315,7 +317,9 @@ class HTTPResponseEncoderTests: XCTestCase {
         }
 
         XCTAssertNoThrow(
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noFramingTransformation)
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(
+                withEncoderConfiguration: .noFramingTransformation
+            )
         )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
@@ -353,7 +357,9 @@ class HTTPResponseEncoderTests: XCTestCase {
         }
 
         XCTAssertNoThrow(
-            try channel.pipeline.syncOperations.configureHTTPServerPipeline(configuration: .noFramingTransformation)
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(
+                withEncoderConfiguration: .noFramingTransformation
+            )
         )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
@@ -607,13 +613,5 @@ class HTTPResponseEncoderTests: XCTestCase {
         XCTAssertEqual(queue.popFirst(), .GET)
         XCTAssertEqual(queue.popFirst(), .CONNECT)
         XCTAssertNil(queue.popFirst())
-    }
-}
-
-extension NIOHTTPServerPipelineSynchronousConfiguration {
-    static var noFramingTransformation: Self {
-        var configuration = Self()
-        configuration.encoderConfiguration = .noFramingTransformation
-        return configuration
     }
 }

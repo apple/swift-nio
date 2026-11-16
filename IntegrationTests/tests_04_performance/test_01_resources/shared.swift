@@ -111,10 +111,10 @@ func doRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> I
     let serverChannel = try ServerBootstrap(group: group)
         .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
         .childChannelInitializer { channel in
-            var configuration = NIOHTTPServerPipelineConfiguration()
-            configuration.pipeliningAssistance = true
-            configuration.errorHandling = false
-            return channel.pipeline.configureHTTPServerPipeline(configuration: configuration).flatMap {
+            channel.pipeline.configureHTTPServerPipeline(
+                withPipeliningAssistance: true,
+                withErrorHandling: false
+            ).flatMap {
                 channel.pipeline.addHandler(SimpleHTTPServer())
             }
         }.bind(to: localhostPickPort).wait()
