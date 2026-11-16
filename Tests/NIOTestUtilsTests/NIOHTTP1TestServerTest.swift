@@ -521,6 +521,14 @@ class NIOHTTP1TestServerTest: XCTestCase {
     }
 
     func testResponsePartsAreNotWrittenToTheNextConnection() throws {
+        #if canImport(Darwin)
+        // This race needs the server to notice the client's close while a response is still in
+        // progress. `HTTPServerPipelineHandler` doesn't read during a response, and on Darwin NIO
+        // only learns about a remote close while reading (`isEarlyEOFDeliveryWorkingOnThisOS` in
+        // NIOPosix is `false`), so the server can't move on to the next connection before the
+        // response ends.
+        throw XCTSkip("Needs early EOF delivery, which NIO disables on Darwin")
+        #else
         let testServer = NIOHTTP1TestServer(group: self.group)
         defer {
             XCTAssertNoThrow(try testServer.stop())
@@ -567,6 +575,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
         XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(response2Buffer))))
         XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
         XCTAssertNoThrow(XCTAssertEqual("Response #2", try response2Promise.futureResult.wait()))
+        #endif
     }
 }
 
