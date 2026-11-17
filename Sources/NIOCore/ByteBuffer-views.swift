@@ -92,7 +92,10 @@ public struct ByteBufferView: RandomAccessCollection, Sendable {
     @inlinable
     public subscript(range: Range<Index>) -> ByteBufferView {
         get {
-            ByteBufferView(buffer: self._buffer, range: range)
+            guard range.lowerBound >= self._range.lowerBound && range.upperBound <= self._range.upperBound else {
+                preconditionFailure("range \(range) out of range \(self._range)")
+            }
+            return ByteBufferView(buffer: self._buffer, range: range)
         }
         set {
             self.replaceSubrange(range, with: newValue)
