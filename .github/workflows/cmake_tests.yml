@@ -52,6 +52,8 @@ jobs:
           which curl || apt -yq install curl
           which cmake || apt -yq install cmake
           which ninja || apt -yq install ninja-build
+          cmake --version
+          ninja --version
           curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/cmake-build.sh | TARGET_DIRECTORY="$INPUT_CMAKE_BUILD_TARGET_DIRECTORY" CMAKE_VERSION="$INPUT_CMAKE_VERSION" bash
         env:
           INPUT_CMAKE_BUILD_TARGET_DIRECTORY: ${{ inputs.cmake_build_target_directory }}
