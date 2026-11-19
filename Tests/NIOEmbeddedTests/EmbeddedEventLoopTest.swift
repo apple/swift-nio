@@ -530,6 +530,85 @@ public final class EmbeddedEventLoopTest: XCTestCase {
         eventLoop.advanceTime(by: .seconds(9))
         XCTAssertEqual(counter.load(ordering: .sequentiallyConsistent), 10)
     }
+
+    func testCancellationNotificationWaitsForInFlightAsyncWork() throws {
+        // Regression test for https://github.com/apple/swift-nio/issues/3769:
+        // cancelling while the future returned by the task is still pending must not
+        // fulfill the cancellation notification before that future completes.
+        let loop = EmbeddedEventLoop()
+        defer {
+            XCTAssertNoThrow(try loop.syncShutdownGracefully())
+        }
+        let finishWork = loop.makePromise(of: Void.self)
+        let stopped = loop.makePromise(of: Void.self)
+
+        let events = NIOLockedValueBox<[String]>([])
+
+        stopped.futureResult.whenSuccess {
+            events.withLockedValue { $0.append("notified") }
+        }
+
+        let repeated = loop.scheduleRepeatedAsyncTask(
+            initialDelay: .zero,
+            delay: .seconds(1),
+            notifying: stopped
+        ) { _ in
+            events.withLockedValue { $0.append("workStarted") }
+            return finishWork.futureResult.map {
+                events.withLockedValue { $0.append("workFinished") }
+            }
+        }
+
+        loop.run()
+        XCTAssertEqual(events.withLockedValue { $0 }, ["workStarted"])
+
+        repeated.cancel()
+        loop.run()
+        // The notification promise must not be fulfilled before the in-flight future
+        // returned by the task closure has completed.
+        XCTAssertEqual(events.withLockedValue { $0 }, ["workStarted"])
+
+        finishWork.succeed(())
+        loop.run()
+        XCTAssertEqual(events.withLockedValue { $0 }, ["workStarted", "workFinished", "notified"])
+    }
+
+    func testSelfCancellationDuringInFlightAsyncWorkNotifiesAfterCompletion() throws {
+        // Regression test for https://github.com/apple/swift-nio/issues/3769:
+        // a task which cancels itself while the future it returns is still pending must
+        // also only notify once that asynchronous work has completed.
+        let loop = EmbeddedEventLoop()
+        defer {
+            XCTAssertNoThrow(try loop.syncShutdownGracefully())
+        }
+        let finishWork = loop.makePromise(of: Void.self)
+        let stopped = loop.makePromise(of: Void.self)
+
+        let events = NIOLockedValueBox<[String]>([])
+
+        stopped.futureResult.whenSuccess {
+            events.withLockedValue { $0.append("notified") }
+        }
+
+        loop.scheduleRepeatedAsyncTask(
+            initialDelay: .zero,
+            delay: .seconds(1),
+            notifying: stopped
+        ) { task in
+            events.withLockedValue { $0.append("workStarted") }
+            task.cancel()
+            return finishWork.futureResult.map {
+                events.withLockedValue { $0.append("workFinished") }
+            }
+        }
+
+        loop.run() // Task runs, cancels itself, and returns a pending future.
+        XCTAssertEqual(events.withLockedValue { $0 }, ["workStarted"])
+
+        finishWork.succeed(())
+        loop.run()
+        XCTAssertEqual(events.withLockedValue { $0 }, ["workStarted", "workFinished", "notified"])
+    }
 }
 
 @available(*, unavailable)
