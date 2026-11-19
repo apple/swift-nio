@@ -478,7 +478,10 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at path: FilePath
     ) async throws -> Int {
         var (subdirectories, filesRemoved) = try await self.withDirectoryHandle(
-            atPath: NIOFilePath(path)
+            atPath: NIOFilePath(path),
+            // not following symlinks here to prevent TOCTOU attacks where a directory found while
+            // listing is replaced with a symlink pointing to an attacker-controlled location
+            options: OpenOptions.Directory(followSymbolicLinks: false)
         ) { directory in
             var subdirectories = [FilePath]()
             var filesRemoved = 0
