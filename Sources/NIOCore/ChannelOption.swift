@@ -309,6 +309,17 @@ extension ChannelOptions {
             public init() {}
         }
 
+        /// Enables receiving file descriptors on Linux Unix-domain stream sockets. Defaults to `false`.
+        ///
+        /// When enabled, every inbound read is an `AddressedEnvelope<ByteBuffer>`, including reads
+        /// without descriptors. Its `metadata.receivedFileDescriptors` transfers ownership to the
+        /// receiving handler, which must close the descriptors. Set this before starting reads.
+        /// Other platforms and socket types do not support this option.
+        public struct ReceiveFileDescriptors: ChannelOption, Sendable {
+            public typealias Value = Bool
+            public init() {}
+        }
+
         /// `BufferedWritableBytesOption` allows users to know the number of writable bytes currently buffered in the `Channel`.
         public struct BufferedWritableBytesOption: ChannelOption, Sendable {
             public typealias Value = Int
@@ -391,6 +402,9 @@ public struct ChannelOptions: Sendable {
 
     /// - seealso: `ReceivePacketInfo`
     public static let receivePacketInfo = Types.ReceivePacketInfo()
+
+    /// - seealso: `ReceiveFileDescriptors`
+    public static let receiveFileDescriptors = Types.ReceiveFileDescriptors()
 
     /// - seealso: `BufferedWritableBytesOption`
     public static let bufferedWritableBytes = Types.BufferedWritableBytesOption()
@@ -492,6 +506,11 @@ extension ChannelOption where Self == ChannelOptions.Types.ExplicitCongestionNot
 /// - seealso: `ReceivePacketInfo`.
 extension ChannelOption where Self == ChannelOptions.Types.ReceivePacketInfo {
     public static var receivePacketInfo: Self { .init() }
+}
+
+/// - seealso: `ReceiveFileDescriptors`.
+extension ChannelOption where Self == ChannelOptions.Types.ReceiveFileDescriptors {
+    public static var receiveFileDescriptors: Self { .init() }
 }
 
 /// - seealso: `BufferedWritableBytesOption`

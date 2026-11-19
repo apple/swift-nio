@@ -270,13 +270,14 @@ class Socket: BaseSocket, SocketProtocol {
 
                 let result = try withUnsafeMutablePointer(to: &messageHeader) { messageHeader in
                     try withUnsafeHandle { fd in
-                        try NIOBSDSocket.recvmsg(socket: fd, msgHdr: messageHeader, flags: 0)
+                        try NIOBSDSocket.recvmsg(socket: fd, msgHdr: messageHeader, flags: controlBytes.receiveFlags)
                     }
                 }
 
                 // Only look at the control bytes if all is good.
                 if case .processed = result {
                     controlBytes.receivedControlMessages = UnsafeControlMessageCollection(messageHeader: messageHeader)
+                    controlBytes.receivedMessageFlags = CInt(messageHeader.msg_flags)
                 }
 
                 return result
@@ -377,4 +378,35 @@ class Socket: BaseSocket, SocketProtocol {
         }
     }
 }
+#if os(Linux)
+extension SocketProtocol {
+    func receiveFileDescriptors(pointer: UnsafeMutableRawBufferPointer) throws -> (IOResult<Int>, [CInt]) {
+        // Linux permits up to SCM_MAX_FD (253) descriptors in one SCM_RIGHTS message.
+        try withUnsafeTemporaryAllocation(
+            byteCount: NIOBSDSocketControlMessage.space(payloadSize: 253 * MemoryLayout<CInt>.size),
+            alignment: MemoryLayout<cmsghdr>.alignment
+        ) { controlBytes in
+            var address = sockaddr_storage()
+            var addressLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
+            var received = UnsafeReceivedControlBytes(
+                controlBytesBuffer: controlBytes,
+                receiveFlags: CInt(MSG_CMSG_CLOEXEC)
+            )
+            let result = try recvmsg(
+                pointer: pointer,
+                storage: &address,
+                storageLen: &addressLength,
+                controlBytes: &received
+            )
+            guard case .processed(let count) = result else { return (result, []) }
+            let descriptors = try received.takeFileDescriptors()
+            guard count > 0 else {
+                for descriptor in descriptors { try? Posix.close(descriptor: descriptor) }
+                return (result, [])
+            }
+            return (result, descriptors)
+        }
+    }
+}
+#endif
 #endif  // !os(WASI)

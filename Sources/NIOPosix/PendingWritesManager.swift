@@ -22,6 +22,7 @@ import NIOCore
 private struct PendingStreamWrite {
     var data: IOData
     var promise: Optional<EventLoopPromise<Void>>
+    var metadata: AddressedEnvelope<ByteBuffer>.Metadata?
 }
 
 /// Write result is `.couldNotWriteEverything` but we have no more writes to perform.
@@ -59,6 +60,10 @@ private func doPendingWriteVectorOperation(
 
         loop: for i in 0..<count {
             let p = pending[i]
+            // A control message must be sent with its own bytes, not an earlier buffer.
+            if p.metadata != nil {
+                break loop
+            }
             switch p.data {
             case .byteBuffer(let buffer):
                 // Must not write more than Int32.max in one go.
@@ -182,6 +187,10 @@ private struct PendingStreamWritesState {
     ///   - bytes: How many bytes of the item were written.
     private mutating func partiallyWrittenFirst(bytes: Int) {
         self.pendingWrites[self.pendingWrites.startIndex].data.moveReaderIndex(forwardBy: bytes)
+        if bytes > 0 {
+            // sendmsg transfers control data with the first byte, even on a partial write.
+            self.pendingWrites[self.pendingWrites.startIndex].metadata = nil
+        }
         self.subtractOutstanding(bytes: bytes)
     }
 
@@ -298,6 +307,9 @@ private struct PendingStreamWritesState {
 
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
+        if self.isFlushPending && self.pendingWrites.first!.metadata != nil {
+            return .scalarBufferWrite
+        }
         switch self.flushedChunks {
         case 0:
             return .nothingToBeWritten
@@ -325,7 +337,7 @@ private struct PendingStreamWritesState {
     }
 }
 
-/// This class manages the writing of pending writes to stream sockets. The state is held in a `PendingWritesState`
+/// This class manages the writing of pending writes to stream sockets. The state is held in a `PendingStreamWritesState`
 /// value. The most important purpose of this object is to call `write`, `writev` or `sendfile` depending on the
 /// currently pending writes.
 final class PendingStreamWritesManager: PendingWritesManager {
@@ -373,7 +385,10 @@ final class PendingStreamWritesManager: PendingWritesManager {
     func add(data: IOData, promise: EventLoopPromise<Void>?) -> Bool {
         assert(self.isOpen)
         self.state.append(PendingStreamWrite(data: data, promise: promise))
+        return _add()
+    }
 
+    private func _add() -> Bool {
         if self.state.bytes > waterMark.high
             && channelWritabilityFlag.compareExchange(expected: true, desired: false, ordering: .relaxed).exchanged
         {
@@ -382,6 +397,14 @@ final class PendingStreamWritesManager: PendingWritesManager {
             return false
         }
         return true
+    }
+
+    func add(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) -> Bool {
+        assert(self.isOpen)
+        self.state.append(
+            PendingStreamWrite(data: .byteBuffer(envelope.data), promise: promise, metadata: envelope.metadata)
+        )
+        return _add()
     }
 
     /// Returns the best mechanism to write pending data at the current point in time.
@@ -393,11 +416,13 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// `sendfile`.
     ///
     /// - Parameters:
+    ///   - writeMessage: An operation that writes bytes with control metadata (usually `sendmsg`).
     ///   - scalarBufferWriteOperation: An operation that writes a single, contiguous array of bytes (usually `write`).
     ///   - vectorBufferWriteOperation: An operation that writes multiple contiguous arrays of bytes (usually `writev`).
     ///   - scalarFileWriteOperation: An operation that writes a region of a file descriptor (usually `sendfile`).
     /// - Returns: The `OneWriteOperationResult` and whether the `Channel` is now writable.
     func triggerAppropriateWriteOperations(
+        writeMessage: (UnsafeRawBufferPointer, AddressedEnvelope<ByteBuffer>.Metadata) throws -> IOResult<Int>,
         scalarBufferWriteOperation: (UnsafeRawBufferPointer) throws -> IOResult<Int>,
         vectorBufferWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>,
         scalarFileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>
@@ -405,7 +430,12 @@ final class PendingStreamWritesManager: PendingWritesManager {
         try self.triggerWriteOperations { writeMechanism in
             switch writeMechanism {
             case .scalarBufferWrite:
-                return try triggerScalarBufferWrite({ try scalarBufferWriteOperation($0) })
+                return try triggerScalarBufferWrite { pointer, metadata in
+                    if let metadata = metadata {
+                        return try writeMessage(pointer, metadata)
+                    }
+                    return try scalarBufferWriteOperation(pointer)
+                }
             case .vectorBufferWrite:
                 return try triggerVectorBufferWrite({ try vectorBufferWriteOperation($0) })
             case .scalarFileWrite:
@@ -439,7 +469,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// - Parameters:
     ///   - operation: An operation that writes a single, contiguous array of bytes (usually `write`).
     private func triggerScalarBufferWrite(
-        _ operation: (UnsafeRawBufferPointer) throws -> IOResult<Int>
+        _ operation: (UnsafeRawBufferPointer, AddressedEnvelope<ByteBuffer>.Metadata?) throws -> IOResult<Int>
     ) throws -> OneWriteOperationResult {
         assert(
             self.state.isFlushPending && !self.state.isEmpty && self.isOpen,
@@ -448,7 +478,11 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
         switch self.state[0].data {
         case .byteBuffer(let buffer):
-            return self.didWrite(itemCount: 1, result: try buffer.withUnsafeReadableBytes({ try operation($0) }))
+            let metadata = self.state[0].metadata
+            return self.didWrite(
+                itemCount: 1,
+                result: try buffer.withUnsafeReadableBytes { try operation($0, metadata) }
+            )
         case .fileRegion:
             preconditionFailure("called \(#function) but first item to write was a FileRegion")
         }
