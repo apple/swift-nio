@@ -649,6 +649,7 @@ public enum HTTPMethod: Equatable, Sendable {
     case MKCOL
     case MERGE
     case PURGE
+    case QUERY
     case NOTIFY
     case SEARCH
     case UNLOCK
@@ -675,7 +676,7 @@ public enum HTTPMethod: Equatable, Sendable {
         switch self {
         case .TRACE:
             return .no
-        case .POST, .PUT, .PATCH:
+        case .POST, .PUT, .PATCH, .QUERY:
             return .yes
         case .GET, .CONNECT, .OPTIONS, .HEAD, .DELETE:
             fallthrough
@@ -1389,6 +1390,8 @@ extension HTTPMethod: RawRepresentable {
             return "LINK"
         case .PATCH:
             return "PATCH"
+        case .QUERY:
+            return "QUERY"
         case .TRACE:
             return "TRACE"
         case .MKCOL:
@@ -1464,6 +1467,8 @@ extension HTTPMethod: RawRepresentable {
             self = .LINK
         case "PATCH":
             self = .PATCH
+        case "QUERY":
+            self = .QUERY
         case "TRACE":
             self = .TRACE
         case "MKCOL":
