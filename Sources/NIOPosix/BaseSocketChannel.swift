@@ -1246,9 +1246,20 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         // The only way to avoid that race, would be to use heavy handed synchronisation primitives like IOSQE_IO_DRAIN (basically
         // flushing all pending requests and wait for a fake event result to sync up) which would be awful for performance,
         // so better skip the assert() for io_uring instead.
-        #if !SWIFTNIO_USE_IO_URING
-        assert(readResult == .some)
-        #endif
+
+        // NOTE: The original assert assumed kqueue/epoll always have implicit sync,
+        // but vsock (virtual sockets) may not provide the same guarantees as regular
+        // TCP/Unix sockets. Handle .none gracefully instead of crashing.
+        // See: https://github.com/apple/swift-nio/issues/3500
+        //      https://github.com/apple/containerization/issues/503
+        if readResult == .none {
+            // Spurious wakeup - no data available despite POLLIN notification.
+            // This can happen with vsock or other non-standard socket types that
+            // don't have the same kqueue synchronization guarantees.
+            self.readIfNeeded0()
+            return .normal(.none)
+        }
+
         if self.lifecycleManager.isActive {
             self.pipeline.syncOperations.fireChannelReadComplete()
         }
