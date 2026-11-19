@@ -302,6 +302,14 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     var maxMessagesPerRead: UInt = 4
     private var inFlushNow: Bool = false  // Guard against re-entrance of flushNow() method.
     private var autoRead: Bool = true
+    var reportWriteProgress: Bool = false {
+        didSet {
+            if self.reportWriteProgress != oldValue {
+                self.unreportedWriteProgress = 0
+            }
+        }
+    }
+    private var unreportedWriteProgress: Int64 = 0
 
     // MARK: Variables that are really constant
     // this is really a constant (set in .init) but needs `self` to be constructed and
@@ -668,6 +676,27 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         return newWriteRegistrationState
     }
 
+    /// Record syscall results before completing promises, which may reenter the channel or close it.
+    final func recordWriteProgress(_ result: IOResult<Int>) {
+        guard self.reportWriteProgress else { return }
+        switch result {
+        case .processed(let bytes), .wouldBlock(let bytes):
+            if bytes > 0 {
+                self.unreportedWriteProgress += Int64(bytes)
+            }
+        }
+    }
+
+    private func emitWriteProgressIfNeeded() {
+        // A nested flush is handled by the outer flush. Its caller must not report progress before that outer
+        // flush has finished both its write loop and its selector registration changes.
+        guard self.reportWriteProgress && !self.inFlushNow else { return }
+        let bytes = self.unreportedWriteProgress
+        self.unreportedWriteProgress = 0
+        guard bytes > 0 && self.isActive else { return }
+        self.pipeline.syncOperations.fireUserInboundEventTriggered(NIOWriteProgressEvent(bytesWritten: bytes))
+    }
+
     public final func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
         if eventLoop.inEventLoop {
             let promise = eventLoop.makePromise(of: Void.self)
@@ -828,6 +857,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             assert(self.lifecycleManager.isPreRegistered)
             registerForWritable()
         }
+        self.emitWriteProgressIfNeeded()
     }
 
     public func read0() {
@@ -916,6 +946,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
 
         // === BEGIN: No user callouts ===
+
+        self.unreportedWriteProgress = 0
 
         // this is to register all error callouts as all the callouts must happen after we transition out state
         var errorCallouts: [(ChannelPipeline) -> Void] = []
@@ -1046,6 +1078,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             assert(!self.isOpen || self.interestedEvent.contains(.write))
             ()  // nothing to do because given that we just received `writable`, we're still registered for writable.
         }
+        self.emitWriteProgressIfNeeded()
     }
 
     private func finishConnect() {
@@ -1437,6 +1470,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             }
         }
 
+        self.emitWriteProgressIfNeeded()
         self.readIfNeeded0()
     }
 
