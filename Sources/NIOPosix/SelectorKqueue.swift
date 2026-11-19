@@ -17,7 +17,7 @@
 import NIOConcurrencyHelpers
 import NIOCore
 
-#if canImport(Darwin) || os(OpenBSD)
+#if canImport(Darwin) || os(FreeBSD) || os(OpenBSD)
 
 /// Represents the `kqueue` filters we might use:
 ///
@@ -58,6 +58,24 @@ extension KQueueEventFilterSet {
         self = kqueueFilterSet
     }
 
+    #if os(FreeBSD)
+    enum ReadFilterState {
+        case notRegistered
+        case dataAndEOF
+        case eofOnly
+    }
+
+    var readFilterState: ReadFilterState {
+        if self.contains(.read) {
+            return .dataAndEOF
+        } else if self.contains(.except) {
+            return .eofOnly
+        } else {
+            return .notRegistered
+        }
+    }
+    #endif
+
     /// Calculate the kqueue filter changes that are necessary to transition from `previousKQueueFilterSet` to `self`.
     /// The `body` closure is then called with the changes necessary expressed as a number of `kevent`.
     ///
@@ -84,6 +102,38 @@ extension KQueueEventFilterSet {
             return UInt16(self.contains(event) ? EV_ADD : EV_DELETE)
         }
 
+        #if os(FreeBSD)
+        let oldReadState = previousKQueueFilterSet.readFilterState
+        let newReadState = self.readFilterState
+        if oldReadState != newReadState {
+            switch newReadState {
+            case .notRegistered:
+                kevents.appendEvent(
+                    fileDescriptor: fileDescriptor,
+                    filter: EVFILT_READ,
+                    flags: UInt16(EV_DELETE),
+                    registrationID: registrationID
+                )
+            case .dataAndEOF, .eofOnly:
+                kevents.appendEvent(
+                    fileDescriptor: fileDescriptor,
+                    filter: EVFILT_READ,
+                    flags: UInt16(EV_ADD),
+                    lowWaterMarkIsMaximal: newReadState == .eofOnly,
+                    registrationID: registrationID
+                )
+            }
+        }
+
+        if let flags = calculateKQueueChange(event: .write) {
+            kevents.appendEvent(
+                fileDescriptor: fileDescriptor,
+                filter: EVFILT_WRITE,
+                flags: flags,
+                registrationID: registrationID
+            )
+        }
+        #else
         for (event, filter) in [
             (KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT),
         ] {
@@ -96,6 +146,7 @@ extension KQueueEventFilterSet {
                 )
             }
         }
+        #endif
 
         try kevents.withUnsafeBufferPointer(body)
     }
@@ -286,6 +337,9 @@ extension Selector: _SelectorBackendProtocol {
         }
 
         loopStart()
+        #if os(FreeBSD)
+        let EVFILT_EXCEPT = EVFILT_READ
+        #endif
 
         for i in 0..<ready {
             let ev = self.events[i]
@@ -306,7 +360,13 @@ extension Selector: _SelectorBackendProtocol {
             var selectorEvent: SelectorEventSet = ._none
             switch filter {
             case EVFILT_READ:
+                #if os(FreeBSD)
+                if registration.interested.contains(.read) {
+                    selectorEvent.formUnion(.read)
+                }
+                #else
                 selectorEvent.formUnion(.read)
+                #endif
                 fallthrough  // falling through here as `EVFILT_READ` also delivers `EV_EOF` (meaning `.readEOF`)
             case EVFILT_EXCEPT:
                 if Int32(ev.flags) & EV_EOF != 0 && registration.interested.contains(.readEOF) {
@@ -383,8 +443,13 @@ extension Selector: _SelectorBackendProtocol {
 
 extension kevent {
     /// Update a kevent for a given filter, file descriptor, and set of flags.
-    mutating func setEvent(fileDescriptor fd: CInt, filter: CInt, flags: UInt16, registrationID: SelectorRegistrationID)
-    {
+    mutating func setEvent(
+        fileDescriptor fd: CInt,
+        filter: CInt,
+        flags: UInt16,
+        lowWaterMarkIsMaximal: Bool = false,
+        registrationID: SelectorRegistrationID
+    ) {
         self.ident = UInt(fd)
         self.filter = Int16(filter)
         self.flags = flags
@@ -398,6 +463,14 @@ extension kevent {
         // this only affects our EXCEPT filter: EVFILT_READ behaves separately.
         #if canImport(Darwin)
         if filter == EVFILT_EXCEPT {
+            self.fflags = CUnsignedInt(NOTE_LOWAT)
+            self.data = Int.max
+        } else {
+            self.fflags = 0
+            self.data = 0
+        }
+        #elseif os(FreeBSD)
+        if lowWaterMarkIsMaximal {
             self.fflags = CUnsignedInt(NOTE_LOWAT)
             self.data = Int.max
         } else {
@@ -452,6 +525,7 @@ private struct KeventTriple {
         fileDescriptor fd: CInt,
         filter: CInt,
         flags: UInt16,
+        lowWaterMarkIsMaximal: Bool = false,
         registrationID: SelectorRegistrationID
     ) {
         defer {
@@ -464,6 +538,7 @@ private struct KeventTriple {
             fileDescriptor: fd,
             filter: filter,
             flags: flags,
+            lowWaterMarkIsMaximal: lowWaterMarkIsMaximal,
             registrationID: registrationID
         )
     }

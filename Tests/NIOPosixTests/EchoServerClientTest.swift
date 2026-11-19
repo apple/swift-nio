@@ -254,6 +254,8 @@ class EchoServerClientTest: XCTestCase {
     func testEchoVsock() throws {
         #if os(Windows)
         throw XCTSkip("VSOCK is not supported on Windows")
+        #elseif !canImport(Darwin) && !os(Linux) && !os(Android)
+        throw XCTSkip("VSOCK loopback is not supported on this platform")
         #else
         try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -285,6 +287,9 @@ class EchoServerClientTest: XCTestCase {
         let connectAddress = VsockAddress(cid: .any, port: port)
         #elseif os(Linux) || os(Android)
         let connectAddress = VsockAddress(cid: .local, port: port)
+        #else
+        // this platform does not support vsock loopback
+        let connectAddress: VsockAddress!
         #endif
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group).connect(to: connectAddress).wait())
 

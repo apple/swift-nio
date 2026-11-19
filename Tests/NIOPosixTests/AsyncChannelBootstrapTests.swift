@@ -1364,6 +1364,8 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     func testVSock() async throws {
         #if os(Windows)
         throw XCTSkip("VSOCK is not supported on Windows")
+        #elseif !canImport(Darwin) && !os(Linux) && !os(Android)
+        throw XCTSkip("VSOCK loopback is not supported on this platform")
         #else
         try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
         let eventLoopGroup = self.group!
