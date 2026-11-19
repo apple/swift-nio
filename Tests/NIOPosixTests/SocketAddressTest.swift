@@ -487,6 +487,20 @@ class SocketAddressTest: XCTestCase {
         XCTAssertEqual(first.hashValue, second.hashValue)
     }
 
+    func testUnixSocketAddressPathnameWithoutNULTerminator() throws {
+        // The kernel doesn't NUL-terminate sun_path when the peer bound to a path that fills it.
+        var addr = sockaddr_un()
+        addr.sun_family = sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue)
+        withUnsafeMutableBytes(of: &addr.sun_path) { pathPtr in
+            _ = pathPtr.initializeMemory(as: UInt8.self, repeating: UInt8(ascii: "A"))
+        }
+        let expectedPath = String(repeating: "A", count: MemoryLayout.size(ofValue: addr.sun_path))
+
+        let address = SocketAddress(addr)
+        XCTAssertEqual(address.pathname, expectedPath)
+        XCTAssertEqual(address.description, "[UDS]\(expectedPath)")
+    }
+
     func testPortAccessor() throws {
         XCTAssertEqual(try SocketAddress(ipAddress: "127.0.0.1", port: 80).port, 80)
         XCTAssertEqual(try SocketAddress(ipAddress: "::1", port: 80).port, 80)
