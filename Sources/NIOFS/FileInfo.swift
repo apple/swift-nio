@@ -57,6 +57,10 @@ public struct FileInfo: Hashable, Sendable {
     public var permissions: FilePermissions
 
     /// The size of the file in bytes.
+    ///
+    /// This is the file's "apparent" size. For the number of bytes it actually occupies on
+    /// disk, which can be smaller because of sparse regions or filesystem-level compression,
+    /// see ``onDiskSize``.
     public var size: Int64
 
     /// User ID of the file.
@@ -73,6 +77,36 @@ public struct FileInfo: Hashable, Sendable {
 
     /// The last time the status of the file was changed.
     public var lastStatusChangeTime: Timespec
+
+    /// The number of bytes the file actually occupies on disk, or `nil` if that information
+    /// isn't available.
+    ///
+    /// Unlike ``size``, which reports the file's apparent size, this value accounts for holes in
+    /// sparse files and for filesystem-level compression (for example on APFS), and so can be
+    /// smaller than `size`.
+    ///
+    /// This is derived from `st_blocks` in the platform-specific `stat` structure (see
+    /// ``platformSpecificStatus``), which counts blocks of a fixed 512 bytes as defined by
+    /// POSIX — not `st_blksize`, which is the filesystem's preferred I/O size and unrelated to
+    /// how much space the file actually uses.
+    ///
+    /// Returns `nil` when ``platformSpecificStatus`` is unavailable, such as when this
+    /// ``FileInfo`` was created with ``init(type:permissions:size:userID:groupID:lastAccessTime:lastDataModificationTime:lastStatusChangeTime:)``
+    /// rather than derived from a `stat` call, and on platforms where on-disk usage isn't
+    /// exposed through `stat` (currently Windows).
+    public var onDiskSize: Int64? {
+        #if os(Windows)
+        return nil
+        #else
+        guard let stat = self._platformSpecificStatus?.stat else {
+            return nil
+        }
+        // POSIX defines st_blocks in units of 512-byte blocks, regardless of the filesystem's
+        // actual block size (which is st_blksize, and must not be used here).
+        let posixBlockSize: Int64 = 512
+        return Int64(stat.st_blocks) * posixBlockSize
+        #endif
+    }
 
     /// Creates a ``FileInfo`` by deriving values from a platform-specific value.
     public init(platformSpecificStatus: CInterop.Stat) {
