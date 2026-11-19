@@ -1246,9 +1246,11 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         // The only way to avoid that race, would be to use heavy handed synchronisation primitives like IOSQE_IO_DRAIN (basically
         // flushing all pending requests and wait for a fake event result to sync up) which would be awful for performance,
         // so better skip the assert() for io_uring instead.
-        #if !SWIFTNIO_USE_IO_URING
-        assert(readResult == .some)
-        #endif
+        if readResult == .none {
+            self.readIfNeeded0()
+            return .normal(.none)
+        }
+
         if self.lifecycleManager.isActive {
             self.pipeline.syncOperations.fireChannelReadComplete()
         }
