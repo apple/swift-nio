@@ -26,6 +26,10 @@ private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer) ->
 #else
 private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
 #endif
+#elseif os(FreeBSD)
+private let sys_pthread_getname_np = pthread_getname_np
+private let sys_pthread_setname_np = pthread_setname_np
+private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
 #elseif os(OpenBSD)
 import CNIOOpenBSD
 
@@ -57,6 +61,8 @@ private func sysPthread_create(
     let thread = pthread_create(handle, &attr, destructor, args)
     pthread_attr_destroy(&attr)
     return thread
+    #elseif os(FreeBSD)
+    return pthread_create(handle, nil, destructor, args)
     #elseif os(OpenBSD)
     var attr: pthread_attr_t? = .init(bitPattern: 0)
     pthread_attr_init(&attr)
@@ -175,7 +181,7 @@ enum ThreadOpsPosix: ThreadOps {
                         #else
                         maximumThreadNameLength = .max
                         #endif
-                        name.prefix(maximumThreadNameLength).withCString { namePtr in
+                        String(name.prefix(maximumThreadNameLength)).withCString { namePtr in
                             // this is non-critical so we ignore the result here, we've seen
                             // EPERM in containers.
                             _ = sys_pthread_setname_np(hThread.handle, namePtr)

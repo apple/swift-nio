@@ -19,6 +19,10 @@ import CNIOLinux
 import CNIOOpenBSD
 import NIOCore
 
+#if os(FreeBSD)
+import CNIOFreeBSD
+#endif
+
 private struct PendingStreamWrite {
     var data: IOData
     var promise: Optional<EventLoopPromise<Void>>

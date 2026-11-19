@@ -18,7 +18,9 @@ import NIOCore
 
 #if canImport(Darwin)
 import CNIODarwin
-#elseif os(Linux) || os(FreeBSD) || os(Android)
+#elseif os(FreeBSD)
+import CNIOFreeBSD
+#elseif os(Linux) || os(Android)
 import CNIOLinux
 #elseif os(OpenBSD)
 import CNIOOpenBSD
@@ -208,7 +210,7 @@ struct ControlMessageParser {
         }
     }
 
-    #if canImport(Darwin)
+    #if canImport(Darwin) || os(FreeBSD)
     private static let ipv4TosType = IP_RECVTOS
     #else
     private static let ipv4TosType = IP_TOS  // Linux
@@ -243,7 +245,7 @@ struct ControlMessageParser {
                 self.ecnValue = .init(receivedValue: readValue)
             }
         } else if controlMessage.type == Posix.IP_PKTINFO {
-            #if !os(OpenBSD)
+            #if !os(OpenBSD) && !os(FreeBSD)
             if let data = controlMessage.data {
                 let info = data.load(as: in_pktinfo.self)
                 var addr = sockaddr_in()

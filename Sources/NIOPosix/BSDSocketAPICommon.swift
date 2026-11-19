@@ -117,8 +117,10 @@ extension NIOBSDSocket.Option {
     /// This option is not public as the way to request this is to use
     /// `ChannelOptions.receivePacketInfo` which works for both
     /// IPv4 and IPv6.
+    #if !os(FreeBSD)
     static let ip_recv_pktinfo: NIOBSDSocket.Option =
         NIOBSDSocket.Option(rawValue: Posix.IP_RECVPKTINFO)
+    #endif
 }
 #endif
 
