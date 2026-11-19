@@ -25,6 +25,41 @@ import typealias WinSDK.DWORD
 import typealias WinSDK.WCHAR
 import typealias WinSDK.WORD
 
+import let WinSDK.WSAEACCES
+import let WinSDK.WSAEADDRINUSE
+import let WinSDK.WSAEADDRNOTAVAIL
+import let WinSDK.WSAEAFNOSUPPORT
+import let WinSDK.WSAEALREADY
+import let WinSDK.WSAEBADF
+import let WinSDK.WSAECANCELLED
+import let WinSDK.WSAECONNABORTED
+import let WinSDK.WSAECONNREFUSED
+import let WinSDK.WSAECONNRESET
+import let WinSDK.WSAEDESTADDRREQ
+import let WinSDK.WSAEFAULT
+import let WinSDK.WSAEHOSTUNREACH
+import let WinSDK.WSAEINPROGRESS
+import let WinSDK.WSAEINTR
+import let WinSDK.WSAEINVAL
+import let WinSDK.WSAEISCONN
+import let WinSDK.WSAELOOP
+import let WinSDK.WSAEMFILE
+import let WinSDK.WSAEMSGSIZE
+import let WinSDK.WSAENAMETOOLONG
+import let WinSDK.WSAENETDOWN
+import let WinSDK.WSAENETRESET
+import let WinSDK.WSAENETUNREACH
+import let WinSDK.WSAENOBUFS
+import let WinSDK.WSAENOPROTOOPT
+import let WinSDK.WSAENOTCONN
+import let WinSDK.WSAENOTEMPTY
+import let WinSDK.WSAENOTSOCK
+import let WinSDK.WSAEOPNOTSUPP
+import let WinSDK.WSAEPROTONOSUPPORT
+import let WinSDK.WSAEPROTOTYPE
+import let WinSDK.WSAETIMEDOUT
+import let WinSDK.WSAEWOULDBLOCK
+
 internal func MAKELANGID(_ p: WORD, _ s: WORD) -> DWORD {
     DWORD((s << 10) | p)
 }
@@ -74,20 +109,74 @@ public struct IOError: Swift.Error {
 
     /// The `errno` that was set for the operation.
     ///
-    /// - Warning: On Windows an `IOError` may instead carry a `windows`- or `winsock`-domain
-    ///   error code, for which there is no corresponding `errno`. Reading `errnoCode` in that
-    ///   case is a programmer error and traps with `fatalError`; inspect the error's domain
-    ///   before accessing this property on Windows.
+    /// On Windows, an `IOError` may carry a `winsock`-domain error code instead. Those codes
+    /// have the same meanings as their `errno` counterparts -- `WSAEMSGSIZE` means what
+    /// `EMSGSIZE` means -- so they are translated here, which keeps error handling written
+    /// against `errno` working on Windows. A `winsock` code with no `errno` counterpart, and a
+    /// `windows`-domain code, are returned unchanged; Windows CRT `errno` values do not exceed
+    /// 140 while Winsock and Win32 codes are far larger, so such a value cannot be mistaken for
+    /// an `errno`.
     public var errnoCode: CInt {
         switch self.error {
         case .errno(let code):
             return code
         #if os(Windows)
-        default:
-            fatalError("IOError domain is not `errno`")
+        case .winsock(let code):
+            return Self.errnoForWinsockError(code) ?? code
+        case .windows(let code):
+            return CInt(bitPattern: code)
         #endif
         }
     }
+
+    #if os(Windows)
+    /// The `errno` equivalent of a Winsock error code, if it has one.
+    ///
+    /// The codes are paired by meaning, which for this range of Winsock errors is the same as
+    /// pairing them by name.
+    private static func errnoForWinsockError(_ code: CInt) -> CInt? {
+        switch code {
+        case WSAEINTR: return EINTR
+        case WSAEBADF: return EBADF
+        case WSAEACCES: return EACCES
+        case WSAEFAULT: return EFAULT
+        case WSAEINVAL: return EINVAL
+        case WSAEMFILE: return EMFILE
+        // Note that the Windows CRT, unlike other platforms, gives `EWOULDBLOCK` and `EAGAIN`
+        // distinct values. Winsock reports would-block as `WSAEWOULDBLOCK`, so that is the one
+        // to pair it with.
+        case WSAEWOULDBLOCK: return EWOULDBLOCK
+        case WSAEINPROGRESS: return EINPROGRESS
+        case WSAEALREADY: return EALREADY
+        case WSAENOTSOCK: return ENOTSOCK
+        case WSAEDESTADDRREQ: return EDESTADDRREQ
+        case WSAEMSGSIZE: return EMSGSIZE
+        case WSAEPROTOTYPE: return EPROTOTYPE
+        case WSAENOPROTOOPT: return ENOPROTOOPT
+        case WSAEPROTONOSUPPORT: return EPROTONOSUPPORT
+        case WSAEOPNOTSUPP: return EOPNOTSUPP
+        case WSAEAFNOSUPPORT: return EAFNOSUPPORT
+        case WSAEADDRINUSE: return EADDRINUSE
+        case WSAEADDRNOTAVAIL: return EADDRNOTAVAIL
+        case WSAENETDOWN: return ENETDOWN
+        case WSAENETUNREACH: return ENETUNREACH
+        case WSAENETRESET: return ENETRESET
+        case WSAECONNABORTED: return ECONNABORTED
+        case WSAECONNRESET: return ECONNRESET
+        case WSAENOBUFS: return ENOBUFS
+        case WSAEISCONN: return EISCONN
+        case WSAENOTCONN: return ENOTCONN
+        case WSAETIMEDOUT: return ETIMEDOUT
+        case WSAECONNREFUSED: return ECONNREFUSED
+        case WSAELOOP: return ELOOP
+        case WSAENAMETOOLONG: return ENAMETOOLONG
+        case WSAEHOSTUNREACH: return EHOSTUNREACH
+        case WSAENOTEMPTY: return ENOTEMPTY
+        case WSAECANCELLED: return ECANCELED
+        default: return nil
+        }
+    }
+    #endif
 
     #if os(Windows)
     public init(windows code: DWORD, reason: String) {
