@@ -17,7 +17,7 @@
 import NIOConcurrencyHelpers
 import NIOCore
 
-#if canImport(Darwin) || os(OpenBSD)
+#if canImport(Darwin) || os(OpenBSD) || os(FreeBSD)
 
 /// Represents the `kqueue` filters we might use:
 ///
@@ -84,9 +84,16 @@ extension KQueueEventFilterSet {
             return UInt16(self.contains(event) ? EV_ADD : EV_DELETE)
         }
 
-        for (event, filter) in [
-            (KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT),
-        ] {
+        #if canImport(Darwin) || os(OpenBSD)
+        let eventFilters: [(KQueueEventFilterSet, CInt)] = [
+            (.read, CInt(EVFILT_READ)), (.write, CInt(EVFILT_WRITE)), (.except, CInt(EVFILT_EXCEPT)),
+        ]
+        #else
+        let eventFilters: [(KQueueEventFilterSet, CInt)] = [
+            (.read, CInt(EVFILT_READ)), (.write, CInt(EVFILT_WRITE)),
+        ]
+        #endif
+        for (event, filter) in eventFilters {
             if let flags = calculateKQueueChange(event: event) {
                 kevents.appendEvent(
                     fileDescriptor: fileDescriptor,
@@ -133,7 +140,7 @@ extension Selector: _SelectorBackendProtocol {
             // Clamp the timespec tv_sec value to the maximum supported by the Darwin-kernel.
             // Whilst this schedules the event far into the future (several years) it will still be triggered provided
             // the system stays up.
-            #if os(OpenBSD)
+            #if os(OpenBSD) || os(FreeBSD)
             // Should double-check if this makes sense for OpenBSD, but
             // let's just get this to compile for now.
             ts.tv_sec = min(ts.tv_sec, time_t(sysIntervalTimerMaxSec))
@@ -307,12 +314,15 @@ extension Selector: _SelectorBackendProtocol {
             switch filter {
             case EVFILT_READ:
                 selectorEvent.formUnion(.read)
-                fallthrough  // falling through here as `EVFILT_READ` also delivers `EV_EOF` (meaning `.readEOF`)
-            case EVFILT_EXCEPT:
                 if Int32(ev.flags) & EV_EOF != 0 && registration.interested.contains(.readEOF) {
-                    // we only add `.readEOF` if it happened and the user asked for it
                     selectorEvent.formUnion(.readEOF)
                 }
+            #if canImport(Darwin) || os(OpenBSD)
+            case EVFILT_EXCEPT:
+                if Int32(ev.flags) & EV_EOF != 0 && registration.interested.contains(.readEOF) {
+                    selectorEvent.formUnion(.readEOF)
+                }
+            #endif
             case EVFILT_WRITE:
                 selectorEvent.formUnion(.write)
             default:
