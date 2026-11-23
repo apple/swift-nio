@@ -52,7 +52,7 @@ final class SocketChannelTest: XCTestCase {
         guard #available(macOS 27, *) else {
             throw XCTSkip("Early EOF delivery is disabled on older macOS versions")
         }
-        final class InactiveObserver: ChannelInboundHandler {
+        final class InactiveObserver: ChannelInboundHandler, Sendable {
             typealias InboundIn = ByteBuffer
 
             let active: EventLoopPromise<Void>
