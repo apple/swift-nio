@@ -1,0 +1,4 @@
+module CNIOPosix {
+  umbrella header "CNIOPosix.h"
+  export *
+}

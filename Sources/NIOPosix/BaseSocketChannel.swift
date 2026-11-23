@@ -18,6 +18,29 @@ import Atomics
 import NIOConcurrencyHelpers
 import NIOCore
 
+/// Darwin's early-EOF fix applies to TCP streams only. An IPv4/IPv6 address by itself
+/// is insufficient: listening and datagram channels can have those addresses too.
+/// Missing local addresses and UNIX-domain sockets must fail closed.
+/// The macOS 27 OS capability gate is checked separately by the selector.
+internal func isEarlyEOFDeliveryWorkingForSocketAddress(
+    _ localAddress: SocketAddress?,
+    isTCPStream: Bool
+) -> Bool {
+    #if canImport(Darwin)
+    guard isTCPStream else {
+        return false
+    }
+    switch localAddress {
+    case .some(.v4), .some(.v6):
+        return true
+    case .some(.unixDomainSocket), .none:
+        return false
+    }
+    #else
+    return true
+    #endif
+}
+
 private struct SocketChannelLifecycleManager {
     // MARK: Types
     private enum State {
@@ -880,7 +903,17 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             return
         }
 
+        guard self.isEarlyEOFDeliveryWorkingForThisChannel else {
+            return
+        }
+
         self.safeReregister(interested: self.interestedEvent.union(.readEOF))
+    }
+
+    /// Whether `.readEOF` is safe for this channel's address family.
+    /// The OS-version guard is applied independently by the selector.
+    private var isEarlyEOFDeliveryWorkingForThisChannel: Bool {
+        isEarlyEOFDeliveryWorkingForSocketAddress(self.localAddress, isTCPStream: self is SocketChannel)
     }
 
     internal final func unregisterForReadable() {

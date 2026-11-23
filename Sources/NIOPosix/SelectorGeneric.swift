@@ -109,8 +109,19 @@ struct SelectorEventSet: OptionSet, Equatable, Sendable {
 }
 
 internal let isEarlyEOFDeliveryWorkingOnThisOS: Bool = {
-    #if canImport(Darwin)
-    return false  // rdar://53656794 , once fixed we need to do an OS version check here.
+    #if os(macOS)
+    // rdar://53656794: On macOS 27+, EVFILT_EXCEPT with NOTE_LOWAT delivers EV_EOF for TCP peers.
+    // This OS capability gate is NOT blanket enablement for all Darwin sockets:
+    // BaseSocketChannel registers .readEOF only for actual TCP SocketChannels with
+    // IPv4/IPv6 local addresses. Listeners, datagrams, UNIX domain sockets (which
+    // can still emit spurious events when full), and missing addresses are excluded.
+    // Earlier macOS versions stay disabled.
+    if #available(macOS 27, *) {
+        return true
+    }
+    return false
+    #elseif canImport(Darwin)
+    return false  // rdar://53656794 , not yet verified on this platform.
     #else
     return true
     #endif
