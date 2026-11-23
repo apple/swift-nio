@@ -48,7 +48,15 @@ final class SocketChannelTest: XCTestCase {
         XCTAssertFalse(isEarlyEOFDeliveryWorkingForSocketAddress(ipv6, isTCPStream: false))
     }
 
+    func testIPv4PeerEOFArrivesWithAutoReadDisabledOnMacOS27() throws {
+        try self.assertPeerEOFArrivesWithAutoReadDisabledOnMacOS27(host: "127.0.0.1")
+    }
+
     func testIPv6PeerEOFArrivesWithAutoReadDisabledOnMacOS27() throws {
+        try self.assertPeerEOFArrivesWithAutoReadDisabledOnMacOS27(host: "::1")
+    }
+
+    private func assertPeerEOFArrivesWithAutoReadDisabledOnMacOS27(host: String) throws {
         guard #available(macOS 27, *) else {
             throw XCTSkip("Early EOF delivery is disabled on older macOS versions")
         }
@@ -83,7 +91,7 @@ final class SocketChannelTest: XCTestCase {
             .childChannelInitializer { channel in
                 channel.pipeline.addHandler(InactiveObserver(active: accepted, inactive: inactive))
             }
-            .bind(host: "::1", port: 0).wait()
+            .bind(host: host, port: 0).wait()
         defer { XCTAssertNoThrow(try server.close().wait()) }
         let client = try ClientBootstrap(group: group)
             .connect(to: server.localAddress!).wait()
