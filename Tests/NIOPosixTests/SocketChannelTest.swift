@@ -32,6 +32,59 @@ extension Array {
 }
 
 final class SocketChannelTest: XCTestCase {
+    #if os(macOS)
+    func testEarlyEOFEligibilityIncludesIPv4AndIPv6ButNotUnixOrMissingAddress() throws {
+        // The macOS 27 OS gate is separate; the address-family gate must fail
+        // closed when the local address is not yet available.
+        XCTAssertTrue(isEarlyEOFDeliveryWorkingForSocketAddress(try SocketAddress(ipAddress: "127.0.0.1", port: 0)))
+        XCTAssertTrue(isEarlyEOFDeliveryWorkingForSocketAddress(try SocketAddress(ipAddress: "::1", port: 0)))
+        XCTAssertFalse(isEarlyEOFDeliveryWorkingForSocketAddress(try SocketAddress(unixDomainSocketPath: "/tmp/nio-early-eof")))
+        XCTAssertFalse(isEarlyEOFDeliveryWorkingForSocketAddress(nil))
+    }
+
+    func testIPv6PeerEOFArrivesWithAutoReadDisabledOnMacOS27() throws {
+        guard #available(macOS 27, *) else {
+            throw XCTSkip("Early EOF delivery is disabled on older macOS versions")
+        }
+        final class InactiveObserver: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+
+            let inactive: EventLoopPromise<Void>
+
+            init(inactive: EventLoopPromise<Void>) {
+                self.inactive = inactive
+            }
+
+            func channelInactive(context: ChannelHandlerContext) {
+                self.inactive.succeed(())
+                context.fireChannelInactive()
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
+        let accepted = group.next().makePromise(of: Void.self)
+        let inactive = group.next().makePromise(of: Void.self)
+        let server = try ServerBootstrap(group: group)
+            .childChannelOption(.autoRead, value: false)
+            .childChannelInitializer { channel in
+                channel.pipeline.addHandler(InactiveObserver(inactive: inactive)).map {
+                    accepted.succeed(())
+                }
+            }
+            .bind(host: "::1", port: 0).wait()
+        defer { XCTAssertNoThrow(try server.close().wait()) }
+        let client = try ClientBootstrap(group: group)
+            .connect(to: server.localAddress!).wait()
+
+        // Ensure the child is active and registered before closing its peer.
+        try accepted.futureResult.wait()
+        try client.close().wait()
+        // No read is ever requested: the IPv6 TCP EOF must be reported early.
+        try inactive.futureResult.wait()
+    }
+    #endif
+
     /// Validate that channel options are applied asynchronously.
     public func testAsyncSetOption() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
