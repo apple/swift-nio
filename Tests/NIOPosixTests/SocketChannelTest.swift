@@ -49,10 +49,17 @@ final class SocketChannelTest: XCTestCase {
         final class InactiveObserver: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
+            let active: EventLoopPromise<Void>
             let inactive: EventLoopPromise<Void>
 
-            init(inactive: EventLoopPromise<Void>) {
+            init(active: EventLoopPromise<Void>, inactive: EventLoopPromise<Void>) {
+                self.active = active
                 self.inactive = inactive
+            }
+
+            func channelActive(context: ChannelHandlerContext) {
+                self.active.succeed(())
+                context.fireChannelActive()
             }
 
             func channelInactive(context: ChannelHandlerContext) {
@@ -68,16 +75,14 @@ final class SocketChannelTest: XCTestCase {
         let server = try ServerBootstrap(group: group)
             .childChannelOption(.autoRead, value: false)
             .childChannelInitializer { channel in
-                channel.pipeline.addHandler(InactiveObserver(inactive: inactive)).map {
-                    accepted.succeed(())
-                }
+                channel.pipeline.addHandler(InactiveObserver(active: accepted, inactive: inactive))
             }
             .bind(host: "::1", port: 0).wait()
         defer { XCTAssertNoThrow(try server.close().wait()) }
         let client = try ClientBootstrap(group: group)
             .connect(to: server.localAddress!).wait()
 
-        // Ensure the child is active and registered before closing its peer.
+        // Await channelActive before triggering peer close, not just initializer completion.
         try accepted.futureResult.wait()
         try client.close().wait()
         // No read is ever requested: the IPv6 TCP EOF must be reported early.
