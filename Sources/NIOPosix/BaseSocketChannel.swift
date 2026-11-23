@@ -18,11 +18,18 @@ import Atomics
 import NIOConcurrencyHelpers
 import NIOCore
 
-/// On Darwin, early EOF is reliable for TCP, not UNIX-domain sockets whose receive buffer is full.
-/// If the address has not yet been obtained, fail closed instead of enabling EVFILT_EXCEPT.
-/// Kept separate from the macOS 27 OS gate so every address-family decision can be regression-tested.
-internal func isEarlyEOFDeliveryWorkingForSocketAddress(_ localAddress: SocketAddress?) -> Bool {
+/// Darwin's early-EOF fix applies to TCP streams only. An IPv4/IPv6 address by itself
+/// is insufficient: listening and datagram channels can have those addresses too.
+/// Missing local addresses and UNIX-domain sockets must fail closed.
+/// The macOS 27 OS capability gate is checked separately by the selector.
+internal func isEarlyEOFDeliveryWorkingForSocketAddress(
+    _ localAddress: SocketAddress?,
+    isTCPStream: Bool
+) -> Bool {
     #if canImport(Darwin)
+    guard isTCPStream else {
+        return false
+    }
     switch localAddress {
     case .some(.v4), .some(.v6):
         return true
@@ -906,7 +913,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     /// Whether `.readEOF` is safe for this channel's address family.
     /// The OS-version guard is applied independently by the selector.
     private var isEarlyEOFDeliveryWorkingForThisChannel: Bool {
-        isEarlyEOFDeliveryWorkingForSocketAddress(self.localAddress)
+        isEarlyEOFDeliveryWorkingForSocketAddress(self.localAddress, isTCPStream: self is SocketChannel)
     }
 
     internal final func unregisterForReadable() {
