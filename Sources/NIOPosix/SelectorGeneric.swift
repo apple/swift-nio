@@ -110,8 +110,11 @@ struct SelectorEventSet: OptionSet, Equatable, Sendable {
 
 internal let isEarlyEOFDeliveryWorkingOnThisOS: Bool = {
     #if os(macOS)
-    // rdar://53656794 : EVFILT_EXCEPT with NOTE_LOWAT delivers EV_EOF on peer close without firing for
-    // ordinary readable data from macOS 27 on. Earlier releases keep early EOF delivery disabled.
+    // rdar://53656794: On macOS 27+, EVFILT_EXCEPT with NOTE_LOWAT delivers EV_EOF for TCP peers.
+    // This is an OS capability gate, NOT blanket enablement for all Darwin sockets:
+    // BaseSocketChannel registers .readEOF only for IPv4/IPv6 channels. UNIX domain sockets
+    // (which can still emit spurious events when their receive buffer fills) and channels
+    // without a local address remain excluded. Earlier macOS versions stay disabled.
     if #available(macOS 27, *) {
         return true
     }
