@@ -76,14 +76,17 @@ let package = Package(
                 swiftCollections,
                 swiftAtomics,
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
             name: "_NIODataStructures",
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
             name: "_NIOBase64",
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
@@ -95,6 +98,7 @@ let package = Package(
                 swiftAtomics,
                 swiftCollections,
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
@@ -110,7 +114,7 @@ let package = Package(
                 "CNIOPosix",
                 swiftAtomics,
             ],
-            exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
+            exclude: includePrivacyManifest ? ["CMakeLists.txt"] : ["CMakeLists.txt", "PrivacyInfo.xcprivacy"],
             resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
             swiftSettings: swiftSettings
         ),
@@ -121,6 +125,7 @@ let package = Package(
                 "NIOEmbedded",
                 "NIOPosix",
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
@@ -129,6 +134,7 @@ let package = Package(
                 .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
@@ -136,6 +142,7 @@ let package = Package(
             dependencies: [
                 "NIOCore"
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
@@ -144,11 +151,13 @@ let package = Package(
                 .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOFoundationEssentialsCompat",
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
             name: "CNIOAtomics",
             dependencies: [],
+            exclude: ["CMakeLists.txt"],
             cSettings: [
                 .define("_GNU_SOURCE")
             ]
@@ -156,25 +165,30 @@ let package = Package(
         .target(
             name: "CNIOPosix",
             dependencies: [],
+            exclude: ["CMakeLists.txt"],
             cSettings: [
                 .define("_GNU_SOURCE")
             ]
         ),
         .target(
             name: "CNIOSHA1",
-            dependencies: []
+            dependencies: [],
+            exclude: ["CMakeLists.txt"]
         ),
         .target(
             name: "CNIOOpenBSD",
-            dependencies: []
+            dependencies: [],
+            exclude: ["CMakeLists.txt"]
         ),
         .target(
             name: "CNIOFreeBSD",
-            dependencies: []
+            dependencies: [],
+            exclude: ["CMakeLists.txt"]
         ),
         .target(
             name: "CNIOLinux",
             dependencies: [],
+            exclude: ["CMakeLists.txt"],
             cSettings: [
                 .define("_GNU_SOURCE")
             ]
@@ -182,23 +196,27 @@ let package = Package(
         .target(
             name: "CNIODarwin",
             dependencies: [],
+            exclude: ["CMakeLists.txt"],
             cSettings: [
                 .define("__APPLE_USE_RFC_3542")
             ]
         ),
         .target(
             name: "CNIOWindows",
-            dependencies: []
+            dependencies: [],
+            exclude: ["CMakeLists.txt"]
         ),
         .target(
             name: "CNIOWASI",
-            dependencies: []
+            dependencies: [],
+            exclude: ["CMakeLists.txt"]
         ),
         .target(
             name: "NIOConcurrencyHelpers",
             dependencies: [
                 "CNIOAtomics"
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
@@ -210,6 +228,7 @@ let package = Package(
                 "CNIOLLHTTP",
                 swiftCollections,
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
@@ -221,10 +240,12 @@ let package = Package(
                 "CNIOSHA1",
                 "_NIOBase64",
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
             name: "CNIOLLHTTP",
+            exclude: ["CMakeLists.txt"],
             cSettings: [
                 .define("_GNU_SOURCE"),
                 .define("LLHTTP_STRICT_MODE"),
@@ -237,6 +258,7 @@ let package = Package(
                 "NIOCore",
                 swiftCollections,
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
@@ -248,6 +270,7 @@ let package = Package(
                 "NIOHTTP1",
                 swiftAtomics,
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
@@ -263,7 +286,7 @@ let package = Package(
                 swiftSystem,
             ],
             path: "Sources/NIOFS",
-            exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
+            exclude: includePrivacyManifest ? ["CMakeLists.txt"] : ["CMakeLists.txt", "PrivacyInfo.xcprivacy"],
             resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
             swiftSettings: swiftSettings + [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
@@ -276,6 +299,7 @@ let package = Package(
                 "NIOFoundationEssentialsCompat",
             ],
             path: "Sources/NIOFSFoundationCompat",
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
 
@@ -292,7 +316,7 @@ let package = Package(
                 swiftSystem,
             ],
             path: "Sources/_NIOFileSystem",
-            exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
+            exclude: includePrivacyManifest ? ["CMakeLists.txt"] : ["CMakeLists.txt", "PrivacyInfo.xcprivacy"],
             resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
             swiftSettings: swiftSettings + [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
@@ -305,11 +329,13 @@ let package = Package(
                 "NIOFoundationEssentialsCompat",
             ],
             path: "Sources/_NIOFileSystemFoundationCompat",
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
         .target(
             name: "NIOFileSystem",
             dependencies: ["_NIOFileSystem"],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: swiftSettings
         ),
 

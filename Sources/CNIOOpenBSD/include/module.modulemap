@@ -1,0 +1,4 @@
+module CNIOOpenBSD {
+  umbrella header "CNIOOpenBSD.h"
+  export *
+}
