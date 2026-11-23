@@ -781,6 +781,15 @@ extension SALContext {
                     return false
                 }
             }
+            #if canImport(Darwin)
+            // Listening sockets are not connected TCP streams. On Darwin,
+            // autoRead adds .read directly, without an earlier .readEOF registration.
+            try assertions.assertReregister { selectable, eventSet in
+                XCTAssertEqual([.reset, .error, .read], eventSet)
+                return true
+            }
+            #else
+            // Preserve the established registration sequence on non-Darwin.
             try assertions.assertReregister { selectable, eventSet in
                 XCTAssertEqual([.reset, .error, .readEOF], eventSet)
                 return true
@@ -790,6 +799,7 @@ extension SALContext {
                 XCTAssertEqual([.reset, .error, .readEOF, .read], eventSet)
                 return true
             }
+            #endif
         }
         return channel
     }
