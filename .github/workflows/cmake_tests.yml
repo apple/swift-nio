@@ -22,6 +22,14 @@ on:
         type: string
         description: "The docker image to run the checks in."
         default: "swift:6.0-jammy"
+      c_compiler:
+        type: string
+        description: "The C compiler to use for the CMake build, exported as `CC`. If empty, `CC` is left as it is."
+        default: ""
+      cxx_compiler:
+        type: string
+        description: "The C++ compiler to use for the CMake build, exported as `CXX`. If empty, `CXX` is left as it is."
+        default: ""
 
 jobs:
   cmake-checks:
@@ -48,6 +56,9 @@ jobs:
           INPUT_UPDATE_CMAKE_LISTS_CONFIG: ${{ inputs.update_cmake_lists_config }}
       - name: CMake build
         run: |
+          # Only override CC and CXX when a compiler was requested: they may be set by the image.
+          if [ -n "$INPUT_C_COMPILER" ]; then export CC="$INPUT_C_COMPILER"; fi
+          if [ -n "$INPUT_CXX_COMPILER" ]; then export CXX="$INPUT_CXX_COMPILER"; fi
           which curl cmake ninja || apt -q update
           which curl || apt -yq install curl
           which cmake || apt -yq install cmake
@@ -56,3 +67,5 @@ jobs:
         env:
           INPUT_CMAKE_BUILD_TARGET_DIRECTORY: ${{ inputs.cmake_build_target_directory }}
           INPUT_CMAKE_VERSION: ${{ inputs.cmake_version }}
+          INPUT_C_COMPILER: ${{ inputs.c_compiler }}
+          INPUT_CXX_COMPILER: ${{ inputs.cxx_compiler }}
