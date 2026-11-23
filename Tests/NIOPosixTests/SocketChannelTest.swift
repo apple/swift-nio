@@ -36,10 +36,16 @@ final class SocketChannelTest: XCTestCase {
     func testEarlyEOFEligibilityIncludesIPv4AndIPv6ButNotUnixOrMissingAddress() throws {
         // The macOS 27 OS gate is separate; the address-family gate must fail
         // closed when the local address is not yet available.
-        XCTAssertTrue(isEarlyEOFDeliveryWorkingForSocketAddress(try SocketAddress(ipAddress: "127.0.0.1", port: 0)))
-        XCTAssertTrue(isEarlyEOFDeliveryWorkingForSocketAddress(try SocketAddress(ipAddress: "::1", port: 0)))
-        XCTAssertFalse(isEarlyEOFDeliveryWorkingForSocketAddress(try SocketAddress(unixDomainSocketPath: "/tmp/nio-early-eof")))
-        XCTAssertFalse(isEarlyEOFDeliveryWorkingForSocketAddress(nil))
+        let ipv4 = try SocketAddress(ipAddress: "127.0.0.1", port: 0)
+        let ipv6 = try SocketAddress(ipAddress: "::1", port: 0)
+        let unix = try SocketAddress(unixDomainSocketPath: "/tmp/nio-early-eof")
+        XCTAssertTrue(isEarlyEOFDeliveryWorkingForSocketAddress(ipv4, isTCPStream: true))
+        XCTAssertTrue(isEarlyEOFDeliveryWorkingForSocketAddress(ipv6, isTCPStream: true))
+        XCTAssertFalse(isEarlyEOFDeliveryWorkingForSocketAddress(unix, isTCPStream: true))
+        XCTAssertFalse(isEarlyEOFDeliveryWorkingForSocketAddress(nil, isTCPStream: true))
+        // An IP address alone must not enable EOF for datagram or listener channels.
+        XCTAssertFalse(isEarlyEOFDeliveryWorkingForSocketAddress(ipv4, isTCPStream: false))
+        XCTAssertFalse(isEarlyEOFDeliveryWorkingForSocketAddress(ipv6, isTCPStream: false))
     }
 
     func testIPv6PeerEOFArrivesWithAutoReadDisabledOnMacOS27() throws {
