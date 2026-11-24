@@ -169,6 +169,29 @@ import Testing
         }
         expectCrashOutput(result, matches: #"Precondition failed: ByteBuffer capacity must be positive."#)
     }
+
+    @Test func slicingByteBufferViewPastItsEnd() async {
+        let result = await #expect(processExitsWith: .failure, observing: [\.standardErrorContent]) {
+            var buffer = ByteBufferAllocator().buffer(capacity: 64)
+            buffer.writeString("hello world")
+            let view = buffer.readableBytesView
+            // The bytes after the writer index are not part of the view.
+            _ = view[view.startIndex..<(view.endIndex + 1)]
+        }
+        expectCrashOutput(result, matches: #"Fatal error: range 0\.\.<12 out of range 0\.\.<11"#)
+    }
+
+    @Test func slicingByteBufferViewBeforeItsStart() async {
+        let result = await #expect(processExitsWith: .failure, observing: [\.standardErrorContent]) {
+            var buffer = ByteBufferAllocator().buffer(capacity: 64)
+            buffer.writeString("hello world")
+            buffer.moveReaderIndex(forwardBy: 6)
+            let view = buffer.readableBytesView
+            // The bytes before the reader index are not part of the view.
+            _ = view[0..<view.endIndex]
+        }
+        expectCrashOutput(result, matches: #"Fatal error: range 0\.\.<11 out of range 6\.\.<11"#)
+    }
 }
 
 /// Assert that a completed exit test crashed with a message on its standard
