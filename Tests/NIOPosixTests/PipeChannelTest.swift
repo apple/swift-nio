@@ -126,13 +126,51 @@ final class PipeChannelTest: XCTestCase {
             return channel!.writeAndFlush(buffer)
         }
         XCTAssertThrowsError(try writeFuture.wait()) { error in
-            if let error = error as? IOError {
-                XCTAssert([EPIPE, EBADF].contains(error.errnoCode), "unexpected errno: \(error)")
+            if let ioError = error as? IOError {
+                XCTAssertEqual(EPIPE, ioError.errnoCode, "unexpected errno: \(error)")
             } else {
-                XCTFail("unexpected error: \(error)")
+                // If the selector delivered `.writeEOF` first, our output fd is already
+                // closed when the write runs so it fails with `ioOnClosedChannel` instead.
+                XCTAssertEqual(
+                    ChannelError.ioOnClosedChannel,
+                    error as? ChannelError,
+                    "unexpected error: \(error)"
+                )
             }
         }
         XCTAssertNoThrow(try self.channel.closeFuture.wait())
+    }
+
+    func testWriteAfterWriteEOFFailsWithIoOnClosedChannel() throws {
+        // When the peer closes its read end the selector delivers `.writeEOF` and
+        // `PipeChannel.writeEOF()` closes our output fd. The channel itself stays
+        // open (the input side is still live), so a subsequent write is queued and
+        // only fails when it reaches the closed fd. That must surface as
+        // `ChannelError.ioOnClosedChannel`, not a synthesised `EBADF` `IOError`.
+        let writeFuture = self.channel.eventLoop.flatSubmit { [channel] in
+            (channel! as! PipeChannel).writeEOF()
+            var buffer = channel!.allocator.buffer(capacity: 1)
+            buffer.writeString("X")
+            return channel!.writeAndFlush(buffer)
+        }
+        XCTAssertThrowsError(try writeFuture.wait()) { error in
+            XCTAssertEqual(ChannelError.ioOnClosedChannel, error as? ChannelError)
+        }
+        // The failed write closed the channel.
+        XCTAssertNoThrow(try self.channel.closeFuture.wait())
+    }
+
+    func testOutputCloseAfterWriteEOFDoesNotThrowEBADF() throws {
+        // `PipeChannel.writeEOF()` closes the output fd directly; a later user-initiated
+        // `.output` close must succeed rather than failing with a synthesised `EBADF`.
+        let closeFuture = self.channel.eventLoop.flatSubmit { [channel] in
+            (channel! as! PipeChannel).writeEOF()
+            let promise = channel!.eventLoop.makePromise(of: Void.self)
+            channel!.close(mode: .output, promise: promise)
+            return promise.futureResult
+        }
+        XCTAssertNoThrow(try closeFuture.wait())
+        XCTAssertNoThrow(try self.channel.close().wait())
     }
 
     func testWeDontAcceptRegularFiles() throws {
