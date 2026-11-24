@@ -71,6 +71,29 @@ class TimeAmountDurationTests: XCTestCase {
         )
     }
 
+    func testTimeAmountFromNegativeDurationClampsToMin() throws {
+        guard #available(macOS 13, iOS 16, tvOS 16, watchOS 9, *) else {
+            throw XCTSkip("Required API is not available for this test.")
+        }
+        XCTAssertEqual(
+            TimeAmount(Duration.nanoseconds(Int64.min)),
+            .nanoseconds(Int64.min)
+        )
+        XCTAssertEqual(
+            TimeAmount(Duration.nanoseconds(Int64.min) - .nanoseconds(1)),
+            .nanoseconds(Int64.min)
+        )
+        XCTAssertEqual(
+            TimeAmount(Duration.seconds(-10_000_000_000)),
+            .nanoseconds(Int64.min)
+        )
+        // Same as the `TimeAmount` constructors, which also clamp to `Int64.min`.
+        XCTAssertEqual(
+            TimeAmount(Duration.seconds(-10_000_000_000)),
+            .seconds(-10_000_000_000)
+        )
+    }
+
     func testTimeAmountToDurationLosslessRountTrip() throws {
         guard #available(macOS 13, iOS 16, tvOS 16, watchOS 9, *) else {
             throw XCTSkip("Required API is not available for this test.")
