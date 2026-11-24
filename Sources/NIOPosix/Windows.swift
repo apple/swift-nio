@@ -57,7 +57,11 @@ extension NIOCore.Windows {
     ) throws -> IOResult<Int> {
         let result = WinSDK.recv(socket, pointer.assumingMemoryBound(to: CChar.self), size, flags)
         if result == WinSDK.SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "accept")
+            let error = WSAGetLastError()
+            if error == WSAEWOULDBLOCK {
+                return .wouldBlock(0)
+            }
+            throw IOError(winsock: error, reason: "recv")
         }
         return .processed(Int(result))
     }

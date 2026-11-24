@@ -32,6 +32,81 @@ extension Array {
 }
 
 final class SocketChannelTest: XCTestCase {
+    func testReadThatFillsTheBufferExactlyKeepsTheChannelOpen() throws {
+        // A read that fills the whole buffer makes the channel read again, which finds no data and must
+        // see would-block rather than an error.
+        final class ReadCountingHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            private let firstMessageRead: EventLoopPromise<Void>
+            private let allRead: EventLoopPromise<Void>
+            private var bytesRead = 0
+
+            init(firstMessageRead: EventLoopPromise<Void>, allRead: EventLoopPromise<Void>) {
+                self.firstMessageRead = firstMessageRead
+                self.allRead = allRead
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                self.bytesRead += Self.unwrapInboundIn(data).readableBytes
+                if self.bytesRead >= 8 {
+                    self.firstMessageRead.succeed()
+                }
+                if self.bytesRead >= 16 {
+                    self.allRead.succeed()
+                }
+            }
+
+            func errorCaught(context: ChannelHandlerContext, error: Error) {
+                self.firstMessageRead.fail(error)
+                self.allRead.fail(error)
+            }
+
+            func channelInactive(context: ChannelHandlerContext) {
+                self.firstMessageRead.fail(ChannelError.ioOnClosedChannel)
+                self.allRead.fail(ChannelError.ioOnClosedChannel)
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let firstMessageRead = group.next().makePromise(of: Void.self)
+        let allRead = group.next().makePromise(of: Void.self)
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+                .childChannelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8))
+                .childChannelInitializer { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try channel.pipeline.syncOperations.addHandler(
+                            ReadCountingHandler(firstMessageRead: firstMessageRead, allRead: allRead)
+                        )
+                    }
+                }
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
+        defer {
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }
+
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!).wait()
+        )
+        defer {
+            XCTAssertNoThrow(try clientChannel.close().wait())
+        }
+
+        var buffer = clientChannel.allocator.buffer(capacity: 8)
+        buffer.writeString("01234567")
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
+        XCTAssertNoThrow(try firstMessageRead.futureResult.wait())
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
+        XCTAssertNoThrow(try allRead.futureResult.wait())
+    }
+
     #if os(macOS)
     func testEarlyEOFEligibilityIncludesIPv4AndIPv6ButNotUnixOrMissingAddress() throws {
         // The macOS 27 OS gate is separate; the address-family gate must fail
