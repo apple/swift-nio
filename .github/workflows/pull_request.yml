@@ -45,6 +45,54 @@ jobs:
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/cxx_interop.yml@main
 
+  cmake-lists:
+    name: Check cmake lists
+    strategy:
+      fail-fast: false
+      matrix:
+        swift_version: ["6.2", "6.3", "6.4"]
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/cmake_tests.yml@main
+    with:
+      image: "swift:${{ matrix.swift_version }}-noble"
+      cmake_version: "3.29.6"
+      c_compiler: "clang"
+      cxx_compiler: "clang++"
+      update_cmake_lists_config: >-
+        {
+          "targets": [
+            { "name": "CNIOAtomics", "type": "source", "exceptions": [] },
+            { "name": "CNIOPosix", "type": "source", "exceptions": [] },
+            { "name": "CNIOLinux", "type": "source", "exceptions": [] },
+            { "name": "CNIOLLHTTP", "type": "source", "exceptions": [] },
+            { "name": "CNIODarwin", "type": "source", "exceptions": [] },
+            { "name": "CNIOSHA1", "type": "source", "exceptions": [] },
+            { "name": "CNIOOpenBSD", "type": "source", "exceptions": [] },
+            { "name": "CNIOFreeBSD", "type": "source", "exceptions": [] },
+            { "name": "CNIOWindows", "type": "source", "exceptions": [] },
+            { "name": "CNIOWASI", "type": "source", "exceptions": [] },
+            { "name": "NIOCore", "type": "source", "exceptions": [] },
+            { "name": "_NIODataStructures", "type": "source", "exceptions": [] },
+            { "name": "_NIOBase64", "type": "source", "exceptions": [] },
+            { "name": "NIOEmbedded", "type": "source", "exceptions": [] },
+            { "name": "NIOPosix", "type": "source", "exceptions": [] },
+            { "name": "NIO", "type": "source", "exceptions": [] },
+            { "name": "_NIOConcurrency", "type": "source", "exceptions": [] },
+            { "name": "NIOFoundationEssentialsCompat", "type": "source", "exceptions": [] },
+            { "name": "NIOFoundationCompat", "type": "source", "exceptions": [] },
+            { "name": "NIOConcurrencyHelpers", "type": "source", "exceptions": [] },
+            { "name": "NIOHTTP1", "type": "source", "exceptions": [] },
+            { "name": "NIOWebSocket", "type": "source", "exceptions": [] },
+            { "name": "NIOTLS", "type": "source", "exceptions": [] },
+            { "name": "NIOTestUtils", "type": "source", "exceptions": [] },
+            { "name": "NIOFS", "type": "source", "exceptions": [] },
+            { "name": "NIOFSFoundationCompat", "type": "source", "exceptions": [] },
+            { "name": "_NIOFileSystem", "type": "source", "exceptions": [] },
+            { "name": "_NIOFileSystemFoundationCompat", "type": "source", "exceptions": [] },
+            { "name": "NIOFileSystem", "type": "source", "exceptions": [] }
+          ]
+        }
+
   construct-integration-test-matrix:
     name: Construct integration test matrix
     runs-on: ubuntu-latest
