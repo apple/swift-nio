@@ -47,10 +47,14 @@ jobs:
 
   cmake-lists:
     name: Check cmake lists
+    strategy:
+      fail-fast: false
+      matrix:
+        swift_version: ["6.2", "6.3", "6.4"]
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/cmake_tests.yml@main
     with:
-      image: "swift:6.4-noble"
+      image: "swift:${{ matrix.swift_version }}-noble"
       cmake_version: "3.29.6"
       c_compiler: "clang"
       cxx_compiler: "clang++"
