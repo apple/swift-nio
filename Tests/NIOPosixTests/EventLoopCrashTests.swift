@@ -88,7 +88,7 @@ struct EventLoopCrashTests {
             }
             blockingFunctionsAllowedInCrashTest()
         }
-        expectCrashOutput(result, matches: "Precondition failed")
+        expectCrashOutput(result, matches: "Precondition failed: Unexpectedly on the EventLoop")
     }
 
     @Test
@@ -103,7 +103,7 @@ struct EventLoopCrashTests {
             }
             blockingFunctionsAllowedInCrashTest()
         }
-        expectCrashOutput(result, matches: "Precondition failed")
+        expectCrashOutput(result, matches: "Precondition failed: Unexpectedly on the EventLoop")
     }
 
     @Test
