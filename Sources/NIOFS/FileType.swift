@@ -169,3 +169,17 @@ extension FileType {
         }
     }
 }
+
+extension FileType {
+    /// Whether files of this type are streams which can't be seeked.
+    ///
+    /// Reads and writes of an unseekable file always happen at the file's current position, and
+    /// positional I/O such as `pread` and `pwrite` fails with `ESPIPE` or `ENXIO`. A read may also
+    /// return fewer bytes than were requested without having reached the end of the file.
+    ///
+    /// - Important: Character devices aren't included. Some can seek, for example raw disk devices
+    ///   on macOS, and treating them as unseekable would mean reading the same offset forever.
+    internal var isUnseekable: Bool {
+        self == .fifo || self == .socket
+    }
+}

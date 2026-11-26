@@ -258,4 +258,76 @@ final class BufferedWriterTests: XCTestCase {
             XCTAssertEqual(writer.bufferCapacity, 0)
         }
     }
+
+    // These tests use FIFOs and pipes, which are created with POSIX calls that are unavailable on Windows.
+    #if !os(Windows)
+    func testBufferedWriterOnFIFO() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        let received = try await withFIFOPeer(at: fifoPath, returning: ByteBuffer.self) { peer in
+            try peer.withOpenFIFO(.read) { fd in
+                try peer.readToEOF(fd)
+            }
+        } test: { peer in
+            try await FileSystem.shared.withFileHandle(
+                forWritingAt: NIOFilePath(fifoPath),
+                options: .modifyFile(createIfNecessary: false)
+            ) { handle in
+                // With a small capacity these writes cause several flushes, of which only the first is
+                // at offset zero.
+                var writer = handle.bufferedWriter(capacity: .bytes(4))
+                for piece in ["abc", "defgh", "ij", "klmnop", "q"] {
+                    try await writer.write(contentsOf: Array(piece.utf8))
+                }
+                try await writer.flush()
+            }
+        }
+        XCTAssertEqual(String(buffer: received), "abcdefghijklmnopq")
+    }
+
+    func testBufferedWriterOnPipe() async throws {
+        let received = try await withPipePeer(peerEnd: .read, returning: ByteBuffer.self) { peer, fd in
+            try peer.readToEOF(fd)
+        } test: { _, path in
+            try await FileSystem.shared.withFileHandle(
+                forWritingAt: NIOFilePath(path),
+                options: .modifyFile(createIfNecessary: false)
+            ) { handle in
+                // With a small capacity these writes cause several flushes, of which only the first is
+                // at offset zero.
+                var writer = handle.bufferedWriter(capacity: .bytes(4))
+                for piece in ["abc", "defgh", "ij", "klmnop", "q"] {
+                    try await writer.write(contentsOf: Array(piece.utf8))
+                }
+                try await writer.flush()
+            }
+        }
+        XCTAssertEqual(String(buffer: received), "abcdefghijklmnopq")
+    }
+
+    func testBufferedWriterOnFIFOWithNonZeroInitialOffsetThrows() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        let received = try await withFIFOPeer(at: fifoPath, returning: ByteBuffer.self) { peer in
+            try peer.withOpenFIFO(.read) { fd in
+                try peer.readToEOF(fd)
+            }
+        } test: { peer in
+            try await FileSystem.shared.withFileHandle(
+                forWritingAt: NIOFilePath(fifoPath),
+                options: .modifyFile(createIfNecessary: false)
+            ) { handle in
+                var writer = handle.bufferedWriter(startingAtAbsoluteOffset: 5)
+                try await writer.write(contentsOf: Array("hello".utf8))
+
+                await XCTAssertThrowsFileSystemErrorAsync {
+                    try await writer.flush()
+                } onError: { error in
+                    XCTAssertEqual(error.code, .unsupported)
+                }
+            }
+        }
+        XCTAssertEqual(received.readableBytes, 0)
+    }
+    #endif  // !os(Windows)
 }

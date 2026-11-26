@@ -1198,7 +1198,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
         forReadingAt path: NIOFilePath,
         options: OpenOptions.Read
     ) async throws -> SystemFileHandle {
-        let opts = options.descriptorOptions.union(.nonBlocking)
+        let opts = options.descriptorOptions
         let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
                 atPath: path.underlying,
@@ -1217,7 +1217,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
         options: OpenOptions.Write
     ) async throws -> SystemFileHandle {
         let perms = options.permissionsForRegularFile
-        let opts = options.descriptorOptions.union(.nonBlocking)
+        let opts = options.descriptorOptions
         let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
                 atPath: path.underlying,
@@ -1237,7 +1237,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
         options: OpenOptions.Write
     ) async throws -> SystemFileHandle {
         let perms = options.permissionsForRegularFile
-        let opts = options.descriptorOptions.union(.nonBlocking)
+        let opts = options.descriptorOptions
         let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
                 atPath: path.underlying,

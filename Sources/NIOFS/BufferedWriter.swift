@@ -34,11 +34,19 @@ import NIOCore
 ///
 /// - Important: You should you call ``BufferedWriter/flush()`` when you have finished appending
 ///   to write any remaining data to the file system.
+///
+/// - Important: Unseekable files, such as pipes, FIFOs and sockets, are written sequentially. The
+///   writer must start at offset zero for these files: writing to an unseekable file from any other
+///   starting offset throws an error with code ``FileSystemError/Code-swift.struct/unsupported``
+///   when the buffer is flushed. Character devices such as terminals aren't detected as unseekable:
+///   only writing them at offset zero is supported, which means a single flush.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
     private let handle: Handle
-    /// Offset for the next write.
-    private var offset: Int64
+
+    /// Tracks the offset for the next write.
+    private var cursor: FileCursor
+
     /// A buffer of bytes to write.
     private var buffer: [UInt8] = []
 
@@ -65,7 +73,7 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
         )
         precondition(capacity > 0, "capacity (\(capacity)) must be greater than zero")
         self.handle = writableHandle
-        self.offset = initialOffset
+        self.cursor = FileCursor(initialOffset: initialOffset)
         self.capacity = capacity
     }
 
@@ -191,8 +199,9 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
     public mutating func flush() async throws {
         if self.buffer.isEmpty { return }
 
-        try await self.handle.write(contentsOf: self.buffer, toAbsoluteOffset: self.offset)
-        self.offset += Int64(self.buffer.count)
+        let writeOffset = try await self.cursor.nextOffset(for: self.handle)
+        try await self.handle.write(contentsOf: self.buffer, toAbsoluteOffset: writeOffset)
+        self.cursor.advance(by: Int64(self.buffer.count))
 
         // The buffer may grow beyond the specified buffer size. Keep the capacity if it's less than
         // double the intended size, otherwise reclaim the memory.

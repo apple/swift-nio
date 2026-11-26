@@ -284,4 +284,241 @@ final class BufferedReaderTests: XCTestCase {
             XCTAssertEqual(words, expected)
         }
     }
+
+    // These tests use FIFOs and pipes, which are created with POSIX calls that are unavailable on Windows.
+    #if !os(Windows)
+    func testBufferedReaderOnFIFOWithSplitWrites() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.writeAll(fd, ByteBuffer(string: "hello "))
+                try peer.waitForRelease()
+                try peer.writeAll(fd, ByteBuffer(string: "world\n"))
+            }
+        } test: { peer in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(fifoPath)) { handle in
+                var reader = handle.bufferedReader()
+
+                // The peer has only written part of what it will write. A read which is shorter than
+                // we asked for isn't the end of the file.
+                let first = try await reader.read(.bytes(3))
+                XCTAssertEqual(String(buffer: first), "hel")
+
+                peer.release()
+
+                let (bytes, readEOF) = try await reader.read(while: { $0 != UInt8(ascii: "\n") })
+                XCTAssertEqual(String(buffer: bytes), "lo world")
+                XCTAssertFalse(readEOF)
+
+                // The newline remains, and the peer then closes its end.
+                let newline = try await reader.read(.bytes(64))
+                XCTAssertEqual(String(buffer: newline), "\n")
+
+                let (rest, restReadEOF) = try await reader.read(while: { _ in true })
+                XCTAssertEqual(rest.readableBytes, 0)
+                XCTAssertTrue(restReadEOF)
+            }
+        }
+    }
+
+    func testBufferedReaderOnPipeWithSplitWrites() async throws {
+        try await withPipePeer(peerEnd: .write) { peer, fd in
+            try peer.writeAll(fd, ByteBuffer(string: "hello "))
+            try peer.waitForRelease()
+            try peer.writeAll(fd, ByteBuffer(string: "world\n"))
+        } test: { peer, path in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(path)) { handle in
+                // The reader relies on a pipe being reported as a FIFO to know that it can't seek.
+                let info = try await handle.info()
+                XCTAssertEqual(info.type, .fifo)
+
+                var reader = handle.bufferedReader()
+
+                // The peer has only written part of what it will write. A read which is shorter than
+                // we asked for isn't the end of the file.
+                let first = try await reader.read(.bytes(3))
+                XCTAssertEqual(String(buffer: first), "hel")
+
+                peer.release()
+
+                let (bytes, readEOF) = try await reader.read(while: { $0 != UInt8(ascii: "\n") })
+                XCTAssertEqual(String(buffer: bytes), "lo world")
+                XCTAssertFalse(readEOF)
+
+                // The newline remains, and the peer then closes its end.
+                let (rest, restReadEOF) = try await reader.read(while: { _ in true })
+                XCTAssertEqual(String(buffer: rest), "\n")
+                XCTAssertTrue(restReadEOF)
+            }
+        }
+    }
+
+    func testBufferedReaderDropOnFIFOConsumesBytes() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.writeAll(fd, ByteBuffer(string: "0123456789ABCDEF"))
+            }
+        } test: { peer in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(fifoPath)) { handle in
+                var reader = handle.bufferedReader(capacity: .bytes(4))
+
+                let head = try await reader.read(.bytes(2))
+                XCTAssertEqual(String(buffer: head), "01")
+
+                // This is more than the reader has buffered so some of the bytes to drop must be read
+                // from the FIFO and thrown away: there's no way to skip ahead by changing the offset.
+                try await reader.drop(10)
+
+                let tail = try await reader.read(.bytes(2))
+                XCTAssertEqual(String(buffer: tail), "CD")
+            }
+        }
+    }
+
+    func testBufferedReaderOnFIFOWithNonZeroInitialOffsetThrows() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.waitForRelease()
+            }
+        } test: { peer in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(fifoPath)) { handle in
+                var reader = handle.bufferedReader(startingAtAbsoluteOffset: 5)
+
+                await XCTAssertThrowsFileSystemErrorAsync {
+                    try await reader.read(.bytes(1))
+                } onError: { error in
+                    XCTAssertEqual(error.code, .unsupported)
+                }
+
+                peer.release()
+            }
+        }
+    }
+
+    func testBufferedReaderDropOnFIFOWithNonZeroInitialOffsetThrows() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.waitForRelease()
+            }
+        } test: { peer in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(fifoPath)) { handle in
+                var reader = handle.bufferedReader(startingAtAbsoluteOffset: 5)
+
+                // Dropping before anything has been read can't skip ahead in an unseekable file.
+                await XCTAssertThrowsFileSystemErrorAsync {
+                    try await reader.drop(10)
+                } onError: { error in
+                    XCTAssertEqual(error.code, .unsupported)
+                }
+
+                peer.release()
+            }
+        }
+    }
+
+    func testBufferedReaderReadReturnsWhatIsAvailableOnFIFO() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        // The peer writes less than will be asked for, then stays connected without writing anything else:
+        // a further read of the FIFO blocks until the peer is released.
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.writeAll(fd, ByteBuffer(string: "abc"))
+                try peer.waitForRelease(timeout: .seconds(10))
+            }
+        } test: { peer in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(fifoPath)) { handle in
+                var reader = handle.bufferedReader()
+
+                // The reader returns the bytes which are available. A short result doesn't mean the end of
+                // the file, so it mustn't wait for the 61 other bytes.
+                let start = NIODeadline.now()
+                let bytes = try await reader.read(.bytes(64))
+                let elapsed = NIODeadline.now() - start
+                XCTAssertEqual(String(buffer: bytes), "abc")
+                XCTAssertLessThan(elapsed, .seconds(2), "Reading took \(elapsed)")
+
+                peer.release()
+            }
+        }
+    }
+
+    func testBufferedReaderDropPastEndOfFileOnFIFO() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.writeAll(fd, ByteBuffer(string: "hello"))
+            }
+        } test: { peer in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(fifoPath)) { handle in
+                var reader = handle.bufferedReader()
+
+                // There are fewer bytes than are being dropped: dropping stops at the end of the file.
+                try await reader.drop(100)
+
+                let (bytes, readEOF) = try await reader.read(while: { _ in true })
+                XCTAssertEqual(bytes.readableBytes, 0)
+                XCTAssertTrue(readEOF)
+            }
+        }
+    }
+
+    func testBufferedReaderDropWhileAcrossSplitWritesOnFIFO() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.writeAll(fd, ByteBuffer(string: "aaa"))
+                try peer.waitForRelease()
+                try peer.writeAll(fd, ByteBuffer(string: "aab"))
+            }
+        } test: { peer in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(fifoPath)) { handle in
+                var reader = handle.bufferedReader()
+
+                let first = try await reader.read(.bytes(1))
+                XCTAssertEqual(String(buffer: first), "a")
+
+                peer.release()
+
+                // The predicate holds for everything which has been written so far, and for the start of
+                // what the peer writes next.
+                try await reader.drop(while: { $0 == UInt8(ascii: "a") })
+
+                let rest = try await reader.read(.bytes(64))
+                XCTAssertEqual(String(buffer: rest), "b")
+            }
+        }
+    }
+    #endif  // !os(Windows)
+
+    #if os(Linux)
+    func testBufferedReaderReadsLinesOfProcFile() async throws {
+        // Procfs files return no more than about a page for each read. A short read isn't the end of the file,
+        // and the file is much larger than a page: a test process has far more memory mappings than fit in one.
+        try await FileSystem.shared.withFileHandle(forReadingAt: "/proc/self/maps") { handle in
+            var reader = handle.bufferedReader()
+            var byteCount = 0
+            while true {
+                let (line, readEOF) = try await reader.read(while: { $0 != UInt8(ascii: "\n") })
+                if readEOF {
+                    // The file ends with a newline, so nothing follows the last one.
+                    XCTAssertEqual(line.readableBytes, 0, "The last line is incomplete")
+                    break
+                }
+                byteCount += line.readableBytes + 1
+                try await reader.drop(1)
+            }
+            XCTAssertGreaterThan(byteCount, 4096)
+        }
+    }
+    #endif  // os(Linux)
 }

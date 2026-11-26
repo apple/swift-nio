@@ -322,10 +322,16 @@ final class FileHandleTests: XCTestCase {
             return
         }
 
-        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readWrite) {
+        // Only reading no bytes at all is end-of-file, so for 'readToEnd' to return the FIFO must have no
+        // writers left once the bytes have been read. A handle opened for reading and writing is itself a
+        // writer, so read from a read-only handle and write with a separate descriptor which is closed.
+        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readOnly, options: .nonBlocking) {
             handle in
             let someBytes = ByteBuffer(repeating: 42, count: 1546)
-            try await handle.write(contentsOf: someBytes.readableBytesView, toAbsoluteOffset: 0)
+            let writer = try FileDescriptor.open(fifoPath, .writeOnly)
+            _ = try writer.closeAfter {
+                try writer.writeAll(someBytes.readableBytesView)
+            }
 
             let readSomeBytes = try await handle.readToEnd(maximumSizeAllowed: .bytes(1546))
             XCTAssertEqual(readSomeBytes, someBytes)
@@ -344,10 +350,16 @@ final class FileHandleTests: XCTestCase {
             return
         }
 
-        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readWrite) {
+        // Reading continues until there are no bytes left and no writers, so don't hold the FIFO open for
+        // writing in the handle being read: read from a read-only handle and write with a separate
+        // descriptor which is closed.
+        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readOnly, options: .nonBlocking) {
             handle in
             let someBytes = [UInt8](repeating: 42, count: 10)
-            try await handle.write(contentsOf: someBytes, toAbsoluteOffset: 0)
+            let writer = try FileDescriptor.open(fifoPath, .writeOnly)
+            _ = try writer.closeAfter {
+                try writer.writeAll(someBytes)
+            }
 
             await XCTAssertThrowsFileSystemErrorAsync {
                 try await handle.readToEnd(maximumSizeAllowed: .bytes(9))
@@ -392,6 +404,564 @@ final class FileHandleTests: XCTestCase {
             }
         }
     }
+    #endif  // !os(Windows)
+
+    // MARK: - Pipes, FIFOs and repeated chunked reads
+
+    #if !os(Windows)
+    func testReadChunksOnFIFOWithSplitWrites() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.writeAll(fd, ByteBuffer(string: "hello "))
+                try peer.waitForRelease()
+                try peer.writeAll(fd, ByteBuffer(string: "world\n"))
+            }
+        } test: { peer in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(fifoPath)) { handle in
+                var iterator = handle.readChunks().makeAsyncIterator()
+
+                // The peer has only written part of what it will write. A chunk which is shorter than
+                // we asked for isn't the end of the file.
+                let first = try await iterator.next()
+                XCTAssertEqual(first.map { String(buffer: $0) }, "hello ")
+
+                peer.release()
+
+                var rest = ByteBuffer()
+                while let chunk = try await iterator.next() {
+                    XCTAssertGreaterThan(chunk.readableBytes, 0, "Chunks must not be empty")
+                    rest.writeImmutableBuffer(chunk)
+                }
+                XCTAssertEqual(String(buffer: rest), "world\n")
+
+                // The sequence is finished.
+                let end = try await iterator.next()
+                XCTAssertNil(end)
+            }
+        }
+    }
+
+    func testReadChunksOnPipeWithSplitWrites() async throws {
+        try await withPipePeer(peerEnd: .write) { peer, fd in
+            try peer.writeAll(fd, ByteBuffer(string: "hello "))
+            try peer.waitForRelease()
+            try peer.writeAll(fd, ByteBuffer(string: "world\n"))
+        } test: { peer, path in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(path)) { handle in
+                var iterator = handle.readChunks().makeAsyncIterator()
+
+                // The peer has only written part of what it will write. A chunk which is shorter than
+                // we asked for isn't the end of the file.
+                let first = try await iterator.next()
+                XCTAssertEqual(first.map { String(buffer: $0) }, "hello ")
+
+                peer.release()
+
+                var rest = ByteBuffer()
+                while let chunk = try await iterator.next() {
+                    XCTAssertGreaterThan(chunk.readableBytes, 0, "Chunks must not be empty")
+                    rest.writeImmutableBuffer(chunk)
+                }
+                XCTAssertEqual(String(buffer: rest), "world\n")
+            }
+        }
+    }
+
+    #if canImport(Darwin)
+    func testReadChunksWithRangeOnTerminal() async throws {
+        // Reading a terminal at an offset fails with ENXIO on Darwin, rather than the ESPIPE which pipes and
+        // FIFOs give (and terminals give on Linux). Like a pipe, a terminal can still be read from the start.
+        try await withPseudoTerminal { terminal in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(terminal.path)) { handle in
+                // A terminal is a character device, so it's only found to be unseekable when it's read.
+                let info = try await handle.info()
+                XCTAssertEqual(info.type, .character)
+
+                try terminal.write(ByteBuffer(string: "hello\n"))
+
+                // A terminal doesn't end until it's closed, so only read as much as was written.
+                var bytes = ByteBuffer()
+                for try await chunk in handle.readChunks(in: 0..<6) {
+                    bytes.writeImmutableBuffer(chunk)
+                }
+                XCTAssertEqual(String(buffer: bytes), "hello\n")
+            }
+        }
+    }
+
+    func testReadingTerminalAtNonZeroOffsetThrows() async throws {
+        // Like a FIFO, a terminal can only be read from offset zero. Reading it at another offset fails with
+        // ENXIO on Darwin, rather than the ESPIPE which FIFOs give.
+        try await withPseudoTerminal { terminal in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(terminal.path)) { handle in
+                // There's something to read, so an implementation which read the terminal regardless of the
+                // offset wouldn't block.
+                try terminal.write(ByteBuffer(string: "hello\n"))
+
+                await XCTAssertThrowsFileSystemErrorAsync {
+                    try await handle.readChunk(fromAbsoluteOffset: 5, length: .bytes(6))
+                } onError: { error in
+                    XCTAssertEqual(error.code, .unsupported)
+                    XCTAssertEqual(error.message, "File is unseekable.")
+                }
+
+                await XCTAssertThrowsFileSystemErrorAsync {
+                    for try await _ in handle.readChunks(in: 5..<10) {}
+                } onError: { error in
+                    XCTAssertEqual(error.code, .unsupported)
+                }
+            }
+        }
+    }
+    #endif
+
+    func testReadChunksWithRangeOnFIFO() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.writeAll(fd, ByteBuffer(string: "hello world\n"))
+            }
+        } test: { peer in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(fifoPath)) { handle in
+                // A FIFO can't seek, but a range which starts at zero is fine: it limits the number of
+                // bytes which are read.
+                var bytes = ByteBuffer()
+                for try await chunk in handle.readChunks(in: 0..<8, chunkLength: .bytes(5)) {
+                    XCTAssertLessThanOrEqual(chunk.readableBytes, 5)
+                    bytes.writeImmutableBuffer(chunk)
+                }
+                XCTAssertEqual(String(buffer: bytes), "hello wo")
+            }
+        }
+    }
+
+    func testReadChunksWithRangeNotStartingAtZeroOnFIFOThrows() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.writeAll(fd, ByteBuffer(string: "hello world"))
+            }
+        } test: { _ in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(fifoPath)) { handle in
+                // A FIFO can only be read from the start, so a range which doesn't start at zero can't be read.
+                // There's something to read, so an implementation which read the FIFO regardless of the range
+                // wouldn't block.
+                await XCTAssertThrowsFileSystemErrorAsync {
+                    for try await _ in handle.readChunks(in: 5..<10) {}
+                } onError: { error in
+                    XCTAssertEqual(error.code, .unsupported)
+                }
+            }
+        }
+    }
+
+    func testReadChunkAtNonZeroOffsetOnFIFOThrows() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.writeAll(fd, ByteBuffer(string: "hello world"))
+            }
+        } test: { _ in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(fifoPath)) { handle in
+                let first = try await handle.readChunk(fromAbsoluteOffset: 0, length: .bytes(5))
+                XCTAssertEqual(String(buffer: first), "hello")
+
+                // A FIFO can't seek, so it can only be read from offset zero. Any other offset throws, even
+                // the one which follows on from the last read. There's more to read, so an implementation which
+                // read the FIFO regardless of the offset wouldn't block.
+                for offset: Int64 in [5, 100] {
+                    await XCTAssertThrowsFileSystemErrorAsync {
+                        try await handle.readChunk(fromAbsoluteOffset: offset, length: .bytes(6))
+                    } onError: { error in
+                        XCTAssertEqual(error.code, .unsupported)
+                        XCTAssertEqual(error.message, "File is unseekable.")
+                    }
+                }
+
+                // Reading from offset zero again reads the next bytes, not the start of the FIFO.
+                let next = try await handle.readChunk(fromAbsoluteOffset: 0, length: .bytes(6))
+                XCTAssertEqual(String(buffer: next), " world")
+            }
+        }
+    }
+
+    func testReadToEndOnFIFOWithSplitWrites() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.writeAll(fd, ByteBuffer(string: "hello "))
+                try peer.waitForRelease()
+                try peer.writeAll(fd, ByteBuffer(string: "world\n"))
+            }
+        } test: { peer in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(fifoPath)) { handle in
+                async let contents = handle.readToEnd(maximumSizeAllowed: .mebibytes(1))
+
+                // 'readToEnd' can't be signalled part way through, so the peer's second write has to be
+                // released after a delay instead. This test may pass spuriously for an implementation
+                // which stops at the first short read if the delay is shorter than the time it takes
+                // to start reading, but that's unlikely with this much time.
+                try await Task.sleep(nanoseconds: 250_000_000)
+                peer.release()
+
+                let result = try await contents
+                XCTAssertEqual(String(buffer: result), "hello world\n")
+            }
+        }
+    }
+
+    func testReadToEndOnFIFOThatExceedsMaximumSizeDoesNotLeaveAReadInFlight() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        // The peer writes more than is allowed, then stays connected without writing anything else: any
+        // further read of the FIFO blocks until the peer is released.
+        try await withFIFOPeer(at: fifoPath) { peer in
+            try peer.withOpenFIFO(.write) { fd in
+                try peer.writeAll(fd, ByteBuffer(string: "0123456789"))
+                try peer.waitForRelease(timeout: .seconds(10))
+            }
+        } test: { peer in
+            let handle = try await FileSystem.shared.openFile(forReadingAt: NIOFilePath(fifoPath))
+
+            await XCTAssertThrowsFileSystemErrorAsync {
+                try await handle.readToEnd(maximumSizeAllowed: .bytes(5))
+            } onError: { error in
+                XCTAssertEqual(error.code, .resourceExhausted)
+            }
+
+            // On some platforms closing a file waits for reads which are in progress to finish. Reading the
+            // FIFO further than necessary to find that it has too many bytes would leave a read in progress
+            // which doesn't finish until the peer writes or disconnects.
+            let start = NIODeadline.now()
+            try await handle.close()
+            let elapsed = NIODeadline.now() - start
+            XCTAssertLessThan(elapsed, .seconds(2), "Closing the handle took \(elapsed)")
+
+            peer.release()
+        }
+    }
+
+    func testReadToEndOnPipeWithSplitWrites() async throws {
+        try await withPipePeer(peerEnd: .write) { peer, fd in
+            try peer.writeAll(fd, ByteBuffer(string: "hello "))
+            try peer.waitForRelease()
+            try peer.writeAll(fd, ByteBuffer(string: "world\n"))
+        } test: { peer, path in
+            try await FileSystem.shared.withFileHandle(forReadingAt: NIOFilePath(path)) { handle in
+                async let contents = handle.readToEnd(maximumSizeAllowed: .mebibytes(1))
+
+                // As for a FIFO, the peer's second write is released after a delay, which is long enough
+                // for reading to have started.
+                try await Task.sleep(nanoseconds: 250_000_000)
+                peer.release()
+
+                let result = try await contents
+                XCTAssertEqual(String(buffer: result), "hello world\n")
+            }
+        }
+    }
+
+    func testDirectoryHandleReadFIFOWaitsForDataFromConnectedWriter() async throws {
+        try await FileSystem.shared.withTemporaryDirectory { directory, directoryPath in
+            let fifoPath = FilePath(directoryPath).appending("fifo")
+            try makeFIFO(at: fifoPath)
+
+            try await withFIFOPeer(at: fifoPath) { peer in
+                try peer.withOpenFIFO(.write) { fd in
+                    peer.reachMilestone()
+                    try peer.waitForRelease()
+                    try peer.writeAll(fd, ByteBuffer(string: "hello"))
+                }
+            } test: { peer in
+                let handle = try await directory.openFile(forReadingAt: "fifo", options: OpenOptions.Read())
+
+                let bytes: ByteBuffer
+                do {
+                    // Make sure that the writer is connected before reading. Whether or not opening the
+                    // file waits for it, there is now a writer and it hasn't written anything.
+                    try await peer.waitForMilestone()
+
+                    // Reading must wait for the writer, it mustn't fail because there's nothing to read yet.
+                    // The peer is released after a delay as the read is blocked until then: an implementation
+                    // which fails the read does so immediately, well within the delay.
+                    async let chunk = handle.readChunk(fromAbsoluteOffset: 0, length: .bytes(64))
+                    try await Task.sleep(nanoseconds: 100_000_000)
+                    peer.release()
+                    bytes = try await chunk
+                } catch {
+                    try? await handle.close()
+                    throw error
+                }
+                try await handle.close()
+
+                XCTAssertEqual(String(buffer: bytes), "hello")
+            }
+        }
+    }
+
+    func testDirectoryHandleReadFIFOBeforeWriterConnects() async throws {
+        try await FileSystem.shared.withTemporaryDirectory { directory, directoryPath in
+            let fifoPath = FilePath(directoryPath).appending("fifo")
+            try makeFIFO(at: fifoPath)
+
+            try await withFIFOPeer(at: fifoPath) { peer in
+                try peer.waitForRelease()
+                try peer.withOpenFIFO(.write) { fd in
+                    try peer.writeAll(fd, ByteBuffer(string: "hello"))
+                }
+            } test: { peer in
+                // Let the writer connect once the test is opening the read end. The test may not have started
+                // to open it by the time the writer connects, so this can't show that opening waits for the
+                // writer: 'testDirectoryHandleOpensFilesInBlockingMode' checks that instead.
+                peer.release()
+                let handle = try await directory.openFile(forReadingAt: "fifo", options: OpenOptions.Read())
+
+                let bytes: ByteBuffer
+                do {
+                    // The writer may not have written anything yet: that's not the same as the end of the file.
+                    bytes = try await handle.readChunk(fromAbsoluteOffset: 0, length: .bytes(64))
+                } catch {
+                    try? await handle.close()
+                    throw error
+                }
+                try await handle.close()
+
+                XCTAssertEqual(String(buffer: bytes), "hello")
+            }
+        }
+    }
+
+    func testDirectoryHandleOpenFIFOForWritingWaitsForReader() async throws {
+        try await FileSystem.shared.withTemporaryDirectory { directory, directoryPath in
+            let fifoPath = FilePath(directoryPath).appending("fifo")
+            try makeFIFO(at: fifoPath)
+
+            let received = try await withFIFOPeer(at: fifoPath, returning: ByteBuffer.self) { peer in
+                try peer.waitForRelease()
+                return try peer.withOpenFIFO(.read) { fd in
+                    try peer.readToEOF(fd)
+                }
+            } test: { peer in
+                // Let the reader connect once the test is opening the write end. Opening must wait for the
+                // reader rather than fail. The test may not have started to open it by the time the reader
+                // connects, so this can't show that: 'testDirectoryHandleOpensFilesInBlockingMode' checks
+                // that instead.
+                peer.release()
+                let handle = try await directory.openFile(
+                    forWritingAt: "fifo",
+                    options: .modifyFile(createIfNecessary: false)
+                )
+
+                do {
+                    try await handle.write(contentsOf: Array("hello".utf8), toAbsoluteOffset: 0)
+                } catch {
+                    try? await handle.close()
+                    throw error
+                }
+                try await handle.close()
+            }
+            XCTAssertEqual(String(buffer: received), "hello")
+        }
+    }
+
+    func testDirectoryHandleWriteToFullFIFOWaitsForReader() async throws {
+        try await FileSystem.shared.withTemporaryDirectory { directory, directoryPath in
+            let fifoPath = FilePath(directoryPath).appending("fifo")
+            try makeFIFO(at: fifoPath)
+
+            // This is much larger than the capacity of a pipe.
+            let payload = ByteBuffer(bytes: (0..<(1024 * 1024)).map { UInt8(truncatingIfNeeded: $0 &* 7) })
+
+            let received = try await withFIFOPeer(at: fifoPath, returning: ByteBuffer.self) { peer in
+                try peer.withOpenFIFO(.read) { fd in
+                    // Leave the FIFO to fill up before draining it.
+                    try peer.waitForFIFOToFill()
+                    return try peer.readToEOF(fd)
+                }
+            } test: { peer in
+                let handle = try await directory.openFile(
+                    forWritingAt: "fifo",
+                    options: .modifyFile(createIfNecessary: false)
+                )
+
+                do {
+                    // Writing must wait for space in the pipe rather than fail when it's full.
+                    let written = try await handle.write(contentsOf: payload, toAbsoluteOffset: 0)
+                    XCTAssertEqual(written, Int64(payload.readableBytes))
+                } catch {
+                    try? await handle.close()
+                    throw error
+                }
+                try await handle.close()
+            }
+            XCTAssertEqual(received.readableBytes, payload.readableBytes)
+            XCTAssertTrue(received == payload, "The bytes received weren't the bytes written")
+        }
+    }
+
+    func testDirectoryHandleOpensFilesInBlockingMode() async throws {
+        // Opening, reading and writing a FIFO must wait for the other end. In non-blocking mode they would
+        // instead fail, or report the end of the file early. Whether a test of a FIFO catches that depends
+        // on whether the test or its peer acts first, which a test can't control, so check the mode itself.
+        func isNonBlocking(_ handle: some FileHandleProtocol) async throws -> Bool {
+            try await handle.withUnsafeDescriptor { descriptor in
+                fcntl(descriptor.rawValue, F_GETFL) & O_NONBLOCK != 0
+            }
+        }
+
+        try await FileSystem.shared.withTemporaryDirectory { directory, _ in
+            try await directory.withFileHandle(
+                forReadingAndWritingAt: "file",
+                options: .modifyFile(createIfNecessary: true)
+            ) { handle in
+                let nonBlocking = try await isNonBlocking(handle)
+                XCTAssertFalse(nonBlocking, "Opened for reading and writing in non-blocking mode")
+            }
+
+            try await directory.withFileHandle(
+                forWritingAt: "file",
+                options: .modifyFile(createIfNecessary: false)
+            ) { handle in
+                let nonBlocking = try await isNonBlocking(handle)
+                XCTAssertFalse(nonBlocking, "Opened for writing in non-blocking mode")
+            }
+
+            try await directory.withFileHandle(forReadingAt: "file") { handle in
+                let nonBlocking = try await isNonBlocking(handle)
+                XCTAssertFalse(nonBlocking, "Opened for reading in non-blocking mode")
+            }
+        }
+    }
+
+    // These check the test support rather than NIOFS. If the peer of a FIFO or pipe raised SIGPIPE when it
+    // wrote without a reader, a test which failed part way through would terminate the whole test process.
+    func testFIFOPeerWritingWithoutAReaderDoesNotRaiseSIGPIPE() async throws {
+        let fifoPath = try await self.makeTemporaryFIFO()
+
+        do {
+            try await withFIFOPeer(at: fifoPath) { peer in
+                try peer.withOpenFIFO(.write) { fd in
+                    try peer.waitForRelease()
+                    try peer.writeAll(fd, ByteBuffer(string: "nobody is listening"))
+                }
+            } test: { peer in
+                // Connect to the peer, then disconnect before it writes.
+                let handle = try await FileSystem.shared.openFile(forReadingAt: NIOFilePath(fifoPath))
+                try await handle.close()
+                peer.release()
+            }
+            XCTFail("The peer's write should have failed")
+        } catch let error as Errno {
+            XCTAssertEqual(error, .brokenPipe)
+        }
+    }
+
+    func testPipePeerWritingWithoutAReaderDoesNotRaiseSIGPIPE() async throws {
+        do {
+            try await withPipePeer(peerEnd: .write) { peer, fd in
+                // The pipe has no reader once the test has finished.
+                try peer.waitForTestToFinish()
+                try peer.writeAll(fd, ByteBuffer(string: "nobody is listening"))
+            } test: { _, path in
+                let handle = try await FileSystem.shared.openFile(forReadingAt: NIOFilePath(path))
+                try await handle.close()
+            }
+            XCTFail("The peer's write should have failed")
+        } catch let error as Errno {
+            XCTAssertEqual(error, .brokenPipe)
+        }
+    }
+
+    func testReadChunksTwiceOnRegularFile() async throws {
+        let fs = FileSystem.shared
+        let path = try await fs.temporaryFilePath()
+        self.addTeardownBlock {
+            try await fs.removeItem(at: path)
+        }
+
+        let contents = (0..<(4 * 1024 + 123)).map { UInt8(truncatingIfNeeded: $0) }
+        try await fs.withFileHandle(
+            forWritingAt: path,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            _ = try await handle.write(contentsOf: contents, toAbsoluteOffset: 0)
+        }
+
+        try await fs.withFileHandle(forReadingAt: path) { handle in
+            for iteration in 1...2 {
+                var bytes = ByteBuffer()
+                for try await chunk in handle.readChunks(chunkLength: .bytes(512)) {
+                    XCTAssertLessThanOrEqual(chunk.readableBytes, 512)
+                    bytes.writeImmutableBuffer(chunk)
+                }
+
+                XCTAssertEqual(bytes.readableBytes, contents.count, "Wrong number of bytes in iteration \(iteration)")
+                XCTAssertTrue(
+                    Array(bytes.readableBytesView) == contents,
+                    "The bytes read in iteration \(iteration) weren't the bytes written"
+                )
+            }
+        }
+    }
+
+    func testReadChunksReadsFromTheStartRegardlessOfDescriptorPosition() async throws {
+        let fs = FileSystem.shared
+        let path = try await fs.temporaryFilePath()
+        self.addTeardownBlock {
+            try await fs.removeItem(at: path)
+        }
+
+        let contents = (0..<(4 * 1024 + 123)).map { UInt8(truncatingIfNeeded: $0) }
+        try await fs.withFileHandle(
+            forWritingAt: path,
+            options: .newFile(replaceExisting: false)
+        ) { handle in
+            _ = try await handle.write(contentsOf: contents, toAbsoluteOffset: 0)
+        }
+
+        try await fs.withFileHandle(forReadingAt: path) { handle in
+            // Move the file position, which is shared by everything using the descriptor.
+            _ = try await handle.withUnsafeDescriptor { descriptor in
+                try descriptor.seek(offset: 1000, from: .start)
+            }
+
+            var bytes = ByteBuffer()
+            for try await chunk in handle.readChunks(chunkLength: .bytes(512)) {
+                bytes.writeImmutableBuffer(chunk)
+            }
+
+            XCTAssertEqual(bytes.readableBytes, contents.count)
+            XCTAssertTrue(
+                Array(bytes.readableBytesView) == contents,
+                "The bytes read weren't the bytes written"
+            )
+        }
+    }
+
+    #if os(Linux)
+    func testReadToEndOfProcFile() async throws {
+        // Procfs files report a size of zero and return no more than about a page for each read. A short read
+        // isn't the end of the file, and the file is much larger than a page: a test process has far more
+        // memory mappings than fit in one.
+        let path: NIOFilePath = "/proc/self/maps"
+
+        let contents = try await FileSystem.shared.withFileHandle(forReadingAt: path) { handle in
+            try await handle.readToEnd(maximumSizeAllowed: .mebibytes(16))
+        }
+        XCTAssertGreaterThan(contents.readableBytes, 4096)
+        XCTAssertEqual(contents.readableBytesView.last, UInt8(ascii: "\n"))
+
+        let string = try await String(contentsOf: path, maximumSizeAllowed: .mebibytes(16))
+        XCTAssertGreaterThan(string.utf8.count, 4096)
+        XCTAssertTrue(string.hasSuffix("\n"))
+    }
+    #endif  // os(Linux)
     #endif  // !os(Windows)
 
     func testReadWholeFileWithOffsets() async throws {
