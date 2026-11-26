@@ -247,8 +247,8 @@ extension NIOThrowingAsyncSequenceProducer {
             }
 
             @inlinable
-            internal func next() async throws -> Element? {
-                try await self._storage.next()
+            internal func next(isolation actor: isolated (any Actor)? = #isolation) async throws -> Element? {
+                try await self._storage.next(isolation: actor)
             }
         }
 
@@ -263,6 +263,16 @@ extension NIOThrowingAsyncSequenceProducer {
         @inlinable
         public func next() async throws -> Element? {
             try await self._internalClass.next()
+        }
+
+        /// Retrieve the next element from the ``NIOThrowingAsyncSequenceProducer``.
+        ///
+        /// The same as `next()` but isolated to an actor, which avoids hopping off the actor when an element is
+        /// already available.
+        @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+        @inlinable
+        public func next(isolation actor: isolated (any Actor)? = #isolation) async throws -> Element? {
+            try await self._internalClass.next(isolation: actor)
         }
     }
 }
@@ -564,8 +574,11 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         @inlinable
-        internal func next() async throws -> Element? {
+        internal func next(isolation actor: isolated (any Actor)?) async throws -> Element? {
             try await withTaskCancellationHandler { () async throws -> Element? in
+                // Swift 6.3 and earlier only keep this closure on the actor if it captures `actor`.
+                _ = actor
+
                 let (action, delegate) = self._state.withLockedValue { state -> (StateMachine.NextAction, Delegate?) in
                     let action = state.stateMachine.next(continuation: nil)
                     switch action {

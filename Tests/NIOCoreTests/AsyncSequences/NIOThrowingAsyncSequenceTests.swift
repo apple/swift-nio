@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Dispatch
+import NIOConcurrencyHelpers
 import XCTest
 
 @testable import NIOCore
@@ -894,6 +896,96 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
 
         XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+    }
+
+    // MARK: - next(isolation:)
+
+    func testNextIsolation_whenElementsAreBuffered_doesNotHopOffTheActor() async throws {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
+            throw XCTSkip("'next(isolation:)' is only available in Swift 6 and later")
+        }
+
+        _ = self.source.yield(contentsOf: [1, 2, 3])
+
+        let consumer = IsolatedConsumer()
+        let sequence = try XCTUnwrap(self.sequence)
+        let result = try await consumer.next(count: 3, from: sequence)
+
+        XCTAssertEqual(result.elements, [1, 2, 3])
+        XCTAssertEqual(result.enqueuesOnActor, 0)
+    }
+
+    func testNextIsolation_whenSuspended_returnsYieldedElement() async throws {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
+            throw XCTSkip("'next(isolation:)' is only available in Swift 6 and later")
+        }
+
+        let consumer = IsolatedConsumer()
+        let sequence = try XCTUnwrap(self.sequence)
+        let elements = try await withThrowingTaskGroup(of: [Int?].self) { group in
+            let suspended = expectation(description: "task suspended")
+            sequence._storage._setDidSuspend {
+                consumer.assertIsolated()
+                suspended.fulfill()
+            }
+
+            group.addTask {
+                try await consumer.next(count: 1, from: sequence).elements
+            }
+
+            await fulfillment(of: [suspended], timeout: 1)
+            _ = self.source.yield(contentsOf: [1])
+
+            return try await group.next() ?? []
+        }
+
+        XCTAssertEqual(elements, [1])
+    }
+}
+
+/// A serial executor that counts how many jobs were enqueued on it, which reveals hops back onto an actor.
+@available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+private final class EnqueueCountingExecutor: SerialExecutor {
+    private let queue = DispatchQueue(label: "EnqueueCountingExecutor")
+    private let _enqueueCount = NIOLockedValueBox(0)
+
+    var enqueueCount: Int {
+        self._enqueueCount.withLockedValue { $0 }
+    }
+
+    func enqueue(_ job: consuming ExecutorJob) {
+        self._enqueueCount.withLockedValue { $0 += 1 }
+        let job = UnownedJob(job)
+        self.queue.async {
+            job.runSynchronously(on: self.asUnownedSerialExecutor())
+        }
+    }
+}
+
+@available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+private actor IsolatedConsumer {
+    private let executor = EnqueueCountingExecutor()
+
+    nonisolated var unownedExecutor: UnownedSerialExecutor {
+        self.executor.asUnownedSerialExecutor()
+    }
+
+    func next(
+        count: Int,
+        from sequence: NIOThrowingAsyncSequenceProducer<
+            Int,
+            Error,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >
+    ) async throws -> (elements: [Int?], enqueuesOnActor: Int) {
+        let iterator = sequence.makeAsyncIterator()
+        let enqueuesBefore = self.executor.enqueueCount
+        var elements: [Int?] = []
+        for _ in 0..<count {
+            elements.append(try await iterator.next(isolation: self))
+        }
+        return (elements, self.executor.enqueueCount - enqueuesBefore)
     }
 }
 
