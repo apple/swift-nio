@@ -19,6 +19,7 @@ import CNIODarwin
 import CNIOLinux
 import CNIOOpenBSD
 import CNIOWindows
+import CNIOFreeBSD
 import NIOCore
 
 #if canImport(WinSDK)

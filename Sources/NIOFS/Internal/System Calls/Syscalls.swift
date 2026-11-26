@@ -17,6 +17,9 @@ import SystemPackage
 #if canImport(Darwin)
 import Darwin
 import CNIODarwin
+#elseif os(FreeBSD)
+import Glibc
+import CNIOFreeBSD
 #elseif canImport(Glibc)
 @preconcurrency import Glibc
 import CNIOLinux
@@ -177,6 +180,64 @@ internal func system_readlink(
     return readlink(path, buffer, bufferSize)
 }
 
+#if os(FreeBSD)
+internal func system_extattr_list_fd(
+    _ fd: FileDescriptor.RawValue,
+    _ namespace: CInt,
+    _ namebuf: UnsafeMutablePointer<CChar>?,
+    _ size: Int
+) -> Int {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mockInt(fd, namespace, namebuf, size)
+    }
+    #endif
+    return extattr_list_fd(fd, namespace, namebuf, size)
+}
+
+internal func system_extattr_get_fd(
+    _ fd: FileDescriptor.RawValue,
+    _ namespace: CInt,
+    _ name: UnsafePointer<CChar>,
+    _ value: UnsafeMutableRawPointer?,
+    _ size: Int
+) -> Int {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mockInt(fd, namespace, name, value, size)
+    }
+    #endif
+    return extattr_get_fd(fd, namespace, name, value, size)
+}
+
+internal func system_extattr_set_fd(
+    _ fd: FileDescriptor.RawValue,
+    _ namespace: CInt,
+    _ name: UnsafePointer<CChar>,
+    _ buf: UnsafeRawPointer?,
+    _ size: Int
+) -> Int {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mockInt(fd, namespace, name, buf, size)
+    }
+    #endif
+    return extattr_set_fd(fd, namespace, name, buf, size)
+}
+
+internal func system_extattr_delete_fd(
+    _ fd: FileDescriptor.RawValue,
+    _ namespace: CInt,
+    _ name: UnsafePointer<CChar>
+) -> Int {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mockInt(fd, namespace, name)
+    }
+    #endif
+    return Int(extattr_delete_fd(fd, namespace, name))
+}
+#else
 /// flistxattr(2): List extended attribute names
 internal func system_flistxattr(
     _ fd: FileDescriptor.RawValue,
@@ -266,6 +327,7 @@ internal func system_fremovexattr(
     fatalError("fremovexattr is unavailable on Windows")
     #endif
 }
+#endif
 
 /// rename(2): Change the name of a file
 internal func system_rename(
@@ -311,6 +373,22 @@ internal func system_renameatx_np(
 }
 #endif
 
+#if os(FreeBSD)
+internal func system_renameat(
+    _ oldFD: FileDescriptor.RawValue,
+    _ old: UnsafePointer<CInterop.PlatformChar>,
+    _ newFD: FileDescriptor.RawValue,
+    _ new: UnsafePointer<CInterop.PlatformChar>
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(oldFD, old, newFD, new)
+    }
+    #endif
+    return renameat(oldFD, old, newFD, new)
+}
+#endif
+
 #if canImport(Glibc) || canImport(Musl) || canImport(Android)
 internal func system_renameat2(
     _ oldFD: FileDescriptor.RawValue,
@@ -324,7 +402,12 @@ internal func system_renameat2(
         return mock(oldFD, old, newFD, new, flags)
     }
     #endif
+    #if os(FreeBSD)
+    // FreeBSD 15 provides `renameat2` directly in libc.
+    return renameat2(oldFD, old, newFD, new, flags)
+    #else
     return CNIOLinux_renameat2(oldFD, old, newFD, new, flags)
+    #endif
 }
 #endif
 
@@ -385,7 +468,7 @@ internal func system_unlinkat(
     return unlinkat(fd, path, flags)
 }
 
-#if canImport(Glibc) || canImport(Musl) || canImport(Android)
+#if !os(FreeBSD) && (canImport(Glibc) || canImport(Musl) || canImport(Android))
 /// sendfile(2): Transfer data between descriptors
 internal func system_sendfile(
     _ outFD: CInt,
@@ -400,6 +483,25 @@ internal func system_sendfile(
     #endif
     var offset = offset
     return sendfile(outFD, inFD, &offset, count)
+}
+#endif
+
+#if os(FreeBSD)
+internal func system_copy_file_range(
+    _ inFD: CInt,
+    _ inOff: UnsafeMutablePointer<off_t>?,
+    _ outFD: CInt,
+    _ outOff: UnsafeMutablePointer<off_t>?,
+    _ size: Int,
+    _ flags: UInt32
+) -> Int {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mockInt(inFD, inOff, outFD, outOff, size, flags)
+    }
+    #endif
+    return copy_file_range(inFD, inOff, outFD, outOff, size, flags)
+
 }
 #endif
 

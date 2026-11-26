@@ -14,6 +14,7 @@
 
 import CNIODarwin
 import CNIOLinux
+import CNIOFreeBSD
 import NIOConcurrencyHelpers
 import NIOCore
 import NIOPosix
@@ -567,6 +568,8 @@ private struct DirectoryEnumerator: Sendable {
                 // Empty is checked for above, root can't exist within a directory, and directory
                 // items must be a single path component.
                 name = FilePath.Component(platformString: CNIODarwin_dirent_dname(entry))!
+                #elseif os(FreeBSD)
+                name = FilePath.Component(platformString: CNIOFreeBSD_dirent_dname(entry))!
                 #elseif os(Windows)
                 name = FilePath.Component(platformString: CNIOWindows_dirent_dname(entry))!
                 #else

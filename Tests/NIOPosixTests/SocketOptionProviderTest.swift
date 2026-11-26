@@ -13,6 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+#if os(FreeBSD)
+import CNIOFreeBSD
+#endif
 import NIOCore
 import NIOPosix
 import XCTest
@@ -216,7 +219,12 @@ final class SocketOptionProviderTest: XCTestCase {
                 provider.getSoLinger()
             }.map {
                 XCTAssertEqual($0.l_linger, newLingerValue.l_linger)
+                #if os(FreeBSD)
+                // FreeBSD: SO_LINGER is a bit in `so_options`
+                XCTAssertEqual($0.l_onoff & SO_LINGER, SO_LINGER)
+                #else
                 XCTAssertEqual($0.l_onoff, newLingerValue.l_onoff)
+                #endif
             }.wait()
         )
     }
@@ -355,7 +363,11 @@ final class SocketOptionProviderTest: XCTestCase {
         let tcpInfo = try assertNoThrowWithValue(channel.getTCPInfo().wait())
 
         // We just need to soundness check something here to ensure that the data is vaguely reasonable.
+        #if os(FreeBSD)
+        XCTAssertEqual(tcpInfo.tcpi_state, UInt8(CNIOFreeBSD_TCPS_ESTABLISHED))
+        #else
         XCTAssertEqual(tcpInfo.tcpi_state, UInt8(TCP_ESTABLISHED))
+        #endif
         #endif
     }
 
