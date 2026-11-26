@@ -480,11 +480,12 @@ extension Channel {
             isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
         )
 
-        let inboundStream = try NIOAsyncChannelInboundStream(
+        let inboundStream = try NIOAsyncChannelInboundStream<Inbound>(
             eventLoop: self.eventLoop,
             handler: handler,
             backPressureStrategy: backPressureStrategy,
-            closeOnDeinit: closeOnDeinit
+            closeOnDeinit: closeOnDeinit,
+            backing: { .producer($0) }
         )
 
         let writer = try NIOAsyncChannelOutboundWriter<Outbound>(
@@ -508,17 +509,21 @@ extension Channel {
     ) throws -> (NIOAsyncChannelInboundStream<ChannelReadResult>, NIOAsyncChannelOutboundWriter<Never>) {
         self.eventLoop.assertInEventLoop()
 
-        let handler = NIOAsyncChannelHandler<Channel, ChannelReadResult, Never>(
+        typealias InboundStream = NIOAsyncChannelInboundStream<ChannelReadResult>
+        let handler = NIOAsyncChannelHandler<Channel, InboundStream.PendingChild, Never>(
             eventLoop: self.eventLoop,
-            transformation: .transformation(channelReadTransformation: channelReadTransformation),
+            transformation: .transformation { channel in
+                channelReadTransformation(channel).map { .init(channel: channel, value: $0) }
+            },
             isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
         )
 
-        let inboundStream = try NIOAsyncChannelInboundStream(
+        let inboundStream = try InboundStream(
             eventLoop: self.eventLoop,
             handler: handler,
             backPressureStrategy: backPressureStrategy,
-            closeOnDeinit: closeOnDeinit
+            closeOnDeinit: closeOnDeinit,
+            backing: { .acceptedChannels($0) }
         )
 
         let writer = try NIOAsyncChannelOutboundWriter<Never>(

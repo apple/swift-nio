@@ -18,12 +18,39 @@
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     @usableFromInline
-    typealias Producer = NIOThrowingAsyncSequenceProducer<
-        Inbound,
+    typealias Producer<Element: Sendable> = NIOThrowingAsyncSequenceProducer<
+        Element,
         Error,
         NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark,
         NIOAsyncChannelHandlerProducerDelegate
     >
+
+    /// Owns an accepted channel until the unicast iterator takes the initializer result.
+    @usableFromInline
+    final class PendingChild: @unchecked Sendable {
+        private let value: Inbound
+        private var channel: (any Channel)?
+
+        @usableFromInline
+        init(channel: any Channel, value: Inbound) {
+            self.channel = channel
+            self.value = value
+        }
+
+        @usableFromInline
+        func takeValue() -> Inbound {
+            self.channel = nil
+            return self.value
+        }
+
+        deinit {
+            guard let channel = self.channel else { return }
+            channel.eventLoop.execute { [value = self.value] in
+                channel.close(promise: nil)
+                channel.closeFuture.whenComplete { _ in withExtendedLifetime(value) {} }
+            }
+        }
+    }
 
     /// A source used for driving a ``NIOAsyncChannelInboundStream`` during tests.
     public struct TestSource: Sendable {
@@ -55,7 +82,8 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     @usableFromInline
     enum _Backing: Sendable {
         case asyncStream(AsyncThrowingStream<Inbound, Error>)
-        case producer(Producer)
+        case producer(Producer<Inbound>)
+        case acceptedChannels(Producer<PendingChild>)
     }
 
     /// The underlying async sequence.
@@ -82,11 +110,12 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     }
 
     @inlinable
-    init<ProducerElement: Sendable, Outbound: Sendable>(
+    init<InboundIn: Sendable, ProducerElement: Sendable, Outbound: Sendable>(
         eventLoop: any EventLoop,
-        handler: NIOAsyncChannelHandler<ProducerElement, Inbound, Outbound>,
+        handler: NIOAsyncChannelHandler<InboundIn, ProducerElement, Outbound>,
         backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        closeOnDeinit: Bool
+        closeOnDeinit: Bool,
+        backing: (Producer<ProducerElement>) -> _Backing
     ) throws {
         eventLoop.preconditionInEventLoop()
         let strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
@@ -99,14 +128,14 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
             strategy = .init(lowWatermark: 2, highWatermark: 10)
         }
 
-        let sequence = Producer.makeSequence(
+        let sequence = Producer<ProducerElement>.makeSequence(
             backPressureStrategy: strategy,
             finishOnDeinit: closeOnDeinit,
             delegate: NIOAsyncChannelHandlerProducerDelegate(handler: handler)
         )
 
         handler.source = sequence.source
-        self._backing = .producer(sequence.sequence)
+        self._backing = backing(sequence.sequence)
     }
 }
 
@@ -118,7 +147,8 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
         @usableFromInline
         enum _Backing {
             case asyncStream(AsyncThrowingStream<Inbound, Error>.Iterator)
-            case producer(Producer.AsyncIterator)
+            case producer(Producer<Inbound>.AsyncIterator)
+            case acceptedChannels(Producer<PendingChild>.AsyncIterator)
         }
 
         @usableFromInline var _backing: _Backing
@@ -130,6 +160,8 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
                 self._backing = .asyncStream(asyncStream.makeAsyncIterator())
             case .producer(let producer):
                 self._backing = .producer(producer.makeAsyncIterator())
+            case .acceptedChannels(let producer):
+                self._backing = .acceptedChannels(producer.makeAsyncIterator())
             }
         }
 
@@ -145,6 +177,8 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
 
             case .producer(let iterator):
                 return try await iterator.next()
+            case .acceptedChannels(let iterator):
+                return try await iterator.next()?.takeValue()
             }
         }
     }
