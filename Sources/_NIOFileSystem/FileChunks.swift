@@ -20,11 +20,6 @@ import SystemPackage
 /// An `AsyncSequence` of ordered chunks read from a file.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public struct FileChunks: AsyncSequence, Sendable {
-    enum ChunkRange {
-        case entireFile
-        case partial(Range<Int64>)
-    }
-
     public typealias Element = ByteBuffer
 
     /// The buffered stream.
@@ -42,20 +37,13 @@ public struct FileChunks: AsyncSequence, Sendable {
         chunkLength: ByteCount,
         range: Range<Int64>
     ) {
-        let chunkRange: ChunkRange
-        if range.lowerBound == 0, range.upperBound == .max {
-            chunkRange = .entireFile
-        } else {
-            chunkRange = .partial(range)
-        }
-
         // TODO: choose reasonable watermarks; this should likely be at least somewhat dependent
         // on the chunk size.
         let stream = NIOThrowingAsyncSequenceProducer.makeFileChunksStream(
             of: ByteBuffer.self,
             handle: handle,
             chunkLength: chunkLength.bytes,
-            range: chunkRange,
+            range: range,
             lowWatermark: 4,
             highWatermark: 8
         )
@@ -102,7 +90,7 @@ where
         of: Element.Type = Element.self,
         handle: SystemFileHandle,
         chunkLength: Int64,
-        range: FileChunks.ChunkRange,
+        range: Range<Int64>,
         lowWatermark: Int,
         highWatermark: Int
     ) -> FileChunkSequenceProducer {
@@ -136,16 +124,8 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
     let path: FilePath
     let chunkLength: Int64
 
-    init(range: FileChunks.ChunkRange, handle: SystemFileHandle, chunkLength: Int64) {
-        let state: ProducerState
-        switch range {
-        case .entireFile:
-            state = .init(handle: handle, range: nil)
-        case .partial(let partialRange):
-            state = .init(handle: handle, range: partialRange)
-        }
-
-        self.state = NIOLockedValueBox(state)
+    init(range: Range<Int64>, handle: SystemFileHandle, chunkLength: Int64) {
+        self.state = NIOLockedValueBox(ProducerState(handle: handle, range: range))
         self.path = handle.path
         self.chunkLength = chunkLength
     }
@@ -236,18 +216,31 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
         try self.state.withLockedValue { state in
             state.fileReadingState()
         }.flatMap {
-            if let (descriptor, range) = $0 {
-                if let range {
-                    let remainingBytes = range.upperBound - range.lowerBound
-                    let clampedLength = min(self.chunkLength, remainingBytes)
+            if let (descriptor, range, readMode) = $0 {
+                // The upper bound of the range is the number of bytes which may still be read; never
+                // read more than that, regardless of how the file is being read.
+                let remainingBytes = range.upperBound - range.lowerBound
+                let clampedLength = min(self.chunkLength, remainingBytes)
+                switch readMode {
+                case .positional:
                     return descriptor.readChunk(
                         fromAbsoluteOffset: range.lowerBound,
                         length: clampedLength
-                    ).mapError { error in
-                        .read(usingSyscall: .pread, error: error, path: self.path, location: .here())
+                    ).flatMapError { error in
+                        // Unseekable files (pipes, FIFOs, sockets) can only be read sequentially,
+                        // which is only possible when starting from the beginning of the file.
+                        if range.lowerBound == 0, let errno = error as? Errno,
+                            errno == .illegalSeek || errno == .noSuchAddressOrDevice
+                        {
+                            return self.readNextChunkSequentiallyFromNowOn(length: clampedLength)
+                        } else {
+                            return .failure(
+                                .read(usingSyscall: .pread, error: error, path: self.path, location: .here())
+                            )
+                        }
                     }
-                } else {
-                    return descriptor.readChunk(length: self.chunkLength).mapError { error in
+                case .sequential:
+                    return descriptor.readChunk(length: clampedLength).mapError { error in
                         .read(usingSyscall: .read, error: error, path: self.path, location: .here())
                     }
                 }
@@ -258,45 +251,74 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
         }.get()
     }
 
-    private func didReadNextChunk(_ buffer: ByteBuffer) {
-        let chunkLength = self.chunkLength
-        assert(buffer.readableBytes <= chunkLength)
+    private func readNextChunkSequentiallyFromNowOn(length: Int64) -> Result<ByteBuffer, FileSystemError> {
+        // The handle may have been closed, or the stream terminated, while the first read was in
+        // progress, so get the descriptor again.
+        self.state.withLockedValue { state in
+            state.switchToSequentialReads()
+            return state.fileReadingState()
+        }.flatMap {
+            if let (descriptor, _, _) = $0 {
+                return descriptor.readChunk(length: length).mapError { error in
+                    .read(usingSyscall: .read, error: error, path: self.path, location: .here())
+                }
+            } else {
+                // nil means done: don't start a read which might block, there's nobody to read
+                // for. Return empty to indicate the stream should finish.
+                return .success(ByteBuffer())
+            }
+        }
+    }
 
-        let (source, initialState): (FileChunkSequenceProducer.Source?, ProducerState.State) = self.state
+    private func didReadNextChunk(_ buffer: ByteBuffer) {
+        assert(buffer.readableBytes <= self.chunkLength)
+
+        let (source, wasDone, isDone): (FileChunkSequenceProducer.Source?, Bool, Bool) = self.state
             .withLockedValue { state in
+                // The stream may have been terminated while the read was in progress.
+                let wasDone = state.isDone
+
                 state.didReadBytes(buffer.readableBytes)
 
-                // finishing short indicates the file is done
-                if buffer.readableBytes < chunkLength {
-                    state.state = .done(emptyRange: false)
+                // Reading no bytes means the end of the file has been reached. Reading fewer bytes
+                // than requested does not: for a pipe or FIFO it just means that fewer bytes were
+                // available. If the requested range has been exhausted then 'didReadBytes' has
+                // already marked the state as done.
+                if buffer.readableBytes == 0 {
+                    state.done()
                 }
-                return (state.source, state.state)
+
+                return (state.source, wasDone, state.isDone)
             }
 
         guard let source else {
             return
         }
 
-        // No bytes were produced, nothing more to do.
-        if buffer.readableBytes == 0 {
-            source.finish()
-            self.clearSource()
-        }
-
-        // Yield bytes and maybe produce more.
-        let yieldResult = source.yield(contentsOf: CollectionOfOne(buffer))
-
-        switch initialState {
-        case .done:
+        // Nothing is wanted any more: don't yield to a source which is finished.
+        if wasDone {
             source.finish()
             self.clearSource()
             return
-        case .producing, .pausedProducing:
-            ()
+        }
+
+        // Never yield an empty chunk: it isn't meaningful to consumers.
+        let yieldResult: FileChunkSequenceProducer.Source.YieldResult?
+        if buffer.readableBytes > 0 {
+            yieldResult = source.yield(contentsOf: CollectionOfOne(buffer))
+        } else {
+            yieldResult = nil
+        }
+
+        // Finish only after yielding the final chunk, and never yield to a finished source.
+        if isDone {
+            source.finish()
+            self.clearSource()
+            return
         }
 
         switch yieldResult {
-        case .produceMore:
+        case .produceMore, .none:
             ()
         case .stopProducing:
             self.state.withLockedValue { state in state.pauseProducing() }
@@ -328,14 +350,29 @@ private struct ProducerState: Sendable {
             case activeAndQueued
         }
 
+        /// How the file is being read.
+        internal enum ReadMode {
+            /// Read from the absolute offset given by the lower bound of the range (with `pread`).
+            /// This is how every file is read to begin with.
+            case positional
+            /// Read from the file's current position (with `read`). The file turned out to be
+            /// unseekable (a pipe, FIFO or socket) so the lower bound of the range is only used to
+            /// track how many bytes have been read.
+            case sequential
+        }
+
         /// The handle to read from.
         var handle: SystemFileHandle.SendableView
 
-        /// An optional range containing the offsets to read from and up to (exclusive)
-        /// The lower bound should be updated after each successful read.
-        /// The upper bound should be used to check if producer should stop.
-        /// If no range is present, then read entire file.
-        var range: Range<Int64>?
+        /// The range containing the offsets to read from and up to (exclusive).
+        /// The lower bound should be updated after each successful read, in either read mode.
+        /// The upper bound should be used to check if producer should stop; for a sequential read
+        /// it's the budget of bytes which may be read.
+        /// Reading the entire file is represented by `0..<Int64.max`.
+        var range: Range<Int64>
+
+        /// How the file is being read.
+        var readMode: ReadMode = .positional
 
         /// Keep track of whether or not we are currently actively engaged in a read
         /// to protect against re-entrant behavior.
@@ -357,8 +394,8 @@ private struct ProducerState: Sendable {
     /// the sourcing end of the `FileChunkSequenceProducer`
     internal var source: FileChunkSequenceProducer.Source?
 
-    init(handle: SystemFileHandle, range: Range<Int64>?) {
-        if let range, range.isEmpty {
+    init(handle: SystemFileHandle, range: Range<Int64>) {
+        if range.isEmpty {
             self.state = .done(emptyRange: true)
         } else {
             self.state = .producing(.init(handle: handle.sendableView, range: range))
@@ -462,11 +499,13 @@ private struct ProducerState: Sendable {
         }
     }
 
-    mutating func fileReadingState() -> Result<(FileDescriptor, Range<Int64>?)?, FileSystemError> {
+    mutating func fileReadingState() -> Result<
+        (FileDescriptor, Range<Int64>, Producing.ReadMode)?, FileSystemError
+    > {
         switch self.state {
         case .producing(let producingState), .pausedProducing(let producingState):
             if let descriptor = producingState.handle.descriptorIfAvailable() {
-                return .success((descriptor, producingState.range))
+                return .success((descriptor, producingState.range, producingState.readMode))
             } else {
                 let error = FileSystemError(
                     code: .closed,
@@ -502,6 +541,20 @@ private struct ProducerState: Sendable {
         }
     }
 
+    /// Reads the rest of the file from its current position instead of from absolute offsets.
+    mutating func switchToSequentialReads() {
+        switch self.state {
+        case .producing(var state):
+            state.readMode = .sequential
+            self.state = .producing(state)
+        case .pausedProducing(var state):
+            state.readMode = .sequential
+            self.state = .pausedProducing(state)
+        case .done:
+            ()
+        }
+    }
+
     mutating func pauseProducing() {
         switch self.state {
         case .producing(let state):
@@ -513,6 +566,16 @@ private struct ProducerState: Sendable {
 
     mutating func done() {
         self.state = .done(emptyRange: false)
+    }
+
+    /// Whether the producer has finished producing values.
+    var isDone: Bool {
+        switch self.state {
+        case .done:
+            return true
+        case .producing, .pausedProducing:
+            return false
+        }
     }
 }
 
@@ -527,21 +590,16 @@ extension ProducerState.Producing {
     /// - Parameter count: The number of bytes which have been read.
     /// - Returns: Returns `.moreToRead` if there are no remaining bytes to read, `.cannotReadMore` otherwise.
     mutating func updateRangeWithReadBytes(_ count: Int) -> RangeUpdateOutcome {
-        guard let currentRange = self.range else {
-            // we are reading the whole file, just keep going
-            return .moreToRead
-        }
-
-        let newLowerBound = currentRange.lowerBound + Int64(count)
+        let newLowerBound = self.range.lowerBound + Int64(count)
 
         // we have run out of bytes to read, we are done
-        if newLowerBound >= currentRange.upperBound {
-            self.range = currentRange.upperBound..<currentRange.upperBound
+        if newLowerBound >= self.range.upperBound {
+            self.range = self.range.upperBound..<self.range.upperBound
             return .cannotReadMore
         }
 
         // update range, we are not done
-        self.range = newLowerBound..<currentRange.upperBound
+        self.range = newLowerBound..<self.range.upperBound
         return .moreToRead
     }
 }

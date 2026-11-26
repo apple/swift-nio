@@ -188,6 +188,15 @@ public protocol ReadableFileHandleProtocol: FileHandleProtocol {
     /// may be. The slice may be shorter than the given `length` if there are fewer bytes from the
     /// `offset` to the end of the file.
     ///
+    /// The slice may also be shorter than `length` when the end of the file hasn't been reached but
+    /// fewer bytes are currently available, even though more may arrive later. This happens for
+    /// unseekable files, such as pipes, FIFOs and sockets, and for some special files which can be
+    /// seeked, such as files in Linux's procfs. A short slice therefore doesn't mean the end of the
+    /// file: only an empty slice does.
+    ///
+    /// Unseekable files can only be read sequentially so `offset` must be zero, otherwise a
+    /// ``FileSystemError`` with code ``FileSystemError/Code-swift.struct/unsupported`` is thrown.
+    ///
     /// - Parameters:
     ///   - offset: The absolute offset into the file to read from.
     ///   - length: The maximum number of bytes to read as a ``ByteCount``.
@@ -195,6 +204,20 @@ public protocol ReadableFileHandleProtocol: FileHandleProtocol {
     func readChunk(fromAbsoluteOffset offset: Int64, length: ByteCount) async throws -> ByteBuffer
 
     /// Returns an asynchronous sequence of chunks read from the file.
+    ///
+    /// The sequence ends once the whole range has been read or when the end of the file is reached,
+    /// whichever comes first. A chunk which is shorter than `chunkLength` doesn't mean the end of the
+    /// file has been reached.
+    ///
+    /// Unseekable files, such as pipes, FIFOs and sockets, are read sequentially so `range` must start
+    /// at zero, otherwise iterating the sequence throws a ``FileSystemError`` with code
+    /// ``FileSystemError/Code-swift.struct/unsupported``. The upper bound of the range limits the
+    /// number of bytes that are read.
+    ///
+    /// Each read of an unseekable file blocks a thread of the file system's I/O thread pool until data is
+    /// available or every writer has closed. The sequence reads ahead of its consumer, so if iteration
+    /// stops before the end of the file a read may still be in progress, and on some platforms, Darwin
+    /// included, closing the handle then waits for that read to finish.
     ///
     /// - Parameters:
     ///   - range: The absolute offsets into the file to read.
@@ -358,7 +381,7 @@ extension ReadableFileHandleProtocol {
             )
         }
 
-        let isSeekable = !(info.type == .fifo || info.type == .socket)
+        let isSeekable = !info.type.isUnseekable
         if isSeekable {
             // Limit the size of single shot reads. If the system is busy then avoid slowing down other
             // work by blocking an I/O executor thread while doing a large read. The limit is somewhat
@@ -420,7 +443,24 @@ extension ReadableFileHandleProtocol {
             var accumulator = ByteBuffer()
             accumulator.reserveCapacity(readSize)
 
-            for try await chunk in self.readChunks(in: ..., chunkLength: .mebibytes(8)) {
+            // Read on demand rather than with 'readChunks'. A sequence of chunks reads ahead of its
+            // consumer, which for an unseekable file can leave a read waiting for more data from the
+            // other end when this function has already stopped, for example by throwing below. On some
+            // platforms closing the file then waits for that read to finish.
+            let maximumChunkLength: Int64 = 8 * 1024 * 1024
+            while true {
+                // Never read more than is needed to find out that there are more bytes than allowed: at
+                // most one byte over the maximum. 'maximumSizeAllowed' is no more than the capacity of a
+                // 'ByteBuffer' so this can't overflow.
+                let remainingBytes = maximumSizeAllowed.bytes - Int64(accumulator.readableBytes)
+                let chunkLength = max(1, min(maximumChunkLength, remainingBytes + 1))
+                let chunk = try await self.readChunk(fromAbsoluteOffset: 0, length: .bytes(chunkLength))
+
+                // Only an empty chunk means that the end of the file has been reached.
+                if chunk.readableBytes == 0 {
+                    break
+                }
+
                 accumulator.writeImmutableBuffer(chunk)
                 if accumulator.readableBytes > maximumSizeAllowed.bytes {
                     throw FileSystemError(

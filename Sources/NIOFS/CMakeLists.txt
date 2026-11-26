@@ -37,6 +37,7 @@ add_library(NIOFS
   "Internal/BufferedStream.swift"
   "Internal/Cancellation.swift"
   "Internal/Concurrency Primitives/TokenBucket.swift"
+  "Internal/FileCursor.swift"
   "Internal/ParallelDirCopy.swift"
   "Internal/ParallelRemoval.swift"
   "Internal/String+UnsafeUnititializedCapacity.swift"

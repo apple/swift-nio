@@ -24,13 +24,24 @@ import NIOCore
 ///
 /// You can also read bytes without returning them to caller by calling ``drop(_:)`` and
 /// ``drop(while:)``.
+///
+/// - Important: Unseekable files, such as pipes, FIFOs and sockets, are read sequentially. The
+///   reader must start at offset zero for these files: reading an unseekable file from any other
+///   starting offset throws an error with code ``FileSystemError/Code-swift.struct/unsupported``.
+///   Character devices such as terminals aren't detected as unseekable: only reading them at
+///   offset zero is supported, which means a single chunk.
+///
+/// - Important: Reading from some files returns fewer bytes than requested even though the end of
+///   the file hasn't been reached. This happens for unseekable files when fewer bytes are currently
+///   available, and for some special files which can be seeked, such as files in Linux's procfs.
+///   Only an empty read means the end of the file; see ``read(_:)``.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
     /// The handle to read from.
     private let handle: Handle
 
-    /// The offset for the next read from the file.
-    private var offset: Int64
+    /// Tracks the offset for the next read from the file.
+    private var cursor: FileCursor
 
     /// Whether the reader has read to the end of the file.
     private var readEOF = false
@@ -53,23 +64,36 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
         )
         precondition(capacity > 0, "capacity (\(capacity)) must be greater than zero")
         self.handle = readableHandle
-        self.offset = initialOffset
+        self.cursor = FileCursor(initialOffset: initialOffset)
         self.capacity = capacity
         self.buffer = ByteBuffer()
     }
 
     private mutating func readFromFile(_ count: Int) async throws -> ByteBuffer {
+        let readOffset = try await self.cursor.nextOffset(for: self.handle)
         let bytes = try await self.handle.readChunk(
-            fromAbsoluteOffset: self.offset,
+            fromAbsoluteOffset: readOffset,
             length: .bytes(Int64(count))
         )
-        // Reading short means reading end-of-file.
-        self.readEOF = bytes.readableBytes < count
-        self.offset += Int64(bytes.readableBytes)
+        // Reading short doesn't mean reading end-of-file: not every file returns as many bytes as
+        // were asked for, for example if it's a pipe and fewer bytes are available. Only reading
+        // no bytes at all means end-of-file.
+        self.readEOF = bytes.readableBytes == 0
+        self.cursor.advance(by: Int64(bytes.readableBytes))
         return bytes
     }
 
-    /// Read at most `count` bytes from the file; reads short if not enough bytes are available.
+    /// Read at most `count` bytes from the file, returning whatever is available.
+    ///
+    /// If the buffer holds `count` bytes they're returned. Otherwise the reader makes a single read from
+    /// the file and returns the bytes it has, which may be fewer than `count`.
+    ///
+    /// - Important: The result may be shorter than `count` even though the end of the file hasn't been
+    ///   reached. This happens for pipes, FIFOs and sockets when fewer bytes are currently available,
+    ///   and for some special files such as files in Linux's procfs. A short result therefore doesn't
+    ///   mean the end of the file: only an empty result does, after which `read(while:)` reports
+    ///   `readEOF`. To read exactly `count` bytes, keep reading until you have them or get an empty
+    ///   result.
     ///
     /// - Parameters:
     ///   - count: The number of bytes to read.
@@ -166,13 +190,28 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
 
     /// Reads and discards the given number of bytes.
     ///
+    /// For an unseekable file the bytes are read and thrown away, stopping early if the end of the
+    /// file is reached.
+    ///
     /// - Parameter count: The number of bytes to read and discard.
     public mutating func drop(_ count: Int) async throws {
-        if count > self.buffer.readableBytes {
-            self.offset += Int64(count &- self.buffer.readableBytes)
-            self.buffer.clear()
-        } else {
+        guard count > self.buffer.readableBytes else {
             self.buffer.moveReaderIndex(forwardBy: count)
+            return
+        }
+
+        var remaining = count &- self.buffer.readableBytes
+
+        // A seekable file is skipped over by moving the offset.
+        let skipped = try await self.cursor.skipIfSeekable(Int64(remaining), for: self.handle)
+        self.buffer.clear()
+
+        if !skipped {
+            // An unseekable file can't be skipped over: the bytes must be read and thrown away.
+            while remaining > 0, !self.readEOF {
+                let chunk = try await self.readFromFile(min(remaining, self.capacity))
+                remaining &-= chunk.readableBytes
+            }
         }
     }
 
