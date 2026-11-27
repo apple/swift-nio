@@ -29,6 +29,24 @@ public protocol ChannelHandler: AnyObject {
     /// - Parameters:
     ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func handlerRemoved(context: ChannelHandlerContext)
+
+    /// The existentials through which the `ChannelPipeline` calls this handler.
+    ///
+    /// Don't implement this. The default implementations form the existentials where the type of the handler is
+    /// statically known, so that specialized generic handlers can be called through specialized witness tables.
+    var _channelPipelineExistentials: _ChannelPipelineExistentials { get }
+}
+
+/// The existentials through which the `ChannelPipeline` calls a `ChannelHandler`.
+public struct _ChannelPipelineExistentials {
+    public var inbound: (any _ChannelInboundHandler)?
+    public var outbound: (any _ChannelOutboundHandler)?
+
+    @inlinable
+    public init(inbound: (any _ChannelInboundHandler)?, outbound: (any _ChannelOutboundHandler)?) {
+        self.inbound = inbound
+        self.outbound = outbound
+    }
 }
 
 /// Untyped `ChannelHandler` which handles outbound I/O events or intercept an outbound I/O operation.
@@ -224,6 +242,36 @@ extension ChannelHandler {
 
     /// Do nothing by default.
     public func handlerRemoved(context: ChannelHandlerContext) {
+    }
+
+    @inlinable
+    public var _channelPipelineExistentials: _ChannelPipelineExistentials {
+        _ChannelPipelineExistentials(
+            inbound: self as? _ChannelInboundHandler,
+            outbound: self as? _ChannelOutboundHandler
+        )
+    }
+}
+
+extension _ChannelInboundHandler {
+    // A subclass may still add the other conformance, so it is checked dynamically.
+    @inlinable
+    public var _channelPipelineExistentials: _ChannelPipelineExistentials {
+        _ChannelPipelineExistentials(inbound: self, outbound: self as? _ChannelOutboundHandler)
+    }
+}
+
+extension _ChannelOutboundHandler {
+    @inlinable
+    public var _channelPipelineExistentials: _ChannelPipelineExistentials {
+        _ChannelPipelineExistentials(inbound: self as? _ChannelInboundHandler, outbound: self)
+    }
+}
+
+extension _ChannelInboundHandler where Self: _ChannelOutboundHandler {
+    @inlinable
+    public var _channelPipelineExistentials: _ChannelPipelineExistentials {
+        _ChannelPipelineExistentials(inbound: self, outbound: self)
     }
 }
 

@@ -139,10 +139,13 @@
 ///
 /// A `ChannelHandler` can be added or removed at any time because a `ChannelPipeline` is thread safe.
 public final class ChannelPipeline: ChannelInvoker {
-    private var head: Optional<ChannelHandlerContext>
-    private var tail: Optional<ChannelHandlerContext>
+    @usableFromInline
+    internal var head: Optional<ChannelHandlerContext>
+    @usableFromInline
+    internal var tail: Optional<ChannelHandlerContext>
 
     private var idx: Int = 0
+    @usableFromInline
     internal private(set) var destroyed: Bool = false
 
     /// The `EventLoop` that is used by the underlying `Channel`.
@@ -168,6 +171,33 @@ public final class ChannelPipeline: ChannelInvoker {
     ///   - handler: the `ChannelHandler` to add
     ///   - position: The position in the `ChannelPipeline` to add `handler`. Defaults to `.last`.
     /// - Returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was added.
+    @inlinable
+    @preconcurrency
+    public func addHandler<Handler: ChannelHandler & Sendable>(
+        _ handler: Handler,
+        name: String? = nil,
+        position: ChannelPipeline.Position = .last
+    ) -> EventLoopFuture<Void> {
+        let future: EventLoopFuture<Void>
+
+        if self.eventLoop.inEventLoop {
+            let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
+            future = self.eventLoop.makeCompletedFuture(
+                self.addHandlerSync(handler, name: name, position: syncPosition)
+            )
+        } else {
+            future = self.eventLoop.submit {
+                let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
+                try self.addHandlerSync(handler, name: name, position: syncPosition).get()
+            }
+        }
+
+        return future
+    }
+
+    /// Add a `ChannelHandler` to the `ChannelPipeline`.
+    @available(*, deprecated, message: "Use the generic addHandler(_:name:position:)")
+    @_disfavoredOverload
     @preconcurrency
     public func addHandler(
         _ handler: ChannelHandler & Sendable,
@@ -200,8 +230,9 @@ public final class ChannelPipeline: ChannelInvoker {
     ///   - name: the name to use for the `ChannelHandler` when it's added. If none is specified a name will be generated.
     ///   - position: The position in the `ChannelPipeline` to add `handler`. Defaults to `.last`.
     /// - Returns: the result of adding this handler - either success or failure with an error code if this could not be completed.
-    fileprivate func addHandlerSync(
-        _ handler: ChannelHandler,
+    @inlinable
+    internal func addHandlerSync<Handler: ChannelHandler>(
+        _ handler: Handler,
         name: String? = nil,
         position: ChannelPipeline.SynchronousOperations.Position = .last
     ) -> Result<Void, Error> {
@@ -259,9 +290,10 @@ public final class ChannelPipeline: ChannelInvoker {
     ///         inserted relative to.
     ///   - operation: A callback that will insert `handler` relative to `relativeHandler`.
     /// - Returns: the result of adding this handler - either success or failure with an error code if this could not be completed.
-    private func add0(
+    @inlinable
+    internal func add0<Handler: ChannelHandler>(
         name: String?,
-        handler: ChannelHandler,
+        handler: Handler,
         relativeHandler: ChannelHandler,
         operation: (ChannelHandlerContext, ChannelHandlerContext) -> Void
     ) -> Result<Void, Error> {
@@ -293,9 +325,10 @@ public final class ChannelPipeline: ChannelInvoker {
     ///         inserted relative to.
     ///   - operation: A callback that will insert `handler` relative to `relativeHandler`.
     /// - Returns: the result of adding this handler - either success or failure with an error code if this could not be completed.
-    private func add0(
+    @inlinable
+    internal func add0<Handler: ChannelHandler>(
         name: String?,
-        handler: ChannelHandler,
+        handler: Handler,
         relativeContext: ChannelHandlerContext,
         operation: (ChannelHandlerContext, ChannelHandlerContext) -> Void
     ) -> Result<Void, Error> {
@@ -305,7 +338,7 @@ public final class ChannelPipeline: ChannelInvoker {
             return .failure(ChannelError._ioOnClosedChannel)
         }
 
-        let context = ChannelHandlerContext(name: name ?? nextName(), handler: handler, pipeline: self)
+        let context = ChannelHandlerContext(name: name ?? self.nextName(), handler: handler, pipeline: self)
         operation(context, relativeContext)
 
         context.invokeHandlerAdded()
@@ -321,7 +354,8 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - Parameters:
     ///   - new: The `ChannelHandlerContext` to add to the pipeline.
     ///   - existing: The `ChannelHandlerContext` that `new` will be added after.
-    private func add0(context new: ChannelHandlerContext, after existing: ChannelHandlerContext) {
+    @usableFromInline
+    internal func add0(context new: ChannelHandlerContext, after existing: ChannelHandlerContext) {
         self.eventLoop.assertInEventLoop()
 
         let next = existing.next
@@ -340,7 +374,8 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - Parameters:
     ///   - new: The `ChannelHandlerContext` to add to the pipeline.
     ///   - existing: The `ChannelHandlerContext` that `new` will be added before.
-    private func add0(context new: ChannelHandlerContext, before existing: ChannelHandlerContext) {
+    @usableFromInline
+    internal func add0(context new: ChannelHandlerContext, before existing: ChannelHandlerContext) {
         self.eventLoop.assertInEventLoop()
 
         let prev = existing.prev
@@ -610,7 +645,8 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - Parameters:
     ///   - body: The predicate to execute per `ChannelHandlerContext` in the `ChannelPipeline`.
     /// - Returns: The first `ChannelHandlerContext` that matches or `nil` if none did.
-    private func contextForPredicate0(_ body: (ChannelHandlerContext) -> Bool) -> ChannelHandlerContext? {
+    @usableFromInline
+    internal func contextForPredicate0(_ body: (ChannelHandlerContext) -> Bool) -> ChannelHandlerContext? {
         var curCtx: ChannelHandlerContext? = self.head?.next
         while let context = curCtx, context !== self.tail {
             if body(context) {
@@ -647,7 +683,8 @@ public final class ChannelPipeline: ChannelInvoker {
     }
 
     /// Returns the next name to use for a `ChannelHandler`.
-    private func nextName() -> String {
+    @usableFromInline
+    internal func nextName() -> String {
         self.eventLoop.assertInEventLoop()
 
         let name = "handler\(idx)"
@@ -1247,6 +1284,20 @@ extension ChannelPipeline {
         ///   - handler: The handler to add.
         ///   - name: The name to use for the `ChannelHandler` when it's added. If no name is specified the one will be generated.
         ///   - position: The position in the `ChannelPipeline` to add `handler`. Defaults to `.last`.
+        @inlinable
+        public func addHandler<Handler: ChannelHandler>(
+            _ handler: Handler,
+            name: String? = nil,
+            position: ChannelPipeline.SynchronousOperations.Position = .last
+        ) throws {
+            try self._pipeline.addHandlerSync(handler, name: name, position: position).get()
+        }
+
+        /// Add a handler to the pipeline.
+        ///
+        /// - Important: This *must* be called on the event loop.
+        @available(*, deprecated, message: "Use the generic addHandler(_:name:position:)")
+        @_disfavoredOverload
         public func addHandler(
             _ handler: ChannelHandler,
             name: String? = nil,
@@ -1858,8 +1909,10 @@ public enum ChannelPipelineError: Error {
 /// `ChannelHandler`.
 public final class ChannelHandlerContext: ChannelInvoker {
     // visible for ChannelPipeline to modify
-    fileprivate var next: Optional<ChannelHandlerContext>
-    fileprivate var prev: Optional<ChannelHandlerContext>
+    @usableFromInline
+    internal var next: Optional<ChannelHandlerContext>
+    @usableFromInline
+    internal var prev: Optional<ChannelHandlerContext>
 
     public let pipeline: ChannelPipeline
 
@@ -1902,17 +1955,21 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 
     public let name: String
-    private let inboundHandler: _ChannelInboundHandler?
-    private let outboundHandler: _ChannelOutboundHandler?
+    @usableFromInline
+    internal let inboundHandler: _ChannelInboundHandler?
+    @usableFromInline
+    internal let outboundHandler: _ChannelOutboundHandler?
     private var removeHandlerInvoked = false
     private var userTriggeredRemovalStarted = false
 
     // Only created from within ChannelPipeline
-    fileprivate init(name: String, handler: ChannelHandler, pipeline: ChannelPipeline) {
+    @inlinable
+    internal init<Handler: ChannelHandler>(name: String, handler: Handler, pipeline: ChannelPipeline) {
         self.name = name
         self.pipeline = pipeline
-        self.inboundHandler = handler as? _ChannelInboundHandler
-        self.outboundHandler = handler as? _ChannelOutboundHandler
+        let existentials = handler._channelPipelineExistentials
+        self.inboundHandler = existentials.inbound
+        self.outboundHandler = existentials.outbound
         self.next = nil
         self.prev = nil
         precondition(
@@ -2296,7 +2353,8 @@ public final class ChannelHandlerContext: ChannelInvoker {
         }
     }
 
-    fileprivate func invokeHandlerAdded() {
+    @usableFromInline
+    internal func invokeHandlerAdded() {
         self.eventLoop.assertInEventLoop()
 
         handler.handlerAdded(context: self)
