@@ -267,6 +267,43 @@ final class AsyncChannelTests: XCTestCase {
         try await channel.closeIgnoringSuppression()
     }
 
+    func testCancellingServerInboundClosesOnlyUnconsumedChildren() async throws {
+        let listener = NIOAsyncTestingChannel()
+        let delivered = NIOAsyncTestingChannel(loop: listener.testingEventLoop)
+        let buffered = NIOAsyncTestingChannel(loop: listener.testingEventLoop)
+        let server = try await listener.testingEventLoop.executeInContext {
+            try NIOAsyncChannel<NIOAsyncChannel<Int, Int>, Never>._wrapAsyncChannelWithTransformations(
+                wrappingChannelSynchronously: listener
+            ) { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try NIOAsyncChannel<Int, Int>(wrappingChannelSynchronously: channel)
+                }
+            }
+        }
+
+        let connection = try await Task {
+            try await server.executeThenClose { inbound in
+                for child in [delivered, buffered] {
+                    try await listener.writeInbound(child)
+                    try await child.connect(to: .init(ipAddress: "127.0.0.1", port: 0)).get()
+                }
+
+                var iterator = inbound.makeAsyncIterator()
+                let first = try await iterator.next()
+                withUnsafeCurrentTask { $0?.cancel() }
+                await XCTAssertThrowsError(try await iterator.next()) { error in
+                    XCTAssertTrue(error is CancellationError)
+                }
+                return try XCTUnwrap(first)
+            }
+        }.value
+
+        await listener.testingEventLoop.run()
+        XCTAssertFalse(buffered.isActive)
+        XCTAssertTrue(delivered.isActive)
+        try await connection.executeThenClose { _, _ in }
+    }
+
     func testManagingBackPressure() async throws {
         let channel = NIOAsyncTestingChannel()
         let readCounter = ReadCounter()
