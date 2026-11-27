@@ -58,6 +58,8 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
             self.allowRemoteHalfClosure = value as! Bool
         case _ as ChannelOptions.Types.WriteSpinOption:
             self.pendingWrites.writeSpinCount = value as! UInt
+        case _ as ChannelOptions.Types.ReportWriteProgressOption:
+            self.reportWriteProgress = value as! Bool
         case _ as ChannelOptions.Types.WriteBufferWaterMarkOption:
             self.pendingWrites.waterMark = value as! ChannelOptions.Types.WriteBufferWaterMark
         default:
@@ -77,6 +79,8 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
             return self.allowRemoteHalfClosure as! Option.Value
         case _ as ChannelOptions.Types.WriteSpinOption:
             return self.pendingWrites.writeSpinCount as! Option.Value
+        case _ as ChannelOptions.Types.ReportWriteProgressOption:
+            return self.reportWriteProgress as! Option.Value
         case _ as ChannelOptions.Types.WriteBufferWaterMarkOption:
             return self.pendingWrites.waterMark as! Option.Value
         case _ as ChannelOptions.Types.BufferedWritableBytesOption:
@@ -171,14 +175,20 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     return .processed(0)
                 }
                 // normal write
-                return try self.socket.write(pointer: ptr)
+                let result = try self.socket.write(pointer: ptr)
+                self.recordWriteProgress(result)
+                return result
             },
             vectorBufferWriteOperation: { ptrs in
                 // Gathering write
-                try self.socket.writev(iovecs: ptrs)
+                let result = try self.socket.writev(iovecs: ptrs)
+                self.recordWriteProgress(result)
+                return result
             },
             scalarFileWriteOperation: { descriptor, index, endIndex in
-                try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
+                let result = try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
+                self.recordWriteProgress(result)
+                return result
             }
         )
         return result
