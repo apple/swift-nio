@@ -62,35 +62,35 @@ typedef struct {
 
 static inline __attribute__((__always_inline__)) int
 NIO(getsockopt)(SOCKET s, int level, int optname, void *optval, int *optlen) {
-  return getsockopt(s, level, optname, optval, optlen);
+  return getsockopt(s, level, optname, (char *)optval, optlen);
 }
 
 static inline __attribute__((__always_inline__)) int
 NIO(recv)(SOCKET s, void *buf, int len, int flags) {
-  return recv(s, buf, len, flags);
+  return recv(s, (char *)buf, len, flags);
 }
 
 static inline __attribute__((__always_inline__)) int
 NIO(recvfrom)(SOCKET s, void *buf, int len, int flags, SOCKADDR *from,
               int *fromlen) {
-  return recvfrom(s, buf, len, flags, from, fromlen);
+  return recvfrom(s, (char *)buf, len, flags, from, fromlen);
 }
 
 static inline __attribute__((__always_inline__)) int
 NIO(send)(SOCKET s, const void *buf, int len, int flags) {
-  return send(s, buf, len, flags);
+  return send(s, (const char *)buf, len, flags);
 }
 
 static inline __attribute__((__always_inline__)) int
 NIO(setsockopt)(SOCKET s, int level, int optname, const void *optval,
                 int optlen) {
-  return setsockopt(s, level, optname, optval, optlen);
+  return setsockopt(s, level, optname, (const char *)optval, optlen);
 }
 
 static inline __attribute__((__always_inline__)) int
 NIO(sendto)(SOCKET s, const void *buf, int len, int flags, const SOCKADDR *to,
             int tolen) {
-  return sendto(s, buf, len, flags, to, tolen);
+  return sendto(s, (const char *)buf, len, flags, to, tolen);
 }
 
 int NIO(recvmmsg)(SOCKET s, NIO(mmsghdr) *msgvec, unsigned int vlen, int flags,
