@@ -52,9 +52,23 @@ extension KQueueEventFilterSet {
             kqueueFilterSet.formUnion(.write)
         }
 
+        #if canImport(Darwin)
+        // EVFILT_EXCEPT is Darwin-only; on OpenBSD EV_EOF is delivered via EVFILT_READ instead
+        // — see the #else branch below.
         if isEarlyEOFDeliveryWorkingOnThisOS && selectorEventSet.contains(.readEOF) {
             kqueueFilterSet.formUnion(.except)
         }
+        #else
+        // On OpenBSD, EV_EOF is delivered as a flag on EVFILT_READ events — there is no
+        // separate filter equivalent to Darwin's EVFILT_EXCEPT or Linux's EPOLLRDHUP.
+        // Register EVFILT_READ whenever .readEOF is interested so the kernel can deliver EV_EOF.
+        // Spurious EVFILT_READ wakeups caused by data arriving before EOF are harmless: the event
+        // loop's intersection(registration.interested) call filters them out (since .read is not
+        // in interestedEvent when autoRead=false), so no spurious channelRead calls occur.
+        if selectorEventSet.contains(.readEOF) {
+            kqueueFilterSet.formUnion(.read)
+        }
+        #endif
         self = kqueueFilterSet
     }
 
