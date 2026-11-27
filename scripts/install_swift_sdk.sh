@@ -111,11 +111,14 @@ if [[ -n "$branch" ]]; then
   # Some snapshots may not have all the artefacts we require
   log "Discovering branch snapshot for branch $branch"
 
-  # Map branch name to download path: "main" uses "development", release branches use their branch name
+  # swift.org uses two different identifiers for a toolchain channel:
+  #   - the dev-snapshot API expects the bare channel ($branch), e.g. "main", "6.3", "6.4.x"
+  #   - download.swift.org expects "development" for main, otherwise "swift-<channel>-branch"
+  # Callers therefore pass the bare channel (e.g. INSTALL_SWIFT_BRANCH=6.4.x) and we map it here.
   if [[ "$branch" == "main" ]]; then
     download_path="development"
   else
-    download_path="$branch"
+    download_path="swift-${branch}-branch"
   fi
 
   # shellcheck disable=SC2016  # Our use of JQ_BIN means that shellcheck can't tell this is a `jq` invocation
