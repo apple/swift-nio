@@ -127,6 +127,12 @@ final class PipePair: SocketProtocol {
         guard let outputSPH = self.output else {
             fatalError("Internal inconsistency inside NIO: outputSPH closed on write. Please file a bug")
         }
+        // The output side may already be closed (e.g. the peer closed its read end and `writeEOF`
+        // tore the fd down) while the `Channel` itself is still open. Surface that as
+        // `ChannelError.ioOnClosedChannel` rather than a synthesised `EBADF` `IOError`.
+        guard outputSPH.isOpen else {
+            throw ChannelError._ioOnClosedChannel
+        }
         return try outputSPH.withUnsafeHandle {
             try Posix.write(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
@@ -140,6 +146,9 @@ final class PipePair: SocketProtocol {
         guard let outputSPH = self.output else {
             fatalError("Internal inconsistency inside NIO: outputSPH closed on writev. Please file a bug")
         }
+        guard outputSPH.isOpen else {
+            throw ChannelError._ioOnClosedChannel
+        }
         return try outputSPH.withUnsafeHandle {
             try Posix.writev(descriptor: $0, iovecs: iovecs)
         }
@@ -152,6 +161,9 @@ final class PipePair: SocketProtocol {
         #else
         guard let inputSPH = self.input else {
             fatalError("Internal inconsistency inside NIO: inputSPH closed on read. Please file a bug")
+        }
+        guard inputSPH.isOpen else {
+            throw ChannelError._ioOnClosedChannel
         }
         return try inputSPH.withUnsafeHandle {
             try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
@@ -192,9 +204,13 @@ final class PipePair: SocketProtocol {
     func shutdown(how: Shutdown) throws {
         switch how {
         case .RD:
-            try self.input?.close()
+            if let input = self.input, input.isOpen {
+                try input.close()
+            }
         case .WR:
-            try self.output?.close()
+            if let output = self.output, output.isOpen {
+                try output.close()
+            }
         case .RDWR:
             try self.close()
         }
