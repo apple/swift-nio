@@ -202,7 +202,7 @@ private final class AddressedEnvelopingHandler: ChannelDuplexHandler {
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
 final class AsyncChannelBootstrapTests: XCTestCase {
     var group: MultiThreadedEventLoopGroup!
 
@@ -270,7 +270,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 try await outbound.write("hello")
             }
 
-            await XCTAsyncAssertEqual(await iterator.next(), .string("hello"))
+            await XCTAsyncAssertEqual(await iterator.next(isolation: #isolation), .string("hello"))
 
             group.cancelAll()
         }
@@ -334,7 +334,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     // This is the actual content
                     try await outbound.write("hello")
                 }
-                await XCTAsyncAssertEqual(await serverIterator.next(), .string("hello"))
+                await XCTAsyncAssertEqual(await serverIterator.next(isolation: #isolation), .string("hello"))
             case .byte:
                 preconditionFailure()
             }
@@ -353,7 +353,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     // This is the actual content
                     try await outbound.write(UInt8(8))
                 }
-                await XCTAsyncAssertEqual(await serverIterator.next(), .byte(8))
+                await XCTAsyncAssertEqual(await serverIterator.next(isolation: #isolation), .byte(8))
             }
 
             group.cancelAll()
@@ -416,7 +416,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     // This is the actual content
                     try await outbound.write("hello")
                 }
-                await XCTAsyncAssertEqual(await serverIterator.next(), .string("hello"))
+                await XCTAsyncAssertEqual(await serverIterator.next(isolation: #isolation), .string("hello"))
             case .byte:
                 preconditionFailure()
             }
@@ -433,7 +433,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     // This is the actual content
                     try await outbound.write("hello")
                 }
-                await XCTAsyncAssertEqual(await serverIterator.next(), .string("hello"))
+                await XCTAsyncAssertEqual(await serverIterator.next(isolation: #isolation), .string("hello"))
             case .byte:
                 preconditionFailure()
             }
@@ -452,7 +452,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     // This is the actual content
                     try await outbound.write(UInt8(8))
                 }
-                await XCTAsyncAssertEqual(await serverIterator.next(), .byte(8))
+                await XCTAsyncAssertEqual(await serverIterator.next(isolation: #isolation), .byte(8))
             }
 
             let stringByteNegotiationResult = try await self.makeClientChannelWithNestedProtocolNegotiation(
@@ -469,7 +469,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     // This is the actual content
                     try await outbound.write(UInt8(8))
                 }
-                await XCTAsyncAssertEqual(await serverIterator.next(), .byte(8))
+                await XCTAsyncAssertEqual(await serverIterator.next(isolation: #isolation), .byte(8))
             }
 
             group.cancelAll()
@@ -567,7 +567,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     // This is the actual content
                     try await outbound.write("hello")
                 }
-                await XCTAsyncAssertEqual(await serverIterator.next(), .string("hello"))
+                await XCTAsyncAssertEqual(await serverIterator.next(isolation: #isolation), .string("hello"))
             case .byte:
                 preconditionFailure()
             }
@@ -661,7 +661,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 try await outbound.write("hello")
             }
 
-            await XCTAsyncAssertEqual(await iterator.next(), .string("hello"))
+            await XCTAsyncAssertEqual(await iterator.next(isolation: #isolation), .string("hello"))
 
             group.cancelAll()
         }
@@ -687,10 +687,10 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 var clientInboundIterator = clientChannelInbound.makeAsyncIterator()
 
                 try await clientChannelOutbound.write("request")
-                try await XCTAsyncAssertEqual(try await serverInboundIterator.next(), "request")
+                try await XCTAsyncAssertEqual(try await serverInboundIterator.next(isolation: #isolation), "request")
 
                 try await serverChannelOutbound.write("response")
-                try await XCTAsyncAssertEqual(try await clientInboundIterator.next(), "response")
+                try await XCTAsyncAssertEqual(try await clientInboundIterator.next(isolation: #isolation), "response")
             }
         }
     }
@@ -745,10 +745,10 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                         var secondInboundIterator = secondChannelInbound.makeAsyncIterator()
 
                         try await firstChannelOutbound.write("request")
-                        try await XCTAsyncAssertEqual(try await secondInboundIterator.next(), "request")
+                        try await XCTAsyncAssertEqual(try await secondInboundIterator.next(isolation: #isolation), "request")
 
                         try await secondChannelOutbound.write("response")
-                        try await XCTAsyncAssertEqual(try await firstInboundIterator.next(), "response")
+                        try await XCTAsyncAssertEqual(try await firstInboundIterator.next(isolation: #isolation), "response")
                     }
                 }
 
@@ -846,11 +846,11 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     var fromChannelInboundIterator = fromChannelInbound.makeAsyncIterator()
 
                     try await toChannelOutbound.write(.init(string: "Request"))
-                    try await XCTAsyncAssertEqual(try await inboundIterator.next(), ByteBuffer(string: "Request"))
+                    try await XCTAsyncAssertEqual(try await inboundIterator.next(isolation: #isolation), ByteBuffer(string: "Request"))
 
                     let response = ByteBuffer(string: "Response")
                     try await channelOutbound.write(response)
-                    try await XCTAsyncAssertEqual(try await fromChannelInboundIterator.next(), response)
+                    try await XCTAsyncAssertEqual(try await fromChannelInboundIterator.next(isolation: #isolation), response)
                 }
             }
         }
@@ -902,11 +902,11 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 var inboundIterator = channelInbound.makeAsyncIterator()
                 var fromChannelInboundIterator = fromChannelInbound.makeAsyncIterator()
 
-                try await XCTAsyncAssertEqual(try await inboundIterator.next(), nil)
+                try await XCTAsyncAssertEqual(try await inboundIterator.next(isolation: #isolation), nil)
 
                 let response = ByteBuffer(string: "Response")
                 try await channelOutbound.write(response)
-                try await XCTAsyncAssertEqual(try await fromChannelInboundIterator.next(), response)
+                try await XCTAsyncAssertEqual(try await fromChannelInboundIterator.next(isolation: #isolation), response)
             }
         }
     }
@@ -958,7 +958,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 var inboundIterator = channelInbound.makeAsyncIterator()
 
                 try await toChannelOutbound.write(.init(string: "Request"))
-                try await XCTAsyncAssertEqual(try await inboundIterator.next(), ByteBuffer(string: "Request"))
+                try await XCTAsyncAssertEqual(try await inboundIterator.next(isolation: #isolation), ByteBuffer(string: "Request"))
 
                 let response = ByteBuffer(string: "Response")
                 await XCTAsyncAssertThrowsError(try await channelOutbound.write(response)) { error in
@@ -1037,11 +1037,11 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try await channel.executeThenClose { channelInbound, channelOutbound in
                         var inboundIterator = channelInbound.makeAsyncIterator()
                         do {
-                            try await XCTAsyncAssertEqual(try await inboundIterator.next(), "Hello")
+                            try await XCTAsyncAssertEqual(try await inboundIterator.next(isolation: #isolation), "Hello")
 
                             let expectedResponse = ByteBuffer(string: "Response\n")
                             try await channelOutbound.write("Response")
-                            let response = try await fromChannelInboundIterator.next()
+                            let response = try await fromChannelInboundIterator.next(isolation: #isolation)
                             XCTAssertEqual(response, expectedResponse)
                         } catch {
                             // We only got to close the FDs that are not owned by the PipeChannel
@@ -1138,11 +1138,11 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     var fromChannelInboundIterator = fromChannelInbound.makeAsyncIterator()
 
                     try await toChannelOutbound.write(.init(string: "Request"))
-                    try await XCTAsyncAssertEqual(try await inboundIterator.next(), ByteBuffer(string: "Request"))
+                    try await XCTAsyncAssertEqual(try await inboundIterator.next(isolation: #isolation), ByteBuffer(string: "Request"))
 
                     let response = ByteBuffer(string: "Response")
                     try await channelOutbound.write(response)
-                    try await XCTAsyncAssertEqual(try await fromChannelInboundIterator.next(), response)
+                    try await XCTAsyncAssertEqual(try await fromChannelInboundIterator.next(isolation: #isolation), response)
                 }
             }
         }
@@ -1205,11 +1205,11 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 var inboundIterator = channelInbound.makeAsyncIterator()
                 var fromChannelInboundIterator = fromChannelInbound.makeAsyncIterator()
 
-                try await XCTAsyncAssertEqual(try await inboundIterator.next(), nil)
+                try await XCTAsyncAssertEqual(try await inboundIterator.next(isolation: #isolation), nil)
 
                 let response = ByteBuffer(string: "Response")
                 try await channelOutbound.write(response)
-                try await XCTAsyncAssertEqual(try await fromChannelInboundIterator.next(), response)
+                try await XCTAsyncAssertEqual(try await fromChannelInboundIterator.next(isolation: #isolation), response)
             }
         }
 
@@ -1272,7 +1272,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 var inboundIterator = channelInbound.makeAsyncIterator()
 
                 try await toChannelOutbound.write(.init(string: "Request"))
-                try await XCTAsyncAssertEqual(try await inboundIterator.next(), ByteBuffer(string: "Request"))
+                try await XCTAsyncAssertEqual(try await inboundIterator.next(isolation: #isolation), ByteBuffer(string: "Request"))
 
                 let response = ByteBuffer(string: "Response")
                 await XCTAsyncAssertThrowsError(try await channelOutbound.write(response)) { error in
@@ -1302,10 +1302,10 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 var clientInboundIterator = clientChannelInbound.makeAsyncIterator()
 
                 try await clientChannelOutbound.write("request")
-                try await XCTAsyncAssertEqual(try await serverInboundIterator.next(), "request")
+                try await XCTAsyncAssertEqual(try await serverInboundIterator.next(isolation: #isolation), "request")
 
                 try await serverChannelOutbound.write("response")
-                try await XCTAsyncAssertEqual(try await clientInboundIterator.next(), "response")
+                try await XCTAsyncAssertEqual(try await clientInboundIterator.next(isolation: #isolation), "response")
             }
         }
     }
@@ -1346,10 +1346,10 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                         var secondInboundIterator = secondChannelInbound.makeAsyncIterator()
 
                         try await firstChannelOutbound.write("request")
-                        try await XCTAsyncAssertEqual(try await secondInboundIterator.next(), "request")
+                        try await XCTAsyncAssertEqual(try await secondInboundIterator.next(isolation: #isolation), "request")
 
                         try await secondChannelOutbound.write("response")
-                        try await XCTAsyncAssertEqual(try await firstInboundIterator.next(), "response")
+                        try await XCTAsyncAssertEqual(try await firstInboundIterator.next(isolation: #isolation), "response")
                     }
                 }
 
@@ -1419,7 +1419,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 try await outbound.write("hello")
             }
 
-            await XCTAsyncAssertEqual(await iterator.next(), .string("hello"))
+            await XCTAsyncAssertEqual(await iterator.next(isolation: #isolation), .string("hello"))
 
             group.cancelAll()
         }
