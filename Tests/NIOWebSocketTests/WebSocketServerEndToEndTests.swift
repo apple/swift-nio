@@ -119,6 +119,7 @@ private class WebSocketRecorderHandler: ChannelInboundHandler {
 struct WebSocketServerUpgraderConfiguration {
     let maxFrameSize: Int
     let automaticErrorHandling: Bool
+    let enforceMaskingRules: Bool
     let shouldUpgrade: @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>
     let upgradePipelineHandler: @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
 
@@ -126,11 +127,13 @@ struct WebSocketServerUpgraderConfiguration {
     init(
         maxFrameSize: Int = 1 << 14,
         automaticErrorHandling: Bool = true,
+        enforceMaskingRules: Bool = true,
         shouldUpgrade: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
         upgradePipelineHandler: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
     ) {
         self.maxFrameSize = maxFrameSize
         self.automaticErrorHandling = automaticErrorHandling
+        self.enforceMaskingRules = enforceMaskingRules
         self.shouldUpgrade = shouldUpgrade
         self.upgradePipelineHandler = upgradePipelineHandler
     }
@@ -147,6 +150,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
             NIOWebSocketServerUpgrader(
                 maxFrameSize: $0.maxFrameSize,
                 automaticErrorHandling: $0.automaticErrorHandling,
+                enforceMaskingRules: $0.enforceMaskingRules,
                 shouldUpgrade: $0.shouldUpgrade,
                 upgradePipelineHandler: $0.upgradePipelineHandler
             )
@@ -474,6 +478,9 @@ class WebSocketServerEndToEndTests: XCTestCase {
         let recorder = NIOLoopBound(WebSocketRecorderHandler(), eventLoop: embeddedEventLoop)
 
         let basicUpgrader = WebSocketServerUpgraderConfiguration(
+            // This test drives the server with a minimal client that sends unmasked frames.
+            // Masking enforcement is covered by the dedicated decoder tests, so disable it here.
+            enforceMaskingRules: false,
             shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
             upgradePipelineHandler: { (channel, req) in
                 channel.eventLoop.makeCompletedFuture {
@@ -675,6 +682,7 @@ final class TypedWebSocketServerEndToEndTests: WebSocketServerEndToEndTests {
             NIOTypedWebSocketServerUpgrader(
                 maxFrameSize: $0.maxFrameSize,
                 enableAutomaticErrorHandling: $0.automaticErrorHandling,
+                enforceMaskingRules: $0.enforceMaskingRules,
                 shouldUpgrade: $0.shouldUpgrade,
                 upgradePipelineHandler: $0.upgradePipelineHandler
             )
