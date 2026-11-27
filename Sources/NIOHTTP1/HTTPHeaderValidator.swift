@@ -201,6 +201,7 @@ extension HTTPMethod {
             .BIND,
             .LINK,
             .PATCH,
+            .QUERY,
             .TRACE,
             .MKCOL,
             .MERGE,
