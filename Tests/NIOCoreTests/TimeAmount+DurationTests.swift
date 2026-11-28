@@ -75,6 +75,9 @@ class TimeAmountDurationTests: XCTestCase {
         guard #available(macOS 13, iOS 16, tvOS 16, watchOS 9, *) else {
             throw XCTSkip("Required API is not available for this test.")
         }
+        #if arch(arm) || arch(i386) || arch(arm64_32) || arch(wasm32)
+        throw XCTSkip("Large integer literals don't compile on 32-bit platforms.")
+        #endif
         XCTAssertEqual(
             TimeAmount(Duration.nanoseconds(Int64.min)),
             .nanoseconds(Int64.min)
